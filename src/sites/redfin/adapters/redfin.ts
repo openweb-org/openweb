@@ -1,7 +1,10 @@
 import type { Page } from 'patchright'
 
-type PageFetch = (page: Page, options: { url: string; method?: 'GET' | 'POST'; headers?: Record<string, string>; credentials?: 'same-origin' | 'include'; timeout?: number }) => Promise<{ status: number; text: string }>
+import { nodeFetch } from '../../../lib/adapter-helpers.js'
+
 type AdapterErrors = { botBlocked(msg: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error }
+
+const BASE = 'https://www.redfin.com'
 
 /** Strip Redfin JSONP protection prefix `{}&&` and parse JSON. */
 function parseStingray(text: string): { resultCode: number; errorMessage: string; payload: any } {
@@ -18,8 +21,7 @@ const PROPERTY_TYPES: Record<number, string> = {
 // ── searchHomes: Stingray GIS API ────────────────────
 
 async function searchHomes(
-  page: Page, params: Record<string, unknown>,
-  pageFetch: PageFetch, errors: AdapterErrors,
+  _page: Page | null, params: Record<string, unknown>, errors: AdapterErrors,
 ): Promise<unknown> {
   const { regionId, state, city } = params as { regionId: string; state: string; city: string }
   const market = city.toLowerCase().replace(/\s+/g, '-')
@@ -28,9 +30,7 @@ async function searchHomes(
     page_number: '1', region_id: regionId, region_type: '6',
     sf: '1,2,3,5,6,7', status: '9', uipt: '1,2,3,4,5,6,7,8', v: '8',
   })
-  const result = await pageFetch(page, {
-    url: `/stingray/api/gis?${qs}`, method: 'GET', credentials: 'same-origin',
-  })
+  const result = await nodeFetch({ url: `${BASE}/stingray/api/gis?${qs}` })
   if (result.status !== 200) throw errors.botBlocked(`Stingray GIS returned ${result.status}`)
 
   const data = parseStingray(result.text)
@@ -59,16 +59,15 @@ async function searchHomes(
 // ── getPropertyDetails: fetch HTML → parse JSON-LD ───
 
 async function getPropertyDetails(
-  page: Page, params: Record<string, unknown>,
-  pageFetch: PageFetch, errors: AdapterErrors,
+  _page: Page | null, params: Record<string, unknown>, errors: AdapterErrors,
 ): Promise<unknown> {
   const { state, city, address, propertyId } = params as {
     state: string; city: string; address: string; propertyId: string
   }
   const path = `/${state}/${city}/${address}/home/${propertyId}`
-  const result = await pageFetch(page, {
-    url: `https://www.redfin.com${path}`, method: 'GET',
-    headers: { Accept: 'text/html' }, credentials: 'same-origin',
+  const result = await nodeFetch({
+    url: `${BASE}${path}`,
+    headers: { Accept: 'text/html' },
   })
 
   if (result.status !== 200) throw errors.botBlocked(`Property page returned ${result.status}`)
@@ -124,7 +123,7 @@ async function getPropertyDetails(
   return {
     name: (titleMatch?.[1] || '').replace(/ \| Redfin$/, ''),
     description: metaMatch?.[1] || '',
-    url: `https://www.redfin.com${path}`,
+    url: `${BASE}${path}`,
     datePosted: '', streetAddress: '', city: '', state: '', zip: '',
     latitude: null, longitude: null, bedrooms: null, bathrooms: null,
     sqft: null, yearBuilt: null, propertyType: '', price: null,
@@ -135,13 +134,12 @@ async function getPropertyDetails(
 // ── getMarketData: fetch HTML → regex text extraction ─
 
 async function getMarketData(
-  page: Page, params: Record<string, unknown>,
-  pageFetch: PageFetch, errors: AdapterErrors,
+  _page: Page | null, params: Record<string, unknown>, errors: AdapterErrors,
 ): Promise<unknown> {
   const { regionId, state, city } = params as { regionId: string; state: string; city: string }
-  const result = await pageFetch(page, {
-    url: `https://www.redfin.com/city/${regionId}/${state}/${city}/housing-market`,
-    method: 'GET', headers: { Accept: 'text/html' }, credentials: 'same-origin',
+  const result = await nodeFetch({
+    url: `${BASE}/city/${regionId}/${state}/${city}/housing-market`,
+    headers: { Accept: 'text/html' },
   })
 
   if (result.status !== 200) throw errors.botBlocked(`Market page returned ${result.status}`)
@@ -197,7 +195,7 @@ async function getMarketData(
 
 // ── Adapter export ───────────────────────────────────
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, pageFetch: PageFetch, errors: AdapterErrors) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page | null, params: Record<string, unknown>, errors: AdapterErrors) => Promise<unknown>> = {
   searchHomes,
   getPropertyDetails,
   getMarketData,
@@ -205,10 +203,10 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, p
 
 const adapter = {
   name: 'redfin',
-  description: 'Redfin — Stingray API + HTML fetch. Zero DOM operations.',
+  description: 'Redfin — node-native Stingray API + HTML fetch. No browser needed.',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('redfin.com')
+  async init(_page: Page | null): Promise<boolean> {
+    return true
   },
 
   async isAuthenticated(): Promise<boolean> {
@@ -216,14 +214,14 @@ const adapter = {
   },
 
   async execute(
-    page: Page, operation: string,
+    page: Page | null, operation: string,
     params: Readonly<Record<string, unknown>>,
     helpers: Record<string, unknown>,
   ): Promise<unknown> {
-    const { pageFetch, errors } = helpers as { pageFetch: PageFetch; errors: AdapterErrors }
+    const { errors } = helpers as { errors: AdapterErrors }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, pageFetch, errors)
+    return handler(page, { ...params }, errors)
   },
 }
 

@@ -8,7 +8,7 @@ info:
 servers:
 - url: https://www.redfin.com
   x-openweb:
-    transport: page
+    transport: node
 paths:
   /city/{regionId}/{state}/{city}:
     get:

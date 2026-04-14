@@ -1,3 +1,23 @@
+## 2026-04-14: Transport upgrade — redfin (page → node, all 3 ops)
+
+**What changed:**
+- **All 3 operations** upgraded from Tier 5 (`pageFetch` / `page.evaluate(fetch)`) → Tier 7 (`nodeFetch` / direct Node HTTP). No browser needed for any Redfin operation.
+- **searchHomes:** Stingray GIS API (`/stingray/api/gis`) — JSONP prefix strip + JSON parse. Returns 20 listings with full property data.
+- **getPropertyDetails:** HTML fetch → JSON-LD `RealEstateListing` extraction. Full property details including amenities, images, coordinates.
+- **getMarketData:** HTML fetch → regex text extraction for median price, homes sold, days on market, competitiveness.
+- Removed `redfin-dom.ts` fallback adapter (DOM extraction no longer needed with node transport).
+- Updated `openapi.yaml` server-level transport: `page` → `node`.
+
+**Why:**
+- DOC.md already noted "No bot detection observed" and "All data accessible from Node.js." Confirmed: all endpoints return 200 with valid data from Node.js fetch with Chrome UA. No cookies, auth, or browser context required.
+
+**Key files:** `src/sites/redfin/adapters/redfin.ts`, `src/sites/redfin/openapi.yaml`, `src/sites/redfin/DOC.md`
+**Verification:** All 3 ops verified via `pnpm dev redfin exec` — searchHomes (20 Seattle listings), getPropertyDetails (full JSON-LD data), getMarketData (median price, homes sold, DOM stats).
+**Next:** None
+**Blockers:** None
+
+---
+
 ## 2026-04-14: Transport upgrade — indeed (reviews/salaries) + imdb (ratings)
 
 **What changed:**

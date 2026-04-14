@@ -49,8 +49,11 @@ openweb redfin exec getMarketData '{"regionId":"16163","state":"WA","city":"Seat
 No auth required. All operations use public listing data.
 
 ## Transport
-- **`page` transport** with `pageFetch` — adapter calls APIs and fetches HTML via `page.evaluate(fetch(...))`. No DOM rendering or selectors.
-- Zero DOM operations: no querySelector, no click, no keyboard input.
+- **`node` transport** with `nodeFetch` — all operations use direct Node.js HTTP fetch. No browser needed.
+- **searchHomes**: Stingray GIS API (`/stingray/api/gis`) → JSON with JSONP prefix strip.
+- **getPropertyDetails**: HTML fetch → JSON-LD `RealEstateListing` extraction.
+- **getMarketData**: HTML fetch → regex text extraction from server-rendered content.
+- Upgraded from `page` (pageFetch/Tier 5) → `node` (nodeFetch/Tier 7). No bot detection blocks node requests.
 
 ## Known Issues
 - **No bot detection** observed on API or HTML page requests. All data accessible from Node.js.
