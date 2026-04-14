@@ -1,3 +1,43 @@
+## 2026-04-14: Transport upgrade — quora (GraphQL intercept for answers)
+
+**What changed:**
+- **getQuestion / getAnswers:** Tier 2 DOM extraction → Tier 4 GQL intercept + Tier 5 page.evaluate(fetch) pagination. Intercepts `QuestionPagedListPaginationQuery` during page navigation for structured answer data (author names, credentials, upvotes, views, timestamps). Uses captured hash + formkey for Tier 5 pagination. DOM extraction as fallback when GQL doesn't fire.
+- **searchQuestions:** Unchanged (Tier 2 DOM — search is SSR-rendered, no GQL query).
+- **getProfile:** Unchanged (Tier 2 DOM — no GQL profile query available).
+- New response fields for getAnswers: `authorUrl`, `credential`, `views`, `createdAt`.
+- Adapter refactored to use `AdapterHelpers` interface (`pageFetch`, `graphqlFetch`).
+
+**Why:**
+- DOM extraction for answers was fragile (CSS selectors, regex-parsed author names, no exact upvote/view counts). GQL response provides structured JSON with exact metrics.
+
+**Key files:** `src/sites/quora/adapters/quora.ts`, `src/sites/quora/openapi.yaml`, `src/sites/quora/DOC.md`
+**Verification:** All 4 ops verified with `--browser`. GQL path returns structured data for popular questions; DOM fallback handles questions without pagination query.
+**Next:** None
+**Blockers:** None
+
+---
+
+## 2026-04-14: Transport upgrade — glassdoor (DOM → GraphQL for reviews + interviews)
+
+**What changed:**
+- **getReviews:** Tier 2 (DOM text parsing) → Tier 5 hybrid (`page.evaluate(fetch)` to `/graph` GraphQL). Extracts review IDs from `data-brandviews` attribute, fetches each via `EmployerReview` GraphQL query. Returns structured `pros`, `cons`, `ratingOverall`, `reviewDateTime`, `summary`, `jobTitle`. Overall rating from JSON-LD.
+- **getInterviews:** Tier 2 (body text splitting) → Tier 4+5 hybrid (response interception of `EmployerInterviewInfoIG` GraphQL during navigation). Clean `processDescription` and `jobTitle` from GraphQL.
+- **searchCompanies:** Unchanged (Tier 3 — SSR/NEXT_DATA).
+- **getSalaries:** Unchanged (Tier 2 — no GraphQL discovered for salary data).
+
+**Key discoveries:**
+- GraphQL `/graph` endpoint: POST with `gd-csrf-token: 1` (static), `credentials: include`
+- Introspection disabled — only pre-defined query shapes succeed; custom queries return "Server error"
+- `EmployerReview` returns 3+ reviews per call (requested + recommendations) — deduplicated by reviewId
+- No GraphQL for salary data — salary page only fires `RecordPageView` mutation
+
+**Key files:** `src/sites/glassdoor/adapters/glassdoor.ts`, `src/sites/glassdoor/DOC.md`
+**Verification:** All 4 ops verified with `--browser --no-headless` for Google (E9079) and Microsoft (E1651).
+**Next:** None
+**Blockers:** None
+
+---
+
 ## 2026-04-14: Transport upgrade — redfin (page → node, all 3 ops)
 
 **What changed:**

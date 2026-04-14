@@ -1,6 +1,29 @@
 # Quora — Progress
 
-## 2026-04-09: Polish — docs, schema, examples
+## 2026-04-14 — Transport upgrade: GraphQL intercept for answers
+
+**Context:** getQuestion and getAnswers used Tier 2 DOM extraction — fragile CSS selectors, no upvote/view counts, no timestamps, author names from regex.
+
+**Changes:**
+- **getQuestion**: Tier 4 (GQL intercept) for top answer previews — intercepts `QuestionPagedListPaginationQuery` during page navigation. Extracts structured author names, credentials, upvotes from GQL. DOM fallback for question metadata (title, topics, follower count) and when GQL doesn't fire.
+- **getAnswers**: Tier 4 (GQL intercept) + Tier 5 (page.evaluate(fetch)) for pagination. New response fields: `authorUrl`, `credential`, `views`, `createdAt`. DOM fallback (Tier 2) for questions without enough answers to trigger pagination query.
+- **searchQuestions**: Unchanged (Tier 2 DOM — search is SSR-rendered, no GQL query).
+- **getProfile**: Unchanged (Tier 2 DOM — no GQL profile query available).
+- Updated openapi.yaml with new getAnswers response fields.
+- Adapter now uses `AdapterHelpers` interface with `pageFetch`/`graphqlFetch` instead of custom error types.
+
+**Key discoveries:**
+- Quora uses Relay-style persisted queries; hashes are deployment-scoped (rotate on deploy)
+- GQL responses use multipart format (`--qgqlmpb` boundary) requiring custom parsing
+- Formkey extracted from `<script>` tags (not `window.ansFrontendGlobals.formkey`)
+- `QuestionPagedListPaginationQuery` only fires for questions with enough answers to paginate
+- Search page makes no search-specific GQL call; results are SSR-rendered
+- Profile page only has `UserProfileSpacesSection_Paging_Query` (spaces, not profile data)
+- `inlineQueryResults` in `window.ansFrontendGlobals.data` contains SSR bootstrap data with qid
+
+**Verification:** All 4 operations pass with `--browser`. GQL path returns structured data (upvotes, views, timestamps). DOM fallback works for questions without pagination query. Build passes, lint clean.
+
+## 2026-04-13 — Fix: search extraction + schema
 
 **What changed:**
 - DOC.md: fixed heading hierarchy under Site Internals (### not ##)

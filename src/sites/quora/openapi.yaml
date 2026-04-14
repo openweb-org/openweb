@@ -149,7 +149,7 @@ paths:
   /answers:
     get:
       operationId: getAnswers
-      summary: "Get answers for a question — author, content, upvotes"
+      summary: "Get answers for a question — author, content, upvotes, views, timestamps (via GraphQL)"
       x-openweb:
         permission: read
         adapter:
@@ -189,6 +189,9 @@ paths:
                   slug:
                     type: string
                     description: "Question slug."
+                  title:
+                    type: string
+                    description: "Question title."
                   answers:
                     type: array
                     items:
@@ -200,12 +203,24 @@ paths:
                         author:
                           type: string
                           description: "Author name."
+                        authorUrl:
+                          type: string
+                          description: "Author profile URL path."
+                        credential:
+                          type: string
+                          description: "Author credential or tagline."
                         content:
                           type: string
                           description: "Full answer text."
                         upvotes:
                           type: string
                           description: "Upvote count."
+                        views:
+                          type: string
+                          description: "View count."
+                        createdAt:
+                          type: string
+                          description: "Answer creation timestamp (ISO 8601)."
 
   /profile:
     get:

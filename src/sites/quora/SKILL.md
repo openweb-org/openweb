@@ -19,7 +19,7 @@ Q&A platform — users ask questions, write answers, follow topics and users.
 |-----------|--------|-----------|------------|-------|
 | searchQuestions | find questions | query (keyword) | qid, slug, title, answerCount | entry point |
 | getQuestion | question detail | slug ← searchQuestions | title, answerCount, topics, topAnswers | includes top 3 answer previews |
-| getAnswers | read all answers | slug ← searchQuestions | author, content, upvotes | up to 20 answers per page |
+| getAnswers | read all answers | slug ← searchQuestions | author, content, upvotes, views, createdAt | up to 20 answers, GQL-backed |
 | getProfile | user profile | username | name, bio, followers, answers | username from profile URL slug |
 
 ## Quick Start
