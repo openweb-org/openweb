@@ -1,3 +1,25 @@
+## 2026-04-13: Uber site split + Tier 5 transport upgrade + verify ordering
+
+**What changed:**
+- **Site split:** `uber` → `ubereats` (8 Eats ops) + `uber` (3 Rides ops). Different domains (ubereats.com vs m.uber.com/riders.uber.com), API styles (REST vs GraphQL), and auth base URLs.
+- **Eats transport upgrade:** addToCart/removeFromCart from Tier 1 (DOM clicks) to Tier 5 (page.evaluate + server-side APIs). Discovered `createDraftOrderV2`, `removeItemsFromDraftOrderV2`, `discardDraftOrdersV1` via CDP network interception. Zero DOM selectors remain.
+- **New Eats ops:** getItemDetails (customization options), getCart, emptyCart. addToCart now supports `customizations` param.
+- **New Rides ops:** searchLocations (PudoLocationSearch GraphQL), getRideEstimate (Products GraphQL — fare quotes for all vehicle types), getRideHistory (Activities GraphQL).
+- **Verify ordering:** Example files now support `order` field for deterministic execution order. Fixes dependency chain issues (addToCart → removeFromCart → emptyCart).
+
+**Why:**
+- removeFromCart was broken (selector timeout). Investigation revealed server-side draft order APIs existed but were missed in earlier probing (wrong endpoint names: V1 vs V2, discardDraftOrdersV1 vs removeFromCartV1).
+- Uber Rides was entirely missing from the catalog. User workflow requires location search → fare estimate → ride history.
+- Verify alphabetical ordering caused false failures when write ops had dependencies.
+
+**Key files:** `src/lifecycle/verify.ts`, `src/sites/ubereats/` (new), `src/sites/uber/` (rides), `skill/openweb/add-site/verify.md`
+**Verification:** ubereats 8/8 PASS, uber 3/3 PASS. Verify tests 19/19 PASS.
+**Commit:** `098bd6f`..`bc85cd7` (3 commits)
+**Next:** None
+**Blockers:** None
+
+---
+
 ## 2026-04-13: Release Quality Sprint — Verify Fixes + x-openweb.headers
 
 **What changed:**

@@ -222,6 +222,8 @@ Create `examples/<operationId>.example.json`:
 }
 ```
 
+For write operations with dependencies, add `"order": N` to control verify execution order (lower runs first). Example: `addToCart(1)` → `removeFromCart(2)` → `emptyCart(3)`.
+
 ## Step 7: Validate & Verify
 
 ```bash

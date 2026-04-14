@@ -18,12 +18,17 @@ Example fixtures at `examples/*.example.json` are used by verify and runtime exe
 ```json
 {
   "operation_id": "searchProducts",
+  "order": 1,
   "cases": [{
     "input": { "k": "laptop" },
     "assertions": { "status": 200, "response_schema_valid": true }
   }]
 }
 ```
+
+Optional fields:
+- **`order`** — execution order for verify (lower = earlier). Use when operations have dependencies (e.g., addToCart before removeFromCart). Files without `order` run after ordered files, sorted alphabetically.
+- **`replay_safety`** — `"unsafe_mutation"` to skip in read-only verify; `"unsafe_write"` for safe writes included with `--write`.
 
 Files without a `cases` array are silently skipped by verify. For adapter-only
 packages where compile doesn't generate examples, create them manually.
