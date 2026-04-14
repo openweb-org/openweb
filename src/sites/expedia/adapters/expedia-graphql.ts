@@ -326,10 +326,10 @@ async function getHotelPrices(page: Page, params: Record<string, unknown>, error
 async function getHotelReviews(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
   const propertyId = String(params.propertyId ?? params.id)
 
-  // Reviews are loaded via a separate GraphQL query on the hotel page.
-  // Since we don't have the APQ hash, use intercept: navigate to the hotel
-  // reviews page and capture the GraphQL response containing review data.
-  const hotelUrl = `https://www.expedia.com/h${propertyId}.Hotel-Reviews`
+  // Navigate to .Hotel-Information (not .Hotel-Reviews) — Akamai blocks
+  // the reviews URL more aggressively. Reviews load lazily via GraphQL
+  // when the user scrolls to the reviews section on the info page.
+  const hotelUrl = `https://www.expedia.com/h${propertyId}.Hotel-Information`
 
   let captured: unknown = null
   const handler = async (resp: PwResponse) => {
@@ -340,17 +340,73 @@ async function getHotelReviews(page: Page, params: Record<string, unknown>, erro
       const postData = req.postData() ?? ''
       if (!postData.includes('Review')) return
       const json = await resp.json()
-      const entry = Array.isArray(json) ? json[0] : json
-      if (entry?.data) captured = entry.data
+      // Handle batched responses
+      const entries = Array.isArray(json) ? json : [json]
+      for (const entry of entries) {
+        if (!entry?.data) continue
+        // Only capture responses with actual review content
+        const d = entry.data as Record<string, unknown>
+        const reviewInfo = (d?.propertyInfo as Record<string, unknown>)?.reviewInfo
+        const reviews = (reviewInfo as Record<string, unknown>)?.reviews
+        if (Array.isArray(reviews) && reviews.length > 0) {
+          captured = d
+          return
+        }
+        // Also check for PropertyFilteredReviewsQuery shape
+        if (d?.propertyReviews || d?.propertyFilteredReviews) {
+          captured = d
+          return
+        }
+      }
     } catch { /* ignore parse errors */ }
   }
 
   page.on('response', handler)
   try {
     await page.goto(hotelUrl, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-    const deadline = Date.now() + 20_000
-    while (!captured && Date.now() < deadline) {
+
+    // Wait briefly for review data that may load with the page
+    const initialWait = Date.now() + 5_000
+    while (!captured && Date.now() < initialWait) {
       await new Promise(r => setTimeout(r, 500))
+    }
+
+    // Scroll to the reviews section to trigger lazy load
+    if (!captured) {
+      await page.evaluate(() => {
+        // Look for reviews section anchor or heading
+        const reviewSection = document.querySelector(
+          '[data-stid*="review"], #reviews, [id*="review"]'
+        )
+        if (reviewSection) {
+          reviewSection.scrollIntoView({ behavior: 'instant' })
+        } else {
+          // Scroll incrementally to trigger lazy loading
+          window.scrollTo(0, document.body.scrollHeight * 0.5)
+        }
+      })
+      await new Promise(r => setTimeout(r, 3_000))
+    }
+
+    // Try clicking reviews tab if present
+    if (!captured) {
+      await page.evaluate(() => {
+        const reviewTab = document.querySelector<HTMLElement>(
+          'a[href*="Reviews"], a[href*="reviews"], button[data-stid*="review"], [data-stid*="Reviews"]'
+        )
+        if (reviewTab) reviewTab.click()
+        else window.scrollTo(0, document.body.scrollHeight * 0.8)
+      })
+      await new Promise(r => setTimeout(r, 3_000))
+    }
+
+    // Final scroll to bottom
+    if (!captured) {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      const deadline = Date.now() + 10_000
+      while (!captured && Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 500))
+      }
     }
   } finally {
     page.off('response', handler)

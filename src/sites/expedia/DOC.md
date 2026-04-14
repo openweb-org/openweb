@@ -61,7 +61,7 @@ Batched queries common on page load (multiple operations in one request).
 
 ### Adapter Lanes
 - **APQ direct fetch** (searchHotels, getHotelDetail, searchFlights, getFlightDetail): `page.evaluate(fetch)` with APQ hash. Requires known hash — breaks if Expedia redeploys with new hashes.
-- **Intercept** (getHotelPrices, getHotelReviews): Navigate to hotel page, intercept GraphQL responses matching rate/review operations. Hash-independent — survives Expedia deploys.
+- **Intercept** (getHotelPrices, getHotelReviews): Navigate to hotel info page, intercept GraphQL responses matching rate/review operations. Hash-independent — survives Expedia deploys. getHotelReviews scrolls to trigger lazy-loaded review data.
 
 ### Auth
 No auth required for public search. `cookie_session` for logged-in features. `DUAID` cookie used for device identity. `EG_SESSIONTOKEN` for authenticated sessions.
@@ -74,4 +74,4 @@ No auth required for public search. `cookie_session` for logged-in features. `DU
 - **APQ hash stability**: Persisted query hashes may change on Expedia deploys. If operations start failing, hashes in the adapter need updating. getHotelReviews uses intercept pattern and is immune to hash changes.
 - **Locale redirect**: Browser with CN locale gets redirected to `/cn/` paths. Search results show in Chinese. Set browser locale to en_US for English results.
 - **Flight search slow**: Flight search can take 10-15 seconds to load results. The GraphQL query returns progressively.
-- **getHotelReviews navigation**: Intercept navigates to `/h{id}.Hotel-Reviews`, which changes the browser's current page. Subsequent operations that use APQ direct fetch are unaffected (they use `page.evaluate`).
+- **getHotelReviews navigation**: Intercept navigates to `.Hotel-Information` (not `.Hotel-Reviews`, which Akamai blocks more aggressively), then scrolls to trigger lazy-loaded review GraphQL. Shares the same page URL pattern as getHotelPrices.
