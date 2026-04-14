@@ -80,14 +80,12 @@ No auth required. All 8 operations return public data.
 - Job detail: `application/ld+json` (JobPosting) + `window._initialData`
 - Salary: `__NEXT_DATA__` props.pageProps (Next.js SSR)
 - Company: `window._initialData` (section view models)
-- Reviews: DOM extraction (`[itemprop]`, `[data-testid]`)
-- Company salaries: DOM extraction (table rows)
+- Reviews: `window._initialData.reviewsList.items` (20 reviews per page with subcategory ratings) + LD+JSON `EmployerAggregateRating`
+- Company salaries: `window._initialData.categorySalarySection.categories` (salary data by category) + `salaryPopularJobsSection.popularJobTitles`
 - Autocomplete: `page.evaluate(fetch)` to autocomplete subdomain
 
 ## Known Issues
-- **getCompanyReviews — empty reviews array** — DOM selectors (`[data-testid="reviewCard"]`, `[itemprop="review"]`) no longer match. `aggregateRating` from LD+JSON still works. Selectors need updating to match current Indeed frontend.
-- **getCompanySalaries — no salary data** — Table/card selectors (`[data-testid="salary-table-row"]`, `[data-testid="salaryCard"]`) no longer match. Returns only `companyName`. Selectors need updating.
-- **DOM selectors may drift** — Indeed updates frontend frequently. LD+JSON and `_initialData` are more stable than DOM selectors.
 - **Mosaic data timing** — `mosaic.providerData` loads asynchronously. The 3-second wait after navigation is required.
 - **Salary location format** — Must use Indeed's URL segment format (e.g. "San-Francisco--CA"). Use autocompleteLocation.
 - **Cloudflare challenges** — Rapid page navigation may trigger bot detection. Space out requests.
+- **Review subcategory ratings** — Some reviews return 0 for all subcategory ratings (compensation, culture, work-life, management, job security) when the reviewer didn't fill them out.

@@ -167,28 +167,34 @@ async function getCompanyReviews(page: Page, params: Record<string, unknown>, er
   return page.evaluate(`
     (() => {
       const result = {};
-      const ratingEl = document.querySelector('[data-testid="annotatedReviewRating"]');
-      if (ratingEl) result.overallRating = ratingEl.textContent?.trim();
-      const title = document.title;
-      const countMatch = title.match(/([\\ d,]+)\\s+Reviews/);
-      if (countMatch) result.reviewCount = countMatch[1];
-      const reviewEls = document.querySelectorAll('[data-testid="reviewCard"], [itemprop="review"]');
-      const reviews = [];
-      for (const el of reviewEls) {
-        const review = {};
-        review.title = el.querySelector('[itemprop="name"], [data-testid="reviewTitle"]')?.textContent?.trim();
-        review.rating = el.querySelector('[itemprop="ratingValue"]')?.getAttribute('content')
-          || el.querySelector('[class*="ratingNumber"]')?.textContent?.trim();
-        review.author = el.querySelector('[itemprop="author"]')?.textContent?.trim();
-        review.date = el.querySelector('[itemprop="datePublished"]')?.getAttribute('content')
-          || el.querySelector('[class*="reviewDate"]')?.textContent?.trim();
-        review.pros = el.querySelector('[data-testid="reviewPros"], [class*="pros"]')?.textContent?.trim();
-        review.cons = el.querySelector('[data-testid="reviewCons"], [class*="cons"]')?.textContent?.trim();
-        review.jobTitle = el.querySelector('[data-testid="reviewJobTitle"]')?.textContent?.trim();
-        review.location = el.querySelector('[data-testid="reviewLocation"]')?.textContent?.trim();
-        if (review.title || review.rating) reviews.push(review);
+      const init = window._initialData;
+      if (init) {
+        if (init.reviewsFilters) {
+          const rc = init.reviewsFilters.reviewsCount;
+          result.reviewCount = rc?.totalReviewCount ?? rc?.foundReviewCount ?? rc;
+          result.topics = (init.reviewsFilters.topics || []).map(t => ({
+            name: t.name, rating: t.rating, count: t.count,
+          }));
+        }
+        const list = init.reviewsList;
+        if (list) {
+          result.companyName = list.companyName;
+          result.reviews = (list.items || []).map(r => ({
+            title: typeof r.title === 'object' ? r.title?.text : r.title,
+            rating: r.overallRating,
+            jobTitle: r.jobTitle || null,
+            location: r.location || null,
+            date: r.submissionDate,
+            currentEmployee: r.currentEmployee,
+            text: typeof r.text === 'object' ? r.text?.text : r.text,
+            compensationRating: r.compensationAndBenefitsRating?.rating ?? null,
+            cultureRating: r.cultureAndValuesRating?.rating ?? null,
+            workLifeRating: r.workAndLifeBalanceRating?.rating ?? null,
+            managementRating: r.managementRating?.rating ?? null,
+            jobSecurityRating: r.jobSecurityAndAdvancementRating?.rating ?? null,
+          }));
+        }
       }
-      result.reviews = reviews;
       const scripts = document.querySelectorAll('script[type="application/ld+json"]');
       for (const s of scripts) {
         try {
@@ -210,26 +216,39 @@ async function getCompanySalaries(page: Page, params: Record<string, unknown>, e
   return page.evaluate(`
     (() => {
       const result = {};
-      result.companyName = document.querySelector('h1, [data-testid="companyName"]')?.textContent?.trim();
-      const rows = document.querySelectorAll('[data-testid="salary-table-row"], table tbody tr');
-      const salaries = [];
-      for (const row of rows) {
-        const cells = row.querySelectorAll('td');
-        if (cells.length >= 2) {
-          salaries.push({
-            jobTitle: cells[0]?.textContent?.trim(),
-            salary: cells[1]?.textContent?.trim(),
-            salaryCount: cells[2]?.textContent?.trim(),
-          });
+      const init = window._initialData;
+      if (init) {
+        result.companyName = init.companyName;
+        if (init.salaryHeader) {
+          result.totalSalaryCount = init.salaryHeader.totalSalaryCount;
+          result.lastUpdated = init.salaryHeader.formattedLastUpdateDate;
         }
-      }
-      if (salaries.length > 0) { result.salaries = salaries; return result; }
-      const cards = document.querySelectorAll('[data-testid="salaryCard"], [class*="salaryRow"]');
-      if (cards.length > 0) {
-        result.salaries = [...cards].map(c => ({
-          jobTitle: c.querySelector('[class*="jobTitle"], a')?.textContent?.trim(),
-          salary: c.querySelector('[class*="salary"], [class*="amount"]')?.textContent?.trim(),
-        }));
+        const cats = init.categorySalarySection;
+        if (cats && cats.categories) {
+          result.categories = cats.categories.map(c => ({
+            categoryTitle: c.categoryTitle,
+            salaries: (c.salaries || []).map(s => ({
+              jobTitle: s.title,
+              salary: s.salary,
+              salaryType: s.salaryType,
+              reportedCount: s.reportedSalaryCount,
+            })),
+          }));
+        }
+        const popular = init.salaryPopularJobsSection;
+        if (popular && popular.popularJobTitles) {
+          result.popularJobs = popular.popularJobTitles.map(j => ({
+            jobTitle: j.jobTitle,
+            salary: j.formattedMedian,
+            salaryPeriod: j.salaryPeriod,
+          }));
+        }
+        if (init.salarySatisfactionSidebarWidget) {
+          result.satisfaction = {
+            totalCount: init.salarySatisfactionSidebarWidget.totalCount,
+            yesRatio: init.salarySatisfactionSidebarWidget.yesRatio,
+          };
+        }
       }
       return result;
     })()

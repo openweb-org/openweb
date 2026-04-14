@@ -141,7 +141,7 @@ async function getRatings(page: Page | null, params: Readonly<Record<string, unk
   const imdbId = String(params.imdbId ?? '')
   if (!imdbId) throw new Error('imdbId parameter is required')
 
-  // GraphQL: aggregate rating + vote count
+  // GraphQL: aggregate rating + vote count (works without browser)
   const data = await gql<{ title: Record<string, any> }>(`
     query TitleRatings($id: ID!) {
       title(id: $id) {
@@ -155,36 +155,58 @@ async function getRatings(page: Page | null, params: Readonly<Record<string, unk
   const t = data.title
   if (!t) throw new Error('No title data found')
 
-  // Histogram: only available from __NEXT_DATA__ on the ratings page (requires browser)
+  // Histogram + LD+JSON from the title page (not the separate /ratings/ page)
   let histogram: Array<{ rating: number; voteCount: number }> = []
+  let ldJson: Record<string, unknown> | null = null
   if (page) {
     try {
-      await page.goto(`https://www.imdb.com/title/${encodeURIComponent(imdbId)}/ratings/`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 20_000,
-    })
-    await page.waitForSelector('#__NEXT_DATA__', { timeout: 8_000 }).catch(() => {})
-    const hist = await page.evaluate(() => {
-      const el = document.querySelector('#__NEXT_DATA__')
-      if (!el?.textContent) return null
-      try {
-        const nd = JSON.parse(el.textContent)
-        return nd.props?.pageProps?.contentData?.histogramData?.histogramValues ?? null
-      } catch { return null }
-    })
-    if (Array.isArray(hist)) {
-      histogram = hist.map((h: any) => ({ rating: h.rating, voteCount: h.voteCount }))
+      await page.goto(`https://www.imdb.com/title/${encodeURIComponent(imdbId)}/`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 20_000,
+      })
+      const extracted = await page.evaluate(`
+        (() => {
+          const result = { histogram: null, ldJson: null };
+          const ndEl = document.querySelector('#__NEXT_DATA__');
+          if (ndEl && ndEl.textContent) {
+            try {
+              const nd = JSON.parse(ndEl.textContent);
+              const hist = nd.props?.pageProps?.mainColumnData?.aggregateRatingsBreakdown?.histogram?.histogramValues;
+              if (Array.isArray(hist)) result.histogram = hist;
+            } catch {}
+          }
+          const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+          for (const s of scripts) {
+            try {
+              const data = JSON.parse(s.textContent || '');
+              if (data.aggregateRating) {
+                result.ldJson = {
+                  ratingValue: data.aggregateRating.ratingValue,
+                  ratingCount: data.aggregateRating.ratingCount,
+                  bestRating: data.aggregateRating.bestRating,
+                  worstRating: data.aggregateRating.worstRating,
+                };
+                break;
+              }
+            } catch {}
+          }
+          return result;
+        })()
+      `)
+      if (Array.isArray(extracted?.histogram)) {
+        histogram = extracted.histogram.map((h: any) => ({ rating: h.rating, voteCount: h.voteCount }))
+      }
+      if (extracted?.ldJson) ldJson = extracted.ldJson
+    } catch {
+      // Title page unavailable — return GraphQL data without histogram
     }
-  } catch {
-    // Histogram unavailable — return GraphQL data without it
-  }
   }
 
   return {
     imdbId: t.id ?? imdbId,
     title: t.titleText?.text ?? null,
-    aggregateRating: t.ratingsSummary?.aggregateRating ?? null,
-    voteCount: t.ratingsSummary?.voteCount ?? null,
+    aggregateRating: ldJson?.ratingValue ?? t.ratingsSummary?.aggregateRating ?? null,
+    voteCount: ldJson?.ratingCount ?? t.ratingsSummary?.voteCount ?? null,
     histogram,
   }
 }

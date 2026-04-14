@@ -278,7 +278,7 @@ paths:
   /title/{imdbId}/ratings:
     get:
       operationId: getRatings
-      summary: 'Ratings breakdown — histogram of votes by rating 1-10'
+      summary: 'Ratings breakdown — histogram of votes by rating 1-10, from title page LD+JSON + SSR'
       x-openweb:
         permission: read
         build:
@@ -288,6 +288,7 @@ paths:
           signals:
             - adapter-verified
             - graphql_api
+            - ld_json
             - ssr_next_data
         adapter:
           name: imdb

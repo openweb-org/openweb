@@ -59,17 +59,16 @@ No auth required. All operations are public read-only.
 ### Transport
 - `page` — browser required by framework for adapter execution
 - 3/4 ops use `fetch()` to GraphQL API directly (zero DOM, zero page dependency)
-- 1/4 ops (getRatings) uses GraphQL + `page.goto()` for histogram from `__NEXT_DATA__`
+- 1/4 ops (getRatings) uses GraphQL + title page LD+JSON + `__NEXT_DATA__` for histogram
 
 ### Extraction
 - **searchTitles**: GraphQL `mainSearch` → `edges[].node.entity` (Title fragment)
 - **getTitleDetail**: GraphQL `title(id)` → full fields including `principalCredits`, `keywords`, `reviews`, `nominations`
-- **getRatings**: GraphQL `title(id).ratingsSummary` + SSR `pageProps.contentData.histogramData.histogramValues`
+- **getRatings**: GraphQL `title(id).ratingsSummary` + title page LD+JSON `aggregateRating` + title page `__NEXT_DATA__` → `mainColumnData.aggregateRatingsBreakdown.histogram.histogramValues`
 - **getCast**: GraphQL `title(id).principalCredits` → category-based extraction (Stars, Director, Writers)
 
 ### Known Issues
 - Cloudflare blocks Node.js HTML requests to `www.imdb.com` (returns 202) — only GraphQL API endpoint is unrestricted
 - GraphQL introspection forbidden — incremental field probing required
 - `principalCredits` limited to ~10 per category (top credits only)
-- Histogram is the sole remaining SSR dependency — if `__NEXT_DATA__` is removed, only histogram breaks
 - `prestigiousAwardSummary.wins` returns major awards only (e.g., Oscars), not all wins

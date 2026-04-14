@@ -346,37 +346,60 @@ paths:
         description: "Filter query (e.g. \"fcountry=US&floc=Mountain+View%2C+CA\")."
       responses:
         "200":
-          description: Company reviews from DOM extraction.
+          description: Company reviews from _initialData + LD+JSON.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  overallRating:
+                  companyName:
                     type: string
                   reviewCount:
-                    type: string
+                    type: [integer, "null"]
+                    description: Total number of reviews.
+                  topics:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        rating:
+                          type: number
+                        count:
+                          type: integer
+                    description: Review topics with average ratings.
                   reviews:
                     type: array
                     items:
                       type: object
                       properties:
                         title:
-                          type: string
+                          type: [string, "null"]
                         rating:
-                          type: string
-                        author:
-                          type: string
-                        date:
-                          type: string
-                        pros:
-                          type: string
-                        cons:
-                          type: string
+                          type: number
+                          description: Overall rating (1-5).
                         jobTitle:
-                          type: string
+                          type: [string, "null"]
                         location:
-                          type: string
+                          type: [string, "null"]
+                        date:
+                          type: [string, "null"]
+                        currentEmployee:
+                          type: boolean
+                        text:
+                          type: [string, "null"]
+                          description: Full review text.
+                        compensationRating:
+                          type: [number, "null"]
+                        cultureRating:
+                          type: [number, "null"]
+                        workLifeRating:
+                          type: [number, "null"]
+                        managementRating:
+                          type: [number, "null"]
+                        jobSecurityRating:
+                          type: [number, "null"]
                   aggregateRating:
                     type: object
                     description: Structured aggregate rating from LD+JSON.
@@ -404,7 +427,7 @@ paths:
         description: "Company slug (e.g. \"Google\", \"Amazon.com\")."
       responses:
         "200":
-          description: Company salary data from DOM.
+          description: Company salary data from _initialData.
           content:
             application/json:
               schema:
@@ -412,7 +435,38 @@ paths:
                 properties:
                   companyName:
                     type: string
-                  salaries:
+                  totalSalaryCount:
+                    type: integer
+                    description: Total number of salary reports.
+                  lastUpdated:
+                    type: string
+                    description: Last update date.
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        categoryTitle:
+                          type: string
+                          description: "Category name (e.g. \"Popular Roles\", \"Software Development\")."
+                        salaries:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              jobTitle:
+                                type: string
+                              salary:
+                                type: string
+                                description: "Formatted salary (e.g. \"$163,862\")."
+                              salaryType:
+                                type: string
+                                description: "Period (e.g. \"YEARLY\", \"HOURLY\")."
+                              reportedCount:
+                                type: integer
+                                description: Number of salary reports.
+                    description: Salary data grouped by category.
+                  popularJobs:
                     type: array
                     items:
                       type: object
@@ -421,8 +475,18 @@ paths:
                           type: string
                         salary:
                           type: string
-                        salaryCount:
+                          description: Formatted median salary.
+                        salaryPeriod:
                           type: string
+                    description: Popular job titles with median salary.
+                  satisfaction:
+                    type: object
+                    properties:
+                      totalCount:
+                        type: integer
+                      yesRatio:
+                        type: number
+                    description: Salary satisfaction survey results.
 
   /autocomplete/job-title:
     get:
