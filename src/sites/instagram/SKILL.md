@@ -124,7 +124,7 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 | getFollowers | list followers | id (user ID) ← getUserProfile data.user.id | users with username, is_verified | paginated via next_max_id |
 | getFollowing | list following | id (user ID) ← getUserProfile data.user.id | users with username, is_verified | paginated via next_max_id |
 | getReels | view user reels | id (user ID) ← getUserProfile data.user.id | reels with play_count, captions | adapter; paginated via paging_info |
-| getNotifications | activity feed | (none) | counts, new_stories, old_stories | — |
+| getNotifications | activity feed | (none) | counts, new_stories, old_stories | adapter; POST |
 | searchUsers | find users | query (search term) | users with username, full_name, is_verified, follower_count | entry point |
 
 ## Quick Start

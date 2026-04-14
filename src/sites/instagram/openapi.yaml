@@ -1643,6 +1643,9 @@ paths:
       summary: "Get activity notifications — likes, comments, follows, mentions"
       x-openweb:
         permission: read
+        adapter:
+          name: instagram-api
+          operation: getNotifications
       parameters:
         - name: x-ig-app-id
           in: header
@@ -1690,7 +1693,7 @@ paths:
                             profile_id:
                               type: string
                             timestamp:
-                              type: string
+                              type: [string, number]
                   old_stories:
                     type: array
                     items:
@@ -1706,7 +1709,7 @@ paths:
                             profile_id:
                               type: string
                             timestamp:
-                              type: string
+                              type: [string, number]
                   status:
                     type: string
                 required:

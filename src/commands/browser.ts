@@ -217,7 +217,7 @@ async function cleanTempProfile(): Promise<void> {
   } catch { /* already gone */ }
 }
 
-export async function browserStartCommand(options: { headless?: boolean; port?: number; profile?: string; silent?: boolean } = {}): Promise<void> {
+export async function browserStartCommand(options: { headless?: boolean; port?: number; profile?: string; silent?: boolean; offscreen?: boolean } = {}): Promise<void> {
   const log = options.silent ? (_msg: string) => {} : (msg: string) => process.stdout.write(msg)
   const browserConfig = getBrowserConfig()
   const port = options.port ?? browserConfig.port
@@ -250,6 +250,15 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
   const tempProfileDir = join(tempUserDataDir, 'Default')
   await copyProfileSelective(profilePath, tempProfileDir)
 
+  // Copy Local State from Chrome root (parent of profile dir) — contains the
+  // os_crypt key needed to decrypt the Cookies SQLite database on macOS/Windows.
+  const localStateSrc = join(profilePath, '..', 'Local State')
+  if (existsSync(localStateSrc)) {
+    const localStateDest = join(tempUserDataDir, 'Local State')
+    await copyFile(localStateSrc, localStateDest)
+    await chmod(localStateDest, 0o600)
+  }
+
   // Launch Chrome
   const chromePath = getChromePath()
   const args = [
@@ -267,6 +276,9 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
   } catch { /* no config or parse error — use native UA */ }
   if (headless) {
     args.push('--headless=new')
+  } else if (options.offscreen) {
+    // Auto-started headed browser: push off-screen so it doesn't steal focus
+    args.push('--window-position=10000,10000')
   }
 
   const child = spawn(chromePath, args, {

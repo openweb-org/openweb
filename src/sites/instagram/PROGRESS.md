@@ -37,3 +37,20 @@
 **Context:** `getNotifications`, `getReels`, and `getStories` returned 401/403 errors because they were missing required Instagram headers (`x-ig-app-id`, `x-requested-with`).
 **Changes:** Fixed auth in `adapters/instagram-api.ts` — these operations now route through the adapter's `fetchJson`/`postJson` helpers which inject `IG_HEADERS` (`x-ig-app-id`, `x-requested-with`) and CSRF token. `getReels` uses the adapter's `postJson` for the POST to `/api/v1/clips/user/`.
 **Verification:** All three operations authenticate correctly with the shared header injection path.
+
+## 2026-04-14 — Auth Error Handling Overhaul (2/12 → 12/12 verify)
+
+**Context:** `pnpm dev verify instagram` failed 10/12 ops — 5 with `authentication expired (401/403)` and 5 with `schema mismatch`.
+**Changes:**
+- `adapters/instagram-api.ts`: 401/403 errors now throw `errors.needsLogin()` (retriable) instead of `errors.fatal()`, enabling the auth cascade to refresh credentials
+- Added `guardAuthExpired()` to detect Instagram's auth-expired JSON patterns (`login_required`, `checkpoint_required`, `{data: null}`)
+- `isAuthenticated()` now checks `sessionid` cookie expiry, not just existence
+- Removed `x-ig-www-claim` header — stale claims from copied Session Storage caused 401; Instagram accepts `'0'` (no claim) for all endpoints
+- `getCsrfToken()` reads from `document.cookie` (browser JS) instead of CDP cookies to guarantee decrypted values
+- `getNotifications` routed through adapter as POST (GET returns 500)
+- `openapi.yaml`: notifications `timestamp` type widened to `[string, number]`
+- `commands/browser.ts`: copies `Local State` file (contains `os_crypt` encryption key) to temp profile, fixing cookie decryption in managed browser
+- `lifecycle/shape-diff.ts`: multi-type schema support (`type: [string, integer]` → `string|number`); skip required checks for children of null nullable ancestors
+**Verification:** 12/12 PASS, pnpm build clean, no test regressions
+**Key discovery:** Copied Chrome profile cookies are encrypted — `Local State` (in Chrome root, not profile dir) holds the decryption key. Without it, `sessionid` values are ciphertext and auth silently fails.
+**Pitfalls encountered:** Sending stale `x-ig-www-claim` from copied Session Storage triggers 401 on POST endpoints; omitting the header entirely (or sending `'0'`) works. Also, `getNotifications` endpoint `/api/v1/news/inbox/` requires POST — GET returns 500 with `{status: "fail"}`.

@@ -11,6 +11,7 @@ import type { PageFetchOptions, PageFetchResult } from '../../../lib/adapter-hel
 type Errors = {
   unknownOp(op: string): Error
   missingParam(name: string): Error
+  needsLogin(): Error
   fatal(msg: string): Error
   retriable(msg: string): Error
 }
@@ -22,6 +23,34 @@ const IG_HEADERS: Record<string, string> = {
   'x-requested-with': 'XMLHttpRequest',
 }
 
+const AUTH_EXPIRED_STATUSES = new Set([
+  'login_required',
+  'checkpoint_required',
+  'consent_required',
+])
+
+/** Detect Instagram responses that signal expired/invalid auth and throw needsLogin. */
+function guardAuthExpired(data: unknown, errors: Errors): unknown {
+  if (data == null) throw errors.needsLogin()
+  if (typeof data !== 'object') return data
+  const obj = data as Record<string, unknown>
+  // Instagram returns {status: "fail", message: "login_required"} or similar
+  if (typeof obj.status === 'string' && AUTH_EXPIRED_STATUSES.has(obj.status)) {
+    throw errors.needsLogin()
+  }
+  if (typeof obj.message === 'string' && AUTH_EXPIRED_STATUSES.has(obj.message)) {
+    throw errors.needsLogin()
+  }
+  // GraphQL-style: {data: null} or {data: {user: null}} with require_login
+  if ('data' in obj && obj.data == null && Object.keys(obj).length <= 2) {
+    throw errors.needsLogin()
+  }
+  if (obj.require_login === true) {
+    throw errors.needsLogin()
+  }
+  return data
+}
+
 async function fetchJson(pageFetch: PageFetchFn, page: Page, url: string, errors: Errors): Promise<unknown> {
   const result = await pageFetch(page, {
     url,
@@ -30,31 +59,26 @@ async function fetchJson(pageFetch: PageFetchFn, page: Page, url: string, errors
     credentials: 'include',
   })
   if (result.status === 401 || result.status === 403) {
-    throw errors.fatal(`Instagram returned ${result.status} — login required`)
+    throw errors.needsLogin()
   }
   if (result.status >= 400) {
     throw errors.retriable(`Instagram returned HTTP ${result.status}`)
   }
+  let data: unknown
   try {
-    return JSON.parse(result.text)
+    data = JSON.parse(result.text)
   } catch {
     throw errors.fatal('Response is not valid JSON')
   }
+  return guardAuthExpired(data, errors)
 }
 
 async function getCsrfToken(page: Page): Promise<string> {
-  const cookies = await page.context().cookies()
-  return cookies.find((c) => c.name === 'csrftoken')?.value || ''
-}
-
-async function getWwwClaim(page: Page): Promise<string> {
   try {
-    return await page.evaluate(() => {
-      // Instagram stores the www-claim in sessionStorage
-      return sessionStorage.getItem('www-claim-v2') || '0'
-    })
+    return await page.evaluate(() => document.cookie.match(/csrftoken=([^;]+)/)?.[1] ?? '')
   } catch {
-    return '0'
+    const cookies = await page.context().cookies()
+    return cookies.find((c) => c.name === 'csrftoken')?.value || ''
   }
 }
 
@@ -66,11 +90,9 @@ async function postJson(
   errors: Errors,
 ): Promise<unknown> {
   const csrf = await getCsrfToken(page)
-  const wwwClaim = await getWwwClaim(page)
   const headers: Record<string, string> = {
     ...IG_HEADERS,
     'content-type': 'application/x-www-form-urlencoded',
-    'x-ig-www-claim': wwwClaim,
   }
   if (csrf) headers['x-csrftoken'] = csrf
 
@@ -82,16 +104,18 @@ async function postJson(
     credentials: 'include',
   })
   if (result.status === 401 || result.status === 403) {
-    throw errors.fatal(`Instagram returned ${result.status} — login required`)
+    throw errors.needsLogin()
   }
   if (result.status >= 400) {
     throw errors.retriable(`Instagram returned HTTP ${result.status}`)
   }
+  let data: unknown
   try {
-    return JSON.parse(result.text)
+    data = JSON.parse(result.text)
   } catch {
     throw errors.fatal('Response is not valid JSON')
   }
+  return guardAuthExpired(data, errors)
 }
 
 async function getUserPosts(
@@ -184,6 +208,15 @@ async function getReels(
   )
 }
 
+async function getNotifications(
+  page: Page,
+  _params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  return postJson(pageFetch, page, 'https://www.instagram.com/api/v1/news/inbox/', '', errors)
+}
+
 const OPERATIONS: Record<
   string,
   (page: Page, params: Record<string, unknown>, helpers: { errors: Errors; pageFetch: PageFetchFn }) => Promise<unknown>
@@ -192,6 +225,7 @@ const OPERATIONS: Record<
   muteUser,
   unmuteUser,
   getReels,
+  getNotifications,
 }
 
 const adapter = {
@@ -204,7 +238,11 @@ const adapter = {
 
   async isAuthenticated(page: Page): Promise<boolean> {
     const cookies = await page.context().cookies()
-    return cookies.some((c) => c.name === 'sessionid' && c.value.length > 0)
+    const session = cookies.find((c) => c.name === 'sessionid' && c.value.length > 0)
+    if (!session) return false
+    // Check cookie expiry — expired sessionid means auth is stale
+    if (session.expires > 0 && session.expires < Date.now() / 1000) return false
+    return true
   },
 
   async execute(

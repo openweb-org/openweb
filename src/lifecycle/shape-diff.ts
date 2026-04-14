@@ -78,8 +78,8 @@ export function extractSchemaFields(
       const fullPath = prefix ? `${prefix}.${key}` : key
       const propType = resolveSchemaType(propSchema)
       if (propType) {
-        const nullable = isNullableSchema(propSchema)
-        fields[fullPath] = nullable ? `${normalizeType(propType)}|null` : normalizeType(propType)
+        const allTypes = resolveAllSchemaTypes(propSchema)
+        fields[fullPath] = allTypes
       }
       if (propType === 'object' || propType === 'array') {
         Object.assign(fields, extractSchemaFields(propSchema, fullPath, depth + 1))
@@ -157,10 +157,13 @@ export function diffShape(
   // Phase 2: required fields missing from response
   // Skip array-item paths (e.g. `challenges[].id`) when the response has no
   // array items at that prefix — an empty array cannot exhibit item fields.
+  // Skip nested fields when parent is null and schema allows null (nullable object).
   const responseHasArrayItems = Object.keys(responseFields).some((k) => k.includes('[]'))
   for (const path of requiredFields) {
     if (!(path in responseFields)) {
       if (!responseHasArrayItems && path.includes('[]')) continue
+      // Ancestor is null and schema allows null → nested required fields are expected to be absent
+      if (path.includes('.') && hasNullAncestor(path, responseFields, schemaFields)) continue
       drifts.push({ kind: 'required_missing', path })
     }
   }
@@ -196,8 +199,38 @@ function resolveSchemaType(schema: JsonSchema): string | undefined {
   return undefined
 }
 
+/** Encode all allowed types as a pipe-separated string (e.g. 'string|number|null'). */
+function resolveAllSchemaTypes(schema: JsonSchema): string {
+  const types: string[] = []
+  if (typeof schema.type === 'string') {
+    types.push(schema.type)
+  } else if (Array.isArray(schema.type)) {
+    types.push(...schema.type)
+  } else if (schema.properties) {
+    types.push('object')
+  } else if (schema.items) {
+    types.push('array')
+  }
+  if (schema.nullable && !types.includes('null')) types.push('null')
+  return [...new Set(types.map(normalizeType))].join('|')
+}
+
 function isNullableSchema(schema: JsonSchema): boolean {
   if (Array.isArray(schema.type)) return schema.type.includes('null')
   if (schema.nullable) return true
+  return false
+}
+
+/** Check if any ancestor path is null in the response and nullable in the schema. */
+function hasNullAncestor(
+  path: string,
+  responseFields: Record<string, string>,
+  schemaFields: Record<string, string>,
+): boolean {
+  const parts = path.split('.')
+  for (let i = 1; i < parts.length; i++) {
+    const ancestor = parts.slice(0, i).join('.')
+    if (responseFields[ancestor] === 'null' && schemaFields[ancestor]?.includes('null')) return true
+  }
   return false
 }

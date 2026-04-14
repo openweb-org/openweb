@@ -104,7 +104,7 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 | getFollowers | list followers | id (user ID) ← getUserProfile data.user.id | users with username, is_verified | paginated via next_max_id |
 | getFollowing | list following | id (user ID) ← getUserProfile data.user.id | users with username, is_verified | paginated via next_max_id |
 | getReels | view user reels | id (user ID) ← getUserProfile data.user.id | reels with play_count, captions | adapter; paginated via paging_info |
-| getNotifications | activity feed | (none) | counts, new_stories, old_stories | — |
+| getNotifications | activity feed | (none) | counts, new_stories, old_stories | adapter; POST |
 | searchUsers | find users | query (search term) | users with username, full_name, is_verified, follower_count | entry point |
 
 ## Quick Start
@@ -181,14 +181,15 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 
 ### Auth
 - `cookie_session` — session cookies from logged-in browser (`sessionid`, `ds_user_id`, `csrftoken`)
-- CSRF: `csrftoken` cookie → `x-csrftoken` header (POST/PUT/DELETE only)
-- Additional headers sent automatically: `x-ig-app-id`, `x-ig-www-claim`
-- `getNotifications`, `getReels`, `getStories` require adapter-injected `x-ig-app-id` and `x-requested-with` headers — direct fetch without these headers returns 401/403
+- CSRF: `csrftoken` read from `document.cookie` (browser JS) → `x-csrftoken` header (POST only)
+- Required headers: `x-ig-app-id`, `x-requested-with: XMLHttpRequest` (injected by adapter)
+- `x-ig-www-claim` NOT sent — stale claims from copied Session Storage cause 401; `'0'` (no claim) works for all endpoints
+- Adapter reads CSRF from `document.cookie` (not CDP cookies) to guarantee decrypted values
 
 ### Transport
 - `page` — Meta bot detection blocks direct node HTTP requests
 - Non-adapter ops: requests execute via page transport (browser-context fetch)
-- Adapter ops: `getUserPosts` composes profile + feed; `muteUser`/`unmuteUser` route to mute endpoint; `getReels` POSTs to clips endpoint
+- Adapter ops: `getUserPosts` composes profile + feed; `muteUser`/`unmuteUser` route to mute endpoint; `getReels` POSTs to clips endpoint; `getNotifications` POSTs to news/inbox (GET returns 500)
 - Page URL: `https://www.instagram.com/`
 
 ### Known Issues
@@ -203,3 +204,5 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 - Write operations are skipped by verify by default
 - `muteUser`/`unmuteUser` use internal mute_posts_or_story_from_follow endpoint (mutes both posts and stories)
 - `getReels` uses POST to `/api/v1/clips/user/` internally (adapter handles this)
+- `getNotifications` requires POST (GET returns 500) — routed through adapter
+- Adapter 401/403 errors are classified as `needs_login` (retriable), enabling the auth cascade to refresh credentials
