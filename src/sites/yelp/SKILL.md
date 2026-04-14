@@ -18,7 +18,7 @@ Local business discovery platform — search businesses, autocomplete suggestion
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | autocompleteBusinesses | typeahead suggestions | prefix, loc | title, query, subtitle, type | entry point; node transport |
-| searchBusinesses | search businesses by keyword + location | find_desc, find_loc | name, rating, reviewCount, categories, address | entry point; adapter (browser); paginated (start) |
+| searchBusinesses | search businesses by keyword + location | find_desc, find_loc | name, rating, reviewCount, categories, address | entry point; adapter (browser); paginated (start); currently blocked by DataDome |
 
 ## Quick Start
 

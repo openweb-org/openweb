@@ -49,13 +49,38 @@ Not needed for basic site usage.
 No auth required. All operations are public read.
 
 ### Transport
-- `autocompleteBusinesses`: node (direct HTTP)
-- `searchBusinesses`: page (browser via `yelp-web` adapter) — Yelp blocks direct HTTP for search pages
+- `autocompleteBusinesses`: node (direct HTTP) — `/search_suggest/v2/prefetch` not DataDome-protected
+- `searchBusinesses`: page (browser via `yelp-web` adapter) — all search endpoints DataDome-protected
 
 ### Extraction
 - **searchBusinesses**: SSR JSON extraction from large `<script type="application/json">` blocks, merged with DOM fallback from `[data-testid="serp-ia-card"]` elements. Ad results are detected via redirect URLs and handled separately.
 
+### Bot Detection
+- **DataDome** — aggressive single-layer detection on all HTML pages and search-related API endpoints
+- Blocks automated browsers (Patchright/Playwright) completely — serves CAPTCHA iframe via `geo.captcha-delivery.com`
+- Blocks node HTTP for `/search` (403), `/search/snippet` (403)
+- Does NOT block the autocomplete API at `/search_suggest/v2/prefetch`
+- `datadome` cookie is the only cookie set; no other bot-detection layers detected
+- `fetch` is not monkey-patched (native, 34 chars) — signing is not a factor
+
+### Transport Upgrade Investigation (2026-04-14)
+Probed for node-viable search endpoints:
+
+| Endpoint | Method | Status | Result |
+|----------|--------|--------|--------|
+| `/search_suggest/v2/prefetch` | GET | 200 | Works — autocomplete JSON, no DataDome |
+| `/search/snippet` | GET | 403 | DataDome blocked (exists, returns JSON block response) |
+| `/search` | GET | 403 | DataDome blocked (HTML page) |
+| `/gql/batch` | POST | 403 | Forbidden (no GraphQL endpoint found) |
+| `/search.json` | GET | 404 | Does not exist |
+| `/search/businesses` | GET | 404 | Does not exist |
+| `/search_results/inline` | GET | 404 | Does not exist |
+| `api.yelp.com/v3/businesses/search` | GET | 400 | Yelp Fusion API — requires OAuth Authorization |
+
+**Conclusion:** Transport upgrade not viable. DataDome blocks all search-related endpoints from both node and automated browsers. Only the autocomplete API bypasses DataDome. The Yelp Fusion API (v3) exists but requires OAuth credentials, which is out of scope.
+
 ### Known Issues
-- `searchBusinesses` requires browser transport (page) — Yelp blocks direct node HTTP for search result pages
+- **searchBusinesses currently broken** — DataDome blocks automated browsers (Patchright) from loading any Yelp page. The `yelp-web` adapter receives a 1591-byte challenge page instead of search results. This is a DataDome policy change since the adapter was last verified (2026-04-06).
+- `autocompleteBusinesses` continues to work on node transport (not DataDome-protected)
 - SSR JSON structure may change across Yelp deployments; DOM fallback provides resilience
 - Ad results use redirect URLs; the adapter resolves these to extract the actual business alias
