@@ -6,10 +6,10 @@ Travel platform — hotel search, property details, reviews, room pricing, and f
 ## Workflows
 
 ### Find a hotel and check prices
-1. `searchHotels(ss, checkin, checkout)` → pick hotel → `url` contains `/hotel/{country}/{slug}.html`
-2. `getHotelDetail(country, slug)` → name, rating, address, description
-3. `getHotelPrices(slug)` → room types, beds, sizes, facilities (requires hotel page open)
-4. `getHotelReviews(slug)` → score, subscores, featured reviews (requires hotel page open)
+1. `searchHotels(ss, checkin, checkout)` → `hotels[].url` — parse URL `/hotel/{country}/{slug}.html` → `country`, `slug`
+2. `getHotelDetail(country, slug)` ← searchHotels url → name, rating, address, description
+3. `getHotelPrices(slug)` ← searchHotels url → room types, beds, sizes, facilities (requires hotel page open)
+4. `getHotelReviews(slug)` ← searchHotels url → score, subscores, featured reviews (requires hotel page open)
 
 ### Search flights
 1. `searchFlights(route, from, to, depart)` → carriers, times, duration, stops, prices
@@ -18,8 +18,8 @@ Travel platform — hotel search, property details, reviews, room pricing, and f
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchHotels | find hotels in a destination | ss (query), checkin, checkout | name, url, price, rating, reviewCount | entry point; up to 30 results |
-| getHotelDetail | hotel info by URL | country, slug ← searchHotels url | name, rating, description, address, image | LD+JSON Hotel schema |
+| searchHotels | find hotels in a destination | ss (query), checkin, checkout | name, url, price, rating, reviewCount | entry point; parse url → country, slug |
+| getHotelDetail | hotel info by URL | country ← searchHotels url, slug ← searchHotels url | name, rating, description, address, image | LD+JSON Hotel schema |
 | getHotelReviews | review summary | slug ← searchHotels url | score, subscores, featured reviews | requires hotel detail page open |
 | getHotelPrices | room availability + pricing | slug ← searchHotels url | room name, bed, size, price, perNight | requires hotel detail page open |
 | searchFlights | find flights by route | route (NYC-PAR), from, to, depart | carrier, times, airports, duration, stops, price | flights.booking.com subdomain |

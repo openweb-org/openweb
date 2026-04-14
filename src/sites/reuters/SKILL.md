@@ -12,8 +12,8 @@ International news agency. News archetype — search articles, browse topic feed
 1. `getTopicArticles(section_id)` → article list for `/world/`, `/business/`, `/technology/`, `/markets/`, `/science/`
 
 ### Read full article
-1. `searchArticles(keyword)` or `getTopicArticles(section_id)` → find `canonical_url`
-2. `getArticleDetail(article_url)` → full article with title, body text, authors, section, word count
+1. `searchArticles(keyword)` or `getTopicArticles(section_id)` or `getTopNews()` → `canonical_url`
+2. `getArticleDetail(article_url=canonical_url)` → full article with `title`, `body`, `authors`, `section`, `word_count`
 
 ### Top news
 1. `getTopNews()` → top/breaking news stories from the Reuters homepage feed
@@ -24,7 +24,7 @@ International news agency. News archetype — search articles, browse topic feed
 |-----------|--------|-----------|------------|-------|
 | searchArticles | search news by keyword | keyword | title, description, canonical_url, published_time | entry point; paginated (offset, size) |
 | getTopicArticles | browse section feed | section_id (e.g., /world/) | title, description, canonical_url, published_time | entry point; paginated (offset, size) |
-| getArticleDetail | read full article | article_url ← searchArticles | title, body, authors, section, published_time, word_count | extracts from Fusion SSR or DOM fallback |
+| getArticleDetail | read full article | article_url ← searchArticles / getTopicArticles / getTopNews | title, body, authors, section, published_time, word_count | extracts from Fusion SSR or DOM fallback |
 | getTopNews | top/breaking news | (none) | title, description, canonical_url, published_time | homepage section feed; optional size param |
 
 ## Quick Start

@@ -22,6 +22,10 @@ Messaging platform — L3 adapter accessing Meta's internal module system via `r
 2. `getMessages(chatId)` → pick message → `messageId`
 3. `deleteMessage(chatId, messageId)` → success
 
+### Mark chat as read
+1. `getChats` or `searchChats(query)` → `chatId`
+2. `markAsRead(chatId, read: true)` → success
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |

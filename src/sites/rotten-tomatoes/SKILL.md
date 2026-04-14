@@ -6,23 +6,24 @@ Movie review aggregator. Search movies, get details with Tomatometer and audienc
 ## Workflows
 
 ### Find a movie and check scores
-1. `searchMovies(query)` → browse results → pick `slug`
-2. `getMovieDetail(slug)` → title, synopsis, Tomatometer, audience score, cast, directors
+1. `searchMovies(query)` → `slug`, `title`, `tomatometerScore`, `isCertifiedFresh`
+2. `getMovieDetail(slug)` → `synopsis`, `audienceScore`, `cast`, `directors`, `genre`
 
 ### Quick Tomatometer lookup
-1. `getTomatoMeter(slug)` → Tomatometer score, certified fresh status, audience score
+1. `searchMovies(query)` → `slug`
+2. `getTomatoMeter(slug)` → `tomatometer.score`, `isCertifiedFresh`, `audienceScore.score`
 
 ### Compare movies
-1. `searchMovies(query)` → note `slug` values from results
-2. `getTomatoMeter(slug)` for each → compare scores
+1. `searchMovies(query)` → `slug` values for each movie
+2. `getTomatoMeter(slug)` for each → compare `tomatometer.score`, `audienceScore.score`
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchMovies | search for movies | query | title, slug, year, tomatometerScore, isCertifiedFresh, cast | entry point, movies only (filters out TV/celebrity) |
-| getMovieDetail | get full movie details | slug ← searchMovies | title, synopsis, tomatometerScore, audienceScore, cast, directors, genre | LD+JSON + scorecard HTML parsing |
-| getTomatoMeter | get scores only | slug ← searchMovies | tomatometer (score, sentiment, reviewCount), audienceScore (score, sentiment) | lightweight score-focused view |
+| getMovieDetail | full movie details | slug ← searchMovies | title, synopsis, tomatometerScore, audienceScore, cast, directors, genre | LD+JSON + scorecard HTML parsing |
+| getTomatoMeter | scores only | slug ← searchMovies | tomatometer.score, isCertifiedFresh, audienceScore.score | lightweight score-focused view |
 
 ## Quick Start
 

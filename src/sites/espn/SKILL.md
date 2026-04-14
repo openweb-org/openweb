@@ -6,31 +6,31 @@ Sports news, scores, and data. Public REST APIs — no auth required.
 ## Workflows
 
 ### Check live scores for a sport
-1. `getScoreboard(sport, league)` → events with teams, scores, status
+1. `getScoreboard(sport, league)` → `events[].name`, `competitors[].team`, `score`, `status`
 
 ### Look up a specific team
-1. `getTeams(sport, league)` → find `teamId`
-2. `getTeam(sport, league, teamId)` → full team detail
+1. `getTeams(sport, league)` → `team.id`, `team.displayName`
+2. `getTeam(sport, league, teamId=team.id)` → `displayName`, `record`, `logos`, `standingSummary`
 
 ### Check league standings
-1. `getStandings(sport, league)` → divisions/conferences with team records
+1. `getStandings(sport, league)` → `children[].standings.entries[].team`, `stats`
 
 ### Get latest sports news
-1. `getNews(sport, league)` → articles with headlines, descriptions, links
+1. `getNews(sport, league)` → `articles[].headline`, `description`, `published`, `links`
 
 ### Search for a player or team
-1. `searchPlayers(query, type)` → results with names, links, descriptions
+1. `searchPlayers(query, type)` → `displayName`, `shortName`, `type`, `sport`, `league`
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| getScoreboard | live/recent scores | sport, league, dates? | events[].name, competitions[].competitors[].score, status | entry point |
-| getTeam | team detail | sport, league, teamId ← getTeams | team.displayName, record, logos | |
-| getTeams | list all teams | sport, league | sports[].leagues[].teams[].team.id, displayName | use to find teamId |
-| getStandings | league standings | sport, league | children[].standings.entries[].team, stats | may be empty in off-season |
-| getNews | sports articles | sport, league | articles[].headline, description, published | |
-| searchPlayers | search players/teams | query, type?, limit? | items[].displayName, shortName, type | uses site.web.api.espn.com |
+| getScoreboard | live/recent scores | sport, league, dates? | events[].name, competitors[].score, status | **entry point** |
+| getTeam | team detail | sport, league, teamId (<- getTeams `team.id`) | team.displayName, record, logos | |
+| getTeams | list all teams | sport, league | team.id, team.displayName | **entry point**; use to find teamId |
+| getStandings | league standings | sport, league | children[].standings.entries[].team, stats | **entry point**; may be empty in off-season |
+| getNews | sports articles | sport, league | articles[].headline, description, published | **entry point** |
+| searchPlayers | search players/teams | query, type?, limit? | items[].displayName, shortName, type | **entry point**; uses site.web.api.espn.com |
 
 ## Quick Start
 

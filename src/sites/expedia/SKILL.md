@@ -6,13 +6,13 @@ Travel booking platform. Hotels and flights search via GraphQL APQ (Automatic Pe
 ## Workflows
 
 ### Search and inspect hotels
-1. `searchHotels(destination, checkInDate, checkOutDate)` → hotel listings with `id`
+1. `searchHotels(destination, checkInDate, checkOutDate)` → `id` (propertyId), name, price, rating
 2. `getHotelDetail(propertyId)` → amenities, policies, location, FAQs
-3. `getHotelPrices(propertyId, checkInDate, checkOutDate)` → room types, nightly rates, availability
-4. `getHotelReviews(propertyId)` → guest ratings, review text, overall score breakdown
+3. `getHotelPrices(propertyId, checkInDate, checkOutDate)` → per-day nightly rates, availability
+4. `getHotelReviews(propertyId)` → guest ratings, review text, score breakdown
 
 ### Search flights
-1. `searchFlights(origin, destination, departureDate)` → flight listings with airline, times, stops, price
+1. `searchFlights(origin, destination, departureDate)` → airline, times, stops, price
 2. `getFlightDetail(origin, destination, departureDate)` → same data, used for refining results
 
 ## Operations
@@ -21,7 +21,7 @@ Travel booking platform. Hotels and flights search via GraphQL APQ (Automatic Pe
 |-----------|--------|-----------|------------|-------|
 | searchHotels | find hotels by city/dates | destination, checkInDate, checkOutDate | id, name, price, rating, photos | entry point; paginated (offset, limit) |
 | getHotelDetail | hotel info | propertyId ← searchHotels | amenities, location, policies, FAQs | |
-| getHotelPrices | daily rate calendar | propertyId, checkInDate, checkOutDate | per-day nightly rates, availability across ~240 days | intercept pattern (navigates to hotel page) |
+| getHotelPrices | daily rate calendar | propertyId ← searchHotels, checkInDate, checkOutDate | per-day nightly rates, availability across ~240 days | intercept pattern (navigates to hotel page) |
 | getHotelReviews | guest reviews | propertyId ← searchHotels | ratings, review text, reviewer info, score breakdown | intercept pattern (navigates to hotel page) |
 | searchFlights | find flights by route/dates | origin, destination, departureDate | airline, times, stops, price | entry point; paginated |
 | getFlightDetail | flight info | origin, destination, departureDate | same as searchFlights | alias for refined search |

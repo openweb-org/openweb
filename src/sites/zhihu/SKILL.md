@@ -5,24 +5,38 @@ Chinese Q&A knowledge-sharing platform (Quora archetype). Users ask questions, w
 
 ## Workflows
 
-**Discover answers by search:**
-`searchContent` → `getMember` (author url_token from results) → `getUserAnswers`
+### Discover answers by search
+1. `searchContent(q)` → `data[].object.author.url_token`
+2. `getMember(url_token)` → author profile
+3. `getUserAnswers(url_token)` → user's answers
 
-**Explore a user's network:**
-`getMember` → `listMemberMutuals` → `listMemberActivities`
+### Explore a user's network
+1. `getMember(url_token)` → profile with `url_token`
+2. `listMemberMutuals(url_token)` → mutual followers with `url_token`
+3. `listMemberActivities(url_token)` → recent activity
 
-**Find related content:**
-`searchContent` → `listSimilarQuestions` (question ID from results) → `listQuestionFollowers`
+### Find related content
+1. `searchContent(q)` → `data[].object.question.id`
+2. `listSimilarQuestions(id)` → related questions
+3. `listQuestionFollowers(id)` → users following the question
 
-**Engage with content (write):**
-`searchContent` → `upvoteAnswer` (answer ID from results)
-`getMember` → `followUser` (url_token from profile)
-`searchContent` → `followQuestion` (question ID from results)
+### Upvote an answer
+1. `searchContent(q)` → `data[].object.id` → `answer_id`
+2. `upvoteAnswer(answer_id)`
 
-**Undo engagement (reverse write):**
-`cancelUpvote` — cancel a previous upvote (adapter-dispatched POST with type=neutral)
-`unfollowUser` — unfollow a previously followed user
-`unfollowQuestion` — stop following a question (returns 204)
+### Follow a user
+1. `searchContent(q)` → `data[].object.author.url_token`
+2. `getMember(url_token)` → confirm user → `url_token`
+3. `followUser(url_token)`
+
+### Follow a question
+1. `searchContent(q)` → `data[].object.question.id` → `question_id`
+2. `followQuestion(question_id)`
+
+### Undo engagement
+1. `cancelUpvote(answer_id)` — reverse of `upvoteAnswer`
+2. `unfollowUser(url_token)` — reverse of `followUser`
+3. `unfollowQuestion(question_id)` — reverse of `followQuestion`
 
 ## Operations
 

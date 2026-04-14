@@ -17,21 +17,22 @@ GitHub REST + GraphQL API — code hosting platform (developer tools archetype).
 2. `searchRepos(q: "user:username")` → their repositories
 
 ### File an issue
-1. `getRepo(owner, repo)` → confirm repo exists
-2. `createIssue(owner, repo, title, body)` → issue number, html_url
+1. `searchRepos(q)` → `owner`, `repo` from `full_name` (or use known repo)
+2. `createIssue(owner, repo, title, body)` → `number`, `html_url`
 
 ### Manage issues
-1. `listIssues(owner, repo)` → find issue number
-2. `closeIssue(owner, repo, issue_number)` → close it
-3. `reopenIssue(owner, repo, issue_number)` → reopen if needed
-4. `createComment(owner, repo, issue_number, body)` → add a comment
-5. `deleteComment(owner, repo, comment_id)` → remove a comment
+1. `listIssues(owner, repo)` → `issue_number`, `title`, `state`
+2. `closeIssue(owner, repo, issue_number ← listIssues)` → `state: "closed"`
+3. `reopenIssue(owner, repo, issue_number ← listIssues)` → `state: "open"`
+4. `createComment(owner, repo, issue_number ← listIssues, body)` → `comment_id`, `html_url`
+5. `deleteComment(owner, repo, comment_id ← createComment)` → 204
 
 ### Star / watch a repo
-1. `starRepo(owner, repo)` → star it
-2. `unstarRepo(owner, repo)` → unstar it
-3. `watchRepo(owner, repo)` → subscribe to notifications
-4. `unwatchRepo(owner, repo)` → unsubscribe
+1. `searchRepos(q)` → `owner`, `repo` from `full_name`
+2. `starRepo(owner, repo)` → 204
+3. `unstarRepo(owner, repo)` → 204
+4. `watchRepo(owner, repo)` → `subscribed`
+5. `unwatchRepo(owner, repo)` → 204
 
 ## Operations
 

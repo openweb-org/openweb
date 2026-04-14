@@ -7,10 +7,10 @@ Academic paper search engine (Google). Search papers, explore citation graphs, a
 
 ### Search papers and explore citations
 1. `searchPapers(q)` → results with `cites` cluster ID
-2. `getCitations(cites)` → papers citing that paper
+2. `getCitations(cites)` → papers citing that paper → `cites` for further hops
 
 ### Research an author
-1. `searchPapers(q)` → find paper → author links contain `user` ID
+1. `searchPapers(q)` → find paper → `user` ID from author links
 2. `getAuthorProfile(user)` → name, affiliation, h-index, citations, publications
 
 ## Operations

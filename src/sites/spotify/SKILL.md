@@ -26,15 +26,15 @@ Music streaming platform. Content platform archetype.
 2. `getPlaylist(uri)` → full playlist details and tracks
 
 ### Library management (requires login)
-1. `searchMusic(searchTerm: "bohemian rhapsody")` → pick track `uri`, extract track ID
+1. `searchMusic(searchTerm)` → pick track → `uri` (e.g. `spotify:track:<trackId>`) → extract `trackId`
 2. `likeTrack(trackId)` → save track to Liked Songs
 3. `unlikeTrack(trackId)` → remove from Liked Songs
 
 ### Playlist curation (requires login)
-1. `createPlaylist(name, description, public)` → new playlist with URI
-2. `searchMusic(searchTerm)` → find tracks to add
-3. `addToPlaylist(playlistId, trackUris)` → add tracks to playlist
-4. `removeFromPlaylist(playlistId, trackUris)` → remove tracks from playlist
+1. `createPlaylist(name, description, public)` → `uri`, extract `playlistId`
+2. `searchMusic(searchTerm)` → pick tracks → `trackUris`
+3. `addToPlaylist(playlistId ← createPlaylist, trackUris ← searchMusic)` → `snapshot_id`
+4. `removeFromPlaylist(playlistId, trackUris)` → `snapshot_id`
 
 ### Quick artist lookup
 1. `searchMusic(searchTerm: "radiohead")` → pick artist `uri`

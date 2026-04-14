@@ -6,41 +6,41 @@ China's largest travel platform (Ctrip International). Flights, trains, attracti
 ## Workflows
 
 ### Search and compare flights
-1. `searchPOI(key)` — find city codes for departure/arrival
-2. `searchFlights(departCode, arriveCode, departDate)` — get flight itineraries with prices → `token`
-3. `getFlightCalendarPrices(dCity, aCity, dDate)` — compare prices across dates
-4. `getFlightComfort(flightNo, dCity, aCity, dDate)` — check seat, WiFi, entertainment for a specific flight
-5. `getFlightFilters(token)` — get available filter options (airline, stops, cabin) for refining results
+1. `searchPOI(key)` → `code` (city/airport IATA code), `districtId`
+2. `searchFlights(departCode, arriveCode, departDate)` → `flightItineraryList[]` with `flightNo`, prices; `token`
+3. `getFlightCalendarPrices(dCity, aCity, dDate)` → cheapest fare per day across a month
+4. `getFlightComfort(flightNo, dCity, aCity, dDate)` → seat pitch, WiFi, entertainment for a specific flight
+5. `getFlightFilters(token)` → available filter options (airline, stops, cabin) for refining results
 
 ### Plan a train journey
-1. `getTrainStations()` — get station list → `stationCode`
-2. `searchTrains(departStation, arriveStation, departDate)` — find trains with schedules and prices
-3. `getTrainCalendar(departStation, arriveStation, month)` — check availability across a month
+1. `getTrainStations()` → `stationCode`, `stationName`, `cityName`
+2. `searchTrains(departStation, arriveStation, departDate)` → `trainList[]` with `trainNumber`, `seatList[]{seatType, price, available}`
+3. `getTrainCalendar(departStation, arriveStation, month)` → `calendarList[]{date, available, lowestPrice}`
 
 ### Explore a destination
-1. `getHotDestinations()` — browse trending cities → `districtId`
-2. `getCityList(countryId)` — browse cities in a country → `districtId`
-3. `getDestinationInfo(districtId, moduleList)` — get travel guide (sights, hotels, restaurants)
-4. `searchAttractions(sceneCode)` — find things to do → `productId`
-5. `getAttractionDetail(productId)` — get attraction details, tickets, reviews
+1. `getHotDestinations()` → `id` (districtId), `word` (destination name)
+2. `getCityList(countryId)` → `districtId`, `cityName`
+3. `getDestinationInfo(districtId)` → sights, hotels, restaurants, comments; also `toursAndTickets[]{productId}`
+4. `searchAttractions(sceneCode)` → `productId`, `productName`, rating, price
+5. `getAttractionDetail(productId)` → description, tickets, opening hours, reviews
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchPOI | find city/airport codes | key (keyword) | results[]{name, code, districtId} | entry point for flights/trains |
-| searchFlights | search flights | departCode, arriveCode, departDate ← searchPOI | flightItineraryList[]{flightNo, airline, times, price}, token | requires Head object |
-| getFlightCalendarPrices | cheapest fares per day | dCity, aCity, dDate ← searchPOI | lowPriceInCalenderDtoInfoList[]{date, price} | calendar view |
-| getFlightComfort | aircraft comfort info | flightNo, dCity, aCity, dDate ← searchFlights | flightComfortList[]{seatPitch, wifi, entertainment} | |
+| searchFlights | search flights | departCode ← searchPOI.code, arriveCode ← searchPOI.code, departDate | flightItineraryList[]{flightNo, airline, times, price}, token | requires Head object |
+| getFlightCalendarPrices | cheapest fares per day | dCity ← searchPOI.code, aCity ← searchPOI.code, dDate | lowPriceInCalenderDtoInfoList[]{date, price} | calendar view |
+| getFlightComfort | aircraft comfort info | flightNo ← searchFlights, dCity ← searchPOI.code, aCity ← searchPOI.code, dDate | flightComfortList[]{seatPitch, wifi, entertainment} | |
 | getFlightFilters | flight filter options | token ← searchFlights | filterList[]{filterType, options[]{label, value, count}} | refine search results |
 | getTrainStations | list train stations | — | stationList[]{stationName, stationCode, cityName} | entry point for trains |
-| searchTrains | search trains | departStation, arriveStation, departDate ← getTrainStations | trainList[]{trainNumber, times, seatList with prices} | |
-| getTrainCalendar | train availability calendar | departStation, arriveStation, month ← getTrainStations | calendarList[]{date, available, lowestPrice} | |
-| getHotDestinations | trending destinations | — | data[]{id, word, url} | entry point for exploration |
+| searchTrains | search trains | departStation ← getTrainStations.stationCode, arriveStation ← getTrainStations.stationCode, departDate | trainList[]{trainNumber, times, seatList with prices} | |
+| getTrainCalendar | train availability calendar | departStation ← getTrainStations.stationCode, arriveStation ← getTrainStations.stationCode, month | calendarList[]{date, available, lowestPrice} | |
+| getHotDestinations | trending destinations | — | data[]{id, word, url} | entry point; id = districtId |
 | getCityList | cities in a country | countryId | cityList[]{districtId, cityName, imageUrl} | entry point for exploration |
-| getDestinationInfo | destination travel guide | districtId ← getHotDestinations/getCityList | hotDistrict, classicRecommendSight[]{poiName, rating}, classicRecommendHotel[]{hotelName, price}, hotComment[]{content, rating} | www.trip.com |
+| getDestinationInfo | destination travel guide | districtId ← getHotDestinations.id / getCityList.districtId | hotDistrict, classicRecommendSight[]{poiName, rating}, classicRecommendHotel[]{hotelName, price}, hotComment[]{content, rating} | www.trip.com |
 | searchAttractions | things to do | sceneCode (e.g., city_sight_list) | list[]{productId, productName, rating, price}, sortRuleList[]{sortType, sortName} | www.trip.com |
-| getAttractionDetail | attraction detail | productId ← searchAttractions | description, rating, reviewCount, tickets, hours | www.trip.com |
+| getAttractionDetail | attraction detail | productId ← searchAttractions.productId | description, rating, reviewCount, tickets, hours | www.trip.com |
 | getGeneralInfo | site info/announcements | — | savedTips, travelTipsList[]{title, content}, promotionList[]{title, linkUrl}, noticeList[]{title, content} | utility |
 
 ## Quick Start

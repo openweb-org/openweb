@@ -6,22 +6,22 @@ Classic US classifieds platform — search listings across cities and categories
 ## Workflows
 
 ### Search and view listings
-1. `getCategories(city)` -> browse available categories with codes
-2. `searchListings(category, city, query)` -> listing titles, prices, URLs
-3. Pick a listing -> extract `category`, `slug`, `id` from URL
-4. `getListing(category, slug, id, city)` -> full details with body, images, attributes
+1. `getCategories(city)` → `code`, `name`, `section` per category
+2. `searchListings(category, city, query)` → `title`, `price`, `url`, `postId`
+3. Parse listing `url` → extract `category`, `slug`, `id`
+4. `getListing(category, slug, id, city)` → `title`, `body`, `price`, `location`, `images`, `attributes`
 
 ### Quick search
-1. `searchListings(category, city, query)` -> results with `title`, `price`, `url`, `postId`
-2. Use `postId` and URL parts to call `getListing` for details
+1. `searchListings(category, city, query)` → `title`, `price`, `url`, `postId`
+2. Parse `url` → `category`, `slug`, `id` → `getListing` for full details
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchListings | Search listings by category + keyword | category, city, query | title, price, url, postId | Entry point; city defaults to sfbay |
-| getListing | Full listing detail | category, slug, id, city | title, body, price, location, images, attributes | URL parts from search results |
-| getCategories | List category codes | city | name, code, section | Homepage category links |
+| searchListings | Search listings by category + keyword | category (<- getCategories `code`), city, query | title, price, url, postId | **entry point**; city defaults to sfbay |
+| getListing | Full listing detail | category, slug, id (<- searchListings `url` path parts), city | title, body, price, location, images, attributes | |
+| getCategories | List category codes | city | name, code, section | **entry point**; homepage category links |
 
 ## Quick Start
 

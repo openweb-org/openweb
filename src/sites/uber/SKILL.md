@@ -6,21 +6,21 @@ Ride-hailing platform. Location search, fare estimates, ride history via GraphQL
 ## Workflows
 
 ### Get fare estimate for a ride
-1. `searchLocations(query="Times Square", type=PICKUP)` → pickup `latitude`, `longitude`
-2. `searchLocations(query="Empire State Building", type=DROPOFF)` → destination `latitude`, `longitude`
-3. `getRideEstimate(pickup, destination)` → ride types with fares, ETAs, capacity
+1. `searchLocations(query="Times Square", type=PICKUP)` → `locations[0].latitude`, `locations[0].longitude`
+2. `searchLocations(query="Empire State Building", type=DROPOFF)` → `locations[0].latitude`, `locations[0].longitude`
+3. `getRideEstimate(pickup={latitude, longitude}, destination={latitude, longitude})` ← searchLocations → `rides[]` with `displayName`, `fare`, `etaString`, `capacity`
 
 ### View past rides
-1. `getRideHistory(limit)` → trips with uuid, title, fare, detailUrl
-2. `getRideHistory(nextPageToken)` → next page
+1. `getRideHistory(limit)` → `rides[]` with `uuid`, `title`, `fare`, `detailUrl`, `nextPageToken`
+2. `getRideHistory(nextPageToken)` ← previous getRideHistory → next page of rides
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchLocations | find pickup/dropoff location | query (text), type (PICKUP/DROPOFF) | id, name, address, latitude, longitude | entry point for getRideEstimate |
-| getRideEstimate | get fare quotes for ride | pickup <- searchLocations, destination <- searchLocations | rides with displayName, fare, fareAmountCents, capacity, etaString | returns multiple vehicle types |
-| getRideHistory | past ride trips | limit, nextPageToken | uuid, title, subtitle, fare, detailUrl | paginated |
+| getRideEstimate | get fare quotes for ride | pickup{latitude, longitude} ← searchLocations, destination{latitude, longitude} ← searchLocations | rides[] with displayName, fare, fareAmountCents, capacity, etaString | returns multiple vehicle types |
+| getRideHistory | past ride trips | limit, nextPageToken ← previous getRideHistory | uuid, title, subtitle, fare, detailUrl, nextPageToken | paginated; hasMore indicates more pages |
 
 ## Quick Start
 

@@ -10,20 +10,20 @@ Task management platform — productivity/personal-organization archetype.
 2. `getTasks(project_id)` → id, content, due, priority, labels
 
 ### Create a task
-1. `getProjects()` → id (pick target project)
-2. `createTask(content, project_id, due_string, priority)` → id, content, due
+1. `getProjects()` → `id` (= `project_id`)
+2. `createTask(content, project_id ← getProjects, due_string, priority)` → `id`, `content`, `due`
 
 ### Complete a task
-1. `getTasks(project_id)` → id, content
-2. `completeTask(task_id)` → success
+1. `getTasks(project_id)` → `id` (= `task_id`), `content`
+2. `completeTask(task_id ← getTasks)` → success
 
 ### Reopen a completed task
-1. `getTasks(filter: "completed")` or known task_id
+1. Known `task_id` (from prior getTasks or createTask)
 2. `uncompleteTask(task_id)` → success (reverse of completeTask)
 
 ### Delete a task
-1. `getTasks(project_id)` → id, content
-2. `deleteTask(task_id)` → success (permanent, irreversible)
+1. `getTasks(project_id)` → `id` (= `task_id`), `content`
+2. `deleteTask(task_id ← getTasks)` → success (permanent, irreversible)
 
 ### Filter tasks by due date or priority
 1. `getTasks(filter: "today")` → tasks due today

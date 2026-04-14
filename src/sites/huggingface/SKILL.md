@@ -6,21 +6,21 @@ AI model and dataset hub. Public REST API for searching and browsing ML models, 
 ## Workflows
 
 ### Find an ML model
-1. `searchModels(search)` -> browse results -> note model `id` (owner/name)
-2. `getModel(owner, name)` -> full details, pipeline_tag, downloads, tags, files
+1. `searchModels(search)` → `id` (owner/name format)
+2. `getModel(owner, name)` → pipeline_tag, downloads, tags, cardData, siblings
 
 ### Explore datasets
-1. `searchDatasets(search)` -> browse results -> note dataset `id`
-2. `getDataset(owner, name)` -> card data, description, citation, files
+1. `searchDatasets(search)` → `id` (owner/name format)
+2. `getDataset(owner, name)` → cardData, description, citation, siblings
 
 ### Discover demo apps
-1. `getSpaces(search)` -> browse Spaces by keyword -> note `id`, `sdk`, runtime status
+1. `getSpaces(search)` → `id`, `sdk`, `runtime.stage`
 
 ### Research a model and its data
-1. `searchModels(search)` -> find model -> note `id`
-2. `getModel(owner, name)` -> check `cardData` for dataset references
-3. `searchDatasets(search)` -> find referenced dataset
-4. `getDataset(owner, name)` -> dataset details and citation
+1. `searchModels(search)` → `id` (owner/name)
+2. `getModel(owner, name)` → `cardData.datasets` (referenced dataset names)
+3. `searchDatasets(search)` → find referenced dataset → `id`
+4. `getDataset(owner, name)` → description, citation
 
 ## Operations
 

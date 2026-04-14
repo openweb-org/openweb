@@ -6,52 +6,52 @@ Chinese finance and social investing platform. Stock quotes, order book, industr
 ## Workflows
 
 ### Search and inspect a stock
-1. `searchStocks(q)` → results with `code` (ticker symbol, e.g. SH600519)
-2. `getStockQuote(symbol)` → real-time price, volume, market cap
-3. `getOrderBook(symbol)` → bid/ask depth at 5 levels
+1. `searchStocks(q)` → `list[].code` (e.g. SH600519)
+2. `getStockQuote(symbol=code)` → real-time price, volume, market cap
+3. `getOrderBook(symbol=code)` → bid/ask depth at 5 levels
 
 ### Analyze stock history and fundamentals
-1. `searchStocks(q)` → find stock `code`
-2. `getStockKline(symbol, begin, period)` → historical candlestick data (OHLCV)
-3. `getStockFinancials(symbol)` → ROE, EPS, revenue, net profit per period
+1. `searchStocks(q)` → `list[].code`
+2. `getStockKline(symbol=code, begin, period)` → historical candlestick data (OHLCV)
+3. `getStockFinancials(symbol=code)` → ROE, EPS, revenue, net profit per period
 
 ### Community sentiment on a stock
-1. `searchStocks(q)` → find stock `code`
-2. `getStockComments(symbol)` → user posts and discussions about the stock
+1. `searchStocks(q)` → `list[].code`
+2. `getStockComments(symbol=code)` → user posts and discussions about the stock
 
 ### Compare industry peers
-1. `searchStocks(q)` → find stock `code`
-2. `getIndustryStocks(code)` → all stocks in same industry with price, PE, market cap
+1. `searchStocks(q)` → `list[].code`
+2. `getIndustryStocks(code ← searchStocks)` → all stocks in same industry with price, PE, market cap
 
 ### Browse market activity
 1. `getHotEvents` → trending market topics with heat scores
 2. `getTimeline` → social discussion feed with posts and authors
 
 ### Track watchlist
-1. `getWatchlist(pid)` → user's followed stocks with live prices (requires login)
+1. `getWatchlist(pid)` → user's followed stocks with `stocks[].symbol`, live prices (requires login)
 
 ### Manage watchlist
-1. `searchStocks(q)` → find stock `code`
-2. `addToWatchlist(symbol, pid)` → add stock to watchlist (requires login)
-3. `getWatchlist(pid)` → confirm stock was added
-4. `removeFromWatchlist(symbol, pid)` → remove stock from watchlist
+1. `searchStocks(q)` → `list[].code`
+2. `addToWatchlist(symbol=code, pid)` → add stock to watchlist (requires login)
+3. `getWatchlist(pid)` → confirm stock was added → `stocks[].symbol`
+4. `removeFromWatchlist(symbol ← getWatchlist, pid)` → remove stock from watchlist
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchStocks | search stocks by keyword | q | code, name, exchange, current, percentage | entry point |
-| getStockQuote | real-time stock quote | symbol ← searchStocks.code | current, percent, chg, volume, market_capital, high, low | supports batch (comma-separated) |
-| getOrderBook | bid/ask order book | symbol ← searchStocks.code | bp1-5/bc1-5 (bids), sp1-5/sc1-5 (asks) | A-share stocks only |
-| getStockKline | candlestick chart data | symbol, begin (ms timestamp), period | column names + OHLCV data arrays | periods: day/week/month/1m-120m |
-| getStockFinancials | financial indicators | symbol, type (Q1-Q4/all), count | avg_roe, basic_eps, total_revenue, net_profit, gross_margin | CN A-share stocks |
-| getStockComments | stock discussion feed | symbol, count, sort, source | posts with description, author, reply_count, fav_count | paginated |
-| getWatchlist | user's stock watchlist | pid (-1 for default) | symbol, name, current, percent, market_capital | requires login |
-| addToWatchlist | add stock to watchlist | symbol, pid | success, error_code | requires login, write |
-| removeFromWatchlist | remove stock from watchlist | symbol, pid | success, error_code | requires login, write |
-| getHotEvents | trending market events | count (optional) | tag, hot, status_count, content | entry point |
-| getTimeline | hot discussion feed | since_id, max_id, size | posts with title, description, author, timestamps | paginated via next_max_id |
-| getIndustryStocks | industry peer stocks | code ← searchStocks.code | symbol, name, current, percentage, pe_ttm, marketCapital | |
+| searchStocks | search stocks by keyword | `q` | code, name, exchange, current, percentage | entry point |
+| getStockQuote | real-time stock quote | `symbol` ← searchStocks.code | current, percent, chg, volume, market_capital, high, low | supports batch (comma-separated) |
+| getOrderBook | bid/ask order book | `symbol` ← searchStocks.code | bp1-5/bc1-5 (bids), sp1-5/sc1-5 (asks) | A-share stocks only |
+| getStockKline | candlestick chart data | `symbol` ← searchStocks.code, `begin` (ms timestamp), `period` | column names + OHLCV data arrays | periods: day/week/month/1m-120m |
+| getStockFinancials | financial indicators | `symbol` ← searchStocks.code, `type` (Q1-Q4/all), `count` | avg_roe, basic_eps, total_revenue, net_profit, gross_margin | CN A-share stocks |
+| getStockComments | stock discussion feed | `symbol` ← searchStocks.code, `count`, `sort`, `source` | posts with description, author, reply_count, fav_count | paginated |
+| getWatchlist | user's stock watchlist | `pid` (-1 for default) | stocks[].symbol, name, current, percent, market_capital | requires login |
+| addToWatchlist | add stock to watchlist | `symbol` ← searchStocks.code, `pid` | success, error_code | requires login, write |
+| removeFromWatchlist | remove stock from watchlist | `symbol` ← getWatchlist or searchStocks.code, `pid` | success, error_code | requires login, write |
+| getHotEvents | trending market events | `count` (optional) | tag, hot, status_count, content | entry point |
+| getTimeline | hot discussion feed | `since_id`, `max_id`, `size` | posts with title, description, author, timestamps | paginated via next_max_id |
+| getIndustryStocks | industry peer stocks | `code` ← searchStocks.code | symbol, name, current, percentage, pe_ttm, marketCapital | |
 
 ## Quick Start
 

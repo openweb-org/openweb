@@ -6,15 +6,15 @@ Open-access preprint server for scientific papers (arxiv.org). Public Atom API a
 ## Workflows
 
 ### Find papers on a topic
-1. `searchPapers(search_query)` → browse results → pick paper arXiv ID from `<id>` element
-2. `getPaper(id_list)` → full metadata including title, authors, abstract, categories, PDF link
+1. `searchPapers(search_query)` → `id`, `title`, `summary`, `category` per entry
+2. `getPaper(id_list)` → full metadata with `title`, `authors`, `abstract`, `links` (PDF link)
 
 ### Get a specific paper's details
-1. `getPaper(id_list: "1706.03762")` → Atom XML with title, authors, abstract, categories, links
-2. Extract PDF link from `<link title="pdf">` element
+1. `getPaper(id_list: "1706.03762")` → `title`, `authors`, `abstract`, `categories`, `links`
+2. Extract PDF link from `<link title="pdf">` → `href`
 
 ### Quick abstract lookup
-1. `getAbstract(arxiv_id: "1706.03762")` → HTML page with title, authors, abstract text
+1. `getAbstract(arxiv_id: "1706.03762")` → `title`, `authors`, `abstract`
 
 ## Operations
 

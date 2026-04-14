@@ -17,16 +17,21 @@ Visual discovery and bookmarking platform. Social media archetype.
 ### Quick search suggestions
 1. `searchTypeahead(term)` → autocomplete suggestions for pins, boards, users
 
-### Save and organize pins
-1. `searchPins(query)` or `getHomeFeed()` → find a pin `id`
-2. `getBoard(username, slug)` → get target `board_id`
-3. `savePin(pin_id, board_id)` → save pin to board
-4. `unsavePin(pin_id, board_id)` → remove pin from board
+### Save a pin to a board
+1. `searchPins(query)` or `getHomeFeed()` → find pin → `id` (= `pin_id`)
+2. `searchPins(query)` → result includes `pinner.username` and `board` slug
+3. `getBoard(username, slug)` → target board → `board_id`
+4. `savePin(pin_id ← searchPins, board_id ← getBoard)` → saved pin `id`
+
+### Remove a saved pin
+1. `getBoard(username, slug)` → `board_id` of source board
+2. `unsavePin(pin_id, board_id ← getBoard)` → removes pin from board
 
 ### Follow and unfollow boards
-1. `getBoard(username, slug)` → get `board_id`
-2. `followBoard(board_id)` → follow the board
-3. `unfollowBoard(board_id)` → unfollow the board
+1. `searchPins(query)` → result includes `pinner.username` and `board` slug
+2. `getBoard(username, slug)` → `board_id`
+3. `followBoard(board_id ← getBoard)` → followed board `id`, `name`, `url`
+4. `unfollowBoard(board_id ← getBoard)` → removes follow
 
 ### Browse home feed and notifications
 1. `getHomeFeed()` → personalized recommended pins
@@ -41,10 +46,10 @@ Visual discovery and bookmarking platform. Social media archetype.
 | getBoard | get board details | username + slug (e.g. `WhoWhatWear/travel`) | name, description, pin_count, follower_count, owner, cover images | |
 | getUserProfile | get user profile | username | full_name, about, follower/following/pin/board counts, image | |
 | searchTypeahead | typeahead suggestions | term | label, type, id, images | |
-| savePin | save pin to board | pin_id, board_id | id, board, pinner | write; reverse: unsavePin |
-| unsavePin | remove saved pin from board | pin_id, board_id | status | write; reverse: savePin |
-| followBoard | follow a board | board_id | id, name, url | write; reverse: unfollowBoard |
-| unfollowBoard | unfollow a board | board_id | status | write; reverse: followBoard |
+| savePin | save pin to board | pin_id ← searchPins/getHomeFeed, board_id ← getBoard | id, board, pinner | write; reverse: unsavePin |
+| unsavePin | remove saved pin from board | pin_id ← searchPins/getHomeFeed, board_id ← getBoard | status | write; reverse: savePin |
+| followBoard | follow a board | board_id ← getBoard | id, name, url | write; reverse: unfollowBoard |
+| unfollowBoard | unfollow a board | board_id ← getBoard | status | write; reverse: followBoard |
 | getHomeFeed | personalized home feed | page_size | id, images, grid_title, pinner, board, bookmark | paginated via `bookmark` |
 | getNotifications | notification feed | page_size | id, type, message, timestamp, actors, target, bookmark | paginated via `bookmark` |
 

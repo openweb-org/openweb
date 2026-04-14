@@ -10,12 +10,16 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 2. `getStoryDetail(id)` → title, url, points, author, nested comment tree
 
 ### Upvote a story
-1. Get the item ID (from `getStoryDetail` or feed `objectID`)
-2. `upvoteStory(id)` → upvotes the story (requires logged-in cookie session)
+1. `getTopStories` → pick story → `objectID`
+2. `upvoteStory(id=objectID)` → upvotes the story (requires login)
 
 ### Comment on a story
-1. Get the item ID (story or comment to reply to)
-2. `addComment(parent, text)` → posts a comment (requires logged-in cookie session)
+1. `getStoryDetail(id)` → `item.id`
+2. `addComment(parent=item.id, text)` → posts top-level comment (requires login)
+
+### Reply to a comment
+1. `getStoryDetail(id)` → `children[]` → pick comment → `comment.id`
+2. `addComment(parent=comment.id, text)` → posts reply (requires login)
 
 ### Explore a user
 1. `getUserProfile(id)` → karma, created, about
@@ -46,8 +50,8 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 | getStoriesByDomain | domain stories | site | objectID, title, url, author, points | adapter (Algolia) |
 | getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter (Algolia) |
 | getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter (Algolia) |
-| upvoteStory | upvote item | id | ok, id | adapter (page) |
-| addComment | post comment | parent, text | ok, parent | adapter (page) |
+| upvoteStory | upvote item | id <- feeds/getStoryDetail | ok, id | adapter (page) |
+| addComment | post comment | parent <- getStoryDetail, text | ok, parent | adapter (page) |
 
 ## Quick Start
 

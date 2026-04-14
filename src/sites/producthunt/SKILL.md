@@ -6,24 +6,24 @@ Product discovery platform — daily curated tech products, tools, and startups 
 ## Workflows
 
 ### Browse today's featured products
-1. `getToday` → today's featured products with name, tagline, votes, rank
+1. `getToday` → `name`, `tagline`, `votesCount`, `dailyRank`, `slug`
 
 ### Search and explore products
-1. `searchProducts(query)` → results with `slug`
-2. `getPost(slug)` → full product details, description, makers
+1. `searchProducts(query)` → `slug`, `name`, `reviewsRating`
+2. `getPost(slug)` → `description`, `makers`, `categories`, `votesCount`
 
 ### Browse posts by time section
-1. `getPosts(section)` → featured posts (TODAY, YESTERDAY, LAST_WEEK, LAST_MONTH)
-2. `getPost(slug)` → full details for any post
+1. `getPosts(section)` → `slug`, `name`, `tagline`, `votesCount`, `dailyRank`
+2. `getPost(slug)` → `description`, `makers`, `categories`
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| getToday | today's featured products | — | name, tagline, votesCount, dailyRank, topics | entry point |
-| getPosts | featured posts by section | section? (TODAY default) | name, tagline, votesCount, dailyRank | entry point, supports YESTERDAY/LAST_WEEK/LAST_MONTH |
-| getPost | product details | slug ← getPosts/searchProducts | name, description, votesCount, makers, categories | |
-| searchProducts | find products by keyword | query | name, tagline, reviewsRating, slug | |
+| getToday | today's featured products | — | name, tagline, slug, votesCount, dailyRank, topics | entry point |
+| getPosts | featured posts by section | section? (TODAY default) | name, tagline, slug, votesCount, dailyRank | entry point, supports YESTERDAY/LAST_WEEK/LAST_MONTH |
+| getPost | product details | slug ← getToday/getPosts/searchProducts | name, description, votesCount, makers, categories | |
+| searchProducts | find products by keyword | query | name, tagline, slug, reviewsRating | entry point |
 
 ## Quick Start
 

@@ -6,16 +6,16 @@ Container image registry. Public REST API for searching and browsing Docker imag
 ## Workflows
 
 ### Find a container image
-1. `searchImages(query)` -> browse results -> note `repo_name`
-2. `getImage(namespace, name)` -> full description, stars, pull count
+1. `searchImages(query)` → `repo_name` (format: namespace/name)
+2. `getImage(namespace, name)` → full description, stars, pull count
 
 ### Check available versions/tags
-1. `searchImages(query)` -> find image -> note namespace and name
-2. `getTags(namespace, name)` -> list tags with size, architecture, last updated
+1. `searchImages(query)` → `repo_name` → split into `namespace`, `name`
+2. `getTags(namespace, name)` → tags with size, architecture, last updated
 
 ### Inspect an official image
-1. `getImage("library", name)` -> image detail (official images use "library" namespace)
-2. `getTags("library", name)` -> available tags
+1. `getImage("library", name)` → image detail (official images use "library" namespace)
+2. `getTags("library", name)` → available tags
 
 ## Operations
 

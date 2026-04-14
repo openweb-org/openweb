@@ -9,14 +9,14 @@ Python Package Index — the official repository for Python packages. Public JSO
 1. `getPackage(package)` → name, summary, version, author, license, dependencies
 
 ### Check a specific version
-1. `getPackage(package)` → find latest version
+1. `getPackage(package)` → `version` (latest)
 2. `getPackageVersion(package, version)` → metadata for that version
 
 ### List all versions of a package
-1. `getReleases(package)` → all version strings + download files
+1. `getReleases(package)` → `versions[]`, `files[]`
 
 ### Compare versions
-1. `getReleases(package)` → pick versions from the list
+1. `getReleases(package)` → `versions[]`
 2. `getPackageVersion(package, version)` → metadata for version A
 3. `getPackageVersion(package, version)` → metadata for version B
 
@@ -25,7 +25,7 @@ Python Package Index — the official repository for Python packages. Public JSO
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | getPackage | get package metadata | package name | name, summary, version, author, license, requires_dist | entry point |
-| getPackageVersion | version-specific metadata | package, version ← getReleases | name, version, requires_python, requires_dist | |
+| getPackageVersion | version-specific metadata | package, version <- getReleases / getPackage | name, version, requires_python, requires_dist | |
 | getReleases | list all versions | package name | versions[], files[] | entry point |
 
 ## Quick Start

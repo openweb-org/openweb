@@ -6,17 +6,17 @@ Restaurant reservation platform — search restaurants, view details and reviews
 ## Workflows
 
 ### Find and book a restaurant
-1. `searchRestaurants(term, location)` → restaurant list with `restaurantId`, `slug`
+1. `searchRestaurants(term, location)` → `restaurantId`, `slug`
 2. `getRestaurant(slug)` → full details (hours, cuisine, ratings, address)
-3. `getAvailability(restaurantId, date, time, partySize)` → available time slots
+3. `getAvailability(restaurantId, date, time, partySize)` → available `slots` with `timeOffsetMinutes`
 
 ### Read restaurant reviews
-1. `searchRestaurants(term, location)` → pick restaurant → `restaurantId`
+1. `searchRestaurants(term, location)` → `restaurantId`
 2. `getReviews(restaurantId, page)` → paginated reviews (10/page)
 
 ### Search with availability
-1. `searchRestaurants(term, location, date, time, covers)` → restaurants in the area
-2. `getAvailability(restaurantId, date, time, partySize)` → time slots for specific restaurant
+1. `searchRestaurants(term, location, date, time, covers)` → `restaurantId`
+2. `getAvailability(restaurantId, date, time, partySize)` → `slots` with `timeOffsetMinutes`, `seatingTypes`
 
 ## Operations
 

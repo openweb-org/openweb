@@ -21,9 +21,9 @@ Video content platform. InnerTube JSON API on `www.youtube.com`.
 2. `getTranscript(params)` → timestamped transcript lines
 
 ### Subscribe / unsubscribe a channel
-1. `searchVideos(query)` or `browseContent(browseId)` → find channel ID (`UC...`)
-2. `subscribeChannel(channelIds: ["UC..."])` → confirmation
-3. `unsubscribeChannel(channelIds: ["UC..."])` → reverses subscription
+1. `searchVideos(query)` or `browseContent(browseId)` → `channelId` (`UC...`)
+2. `subscribeChannel(channelIds: [channelId])` → confirmation
+3. `unsubscribeChannel(channelIds: [channelId])` → reverses subscription
 
 ### Comment on a video
 1. `searchVideos(query)` → `videoId`

@@ -18,10 +18,10 @@ E-commerce marketplace — search products, view details, read reviews, browse d
 1. `getBestSellers` → ranked best-selling products
 
 ### Cart operations
-1. `searchProducts(k)` → find product `asin`
-2. `addToCart(asin)` → add product to cart (returns confirmation, cart count)
-3. `getCart` → view current cart contents (items, quantities, subtotal)
-4. `removeFromCart(asin)` → remove product from cart (reverse of addToCart)
+1. `searchProducts(k)` → `asin`
+2. `addToCart(asin)` → `cartCount`, `subtotal`
+3. `getCart` → cart items with `asin`, `title`, `quantity`, `subtotal`
+4. `removeFromCart(asin ← getCart)` → updated cart
 
 ## Operations
 

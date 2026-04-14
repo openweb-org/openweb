@@ -22,6 +22,17 @@ Blogging and publishing platform. Content platform archetype. Search articles, b
 1. `getTagCuratedLists(tagSlug)` → staff-picked reading lists
 2. Lists contain posts with `postId` → `getArticle(postId)`
 
+### Engage with content (requires login)
+1. `getTagFeed(tagSlug)` → posts with `postId`
+2. `clapArticle(postId)` → `clapCount`, `viewerClapCount`
+3. `saveArticle(postId)` → `catalogItemId`
+4. `unsaveArticle(postId)` → removes bookmark
+
+### Follow a writer (requires login)
+1. `getTagWriters(tagSlug)` → writers with `userId`
+2. `followWriter(userId ← getTagWriters)` → `isFollowing`
+3. `unfollowWriter(userId)` → removes follow
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |

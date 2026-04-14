@@ -30,34 +30,54 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 1. `getUserProfile(username)` → `id`
 2. `getStories(id)` → current stories via `reel` object (null if no active stories)
 
-### Like / unlike a post
-1. `likePost(id)` → status confirmation
-2. `unlikePost(id)` → status confirmation
-   - `id` is the numeric PK from `getFeed` or `getUserPosts` items (`items[].pk`)
+### Like a post
+1. `getFeed(id, count)` or `getUserPosts(username, count)` → `items[].pk`
+2. `likePost(id=items[].pk)` → status
 
-### Follow / unfollow a user
-1. `getUserProfile(username)` → `id`
-2. `followUser(id)` → friendship_status (following/outgoing_request)
-3. `unfollowUser(id)` → friendship_status
+### Unlike a post
+1. `getFeed(id, count)` or `getUserPosts(username, count)` → `items[].pk`
+2. `unlikePost(id=items[].pk)` → status
 
-### Save / unsave a post
-1. `savePost(id)` → status confirmation
-2. `unsavePost(id)` → status confirmation
+### Follow a user
+1. `getUserProfile(username)` → `data.user.id`
+2. `followUser(id=data.user.id)` → friendship_status (following/outgoing_request)
+
+### Unfollow a user
+1. `getUserProfile(username)` → `data.user.id`
+2. `unfollowUser(id=data.user.id)` → friendship_status
+
+### Save a post
+1. `getFeed(id, count)` or `getUserPosts(username, count)` → `items[].pk`
+2. `savePost(id=items[].pk)` → status
+
+### Unsave a post
+1. `getFeed(id, count)` or `getUserPosts(username, count)` → `items[].pk`
+2. `unsavePost(id=items[].pk)` → status
 
 ### Comment on a post
-1. `createComment(id, comment_text)` → created comment with pk, text, user
-2. `deleteComment(media_id, comment_id)` → status confirmation
-   - `comment_id` from `getPostComments` comments[].pk
+1. `getFeed(id, count)` or `getUserPosts(username, count)` → `items[].pk`
+2. `createComment(id=items[].pk, comment_text)` → created comment with `pk`, text, user
 
-### Block / unblock a user
-1. `getUserProfile(username)` → `id`
-2. `blockUser(id)` → friendship_status (blocking)
-3. `unblockUser(id)` → friendship_status
+### Delete a comment
+1. `getFeed(id, count)` or `getUserPosts(username, count)` → `items[].pk`
+2. `getPostComments(id=items[].pk)` → `comments[].pk`
+3. `deleteComment(media_id=items[].pk, comment_id=comments[].pk)` → status
 
-### Mute / unmute a user
-1. `getUserProfile(username)` → `id`
-2. `muteUser(id)` → status confirmation (hides posts + stories)
-3. `unmuteUser(id)` → status confirmation
+### Block a user
+1. `getUserProfile(username)` → `data.user.id`
+2. `blockUser(id=data.user.id)` → friendship_status (blocking)
+
+### Unblock a user
+1. `getUserProfile(username)` → `data.user.id`
+2. `unblockUser(id=data.user.id)` → friendship_status
+
+### Mute a user
+1. `getUserProfile(username)` → `data.user.id`
+2. `muteUser(id=data.user.id)` → status (hides posts + stories)
+
+### Unmute a user
+1. `getUserProfile(username)` → `data.user.id`
+2. `unmuteUser(id=data.user.id)` → status
 
 ### Browse Explore page
 1. `getExplore()` → trending posts grid

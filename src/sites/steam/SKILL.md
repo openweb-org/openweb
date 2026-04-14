@@ -6,40 +6,40 @@ Gaming marketplace. Game search, details, pricing, user reviews, news, player co
 ## Workflows
 
 ### Find and research a game
-1. `searchGames(term)` → pick game → `id`
-2. `getAppDetails(appids=id)` → full info, price, genres, metacritic
-3. `getAppReviews(appid=id)` → user reviews, score summary
+1. `searchGames(term)` → `id`, `name`, `price`, `metascore`
+2. `getAppDetails(appids=id)` → full info, `price_overview`, `genres`, `metacritic`, `platforms`
+3. `getAppReviews(appid=id)` → `reviews[]` with `review` text, `voted_up`, `author.playtime_forever`; `query_summary.review_score_desc`
 
 ### Track a game's community
 1. `searchGames(term)` → `id`
-2. `getAppNews(appid=id)` → news articles
-3. `getCurrentPlayers(appid=id)` → live player count
-4. `getGlobalAchievements(gameid=id)` → achievement unlock rates
+2. `getAppNews(appid=id)` → `newsitems[]{title, author, contents, date, feedname}`
+3. `getCurrentPlayers(appid=id)` → `player_count`
+4. `getGlobalAchievements(gameid=id)` → `achievements[]{name, percent}`
 
 ### Browse deals and new releases
-1. `getFeatured()` → promoted games with discounts
-2. `getFeaturedCategories()` → specials, top sellers, new releases, coming soon
-3. `getAppDetails(appids=id)` → drill into any game
+1. `getFeatured()` → `large_capsules[]{id, name, discount_percent, final_price}`
+2. `getFeaturedCategories()` → `specials`, `top_sellers`, `new_releases`, `coming_soon` each with `items[]{id, name, final_price}`
+3. `getAppDetails(appids=id)` → drill into any game from above → full details
 
 ### Explore DLC and bundles
-1. `getAppDetails(appids=id)` → find package IDs from game info
-2. `getDlcForApp(appid=id)` → list all DLC for a game
-3. `getPackageDetails(packageids=id)` → bundle contents and pricing
+1. `getAppDetails(appids=id)` → `data.packages[]` (package IDs), `data.dlc[]` (DLC app IDs)
+2. `getDlcForApp(appid=id)` → `dlc[]{id, name, price_overview, platforms}`
+3. `getPackageDetails(packageids)` → `name`, `apps[]`, `price`, `platforms`
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchGames | search games by keyword | term | id, name, price, metascore, platforms | entry point |
-| getAppDetails | full game info | appids ← searchGames | name, price_overview, genres, metacritic, platforms, release_date | supports multiple IDs |
-| getAppReviews | user reviews for a game | appid ← searchGames | review text, voted_up, author playtime, review_score_desc | paginated (num_per_page, filter) |
+| getAppDetails | full game info | appids ← searchGames.id | name, price_overview, genres, metacritic, platforms, release_date, packages[], dlc[] | supports multiple IDs |
+| getAppReviews | user reviews for a game | appid ← searchGames.id | review text, voted_up, author playtime, review_score_desc | paginated (num_per_page, filter) |
 | getFeatured | featured/promoted games | — | id, name, discount_percent, final_price, windows/mac/linux_available | entry point |
 | getFeaturedCategories | specials, top sellers, new releases | — | category.items[].id, name, discount_percent, final_price | entry point |
-| getPackageDetails | bundle/package info | packageids ← getAppDetails | name, apps[], price, platforms | |
-| getAppNews | news articles for a game | appid ← searchGames | title, author, contents, date, feedname, tags | filterable by feed |
-| getCurrentPlayers | live player count | appid ← searchGames | player_count | |
-| getGlobalAchievements | achievement unlock rates | gameid ← searchGames | name, percent per achievement | |
-| getDlcForApp | DLC listing for a game | appid ← searchGames | dlc[].id, name, price, platforms | unverified |
+| getPackageDetails | bundle/package info | packageids ← getAppDetails.packages[] | name, apps[], price, platforms | |
+| getAppNews | news articles for a game | appid ← searchGames.id | title, author, contents, date, feedname, tags | filterable by feed |
+| getCurrentPlayers | live player count | appid ← searchGames.id | player_count | |
+| getGlobalAchievements | achievement unlock rates | gameid ← searchGames.id | name, percent per achievement | |
+| getDlcForApp | DLC listing for a game | appid ← searchGames.id | dlc[].id, name, price, platforms | unverified |
 | getPopularTags | all store tags | — | tagid, name | entry point; unverified |
 
 ## Quick Start

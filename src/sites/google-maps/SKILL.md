@@ -8,29 +8,33 @@ Google Maps — location search, place details, directions, and geocoding. Adapt
 
 ### Find a place and get details
 
-1. `searchPlaces(query)` → place listings → `placeId`
+1. `searchPlaces(query)` → `placeId`, name, address, rating
 2. `getPlaceDetails(placeId)` → name, address, rating, hours, website, phone, reviews
-3. `getPlaceReviews(placeId)` → detailed reviews with author, rating, relative time
+3. `getPlaceReviews(placeId)` → reviews with author, rating, relative time
 4. `getPlacePhotos(placeId)` → photo URLs with dimensions
 5. `getPlaceHours(placeId)` → weekly operating schedule
 6. `getPlaceAbout(placeId)` → description, category, attributes
 
+Steps 2–6 all use `placeId` from step 1.
+
 ### Search nearby and compare
 
-1. `nearbySearch(category, location)` → place listings → `placeId`
+1. `nearbySearch(category, location)` → `placeId`, name, address, rating
 2. `getPlaceDetails(placeId)` per result → compare ratings, hours, prices
 
 ### Get directions between locations
 
-1. `getDirections(origin, destination)` → driving routes with distance, duration
-2. `getTransitDirections(origin, destination)` → public transit routes
-3. `getWalkingDirections(origin, destination)` → walking routes
-4. `getBicyclingDirections(origin, destination)` → cycling routes
+- `getDirections(origin, destination)` → driving routes with distance, duration
+- `getTransitDirections(origin, destination)` → public transit routes
+- `getWalkingDirections(origin, destination)` → walking routes
+- `getBicyclingDirections(origin, destination)` → cycling routes
+
+All are entry points — pick the travel mode needed.
 
 ### Geocoding
 
-1. `geocode(address)` → lat, lng, placeId from address string
-2. `reverseGeocode(lat, lng)` → address, place name from coordinates
+- `geocode(address)` → `lat`, `lng`, `placeId` from address string
+- `reverseGeocode(lat, lng)` → address, place name from coordinates
 
 ## Operations
 

@@ -6,20 +6,20 @@ Financial services platform. Stock quotes, market indices, mutual fund research,
 ## Workflows
 
 ### Look up a stock
-1. `getQuote(symbol)` → price, volume, PE, market cap, 52-week range
-2. `getCompanyProfile(symbols)` → sector, industry, employees, description
-3. `getNewsHeadlines(symbol)` → recent news for the stock
+1. `getQuote(symbol)` → lastPrice, volume, peRatio, marketCap, 52-week range
+2. `getCompanyProfile(symbols)` → sector, industry, employeeCount, description
+3. `getNewsHeadlines(symbol)` → headlines[].text, provider, impactRating
 
 ### Research mutual funds
-1. `listAssetClasses` → get asset class and category codes
-2. `searchFunds(searchFilter)` → browse/filter funds by criteria
-3. `getFundPicks(mstarAssetClassCd, mstarCtgyCd)` → Fidelity-recommended funds
-4. `getFundPerformance(cusip)` → annual returns (YTD, 1/3/5/10yr)
-5. `getFundSummary(cusip)` → composition, ratings, fees
+1. `listAssetClasses` → `code` (mstarAssetClassCd), categories[].`code` (mstarCtgyCd)
+2. `searchFunds(searchFilter)` → funds[].fundInformation.`cusip`, ticker, legalName
+3. `getFundPicks(mstarAssetClassCd, mstarCtgyCd)` → funds[].fundInformation.`cusip`, ticker
+4. `getFundPerformance(cusip)` → YTD, 1/3/5/10yr annual returns
+5. `getFundSummary(cusip)` → composition, ratings, fees, top10Holdings
 
 ### Market overview
-1. `getMarketSummary` → S&P 500, DJIA, NASDAQ current values
-2. `getIndexQuotes(symbol)` → global indices, currencies
+1. `getMarketSummary` → quotes[].label, lastPrice, pctChgToday (S&P 500, DJIA, NASDAQ)
+2. `getIndexQuotes(symbol)` → quotes[].name, pctChgToday (global indices, currencies)
 
 ## Operations
 

@@ -6,25 +6,25 @@ Major U.S. public media news outlet. Public Algolia search index provides full a
 ## Workflows
 
 ### Search for articles on a topic
-1. `searchArticles(query)` → browse results → note article `objectID`
-2. `getArticle(objectID)` → full article with complete body text
+1. `searchArticles(query)` → `objectID`, `title`, `bodyText`
+2. `getArticle(objectID)` → full `bodyText`, `topics`, `bylines`
 
 ### Get today's top stories
-1. `getTopStories()` → latest front-page stories with headlines and summaries
-2. `getArticle(objectID)` → drill into a specific story for full text
+1. `getTopStories()` → `objectID`, `title`, `displayDate`
+2. `getArticle(objectID)` → full `bodyText`, `topics`, `image`
 
 ### Research a topic
-1. `searchArticles(query, hitsPerPage: 20)` → broad search results
+1. `searchArticles(query, hitsPerPage: 20)` → `objectID`, `title`, `topics`
 2. Filter by topic using `filters: "type:story AND topics:\"Health\""` for section-specific results
-3. `getArticle(objectID)` → read full articles of interest
+3. `getArticle(objectID)` → full `bodyText`, `bylines`
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchArticles | find articles by keyword | query | objectID, title, bodyText, bylines, displayDate | entry point, paginated (page 0-indexed) |
-| getArticle | full article content | objectID ← searchArticles | bodyText (full), title, bylines, topics, image | body is plain text |
-| getTopStories | latest front page stories | — | objectID, title, bodyText, displayDate, topics | pre-filtered to homepage stories |
+| getArticle | full article content | objectID ← searchArticles/getTopStories | bodyText (full), title, bylines, topics, image | body is plain text |
+| getTopStories | latest front page stories | — | objectID, title, bodyText, displayDate, topics | entry point, pre-filtered to homepage stories |
 
 ## Quick Start
 

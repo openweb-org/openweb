@@ -19,16 +19,19 @@ Travel review and booking platform. Archetype: Travel. Adapter-only site — all
 2. `searchRestaurants(geoId, location)` → restaurant list with names, ratings, cuisine, price range
 
 ### Get restaurant detail
-1. `searchLocation(query)` → `geoId`
-2. `getRestaurant(geoId, locationId, slug)` → name, cuisine, rating, hours, address, menu URL
+1. `searchLocation(query)` → `geoId`, `locationSlug`
+2. `searchRestaurants(geoId, location=locationSlug)` → pick restaurant → extract `locationId` and `slug` from `url`
+3. `getRestaurant(geoId, locationId, slug)` → name, cuisine, rating, hours, address, menu URL
 
 ### Get attraction detail
 1. `searchLocation(query)` → `geoId`
 2. `getAttractionDetail(geoId, locationId, slug)` → name, rating, description, hours, address
+   - `locationId` and `slug` are extracted from known TripAdvisor attraction URLs
 
 ### Read attraction reviews
 1. `searchLocation(query)` → `geoId`
 2. `getAttractionReviews(geoId, locationId, slug)` → attraction info + review titles, text, dates
+   - `locationId` and `slug` are extracted from known TripAdvisor attraction URLs
 
 ## Operations
 
@@ -36,9 +39,9 @@ Travel review and booking platform. Archetype: Travel. Adapter-only site — all
 |-----------|--------|-----------|------------|-------|
 | searchLocation | find geoId for a city/region | query | geoId, locationSlug, type | entry point; uses TypeAheadJson API |
 | searchHotels | list hotels in a city | geoId ← searchLocation, location ← locationSlug | name, rating, reviewCount, priceRange, address | LD+JSON `ItemList`/`Hotel`/`LodgingBusiness` + DOM fallback |
-| getHotelDetail | hotel detail page | geoId ← searchLocation, locationId, slug | name, rating, amenities, starRating, priceRange, checkin/out | LD+JSON `Hotel`/`LodgingBusiness` |
+| getHotelDetail | hotel detail page | geoId ← searchLocation, locationId ← searchHotels.url, slug ← searchHotels.url | name, rating, amenities, starRating, priceRange, checkin/out | LD+JSON `Hotel`/`LodgingBusiness` |
 | searchRestaurants | list restaurants in a city | geoId ← searchLocation, location ← locationSlug | name, rating, cuisine, priceRange, address | LD+JSON `ItemList`/`Restaurant` + DOM fallback |
-| getRestaurant | restaurant detail | geoId ← searchLocation, locationId, slug | name, cuisine, rating, reviewCount, hours, menuUrl | LD+JSON `Restaurant`/`FoodEstablishment`/`LocalBusiness` |
+| getRestaurant | restaurant detail | geoId ← searchLocation, locationId ← searchRestaurants.url, slug ← searchRestaurants.url | name, cuisine, rating, reviewCount, hours, menuUrl | LD+JSON `Restaurant`/`FoodEstablishment`/`LocalBusiness` |
 | getAttractionDetail | attraction detail page | geoId ← searchLocation, locationId, slug | name, description, rating, hours, address | LD+JSON `TouristAttraction`/`LocalBusiness` |
 | getAttractionReviews | attraction info + reviews | geoId ← searchLocation, locationId, slug | name, rating, reviewCount, reviews[] | LD+JSON + DOM `[data-reviewid]`/`[data-test-target]` |
 

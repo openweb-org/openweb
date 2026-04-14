@@ -17,18 +17,48 @@ Social media platform — link aggregation, discussion, communities (subreddits)
 1. `getUserProfile(username)` → karma, account age, verified status
 2. `getUserPosts(username)` → recent posts and comments
 
-### Create content
-1. `createPost(sr, title, kind, text)` → creates a self or link post
-2. `createComment(thing_id, text)` → replies to a post or comment
+### Create a post in a subreddit
+1. `getSubredditAbout(subreddit)` → confirm subreddit exists → `subreddit` name
+2. `createPost(sr=subreddit, title, kind, text)` → post `fullname` (t3_xxx), `url`
 
-### Manage content
-1. `deleteThing(id)` → delete own post or comment
-2. `unsavePost(id)` → remove from saved items
-3. `vote(id, dir)` → upvote/downvote/unvote
+### Reply to a post
+1. `getSubredditPosts(subreddit)` → pick post → `name` (fullname, e.g. t3_xxx)
+2. `createComment(thing_id=name, text)` → comment `id`, `body`
 
-### Community management
-1. `subscribe(action, sr_name)` → subscribe/unsubscribe from subreddit
-2. `blockUser(account_id)` → block a user
+### Reply to a comment
+1. `getPostComments(subreddit, post_id)` → pick comment → `name` (fullname, e.g. t1_xxx)
+2. `createComment(thing_id=name, text)` → comment `id`, `body`
+
+### Vote on a post
+1. `getSubredditPosts(subreddit)` → pick post → `name` (fullname)
+2. `vote(id=name, dir)` → dir: 1=upvote, 0=unvote, -1=downvote
+
+### Save a post
+1. `getSubredditPosts(subreddit)` → pick post → `name` (fullname)
+2. `savePost(id=name)` → saved
+
+### Unsave a post
+1. `savePost` result or `getSubredditPosts` → `name` (fullname)
+2. `unsavePost(id=name)` → unsaved
+
+### Delete own post
+1. `createPost(...)` → `fullname` (t3_xxx)
+2. `deleteThing(id=fullname)` → deleted
+
+### Delete own comment
+1. `createComment(...)` → comment `name` (t1_xxx)
+2. `deleteThing(id=name)` → deleted
+
+### Subscribe to a subreddit
+1. `getSubredditAbout(subreddit)` → `subreddit` name
+2. `subscribe(action="sub", sr_name=subreddit)` → subscribed
+
+### Unsubscribe from a subreddit
+1. `subscribe(action="unsub", sr_name=subreddit)` → unsubscribed
+
+### Block a user
+1. `getUserProfile(username)` → `account_id` (t2_xxx)
+2. `blockUser(account_id=account_id)` → blocked
 
 ### Check notifications
 1. `getNotifications(limit)` → inbox: replies, mentions, messages

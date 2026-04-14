@@ -11,9 +11,9 @@ Financial news and market data. Top news headlines, breaking news, market ticker
 3. `getLatestNews` → breaking/latest news feed
 
 ### Research a company
-1. `searchBloomberg(query)` → find ticker symbol
-2. `getCompanyProfile(ticker)` → company description, sector, market cap, employees
-3. `getStockChart(ticker)` → current price, daily stats, 1Y/5Y price history
+1. `searchBloomberg(query)` → results with ticker in URL (e.g. `/quote/AAPL:US`) → `ticker`
+2. `getCompanyProfile(ticker)` → name, description, sector, marketCap, employees
+3. `getStockChart(ticker)` → price, priceChange, open/dayHigh/dayLow, priceHistory1Y/5Y
 
 ### Market overview
 1. `getMarketOverview` → indices, bonds, commodities, currencies with prices and changes
@@ -30,8 +30,8 @@ Financial news and market data. Top news headlines, breaking news, market ticker
 | getNewsHeadlines | top news | — | headline, abstract, url, publishedAt, byline | up to 50 stories |
 | getLatestNews | breaking news | — | headline, abstract, url, publishedAt | up to 30 stories |
 | searchBloomberg | search | query | headline, abstract, url, publishedAt, type | news, quotes, people |
-| getCompanyProfile | company info | ticker | name, description, sector, marketCap, employees | sub-page; PerimeterX may block |
-| getStockChart | stock price/chart | ticker | price, change, open/high/low, priceHistory1Y/5Y | sub-page; 15-min delayed |
+| getCompanyProfile | company info | ticker <- searchBloomberg | name, description, sector, marketCap, employees | sub-page; PerimeterX may block |
+| getStockChart | stock price/chart | ticker <- searchBloomberg | price, change, open/high/low, priceHistory1Y/5Y | sub-page; 15-min delayed |
 | getMarketOverview | market indices | — | indices, bonds, commodities, currencies | sub-page; categorized by asset class |
 
 ## Quick Start

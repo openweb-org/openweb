@@ -6,16 +6,16 @@ Investment research and analysis platform. Stock ratings, earnings data, analyst
 ## Workflows
 
 ### Research a stock
-1. `searchArticles(query)` → find ticker or articles → `slug`
-2. `getStockAnalysis(ticker)` → quant/author/sell-side ratings, growth/value/momentum grades, key metrics
-3. `getEarnings(ticker)` → EPS/revenue estimates vs actuals, earnings call transcripts
+1. `searchArticles(query)` → `slug`, `quant_rating`
+2. `getStockAnalysis(ticker)` → `ratings` (quant/author/sell-side), `grades`, `metrics`
+3. `getEarnings(ticker)` → `estimates` (EPS/revenue), `transcripts`
 
 ### Read earnings transcript
-1. `getEarnings(ticker)` → transcripts list → `id`
+1. `getEarnings(ticker)` → `transcripts[].id`
 2. `getArticle(articleId)` → full transcript HTML content
 
 ### Search for analysis
-1. `searchArticles(query)` → articles, symbols, news → result `id` and `url`
+1. `searchArticles(query)` → `id`, `url`, `type`
 2. `getArticle(articleId)` → full article content (if not paywalled)
 
 ## Operations
@@ -23,9 +23,9 @@ Investment research and analysis platform. Stock ratings, earnings data, analyst
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchArticles | find articles/tickers | query | id, type, name, company_name, quant_rating, url | returns symbols and articles; paginated |
-| getArticle | read article content | articleId ← searchArticles or getEarnings | title, content, summary, author, tickers | some articles paywalled |
-| getStockAnalysis | stock ratings & metrics | ticker | ratings (quant/author/sell-side), grades, marketcap, eps_growth | current period may be premium-locked |
-| getEarnings | earnings data | ticker | estimates (EPS/revenue), transcripts list | transcript IDs feed into getArticle |
+| getArticle | read article content | articleId ← searchArticles or getEarnings `transcripts[].id` | title, content, summary, author, tickers | some articles paywalled |
+| getStockAnalysis | stock ratings & metrics | ticker | ratings (quant/author/sell-side), grades, marketcap, eps_growth | entry point; current period may be premium-locked |
+| getEarnings | earnings data | ticker | estimates (EPS/revenue), transcripts[].id | entry point; transcript IDs feed into getArticle |
 
 ## Quick Start
 

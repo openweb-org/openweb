@@ -21,8 +21,9 @@ Real-time messaging platform. Archetype: Messaging.
 4. `addReaction(channelId, messageId, emoji)` → 204
 
 ### Undo message & reaction
-1. `deleteMessage(channelId, messageId)` → 204
-2. `removeReaction(channelId, messageId, emoji)` → 204
+1. `getChannelMessages(channelId)` → `messageId` (or use `messageId ← sendMessage`)
+2. `deleteMessage(channelId, messageId)` → 204
+3. `removeReaction(channelId, messageId, emoji)` → 204
 
 ### Create a server & channel
 1. `createServer(name)` → server with ID → `guildId`

@@ -6,16 +6,16 @@ Handmade and vintage marketplace — search listings, view details, shop profile
 ## Workflows
 
 ### Search and view listing
-1. `searchListings(query)` → results with `listingId`, `shopName`
-2. `getListingDetail(listingId)` → full listing info (title, price, description, photos, seller)
+1. `searchListings(query)` → `listingId`, `shopName`
+2. `getListingDetail(listingId)` → title, price, description, photos, seller
 
 ### Read listing reviews
 1. `searchListings(query)` → `listingId`
-2. `getReviews(listingId)` → reviews with aggregate rating
+2. `getReviews(listingId)` → averageRating, reviews[]
 
 ### Browse a shop
-1. `searchListings(query)` → `shopName` from result
-2. `getShop(shopName)` → shop profile (rating, sales, location, owner)
+1. `searchListings(query)` → `shopName`
+2. `getShop(shopName)` → rating, sales, location, owner
 
 ## Operations
 

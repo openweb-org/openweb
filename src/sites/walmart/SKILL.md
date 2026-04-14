@@ -18,7 +18,8 @@ E-commerce. Walmart.com — product search, detail pages, pricing, and cart oper
 2. `addToCart(usItemId, quantity)` → cartId, cartCount, item details
 
 ### Remove from cart
-1. `removeFromCart(usItemId)` → cartId, cartCount, removedItemId
+1. `searchProducts(q)` or prior `addToCart` → `usItemId`
+2. `removeFromCart(usItemId)` → cartId, cartCount, removedItemId
 
 ## Operations
 

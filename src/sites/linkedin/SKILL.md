@@ -6,16 +6,16 @@ Professional networking platform — social media archetype with Voyager REST/Gr
 ## Workflows
 
 ### Look up a person's profile
-1. `getProfile(variables)` → profile data with URN
-2. `getProfileByUrn(id, decorationId)` → full profile with experience, education, skills
+1. `getProfile(variables)` → profile data → `profileUrn`
+2. `getProfileByUrn(id ← getProfile, decorationId)` → full profile with experience, education, skills
 
 ### Browse feed and news
 1. `getFeed(variables)` → posts, articles, shares
 2. `getNewsStorylines(variables)` → trending topics, curated news
 
 ### Search people, jobs, or content
-1. `searchJobs(keywords, geoId?, count?, start?)` → job cards with titles, companies, locations
-2. `getJobDetail(jobId)` → full posting with description, requirements, salary
+1. `searchJobs(keywords, geoId?, count?, start?)` → job cards → `jobId`
+2. `getJobDetail(jobId ← searchJobs)` → full posting with description, requirements, salary
 
 ### Check connections and invitations
 1. `getConnectionsSummary()` → total count, new connections

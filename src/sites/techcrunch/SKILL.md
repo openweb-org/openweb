@@ -6,19 +6,19 @@ Leading tech news outlet covering startups, venture capital, AI, and technology.
 ## Workflows
 
 ### Search for articles on a topic
-1. `searchArticles(search)` → browse results → note post `id`
-2. `getArticle(id)` → full article with body, author, date
+1. `searchArticles(search)` → `id`, `title`, `excerpt`, `date`
+2. `getArticle(id)` → `content.rendered`, `title`, `date`, `_embedded.author`
 
 ### Get the latest tech news
-1. `getLatest()` → most recent articles across all categories
-2. `getArticle(id)` → drill into a specific article for full content
+1. `getLatest()` → `id`, `title`, `excerpt`, `date`, `link`
+2. `getArticle(id)` → `content.rendered`, `title`, `date`
 
 ### Browse articles by category
-1. `getCategory(categories)` → articles in a category (AI, Startups, Venture, etc.)
-2. `getArticle(id)` → full article content
+1. `getCategory(categories)` → `id`, `title`, `excerpt`, `date`
+2. `getArticle(id)` → `content.rendered`, `title`, `date`
 
 ### Research a topic across categories
-1. `searchArticles(search, orderby: date)` → recent coverage sorted by date
+1. `searchArticles(search, orderby: date)` → `id`, `title`, `date`, `categories`
 2. `getCategory(categories)` → compare coverage across categories
 
 ## Operations

@@ -9,21 +9,21 @@ Global news — the BBC's public news service covering world, UK, business, tech
 1. `getHeadlines` → top stories with title, description, url, topic
 
 ### Read an article
-1. `getHeadlines` or `searchArticles` → pick story → extract `articleId` from url
-2. `getArticle(articleId)` → full article with title, body, publishedAt, byline, topics
+1. `getHeadlines` or `searchArticles(q)` → `url` (contains `articleId` in path)
+2. `getArticle(articleId)` → `title`, `body`, `publishedAt`, `byline`, `topics`
 
 ### Search news
-1. `searchArticles(q)` → matching articles with title, description, url
+1. `searchArticles(q)` → `title`, `description`, `url`
 
 ### Browse by topic
-1. `getTopicFeed(topic)` → articles for a topic (world, business, innovation, culture, arts, travel)
+1. `getTopicFeed(topic)` → `title`, `description`, `url`, `topic`
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | getHeadlines | top stories | — | title, description, url, topic, isLive | entry point |
-| getArticle | read full article | articleId ← url from getHeadlines | title, body, byline, publishedAt, topics | |
+| getArticle | read full article | articleId <- getHeadlines/searchArticles `url` | title, body, byline, publishedAt, topics | |
 | searchArticles | search news | q | title, description, url | paginated |
 | getTopicFeed | browse topic | topic | title, description, url, topic | world, business, innovation, culture, arts, travel |
 

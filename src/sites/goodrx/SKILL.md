@@ -6,8 +6,8 @@ Drug price comparison platform. Compare prescription drug prices across pharmaci
 ## Workflows
 
 ### Find drug prices
-1. `searchDrugs(query)` → pick drug → `slug`
-2. `getDrugPrices(slug)` → pharmacy prices
+1. `searchDrugs(query)` → `name`, `url` (url path = slug)
+2. `getDrugPrices(slug)` → pharmacy prices with `drugName`, `pharmacy`, `price`
 
 ### Find pharmacies near me
 1. `getPharmacies(zipCode?)` → list of pharmacy chains with URLs

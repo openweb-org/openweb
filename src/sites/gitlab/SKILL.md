@@ -19,9 +19,14 @@ GitLab REST API v4 — code hosting and DevOps platform (developer tools archety
 ### File an issue and discuss
 1. `searchProjects(search)` → `projectId`
 2. `createIssue(projectId, title, description)` → new issue → `iid`
-3. `createComment(projectId, issueIid, body)` → add discussion
+3. `createComment(projectId, issueIid, body)` → add discussion → `noteId`
 4. `closeIssue(projectId, issueIid)` → close when resolved
 5. `deleteComment(projectId, issueIid, noteId)` → remove a comment
+
+### Star / unstar a project
+1. `searchProjects(search)` → `projectId`
+2. `starProject(projectId)` → starred
+3. `unstarProject(projectId)` → unstarred (reverse of starProject)
 
 ### Browse group projects
 1. `searchGroups(search)` → pick group → `groupId`

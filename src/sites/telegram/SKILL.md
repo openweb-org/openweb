@@ -33,6 +33,10 @@ Telegram — messaging platform. L3 adapter reads via webpack `getGlobal()`, wri
 1. `getChats` → find chat with user → note `senderId` from messages
 2. `getUserInfo(userId)` → full profile (username, status, premium)
 
+### Mark a chat as read
+1. `getChats` → pick chat → `chatId`
+2. `markAsRead(chatId)` → marked read
+
 ### Browse contacts
 1. `getContacts` → full contact list with phone numbers and status
 

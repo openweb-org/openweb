@@ -25,11 +25,11 @@ Productivity and collaboration workspace. Enterprise archetype.
    - Optionally pass `parentId` to nest under an existing page
 
 ### Update a page
-1. Get `pageId` from search or prior create
+1. `searchPages(query, spaceId)` → find page → `pageId`
 2. `updatePage(pageId, title, spaceId)` → updated page info
 
 ### Delete a page
-1. Get `pageId` from search or prior create
+1. `searchPages(query, spaceId)` → find page → `pageId`
 2. `deletePage(pageId, spaceId)` → `deleted: true`
    - Moves page to trash — recoverable from Notion UI
    - Reverse of `createPage`

@@ -6,19 +6,19 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 ## Workflows
 
 ### Browse timeline and interact
-1. `getHomeTimeline` → tweets with tweet_id
+1. `getHomeTimeline` → tweets → `tweet_id`
 2. `likeTweet(tweet_id)` / `createBookmark(tweet_id)` / `createRetweet(tweet_id)`
 
 ### Compose and manage tweets
-1. `createTweet(text)` → new tweet with rest_id
-2. `reply(tweet_id, text)` → reply to a tweet
-3. `deleteTweet(tweet_id)` → delete your own tweet
+1. `createTweet(text)` → `rest_id` (new tweet_id)
+2. `reply(tweet_id, text)` → reply to a tweet → `rest_id`
+3. `deleteTweet(tweet_id)` → delete your own tweet (tweet_id from createTweet `rest_id` or getHomeTimeline)
 
 ### Find and read a user's profile
-1. `getUserByScreenName(screen_name)` → `rest_id` (userId), bio, follower counts
-2. `getUserTweets(userId)` → user's tweets
-3. `getUserLikes(userId)` → user's liked tweets
-4. `getUserFollowers(userId)` / `getUserFollowing(userId)` → follower/following lists
+1. `getUserByScreenName(screen_name)` → `rest_id` (userId), `name`, `followers_count`
+2. `getUserTweets(userId)` → user's tweets → `tweet_id`
+3. `getUserLikes(userId)` → user's liked tweets → `tweet_id`
+4. `getUserFollowers(userId)` / `getUserFollowing(userId)` → follower/following `rest_id` list
 
 ### Manage social graph
 1. `getUserByScreenName(screen_name)` → `rest_id`
@@ -33,12 +33,13 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 1. `getTweetDetail(focalTweetId)` → full tweet thread with replies
 
 ### Moderate replies
-1. `hideReply(tweet_id)` / `unhideReply(tweet_id)` — hide/show replies on your tweets
+1. `getTweetDetail(focalTweetId)` → reply entries → reply `tweet_id`
+2. `hideReply(tweet_id)` / `unhideReply(tweet_id)` — hide/show replies on your tweets
 
 ### Direct messages
-1. `getUserByScreenName(screen_name)` → `rest_id`
-2. `sendDM(recipientId, text)` — approved contacts only
-3. `deleteDM(messageId)` — delete a sent message
+1. `getUserByScreenName(screen_name)` → `rest_id` (recipientId)
+2. `sendDM(recipientId, text)` → DM event with `messageId` — approved contacts only
+3. `deleteDM(messageId)` — delete a sent message (messageId from sendDM response)
 
 ### Notifications and bookmarks
 1. `getNotifications` → mentions, likes, retweets, follows
@@ -63,8 +64,8 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 | getBookmarks | your bookmarks | count | bookmarked tweets, cursors | paginated, own bookmarks only |
 | getNotifications | notifications | count | mentions, likes, follows, retweets | paginated |
 | createTweet | post a tweet | text | rest_id | write, CAUTION |
-| deleteTweet | delete your tweet | tweet_id | — | write, CAUTION |
-| reply | reply to tweet | tweet_id, text | rest_id | write, CAUTION |
+| deleteTweet | delete your tweet | tweet_id ← createTweet rest_id / getHomeTimeline | — | write, CAUTION |
+| reply | reply to tweet | tweet_id ← getHomeTimeline / getTweetDetail, text | rest_id | write, CAUTION |
 | likeTweet | like a tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write |
 | unlikeTweet | unlike a tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write |
 | createBookmark | bookmark tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write |
@@ -77,10 +78,10 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 | unblockUser | unblock user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
 | muteUser | mute user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
 | unmuteUser | unmute user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
-| hideReply | hide reply | tweet_id (reply to your tweet) | hidden: true | write, CAUTION |
-| unhideReply | unhide reply | tweet_id | hidden: false | write, CAUTION |
-| sendDM | send DM | recipientId ← getUserByScreenName rest_id, text | DM event | write, CAUTION, approved contacts |
-| deleteDM | delete DM | messageId | — | write, CAUTION |
+| hideReply | hide reply | tweet_id ← getTweetDetail reply entries | hidden: true | write, CAUTION |
+| unhideReply | unhide reply | tweet_id ← getTweetDetail reply entries | hidden: false | write, CAUTION |
+| sendDM | send DM | recipientId ← getUserByScreenName rest_id, text | messageId, DM event | write, CAUTION, approved contacts |
+| deleteDM | delete DM | messageId ← sendDM | — | write, CAUTION |
 
 ## Quick Start
 

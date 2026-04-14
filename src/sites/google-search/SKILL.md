@@ -6,23 +6,23 @@ Search engine (archetype: search). Google.com — autocomplete suggestions, orga
 ## Workflows
 
 ### Research a topic with context
-1. `searchSuggestions(q)` → refine query with autocomplete completions
-2. `searchWeb(q)` → organic results with title, link, snippet
-3. `getPeopleAlsoAsk(q)` → related questions for deeper exploration
-4. `getRelatedSearches(q)` → follow-up query ideas
+1. `searchSuggestions(q)` → `completions[]` for query refinement
+2. `searchWeb(q)` → `title`, `link`, `snippet` per result
+3. `getPeopleAlsoAsk(q)` → `questions[]` for deeper exploration
+4. `getRelatedSearches(q)` → `searches[]` for follow-up queries
 
 ### Compare products
-1. `searchSuggestions(q)` → refine product search terms
-2. `searchShopping(q)` → price, merchant, reviews for products
-3. `searchWeb(q)` → review articles and comparison pages
+1. `searchSuggestions(q)` → `completions[]` to refine product search terms
+2. `searchShopping(q)` → `title`, `price`, `merchant`, `reviewCount`
+3. `searchWeb(q)` → `title`, `link`, `snippet` for review articles
 
 ### Get entity information
-1. `searchWeb(q)` → organic results for entity name
-2. `getKnowledgePanel(q)` → structured entity data (title, subtitle, facts)
+1. `searchWeb(q)` → `title`, `link`, `snippet` for entity name
+2. `getKnowledgePanel(q)` → `title`, `subtitle`, `description`, `facts[]`
 
 ### Find local businesses
-1. `searchLocal(q)` → name, rating, reviews, type, address from map pack
-2. `searchWeb(q)` → supplementary organic results and review links
+1. `searchLocal(q)` → `name`, `rating`, `reviews`, `type`, `address`
+2. `searchWeb(q)` → supplementary `title`, `link`, `snippet` results
 
 ## Operations
 

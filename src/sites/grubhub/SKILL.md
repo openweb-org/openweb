@@ -6,11 +6,11 @@ Grubhub is a food delivery platform (archetype: Food Delivery). Search restauran
 ## Workflows
 
 ### Find restaurants and browse menu
-1. `searchRestaurants(latitude, longitude, searchTerm)` → pick restaurant → `restaurantId`
+1. `searchRestaurants(latitude, longitude, searchTerm)` → `restaurantId`, name, rating, deliveryFee
 2. `getMenu(restaurantId)` → categories with items and prices
 
 ### Check delivery details
-1. `searchRestaurants(latitude, longitude)` → pick restaurant → `restaurantId`
+1. `searchRestaurants(latitude, longitude)` → `restaurantId`, name, deliveryEstimate
 2. `getDeliveryEstimate(restaurantId)` → delivery time, fee, order minimum
 
 ## Operations

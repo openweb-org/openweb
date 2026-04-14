@@ -7,44 +7,44 @@ Chinese media review/rating platform (movies, books, music). Social/media archet
 
 ### Find and explore a movie
 1. `searchMovies(q)` → pick result → `target.id`
-2. `getMovie(id)` → full detail (rating, summary, cast overview)
-3. `getMovieCelebrities(id)` → directors, actors with roles
-4. `getMovieReviews(id)` → user reviews with ratings
-5. `getMoviePhotos(id)` → stills, posters with dimensions
+2. `getMovie(id=target.id)` → full detail → `rating.value`, `intro`, `genres`, `directors`, `actors`
+3. `getMovieCelebrities(id=target.id)` → directors[], actors[] with `name`, `character`, `latin_name`
+4. `getMovieReviews(id=target.id)` → user reviews → `comment`, `rating`, `user.name`, `vote_count`
+5. `getMoviePhotos(id=target.id)` → stills, posters → `image.large.url`, dimensions
 
 ### Find and explore a book
 1. `searchBooks(q)` → pick result → `target.id`
-2. `getBook(id)` → full detail (rating, author, summary)
-3. `getBookReviews(id)` → user reviews with ratings
+2. `getBook(id=target.id)` → full detail → `rating.value`, `intro`, `author_intro`, `pubdate`
+3. `getBookReviews(id=target.id)` → user reviews → `comment`, `rating`, `user.name`, `vote_count`
 
 ### Discover trending content
-1. `getRecentHotMovies()` → trending movies → `id`
-2. `getRecentHotTv()` → trending TV shows → `id`
-3. `getNowShowingMovies()` → in-theater movies → `id`
-4. `getTop250(start)` → all-time top movies with rank
+1. `getRecentHotMovies()` → trending movies → `id`, `title`, `rating.value`
+2. `getRecentHotTv()` → trending TV shows → `id`, `title`, `rating.value`, `episodes_info`
+3. `getNowShowingMovies()` → in-theater movies → `id`, `title`, `release_date`
+4. `getTop250(start)` → all-time top movies → `rank_value`, `title`, `rating.value`
 
 ### Find music
 1. `searchMusic(q)` → pick result → `target.id`
-2. `getMusicDetail(id)` → album detail, tracklist, singer
+2. `getMusicDetail(id=target.id)` → album detail → `title`, `singer[]`, `songs[]`, `genres[]`
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchMovies | search movies | q | target.id, title, rating, year | entry point |
-| getMovie | movie detail | id ← searchMovies | title, rating, genres, intro, directors, actors | |
-| getMovieReviews | movie user reviews | id ← searchMovies | comment, rating, user.name, vote_count | paginated (count, start) |
-| getMovieCelebrities | movie cast/crew | id ← searchMovies | directors[], actors[] with name, character, latin_name | |
-| getMoviePhotos | movie photo gallery | id ← searchMovies | photos[].image.large.url, dimensions | paginated (count, start) |
-| getTop250 | top 250 movies | start (optional) | rank_value, title, rating, description | paginated by 25 |
-| searchBooks | search books | q | target.id, title, rating, card_subtitle | entry point |
-| getBook | book detail | id ← searchBooks | title, rating, intro, author_intro, pubdate | |
-| getBookReviews | book user reviews | id ← searchBooks | comment, rating, user.name, vote_count | paginated (count, start) |
-| searchMusic | search music | q | target.id, title, rating, card_subtitle | entry point |
-| getMusicDetail | album detail | id ← searchMusic | title, singer[], songs[], genres[], pubdate | |
-| getRecentHotMovies | trending movies | limit (optional) | id, title, rating, year | entry point |
-| getRecentHotTv | trending TV shows | limit (optional) | id, title, rating, episodes_info | entry point |
-| getNowShowingMovies | in-theater movies | count (optional) | id, title, rating, release_date | entry point |
+| searchMovies | search movies | q | target.id, title, rating.value, year | entry point |
+| getMovie | movie detail | id <- searchMovies/getRecentHotMovies | title, rating.value, genres, intro, directors, actors | |
+| getMovieReviews | movie user reviews | id <- searchMovies | comment, rating, user.name, vote_count | paginated (count, start) |
+| getMovieCelebrities | movie cast/crew | id <- searchMovies | directors[], actors[] with name, character, latin_name | |
+| getMoviePhotos | movie photo gallery | id <- searchMovies | photos[].image.large.url, dimensions | paginated (count, start) |
+| getTop250 | top 250 movies | start (optional) | rank_value, title, rating.value, id | paginated by 25 |
+| searchBooks | search books | q | target.id, title, rating.value, card_subtitle | entry point |
+| getBook | book detail | id <- searchBooks | title, rating.value, intro, author_intro, pubdate | |
+| getBookReviews | book user reviews | id <- searchBooks | comment, rating, user.name, vote_count | paginated (count, start) |
+| searchMusic | search music | q | target.id, title, rating.value, card_subtitle | entry point |
+| getMusicDetail | album detail | id <- searchMusic | title, singer[], songs[], genres[], pubdate | |
+| getRecentHotMovies | trending movies | limit (optional) | id, title, rating.value, year | entry point |
+| getRecentHotTv | trending TV shows | limit (optional) | id, title, rating.value, episodes_info | entry point |
+| getNowShowingMovies | in-theater movies | count (optional) | id, title, rating.value, release_date | entry point |
 
 ## Quick Start
 
