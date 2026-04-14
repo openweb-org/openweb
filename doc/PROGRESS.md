@@ -1,3 +1,29 @@
+## 2026-04-14: Transport upgrade probe — ebay (no upgrade, bot detection blocks)
+
+**What changed:**
+- No code changes — probe concluded that transport upgrade is not viable.
+- Updated DOC.md with comprehensive probe results and transport evidence.
+
+**Probe findings:**
+- **Node direct**: Initial requests (3-4) return 200 with full data — search HTML with `.s-card`, item HTML with LD+JSON `@type: Product`. Radware StormCaster blocks after ~5-6 rapid requests with "Pardon Our Interruption..." captcha.
+- **page.evaluate(fetch)**: Fails from fresh browser context — eBay bot detection requires cookies from prior page navigation. Without cookies, fetch calls are blocked.
+- **No JSON APIs**: eBay is fully SSR (Marko.js). Zero API/XHR calls during page load.
+- **Seller stats JS-loaded**: Store page SSR HTML has card structure but feedback/sold/followers stats are populated by client-side JS.
+- **Store pages**: Intermittent hCaptcha triggers even in real browser sessions.
+- **HTML format**: eBay uses unquoted attributes (`type=application/ld+json`, `data-listingid=123`).
+
+**Current tier assessment:**
+- searchItems: Tier 2 (DOM extraction via `.s-card` selectors)
+- getItemDetail: Tier 3 (LD+JSON primary, DOM fallback for seller card)
+- getSellerProfile: Tier 2 (DOM extraction, stats require JS execution)
+
+**Key files:** `src/sites/ebay/DOC.md`
+**Verification:** Existing operations still functional (no code changes made)
+**Next:** None — eBay is at its optimal transport tier given bot detection constraints
+**Blockers:** Radware StormCaster rate-based blocking prevents node/page.evaluate(fetch) upgrade
+
+---
+
 ## 2026-04-14: Transport upgrade — quora (GraphQL intercept for answers)
 
 **What changed:**
