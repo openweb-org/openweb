@@ -80,6 +80,9 @@ openweb medium exec getRecommendedWriters '{}'
 - `transport: page` — all operations use browser fetch via adapter
 - GraphQL requires `Content-Type: application/json` header
 - Responses are JSON arrays (one element per batched operation)
+- **No `__NEXT_DATA__`**: Medium is not a Next.js site. No `_next/` assets, no `__NEXT_DATA__` script tag.
+- **`__APOLLO_STATE__` on tag pages**: Tag pages (e.g., `/tag/programming`) embed Apollo SSR cache as `window.__APOLLO_STATE__` with ~15 Post objects. Article pages and search pages do not have it. Tag page HTML is also fetchable from node (HTTP 200).
+- **GraphQL works from node**: The `/_/graphql` endpoint accepts standard (non-batched) `{ query, variables }` POST from node HTTP with Chrome UA — returns 200 with `{ data: ... }`. All read operations tested successfully. This means a Tier 7 (node direct) upgrade is feasible for read ops, but requires restructuring all operations away from the adapter pattern (Relay connection flattening, field renames) or accepting raw GraphQL response shapes.
 
 ## Known Issues
 - **Search uses DOM scraping**: Medium SSR-renders search results, no dedicated search GraphQL query. Author field may contain clap/response icons instead of author name. May break if layout changes.

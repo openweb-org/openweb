@@ -49,9 +49,11 @@ openweb goodrx exec getPharmacies '{"zipCode":"90210"}'
 No auth required. All operations access public drug pricing data.
 
 ## Transport
-- `transport: page` — PerimeterX blocks all node/direct HTTP requests
+- `transport: page` — PerimeterX blocks all node/direct HTTP requests (403 on node fetch)
 - Homepage warm-up required: navigate to goodrx.com before drug pages to build PerimeterX cookies
 - Adapter: `adapters/goodrx-web.ts`
+- **No `__NEXT_DATA__`**: Site uses Next.js App Router (RSC), not Pages Router. `_next/` assets present but no `__NEXT_DATA__` script tag or `window.__NEXT_DATA__` global. No other SSR globals (`__INITIAL_STATE__`, `__APOLLO_STATE__`, `__NUXT__`) found.
+- **Node transport not viable**: PerimeterX returns 403 on direct HTTP. Upgrade to `ssr_next_data` extraction is not possible.
 
 ## Extraction
 - **searchDrugs**: `page.evaluate` fetch to `/api/autocomplete` endpoint from page context, with DOM link fallback

@@ -12,6 +12,17 @@
 
 **Verification:** adapter-verified via openweb verify goodrx --browser
 
+## 2026-04-14 — Transport Upgrade Probe: No __NEXT_DATA__
+
+**Context:** Investigated `__NEXT_DATA__` extraction for transport upgrade from Tier 2 (DOM) to Tier 3 (SSR).
+**Findings:**
+- GoodRx uses Next.js **App Router (RSC)**, not Pages Router — no `__NEXT_DATA__` script tag
+- `_next/` asset paths present on drug pages, confirming Next.js, but RSC delivers data via React Server Components, not `__NEXT_DATA__`
+- No other SSR globals: `__INITIAL_STATE__`, `__APOLLO_STATE__`, `__NUXT__` all absent
+- Node HTTP returns 403 (PerimeterX) — no node transport path
+- LD+JSON (`MedicalWebPage`, `Drug`) available on drug pages; already used by adapter
+**Decision:** No upgrade viable. Staying on `transport: page` with adapter DOM/JSON-LD extraction.
+
 ## 2026-04-13 — PerimeterX Mitigation
 
 **Context:** PerimeterX bot detection blocks requests across operations, especially during sequential verify runs where cookies become poisoned.
