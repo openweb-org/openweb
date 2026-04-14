@@ -14,6 +14,16 @@ import type { Page } from 'patchright'
  * Bot detection: PerimeterX — navigate to about:blank, clear cookies, retry.
  */
 
+/** Detect stale/closed page errors (verify warm-up + PX can close the tab). */
+function isStalePage(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e)
+  return (
+    msg.includes('Cannot find parent object') ||
+    msg.includes('has been closed') ||
+    msg.includes('Target closed')
+  )
+}
+
 type AdapterErrors = {
   unknownOp(op: string): Error
   missingParam(p: string): Error
@@ -30,7 +40,18 @@ async function navigateWithPxRetry(page: Page, url: string, maxRetries = 4): Pro
       await page.context().clearCookies()
       await new Promise((r) => setTimeout(r, 1000))
     }
-    await page.goto(url, { waitUntil: 'load', timeout: 15_000 }).catch(() => {})
+    try {
+      await page.goto(url, { waitUntil: 'load', timeout: 15_000 })
+    } catch (e) {
+      if (isStalePage(e)) {
+        // Page stale from verify warm-up — blank + clear and retry
+        await page.goto('about:blank').catch(() => {})
+        await page.context().clearCookies().catch(() => {})
+        await new Promise((r) => setTimeout(r, 500))
+        continue
+      }
+      // Other navigation errors (timeout, etc.) — proceed to title check
+    }
     const title = await page.title().catch(() => '')
     if (!title.includes('Access to this page has been denied')) return true
   }
@@ -343,10 +364,17 @@ const adapter = {
     'Zillow property data via __NEXT_DATA__ extraction. Bypasses PerimeterX by using page navigation instead of API calls.',
 
   async init(page: Page): Promise<boolean> {
-    // If page is on PerimeterX CAPTCHA, clear all cookies immediately
-    const title = await page.title().catch(() => '')
-    if (title.includes('Access to this page has been denied')) {
-      await page.context().clearCookies()
+    try {
+      const title = await page.title()
+      if (title.includes('Access to this page has been denied')) {
+        await page.context().clearCookies()
+      }
+    } catch (e) {
+      // Page may be stale from verify warm-up (PX closed the tab)
+      if (isStalePage(e)) {
+        await page.goto('about:blank').catch(() => {})
+        await page.context().clearCookies().catch(() => {})
+      }
     }
     return true
   },

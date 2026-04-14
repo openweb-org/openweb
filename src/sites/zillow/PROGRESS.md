@@ -1,3 +1,16 @@
+## 2026-04-14 — Fix PerimeterX stale page crash during verify
+
+**Context:** `pnpm dev verify zillow` crashes with `Cannot find parent object page@... to create disposable@...` — verify warm-up navigates to zillow.com before the adapter runs, triggering PX CAPTCHA which closes the CDP tab. The adapter then tries to use the stale page object.
+
+**Changes:**
+- Added `isStalePage()` helper — detects `Cannot find parent object`, `has been closed`, `Target closed` error patterns
+- `adapter.init()` now wraps `page.title()` in try-catch; on stale page error, recovers via `about:blank` + `clearCookies()`
+- `navigateWithPxRetry()` now uses try-catch on `page.goto()` instead of `.catch(() => {})`; on stale page error, blanks + clears and continues to next retry attempt
+
+**Verification:** `pnpm dev verify zillow` → 4/4 PASS, `pnpm build` clean
+
+**Key discovery:** The `.catch(() => {})` pattern on `page.goto()` silently swallowed stale page errors, making the function return `true` (success) with a broken page. Subsequent `page.evaluate()` calls then crashed. The fix uses try-catch to distinguish stale page errors (which need recovery) from other navigation errors (which can be ignored).
+
 ## 2026-04-13 — Transport downgrade: GraphQL API → __NEXT_DATA__ SSR extraction
 
 **Context:** All 4 ops failing verify — PerimeterX now blocks all programmatic fetch calls to `/graphql/` (both `page.evaluate(fetch())` and `page.request.fetch()` return 403 with CAPTCHA HTML). Previous adapter used GraphQL persisted query via in-page fetch.

@@ -79,9 +79,10 @@ openweb zillow exec getNeighborhood '{"zpid":"15076238","slug":"1000-Fell-St-San
 
 ### PerimeterX Handling (adapter pattern)
 - Initial page load after browser start triggers CAPTCHA — verify warm-up poisons the PX session
+- **Stale page recovery**: verify warm-up may trigger PX which closes the CDP tab. `adapter.init()` detects stale page errors (`Cannot find parent object`, `has been closed`, `Target closed`) and recovers by navigating to `about:blank` + clearing cookies
 - **Reset pattern**: navigate to `about:blank` → `context.clearCookies()` → wait 1s → retry navigation
+- `navigateWithPxRetry()` also handles stale page on first navigation attempt — detects the error, blanks + clears, and retries
 - Up to 4 retry attempts per navigation; first 1-2 attempts typically CAPTCHA, subsequent succeed
-- `adapter.init()` clears cookies if current page is CAPTCHA (handles warm-up poisoning)
 - `propertyCache` avoids re-navigation when multiple ops target the same zpid
 
 ### Known Issues
