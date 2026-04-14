@@ -242,7 +242,7 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle
 
     // Start headless Chrome
     const config = getBrowserConfig()
-    await browserStartCommand({ silent: true, headless: true, ...config })
+    await browserStartCommand({ silent: true, headless: true, offscreen: true, ...config })
 
     // Read the port that browserStartCommand wrote
     const port = await readPort()
@@ -275,7 +275,7 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle
  */
 export async function refreshProfile(): Promise<void> {
   await browserStopCommand({ silent: true })
-  await browserStartCommand({ silent: true, headless: true, ...getBrowserConfig() })
+  await browserStartCommand({ silent: true, headless: true, offscreen: true, ...getBrowserConfig() })
 }
 
 // ── Tier 4: User login with backoff poll ─────

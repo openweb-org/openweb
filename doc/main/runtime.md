@@ -130,7 +130,8 @@ ensureBrowser(cdpEndpoint?)
        └── No managed browser
              ├── Acquire filesystem lock (atomic, PID-based, stale-safe)
              ├── Double-check after lock (another process may have started Chrome)
-             ├── Start headless Chrome (config from ~/.openweb/config.json)
+             ├── Start Chrome (config from ~/.openweb/config.json)
+             │     └── If headed (headless: false), launch off-screen (--window-position=10000,10000)
              ├── Write PID/port files
              ├── Connect via CDP with retry
              ├── Touch last-used, spawn watchdog

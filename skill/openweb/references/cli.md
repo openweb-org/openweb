@@ -71,6 +71,8 @@ Override profile source with `--profile <dir>` or `browser.profile` in config. D
 
 **Headed mode:** The managed browser is headless by default. Use `--no-headless` when the user needs to interact with it (CAPTCHA solving, debugging). Set `"browser": {"headless": false}` in config for persistent headed mode. Example: `openweb browser restart --no-headless`.
 
+**Off-screen headed:** When auto-started (e.g., by `exec` or `verify`), headed browsers launch off-screen (`--window-position=10000,10000`) so they don't steal focus. Manual `browser start --no-headless` launches on-screen for interactive use (CAPTCHA solving).
+
 ## Login
 
 ```bash

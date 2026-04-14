@@ -73,7 +73,7 @@ Errors on stderr include `failureClass`:
 | `needs_page` | Open a tab to the site URL |
 | `permission_denied` | Update `permissions` in `$OPENWEB_HOME/config.json` |
 | `permission_required` | Ask user for confirmation, then retry |
-| `retriable` | Wait a few seconds, retry (max 2). If 403 + CAPTCHA: `openweb browser restart --no-headless`, user solves CAPTCHA in visible browser, then retry. For persistent CAPTCHA sites, set `"browser": {"headless": false}` in config |
+| `retriable` | Wait a few seconds, retry (max 2). If 403 + CAPTCHA: `openweb browser restart --no-headless`, user solves CAPTCHA in visible browser, then retry. For persistent CAPTCHA sites, set `"browser": {"headless": false}` in config (auto-started browsers launch off-screen to avoid stealing focus) |
 | `fatal` | Don't retry — fix params or check site name |
 
 If the table above doesn't resolve it, read references/troubleshooting.md.

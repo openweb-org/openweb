@@ -132,7 +132,7 @@ If fix revealed something novel → read `add-site/document.md` for knowledge up
 3. Retry the operation
 4. Optionally `openweb browser restart` to return to headless
 
-For sites that consistently trigger CAPTCHAs, set `"browser": {"headless": false}` in `~/.openweb/config.json` for persistent headed mode.
+For sites that consistently trigger CAPTCHAs, set `"browser": {"headless": false}` in `~/.openweb/config.json` for persistent headed mode. Auto-started headed browsers launch off-screen and won't interfere with user activity — only manual `browser start --no-headless` shows a visible window for CAPTCHA solving.
 
 **Note:** This is different from `needs_login` — login happens in the user's default browser (cookies get copied to managed browser). CAPTCHAs must be solved in the managed browser itself because the challenge cookie/state must stay in that session.
 
