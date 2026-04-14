@@ -59,8 +59,9 @@ openweb kayak exec searchCars '{"location":"LAX","pickupDate":"2026-05-15","drop
 - **page** transport required (adapter/intercept pattern)
 - Akamai bot detection present — direct Node HTTP will be blocked
 - Adapter: `adapters/kayak-search.ts`
-- Pattern: navigate to search URL → intercept poll API responses
+- Pattern: navigate to search URL → intercept poll API responses (flights, cars) or SSR DOM extraction (hotels)
 - Poll is progressive: results accumulate across multiple responses
+- Hotels redirect to map view (`;map`) where results are SSR-rendered in DOM, not via poll API
 
 ## Bot Detection
 - Akamai Bot Manager (`_abck` cookie present on some subdomains)
@@ -73,3 +74,4 @@ openweb kayak exec searchCars '{"location":"LAX","pickupDate":"2026-05-15","drop
 - Hotel URLs need specific format: city name with dashes or city,state-cID
 - Car search location resolution may redirect (e.g., city name → nearest airport)
 - Booking URLs are redirects to external provider sites
+- Akamai rate-limits rapid successive visits — browser restart (`openweb browser stop && openweb browser start`) may be needed between verify runs

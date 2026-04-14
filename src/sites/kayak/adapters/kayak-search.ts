@@ -1,9 +1,9 @@
 import type { Page, Response as PwResponse } from 'patchright'
 /**
- * Kayak L3 adapter — mixed intercept + extraction.
+ * Kayak L3 adapter — intercept + extraction.
  *
  * Flights & Cars: intercept progressive poll API responses.
- * Hotels: DOM extraction from SSR map view (poll API doesn't fire on clean sessions).
+ * Hotels: DOM extraction from SSR map view (map mode doesn't use poll API).
  *
  * Poll endpoints (flights/cars):
  *   Flights: POST /i/api/search/dynamic/flights/poll
@@ -16,6 +16,35 @@ type ErrorHelpers = {
   unknownOp(op: string): Error
   httpError(status: number): Error
   apiError(label: string, msg: string): Error
+}
+
+/* ---------- Akamai warm-up ---------- */
+
+/**
+ * Ensure Akamai Bot Manager `_abck` cookie exists before making requests.
+ * The framework's warmSession runs with a 3s fixed delay which is often
+ * insufficient for Akamai sensor scripts. This polls for the actual cookie.
+ */
+async function ensureAkamaiCookie(page: Page): Promise<void> {
+  const url = 'https://www.kayak.com'
+  const cookies = await page.context().cookies(url)
+  const hasAbck = cookies.some(c => c.name === '_abck')
+
+  // Navigate to homepage if not already on kayak.com or if on error page
+  const currentUrl = page.url()
+  if (!currentUrl.includes('kayak.com') || currentUrl.includes('chrome-error')) {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
+  }
+
+  if (hasAbck) return
+
+  // Poll for _abck cookie stabilization (up to 8s)
+  const start = Date.now()
+  while (Date.now() - start < 8_000) {
+    const fresh = await page.context().cookies(url)
+    if (fresh.some(c => c.name === '_abck')) return
+    await new Promise(r => setTimeout(r, 500))
+  }
 }
 
 /* ---------- shared intercept ---------- */
@@ -116,20 +145,25 @@ async function searchHotels(
     throw errors.apiError('searchHotels', 'checkInDate and checkOutDate are required')
   }
 
-  // Kayak hotel URL → SSR map view with hotel cards in DOM
+  // Hotels use DOM extraction (map mode is SSR, no poll API).
+  // Ensure Akamai cookies are present before navigating to search results.
   const location = destination.replace(/\s+/g, '-')
   let url = `https://www.kayak.com/hotels/${location}/${checkInDate}/${checkOutDate}/${guests}adults`
   if (rooms > 1) url += `/${rooms}rooms`
   url += `?sort=${sort}`
 
-  await page.goto(url, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-  await page.waitForSelector('[class*="resultInner"]', { timeout: 20_000 }).catch(() => {})
+  await ensureAkamaiCookie(page)
+
+  // Navigation may timeout on load event (ad-heavy page), but DOM renders earlier
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
+  // Wait for hotel result cards to render — fail explicitly if they don't appear
+  await page.waitForSelector('[class*="resultInner"]', { timeout: 20_000 })
 
   // Extract hotel data from SSR-rendered DOM
   const results = await page.evaluate(() => {
     const cards = document.querySelectorAll('[class*="resultInner"]')
     return Array.from(cards).map(card => {
-      const text = card.innerText
+      const text = (card as HTMLElement).innerText
       const lines = text.split('\n').filter(l => l.trim().length > 0)
 
       // Name: first substantial line (skip Save, Share, Compare)
@@ -139,12 +173,9 @@ async function searchHotels(
         if (t.length > 5 && !['Save', 'Share', 'Compare'].includes(t)) { name = t; break }
       }
 
-      // Rating: pattern like "8.4" followed by text and review count
       const ratingMatch = text.match(/(\d+\.\d)\s+(\w[\w\s]*?)\((\d[\d,]*)\)/)
       const starsMatch = text.match(/(\d)\s*stars?/i)
       const priceMatch = text.match(/\$(\d[\d,]+)/)
-
-      // Location from name link
       const nameLink = card.querySelector('[class*="FLpo-hotel-name"] a, [class*="hotel-name"] a, a[class*="name"]')
       const linkHref = nameLink?.getAttribute('href') ?? ''
 

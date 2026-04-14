@@ -1,3 +1,22 @@
+## 2026-04-14: Fix kayak searchHotels — proper error handling + Akamai warm-up
+
+**What changed:**
+- Fixed searchHotels silent failure: removed `.catch(() => {})` on `waitForSelector` so bot detection / DOM timeout errors propagate instead of returning empty results
+- Changed `waitUntil: 'load'` → `'domcontentloaded'` for faster DOM readiness on ad-heavy page
+- Added `ensureAkamaiCookie()` — polls for `_abck` cookie before hotel navigation, ensuring Akamai sensor scripts have generated valid cookies
+- Verified hotel poll API (`/search/dynamic/hotels/poll`) does NOT fire in map mode — hotels redirect to `;map` view where results are SSR-rendered in DOM. DOM extraction is the correct approach.
+- Updated DOC.md with hotel transport details and Akamai rate-limiting caveat
+
+**Why:**
+- searchHotels was always failing in verify because `.catch(() => {})` on both `page.goto()` and `page.waitForSelector()` silently swallowed all errors — bot-blocked pages returned 0 results with no diagnostic info
+
+**Key files:** `src/sites/kayak/adapters/kayak-search.ts`, `src/sites/kayak/DOC.md`
+**Verification:** `pnpm dev verify kayak` — 2/2 ops PASS (fresh browser)
+**Next:** None (searchFlights repeat-run flakiness is pre-existing Akamai rate limiting)
+**Blockers:** None
+
+---
+
 ## 2026-04-14: Workflow Polish + Transport Stability Sprint (release-quality-0413)
 
 **What changed:**
