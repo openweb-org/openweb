@@ -1,76 +1,228 @@
 import type { Page } from 'patchright'
 
-/** Map operationId → Google Flights page path for navigation */
-const OP_PATHS: Record<string, string> = {
-	searchFlights: '/travel/flights/search',
-	getFlightOverview: '/travel/flights',
-	getFlightBookingDetails: '/travel/flights/booking',
-	exploreDestinations: '/travel/explore',
-	getPriceInsights: '/travel/flights/search/insights',
+import { nodeFetch } from '../../../lib/adapter-helpers.js'
+
+type AdapterErrors = {
+	botBlocked(msg: string): Error
+	unknownOp(op: string): Error
+	wrap(error: unknown): Error
 }
 
-/* ---------- searchFlights ---------- */
+const BASE = 'https://www.google.com'
 
-async function searchFlights(page: Page): Promise<unknown> {
-	return page.evaluate(() => {
-		const flights: Array<Record<string, unknown>> = []
-		const items = document.querySelectorAll('li.pIav2d')
-		for (const li of items) {
-			const text = li.textContent || ''
-			if (!text.includes('$')) continue
-			const timeMatch = text.match(
-				/(\d+:\d+\s[AP]M)\d+:\d+\s[AP]M[\s\u00A0]+on[\s\u00A0]+.+?[\s\u00A0]+\u2013[\s\u00A0]+(\d+:\d+\s[AP]M)/,
-			)
-			if (!timeMatch) continue
-			const airlineSpan = [...li.querySelectorAll('span')].find((s) => {
-				const t = s.textContent?.trim()
-				return (
-					t.length > 2 &&
-					t.length < 30 &&
-					!t.match(/\d/) &&
-					!t.includes('Airport') &&
-					!t.includes('Nonstop') &&
-					!t.includes('stop') &&
-					!t.includes('emissions') &&
-					!t.includes('trip') &&
-					!t.includes('Select') &&
-					!t.includes('Departure') &&
-					!t.includes('Return')
-				)
-			})
-			const airline = airlineSpan ? airlineSpan.textContent?.trim() : ''
-			const durationMatch = text.match(/(\d+\shr(?:\s\d+\smin)?|\d+\smin)/)
-			const routeMatch = text.match(/([A-Z]{3})[A-Za-z\s\u00A0-]+\u2013([A-Z]{3})/)
-			const stopsText = text.match(/(Nonstop|\d+\sstops?)/i)
-			const priceMatch = text.match(/\$(\d[\d,]*)/)
-			const co2Match = text.match(/(\d+)\skg\sCO2/)
-			const emMatch = text.match(/(-?\d+)%\semissions/)
-			flights.push({
-				departureTime: timeMatch[1],
-				arrivalTime: timeMatch[2],
-				airline,
-				duration: durationMatch ? durationMatch[1] : '',
-				origin: routeMatch ? routeMatch[1] : '',
-				destination: routeMatch ? routeMatch[2] : '',
-				stops: stopsText ? stopsText[1] : '',
-				price: priceMatch ? Number.parseInt(priceMatch[1].replace(',', '')) : null,
-				co2Kg: co2Match ? Number.parseInt(co2Match[1]) : null,
-				emissionsPct: emMatch ? Number.parseInt(emMatch[1]) : null,
-			})
+/* ========== Shared: AF_initDataCallback parser ========== */
+
+/** Parse all AF_initDataCallback entries from Google SSR HTML. */
+function parseAfInitData(html: string): Map<string, unknown> {
+	const results = new Map<string, unknown>()
+	const regex = /AF_initDataCallback\(\{key:\s*'(ds:\d+)',\s*hash:\s*'\d+',\s*data:/g
+	let match: RegExpExecArray | null
+	for (match = regex.exec(html); match !== null; match = regex.exec(html)) {
+		const key = match[1]
+		const start = match.index + match[0].length
+		let depth = 0
+		let i = start
+		let inStr = false
+		let esc = false
+		for (; i < html.length && i < start + 200_000; i++) {
+			const ch = html[i]
+			if (esc) { esc = false; continue }
+			if (ch === '\\') { esc = true; continue }
+			if (ch === '"') { inStr = !inStr; continue }
+			if (inStr) continue
+			if (ch === '[' || ch === '{') depth++
+			else if (ch === ']' || ch === '}') { depth--; if (depth === 0) break }
 		}
-		const origin = (document.querySelector('input[aria-label*="Where from"]') as HTMLInputElement)?.value || ''
-		const dest = (document.querySelector('input[aria-label*="Where to"]') as HTMLInputElement)?.value || ''
-		const rc = document.body.innerText.match(/(\d+) results? returned/)
-		return {
-			origin,
-			destination: dest,
-			resultCount: rc ? Number.parseInt(rc[1]) : flights.length,
-			flights,
+		const raw = html.slice(start, i + 1)
+		try {
+			results.set(key, JSON.parse(raw))
+		} catch {
+			// Trim trailing garbage for lenient parse
+			let trimmed = raw
+			while (trimmed.length > 0 && trimmed[trimmed.length - 1] !== ']') trimmed = trimmed.slice(0, -1)
+			try { results.set(key, JSON.parse(trimmed)) } catch { /* skip unparseable */ }
 		}
+	}
+	return results
+}
+
+/** Fetch Google Flights page HTML via node and return parsed ds:1 data. */
+async function fetchFlightsData(
+	tfs: string, errors: AdapterErrors,
+): Promise<{ ds1: unknown[]; html: string }> {
+	const url = new URL('/travel/flights/search', BASE)
+	url.searchParams.set('tfs', tfs)
+	const result = await nodeFetch({
+		url: url.toString(),
+		headers: { Accept: 'text/html', 'Accept-Language': 'en-US,en;q=0.9' },
+		timeout: 25_000,
 	})
+	if (result.status !== 200) throw errors.botBlocked(`Google Flights returned HTTP ${result.status}`)
+	const afData = parseAfInitData(result.text)
+	const ds1 = afData.get('ds:1')
+	if (!ds1 || !Array.isArray(ds1)) throw errors.wrap(new Error('Flight data (ds:1) not found in page'))
+	return { ds1: ds1 as unknown[], html: result.text }
 }
 
-/* ---------- getFlightOverview ---------- */
+/* ========== Helpers ========== */
+
+function fmtTime(t: unknown): string {
+	if (!Array.isArray(t)) return ''
+	const h = t[0] as number
+	const m = (t[1] as number | undefined) ?? 0
+	const ampm = h >= 12 ? 'PM' : 'AM'
+	return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
+function fmtDuration(mins: number): string {
+	const h = Math.floor(mins / 60)
+	const m = mins % 60
+	if (h === 0) return `${m} min`
+	if (m === 0) return `${h} hr`
+	return `${h} hr ${m} min`
+}
+
+function extractOffer(offer: unknown[]): Record<string, unknown> | null {
+	const d = offer[0] as unknown[]
+	const priceArr = offer[1] as unknown[]
+	if (!Array.isArray(d) || !Array.isArray(priceArr)) return null
+
+	const legs = d[2] as unknown[][]
+	const stopsCount = Array.isArray(legs) ? legs.length - 1 : 0
+
+	// Emissions from d[22]
+	const emStats = d[22] as unknown[] | null
+	const emPct = Array.isArray(emStats) ? (emStats[3] as number | null) : null
+	const co2g = Array.isArray(emStats) ? (emStats[7] as number | null) : null
+
+	return {
+		airline: Array.isArray(d[1]) ? (d[1] as string[])[0] : String(d[0]),
+		airlineCode: d[0] as string,
+		origin: d[3] as string,
+		destination: d[6] as string,
+		departureTime: fmtTime(d[5]),
+		arrivalTime: fmtTime(d[8]),
+		duration: fmtDuration(d[9] as number),
+		durationMinutes: d[9] as number,
+		stops: stopsCount === 0 ? 'Nonstop' : `${stopsCount} stop${stopsCount > 1 ? 's' : ''}`,
+		price: Array.isArray(priceArr[0]) ? (priceArr[0] as unknown[])[1] as number : null,
+		co2Kg: typeof co2g === 'number' ? Math.round(co2g / 1000) : null,
+		emissionsPct: typeof emPct === 'number' ? emPct : null,
+		legs: Array.isArray(legs)
+			? legs.map((leg: unknown[]) => ({
+					origin: leg[3] as string,
+					originAirport: leg[4] as string,
+					destination: leg[6] as string,
+					destinationAirport: leg[5] as string,
+					departureTime: fmtTime(leg[8]),
+					arrivalTime: fmtTime(leg[10]),
+					duration: fmtDuration(leg[11] as number),
+					aircraft: leg[17] as string || '',
+					flightNumber: Array.isArray(leg[22])
+						? `${leg[22][0]}${leg[22][1]}`
+						: '',
+					airline: Array.isArray(leg[22]) ? (leg[22][3] as string) : '',
+				}))
+			: [],
+	}
+}
+
+/* ========== Node operations ========== */
+
+async function searchFlights(
+	_page: Page | null, params: Record<string, unknown>, errors: AdapterErrors,
+): Promise<unknown> {
+	const tfs = String(params.tfs || '')
+	if (!tfs) throw errors.wrap(new Error('tfs parameter is required'))
+
+	const { ds1 } = await fetchFlightsData(tfs, errors)
+
+	// Route info from ds1[1]
+	const routeInfo = ds1[1] as unknown[][]
+	const originCity = routeInfo?.[0]?.[0]?.[0]?.[1] as string || ''
+	const originCode = (routeInfo?.[0]?.[0]?.[0]?.[2] as unknown[])?.[5] as string || ''
+	const destCity = routeInfo?.[0]?.[1]?.[0]?.[1] as string ||
+		routeInfo?.[1]?.[0]?.[0]?.[1] as string || ''
+	const destCode = (routeInfo?.[0]?.[1]?.[0]?.[2] as unknown[])?.[5] as string ||
+		(routeInfo?.[1]?.[0]?.[0]?.[2] as unknown[])?.[5] as string || ''
+
+	// Best flights from ds1[2], other flights from ds1[3]
+	const flights: Record<string, unknown>[] = []
+	for (const bucket of [ds1[2], ds1[3]]) {
+		const offers = Array.isArray(bucket) && Array.isArray(bucket[0]) ? bucket[0] as unknown[][] : []
+		for (const offer of offers) {
+			if (!Array.isArray(offer)) continue
+			const f = extractOffer(offer)
+			if (f) flights.push(f)
+		}
+	}
+
+	return {
+		origin: originCity ? `${originCity} (${originCode})` : originCode,
+		destination: destCity ? `${destCity} (${destCode})` : destCode,
+		resultCount: flights.length,
+		flights,
+	}
+}
+
+async function getPriceInsights(
+	_page: Page | null, params: Record<string, unknown>, errors: AdapterErrors,
+): Promise<unknown> {
+	const tfs = String(params.tfs || '')
+	if (!tfs) throw errors.wrap(new Error('tfs parameter is required'))
+
+	const { ds1 } = await fetchFlightsData(tfs, errors)
+
+	// Route info
+	const routeInfo = ds1[1] as unknown[][]
+	const origin = routeInfo?.[0]?.[0]?.[0]?.[1] as string || ''
+	const destination = (ds1[5] as unknown[])?.[12] as string || ''
+
+	// Price stats from ds1[5]
+	const stats = ds1[5] as unknown[]
+	const lowPrice = Array.isArray(stats?.[1]) ? (stats[1] as unknown[])[1] as number : null
+	const typicalPrice = Array.isArray(stats?.[2]) ? (stats[2] as unknown[])[1] as number : null
+	const lowRange = Array.isArray(stats?.[4]) ? (stats[4] as unknown[])[1] as number : null
+	const highRange = Array.isArray(stats?.[5]) ? (stats[5] as unknown[])[1] as number : null
+
+	// Price history from ds1[5][10]
+	const historyData = stats?.[10]
+	const priceHistory: Array<{ date: string; price: number }> = []
+	if (Array.isArray(historyData) && Array.isArray(historyData[0])) {
+		for (const [ts, price] of historyData[0] as [number, number][]) {
+			const d = new Date(ts)
+			priceHistory.push({
+				date: d.toISOString().slice(0, 10),
+				price,
+			})
+		}
+	}
+
+	// Filter metadata from ds1[7]
+	const filters = ds1[7] as unknown[]
+	const priceRange = {
+		low: Array.isArray(filters?.[0]?.[0]) ? (filters[0] as unknown[][])[0][1] as number : null,
+		high: Array.isArray(filters?.[0]?.[1]) ? (filters[0] as unknown[][])[1][1] as number : null,
+	}
+	const airlines: Array<{ code: string; name: string }> = []
+	const airlineList = (filters?.[1] as unknown[])?.[1] as string[][] | undefined
+	if (Array.isArray(airlineList)) {
+		for (const [code, name] of airlineList) airlines.push({ code, name })
+	}
+
+	return {
+		origin,
+		destination,
+		currentLowPrice: lowPrice,
+		typicalPrice,
+		priceRange: { low: lowRange, high: highRange },
+		routePriceRange: priceRange,
+		popularAirlines: airlines,
+		priceHistory: priceHistory.length > 0 ? priceHistory : undefined,
+	}
+}
+
+/* ========== Page operations (kept on page transport) ========== */
 
 async function getFlightOverview(page: Page): Promise<unknown> {
 	return page.evaluate(() => {
@@ -95,8 +247,10 @@ async function getFlightOverview(page: Page): Promise<unknown> {
 		}
 		const fastestMatch = text.match(/Fastest flight\s*(\d+ hr(?: \d+ min)?)/)
 		const nonstopMatch = text.match(/Nonstop flights\s*(Every day|[A-Z][a-z]+)/)
-		const origin = (document.querySelector('input[aria-label*="Where from"]') as HTMLInputElement)?.value || ''
-		const dest = (document.querySelector('input[aria-label*="Where to"]') as HTMLInputElement)?.value || ''
+		const origin =
+			(document.querySelector('input[aria-label*="Where from"]') as HTMLInputElement)?.value || ''
+		const dest =
+			(document.querySelector('input[aria-label*="Where to"]') as HTMLInputElement)?.value || ''
 		return {
 			origin,
 			destination: dest,
@@ -106,8 +260,6 @@ async function getFlightOverview(page: Page): Promise<unknown> {
 		}
 	})
 }
-
-/* ---------- getFlightBookingDetails ---------- */
 
 async function getFlightBookingDetails(page: Page): Promise<unknown> {
 	return page.evaluate(() => {
@@ -134,20 +286,18 @@ async function getFlightBookingDetails(page: Page): Promise<unknown> {
 		const bagMatches = text.matchAll(
 			/(free carry-on|carry-on bag available for a fee|checked bag[^.]*?\$\d+|checked bag available for a fee)/gi,
 		)
-		for (const m of bagMatches) {
-			bagPolicies.push(m[0])
-		}
+		for (const m of bagMatches) bagPolicies.push(m[0])
 		const bookingMatch = text.match(/Book with ([^\n]+)/)
 		return {
-			totalPrice: totalPriceMatch ? Number.parseInt(totalPriceMatch[1].replace(',', '')) : null,
+			totalPrice: totalPriceMatch
+				? Number.parseInt(totalPriceMatch[1].replace(',', ''))
+				: null,
 			legs,
 			bagPolicies,
 			bookWith: bookingMatch ? bookingMatch[1].trim() : '',
 		}
 	})
 }
-
-/* ---------- exploreDestinations ---------- */
 
 async function exploreDestinations(page: Page): Promise<unknown> {
 	return page.evaluate(() => {
@@ -172,7 +322,9 @@ async function exploreDestinations(page: Page): Promise<unknown> {
 			const dateMatch = beforePrice.match(
 				/((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+\s*[–—]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+)?\d+)/i,
 			)
-			const destination = dateMatch ? beforePrice.slice(0, dateMatch.index).trim() : beforePrice.trim()
+			const destination = dateMatch
+				? beforePrice.slice(0, dateMatch.index).trim()
+				: beforePrice.trim()
 			const dates = dateMatch ? dateMatch[1].trim() : ''
 			const middlePart = parts[1].replace(/^\d+/, '')
 			const stopsMatch = middlePart.match(/(Nonstop|\d+\s*stops?)/i)
@@ -184,81 +336,45 @@ async function exploreDestinations(page: Page): Promise<unknown> {
 				flightPrice: Number.parseInt(flightPriceMatch[1]),
 				stops: stopsMatch ? stopsMatch[1] : '',
 				duration: durationMatch ? durationMatch[1].trim() : '',
-				hotelPricePerNight: hotelPriceMatch ? Number.parseInt(hotelPriceMatch[1]) : null,
+				hotelPricePerNight: hotelPriceMatch
+					? Number.parseInt(hotelPriceMatch[1])
+					: null,
 			})
 		}
 		return { origin, destinationCount: destinations.length, destinations }
 	})
 }
 
-/* ---------- getPriceInsights ---------- */
+/* ========== Adapter export ========== */
 
-async function getPriceInsights(page: Page): Promise<unknown> {
-	return page.evaluate(() => {
-		const text = document.body.innerText
-		const origin =
-			(document.querySelector('input[aria-label*="Where from"]') as HTMLInputElement)?.value || ''
-		const dest =
-			(document.querySelector('input[aria-label*="Where to"]') as HTMLInputElement)?.value || ''
-
-		// Price trend prediction (from search results page)
-		const trendMatch = text.match(/Prices are (likely to go up[^\n]*|currently low|expected to[^\n]*|unlikely to[^\n]*)/)
-		const priceTrend = trendMatch ? trendMatch[1].trim() : ''
-
-		// Cheapest/most expensive months (from overview page)
-		const cheapMonthMatch = text.match(/cheapest month to fly.*?is typically (\w+)/)
-		const expMonthMatch = text.match(/most expensive month.*?is typically (\w+)/)
-		const cheapRangeMatch = text.match(
-			/(\w+)Cheapest\s*Typical prices:\s*\$(\d+)[–—](\d+)/,
-		)
-		const expRangeMatch = text.match(
-			/(\w+)Most expensive\s*Typical prices:\s*\$(\d+)[–—](\d+)/,
-		)
-
-		// Popular airlines
-		const airlines: Array<Record<string, unknown>> = []
-		const airlineSection = text.match(/Popular airlines[^\n]*\n([\s\S]*?)(?:Popular airports|Frequently|$)/);
-		if (airlineSection) {
-			const airlineMatches = airlineSection[1].matchAll(
-				/([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)*)\n(Nonstop|\d+\s*stops?)\nfrom\s*\$(\d+)/g,
-			)
-			for (const m of airlineMatches) {
-				airlines.push({ airline: m[1].trim(), stops: m[2], fromPrice: Number.parseInt(m[3]) })
-			}
-		}
-
-		return {
-			origin,
-			destination: dest,
-			priceTrend,
-			cheapestMonth: cheapMonthMatch ? cheapMonthMatch[1] : '',
-			mostExpensiveMonth: expMonthMatch ? expMonthMatch[1] : '',
-			cheapestRange: cheapRangeMatch
-				? { low: Number.parseInt(cheapRangeMatch[2]), high: Number.parseInt(cheapRangeMatch[3]) }
-				: null,
-			mostExpensiveRange: expRangeMatch
-				? { low: Number.parseInt(expRangeMatch[2]), high: Number.parseInt(expRangeMatch[3]) }
-				: null,
-			popularAirlines: airlines,
-		}
-	})
+/** Page ops need navigation paths */
+const PAGE_OP_PATHS: Record<string, string> = {
+	getFlightOverview: '/travel/flights',
+	getFlightBookingDetails: '/travel/flights/booking',
+	exploreDestinations: '/travel/explore',
 }
 
-/* ---------- adapter export ---------- */
-
-const OPERATIONS: Record<string, (page: Page) => Promise<unknown>> = {
+const NODE_OPS: Record<
+	string,
+	(page: Page | null, params: Record<string, unknown>, errors: AdapterErrors) => Promise<unknown>
+> = {
 	searchFlights,
+	getPriceInsights,
+}
+
+const PAGE_OPS: Record<string, (page: Page) => Promise<unknown>> = {
 	getFlightOverview,
 	getFlightBookingDetails,
 	exploreDestinations,
-	getPriceInsights,
 }
 
 const adapter = {
 	name: 'google-flights',
-	description: 'Google Flights — search, overview, booking, explore destinations, price insights via DOM extraction',
+	description:
+		'Google Flights — search + price insights via node SSR extraction, overview/booking/explore via page DOM',
 
-	async init(page: Page): Promise<boolean> {
+	async init(page: Page | null): Promise<boolean> {
+		if (!page) return true // node transport — always ready
 		return page.url().includes('google.com')
 	},
 
@@ -266,25 +382,33 @@ const adapter = {
 		return true
 	},
 
-	async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: { unknownOp(op: string): Error; wrap(error: unknown): Error } }): Promise<unknown> {
-		const { errors } = helpers
-		try {
-			const handler = OPERATIONS[operation]
-			if (!handler) throw errors.unknownOp(operation)
+	async execute(
+		page: Page | null,
+		operation: string,
+		params: Readonly<Record<string, unknown>>,
+		helpers: Record<string, unknown>,
+	): Promise<unknown> {
+		const { errors } = helpers as { errors: AdapterErrors }
 
-			const basePath = OP_PATHS[operation]
-			if (basePath) {
-				const url = new URL(basePath, 'https://www.google.com')
-				if (params.tfs) url.searchParams.set('tfs', String(params.tfs))
-				if (params.tfu) url.searchParams.set('tfu', String(params.tfu))
-				await page.goto(url.toString(), { waitUntil: 'load', timeout: 30000 }).catch(() => {})
-				await new Promise((r) => setTimeout(r, 3000))
-			}
+		// Node-transport operations
+		const nodeHandler = NODE_OPS[operation]
+		if (nodeHandler) return nodeHandler(page, { ...params }, errors)
 
-			return await handler(page)
-		} catch (error) {
-			throw errors.wrap(error)
+		// Page-transport operations
+		const pageHandler = PAGE_OPS[operation]
+		if (!pageHandler) throw errors.unknownOp(operation)
+		if (!page) throw errors.wrap(new Error(`${operation} requires page transport`))
+
+		const basePath = PAGE_OP_PATHS[operation]
+		if (basePath) {
+			const url = new URL(basePath, BASE)
+			if (params.tfs) url.searchParams.set('tfs', String(params.tfs))
+			if (params.tfu) url.searchParams.set('tfu', String(params.tfu))
+			await page.goto(url.toString(), { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+			await new Promise((r) => setTimeout(r, 3000))
 		}
+
+		return pageHandler(page)
 	},
 }
 

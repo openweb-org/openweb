@@ -8,17 +8,17 @@ info:
 servers:
 - url: https://www.google.com
   x-openweb:
-    transport: page
+    transport: node
 paths:
   /travel/flights/search:
     get:
       operationId: searchFlights
-      summary: Extract flight search results from an open Google Flights search page — airline, times, duration, stops, price
+      summary: Search flights by route and dates — airline, times, duration, stops, price, legs, aircraft, flight numbers
       x-openweb:
         permission: read
         build:
           stable_id: gf0001
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
           - adapter-verified
@@ -42,7 +42,7 @@ paths:
         description: Additional flight UI parameters.
       responses:
         '200':
-          description: Flight search results extracted from the page.
+          description: Flight search results extracted from SSR data.
           content:
             application/json:
               schema:
@@ -54,10 +54,10 @@ paths:
                 properties:
                   origin:
                     type: string
-                    description: Departure city/airport name.
+                    description: Departure city and airport (e.g. "Raleigh (RDU)").
                   destination:
                     type: string
-                    description: Arrival city/airport name.
+                    description: Arrival city and airport (e.g. "New York (NYC)").
                   resultCount:
                     type: integer
                     description: Total number of flight results.
@@ -66,24 +66,30 @@ paths:
                     items:
                       type: object
                       properties:
-                        departureTime:
-                          type: string
-                          description: Departure time (e.g. "5:52 PM").
-                        arrivalTime:
-                          type: string
-                          description: Arrival time (e.g. "7:30 PM").
                         airline:
                           type: string
                           description: Airline name.
-                        duration:
+                        airlineCode:
                           type: string
-                          description: Flight duration (e.g. "1 hr 38 min").
+                          description: IATA airline code (e.g. "UA").
                         origin:
                           type: string
                           description: Origin airport code (e.g. "RDU").
                         destination:
                           type: string
                           description: Destination airport code (e.g. "LGA").
+                        departureTime:
+                          type: string
+                          description: Departure time (e.g. "5:52 PM").
+                        arrivalTime:
+                          type: string
+                          description: Arrival time (e.g. "7:30 PM").
+                        duration:
+                          type: string
+                          description: Flight duration (e.g. "1 hr 38 min").
+                        durationMinutes:
+                          type: integer
+                          description: Flight duration in minutes.
                         stops:
                           type: string
                           description: Stop info ("Nonstop" or "1 stop").
@@ -99,10 +105,39 @@ paths:
                           type: integer
                           nullable: true
                           description: Emissions percentage vs typical.
+                        legs:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              origin:
+                                type: string
+                              originAirport:
+                                type: string
+                              destination:
+                                type: string
+                              destinationAirport:
+                                type: string
+                              departureTime:
+                                type: string
+                              arrivalTime:
+                                type: string
+                              duration:
+                                type: string
+                              aircraft:
+                                type: string
+                              flightNumber:
+                                type: string
+                              airline:
+                                type: string
   /travel/flights:
     get:
       operationId: getFlightOverview
       summary: Extract flight overview and cheapest fares from a Google Flights route page — cheapest options, fastest flight, frequency
+      servers:
+      - url: https://www.google.com
+        x-openweb:
+          transport: page
       x-openweb:
         permission: read
         build:
@@ -168,6 +203,10 @@ paths:
     get:
       operationId: getFlightBookingDetails
       summary: Extract flight booking/itinerary details from a Google Flights detail page — legs, baggage, booking links
+      servers:
+      - url: https://www.google.com
+        x-openweb:
+          transport: page
       x-openweb:
         permission: read
         build:
@@ -235,6 +274,10 @@ paths:
     get:
       operationId: exploreDestinations
       summary: Browse flight destinations by budget from an origin city — destination, dates, flight price, stops, duration
+      servers:
+      - url: https://www.google.com
+        x-openweb:
+          transport: page
       x-openweb:
         permission: read
         build:
@@ -304,13 +347,13 @@ paths:
   /travel/flights/search/insights:
     get:
       operationId: getPriceInsights
-      summary: Extract price trends, cheapest months, and popular airlines for a route — priceTrend, cheapestMonth, mostExpensiveMonth, popularAirlines
+      summary: Price statistics, trends, and airline options for a route — currentLowPrice, typicalPrice, priceHistory, popularAirlines
       x-openweb:
         permission: read
         build:
           stable_id: gf0005
-          tool_version: 1
-          verified: false
+          tool_version: 2
+          verified: true
           signals:
           - adapter-verified
         adapter:
@@ -323,11 +366,10 @@ paths:
         schema:
           type: string
         description: >-
-          Encoded flight search parameters (origin, destination).
-          Navigate to the Google Flights search page with this parameter set.
+          Encoded flight search parameters (origin, destination, dates).
       responses:
         '200':
-          description: Price insights including trends, cheapest months, and popular airlines.
+          description: Price insights extracted from SSR data.
           content:
             application/json:
               schema:
@@ -339,18 +381,15 @@ paths:
                   destination:
                     type: string
                     description: Arrival city name.
-                  priceTrend:
-                    type: string
-                    description: >-
-                      Price trend prediction (e.g. "likely to go up in the next 5 days by at least $10",
-                      "currently low").
-                  cheapestMonth:
-                    type: string
-                    description: Typically cheapest month to fly (e.g. "February").
-                  mostExpensiveMonth:
-                    type: string
-                    description: Typically most expensive month to fly (e.g. "April").
-                  cheapestRange:
+                  currentLowPrice:
+                    type: integer
+                    nullable: true
+                    description: Current lowest price in USD.
+                  typicalPrice:
+                    type: integer
+                    nullable: true
+                    description: Typical price in USD for this route.
+                  priceRange:
                     type: object
                     nullable: true
                     properties:
@@ -358,8 +397,8 @@ paths:
                         type: integer
                       high:
                         type: integer
-                    description: Typical price range for the cheapest month.
-                  mostExpensiveRange:
+                    description: Typical price range for the route.
+                  routePriceRange:
                     type: object
                     nullable: true
                     properties:
@@ -367,21 +406,30 @@ paths:
                         type: integer
                       high:
                         type: integer
-                    description: Typical price range for the most expensive month.
+                    description: Full price range across all flights on this route.
                   popularAirlines:
                     type: array
                     items:
                       type: object
                       properties:
-                        airline:
+                        code:
+                          type: string
+                          description: IATA airline code.
+                        name:
                           type: string
                           description: Airline name.
-                        stops:
+                  priceHistory:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
                           type: string
-                          description: Stop info.
-                        fromPrice:
+                          description: Date (YYYY-MM-DD).
+                        price:
                           type: integer
-                          description: Starting price in USD.
+                          description: Lowest price on that date in USD.
+                    description: Historical daily price trend.
                 required:
                 - origin
                 - destination
