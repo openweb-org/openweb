@@ -1,3 +1,22 @@
+## 2026-04-14: Transport upgrade probe — goodrx + medium (no __NEXT_DATA__)
+
+**What changed:**
+- Probed GoodRx and Medium for `__NEXT_DATA__` SSR extraction (transport upgrade candidates).
+- **GoodRx:** Uses Next.js App Router (RSC), not Pages Router — no `__NEXT_DATA__`. No SSR globals. PerimeterX blocks node HTTP (403). No upgrade viable.
+- **Medium:** Not Next.js — no `__NEXT_DATA__`. Tag pages embed `__APOLLO_STATE__` (Apollo SSR cache, ~15 Post objects, fetchable from node). Discovered that `/_/graphql` endpoint accepts standard `{ query, variables }` POST from node HTTP — all read queries return 200 without auth or cookies.
+- Medium node GraphQL upgrade documented as future opportunity; blocked by adapter Relay connection flattening that can't be expressed via `unwrap` alone.
+
+**Why:**
+- Transport upgrade batch: investigating SSR extraction paths for sites suspected to be Next.js. Both turned out to be non-candidates for `ssr_next_data`.
+
+**Key files:** `src/sites/goodrx/DOC.md`, `src/sites/goodrx/PROGRESS.md`, `src/sites/medium/DOC.md`, `src/sites/medium/PROGRESS.md`
+**Verification:** Headed browser probes confirmed findings; node fetch tests validated Medium GraphQL accessibility.
+**Commit:** `021edd9`
+**Next:** Medium node transport upgrade (separate effort — schema restructuring needed)
+**Blockers:** None
+
+---
+
 ## 2026-04-13: Uber site split + Tier 5 transport upgrade + verify ordering
 
 **What changed:**
