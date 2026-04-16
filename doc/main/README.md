@@ -137,7 +137,7 @@ src/
 │   ├── cookies.ts              #   Cookie management
 │   └── config/                 #   Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
 │
-└── sites/                      # Site packages (61 sites)
+└── sites/                      # Site packages (90+ sites)
     ├── github/                 #   L1 (no x-openweb)
     ├── instagram/              #   L2 (cookie_session + cookie_to_header)
     ├── youtube/                #   L2 (innertube API)

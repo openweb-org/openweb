@@ -16,12 +16,12 @@
 
 Browser automation clicks buttons, reads pixels, and burns tokens. OpenWeb calls the same APIs the website calls.
 
-- **Fast, cheap, and token-efficient** — No screenshots, no vision API, no LLM-powered extraction.
-- **Minimal effort per operation** — Direct HTTP when possible, browser only when needed. WebSocket and code adapters for maximal coverage. The right transport per site, automatically.
-- **Predictable, structured output** — Typed params, response schemas, and examples for every operation. JSON in, JSON out.
+- **Fast, cheap, and token-efficient** — No screenshots, no vision API, no LLM-powered parsing. JSON in, JSON out.
+- **Minimal effort per operation** — Direct HTTP when it works, browser-backed fetch when the site requires it. WebSocket and code adapters for maximal flexibility. The right transport per site, automatically — the caller never chooses or cares.
+- **Predictable, typed API** — Typed params, response schemas, and examples for every operation.
 - **Safe by default** — Read, write, delete, and transact operations gated by permission tiers. SSRF protection on every request.
 - **Auth that just works** — Cookies, JWT, CSRF, request signing, exchange chains — auto-resolved per request. You never touch tokens.
-- **Any site, any time** — 50+ sites out of the box across social, commerce, content, travel, finance, and more. Not listed? [Add it](#discover).
+- **Any site, any time** — 90+ sites out of the box across social, commerce, content, travel, finance, and more. Not listed? [Add it](#discover).
 
 ## Quick Start
 
@@ -114,7 +114,7 @@ Any website can become an OpenWeb site — just ask the agent skill:
 /openweb Discover and add the search function on example.com.
 ```
 
-The agent drives the entire process — you stay in chat to make decisions when needed. All 50+ built-in sites were created this way.
+The agent drives the entire process — you stay in chat to make decisions when needed. All 90+ built-in sites were created this way.
 
 ```
 Frame intents → Probe site stack → Route per family → Capture & compile (if needed) → Build package → Verify → Learn
@@ -126,17 +126,23 @@ See [`skill/openweb/add-site/guide.md`](skill/openweb/add-site/guide.md) for the
 
 ## Sites
 
-50+ sites across categories:
+90+ sites, 750+ operations:
 
 | Category | Sites |
 |---|---|
-| **Social** | instagram, x, reddit, bluesky, linkedin, weibo, xiaohongshu, zhihu |
-| **Commerce** | amazon, walmart, target, costco, bestbuy, jd, instacart |
-| **Content** | youtube, medium, substack, wikipedia, hackernews, bilibili |
-| **Travel** | booking, expedia, google-flights, tripadvisor, ctrip |
-| **Finance** | robinhood, fidelity, yahoo-finance, xueqiu, bloomberg |
-| **Dev** | github, gitlab, leetcode, chatgpt |
-| **Search** | google-search, google-maps |
+| **Social** | instagram(24), x(30), reddit(17), bluesky(22), linkedin(12), weibo(16), xiaohongshu(14), zhihu(17), discord(16), telegram(13), whatsapp(8), tiktok(25), pinterest(11) |
+| **Commerce** | amazon(8), walmart(5), target(5), costco(14), bestbuy(5), ebay(3), etsy(4), jd(4), instacart(3), homedepot(5) |
+| **Food & Delivery** | doordash(5), grubhub(3), ubereats(8), starbucks(3), opentable(4) |
+| **Content** | youtube(15), youtube-music(9), medium(14), substack(5), wikipedia(14), hackernews(16), bilibili(14), soundcloud(4), spotify(13), twitch(7), apple-podcasts(4), douban(14) |
+| **Travel** | booking(5), expedia(6), google-flights(5), tripadvisor(7), kayak(2), ctrip(13), airbnb(5), uber(3) |
+| **Finance** | robinhood(14), fidelity(13), yahoo-finance(9), xueqiu(12), bloomberg(7), coinmarketcap(3), coingecko(5), seeking-alpha(4) |
+| **News** | bbc-news(4), cnn(3), reuters(4), guardian(3), techcrunch(4), npr(3), espn(6) |
+| **Dev** | github(18), gitlab(17), leetcode(12), chatgpt(6), stackoverflow(5), docker-hub(3), huggingface(5), npm(4), pypi(3) |
+| **Search** | google-search(10), google-maps(14), google-scholar(3) |
+| **Jobs & Reviews** | indeed(8), glassdoor(4), goodreads(4), yelp(2), rotten-tomatoes(3), imdb(4) |
+| **Real Estate** | zillow(4), redfin(3) |
+| **Productivity** | notion(7), todoist(6), trello(7) |
+| **Other** | craigslist(3), goodrx(3), producthunt(4), quora(4), steam(11), boss(7), arxiv(3) |
 
 Run `openweb sites` for the complete list with operation counts and auth requirements.
 
