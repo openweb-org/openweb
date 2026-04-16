@@ -218,7 +218,12 @@ paths:
                   shows:
                     type: array
                     items:
-                      type: string
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
                     description: Associated NPR shows.
                   image:
                     type: object

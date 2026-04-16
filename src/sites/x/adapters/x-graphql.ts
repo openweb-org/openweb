@@ -321,13 +321,52 @@ const DEFAULT_FEATURES: Record<string, boolean> = {
 // ── Per-operation dispatch ────────────────────────
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
-  getHomeTimeline: async (page, params, errors) =>
-    executeGraphqlGet(page, 'HomeTimeline', {
+  getHomeTimeline: async (page, params, errors) => {
+    // Twitter removed the `HomeTimeline` GraphQL op from their main bundle.
+    // Discover the actual timeline op by navigating to /home and capturing
+    // the first GraphQL request that's not a known non-timeline operation.
+    if (!cachedQueryIds) cachedQueryIds = await loadQueryIds(page)
+    if (!cachedQueryIds.HomeTimeline) {
+      const prevUrl = page.url()
+      const KNOWN_NON_TIMELINE = new Set([
+        'Viewer', 'UserByScreenName', 'UserByRestId', 'getAltTextPromptPreference',
+        'BakeryQuery', 'DataSaverMode', 'UserPreferences', 'GetUserClaims',
+      ])
+      const discovery = new Promise<{ queryId: string; opName: string }>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('HomeTimeline queryId capture timeout')), 15000)
+        const handler = (req: { url(): string }) => {
+          const match = req.url().match(/\/i\/api\/graphql\/([^/]+)\/([^?]+)/)
+          if (match && !KNOWN_NON_TIMELINE.has(match[2])) {
+            clearTimeout(timeout)
+            page.removeListener('request', handler)
+            resolve({ queryId: match[1], opName: match[2] })
+          }
+        }
+        page.on('request', handler)
+      })
+      await page.goto('https://x.com/home', { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+      try {
+        const { queryId, opName } = await discovery
+        cachedQueryIds[opName] = queryId
+        // Also alias it as HomeTimeline for caching
+        if (opName !== 'HomeTimeline') cachedQueryIds.HomeTimeline = queryId
+        // Update OP_NAME to use the discovered operation name
+        OP_NAME.getHomeTimeline = opName
+      } catch {
+        throw errors.fatal('Could not discover HomeTimeline queryId from Twitter navigation')
+      }
+      if (prevUrl && prevUrl !== page.url()) {
+        await page.goto(prevUrl, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {})
+      }
+    }
+    const opName = OP_NAME.getHomeTimeline
+    return executeGraphqlGet(page, opName, {
       count: Number(params.count) || 20,
       includePromotedContent: true,
       requestContext: 'launch',
       withCommunity: true,
-    }, DEFAULT_FEATURES, undefined, errors),
+    }, DEFAULT_FEATURES, undefined, errors)
+  },
 
   getTweetDetail: async (page, params, errors) => {
     const focalTweetId = String(params.focalTweetId ?? '')

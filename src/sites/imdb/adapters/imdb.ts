@@ -161,9 +161,12 @@ async function getRatings(page: Page | null, params: Readonly<Record<string, unk
   if (page) {
     try {
       await page.goto(`https://www.imdb.com/title/${encodeURIComponent(imdbId)}/`, {
-        waitUntil: 'domcontentloaded',
+        waitUntil: 'load',
         timeout: 20_000,
       })
+      // Wait for page to fully settle — IMDB's React hydration can trigger
+      // client-side navigations that destroy the execution context.
+      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
       const extracted = await page.evaluate(`
         (() => {
           const result = { histogram: null, ldJson: null };
