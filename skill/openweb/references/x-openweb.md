@@ -76,7 +76,7 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `unwrap` | string | Dot-path into parsed response body to extract before returning (e.g. `data`, `0.data`) |
 | `wrap` | string | Wrap non-const request body params under this key (e.g. `variables` for GraphQL) |
 | `graphql_query` | string | GraphQL query string injected at body root when `wrap` is active and the schema property name would conflict with a user-facing param |
-| `graphql_hash` | string | Persisted-query hash (e.g. `sha256:…`) sent instead of a full query; combined with `wrap: variables` |
+| `graphql_hash` | string | Persisted-query hash (e.g. `sha256:…`). On POST: body gets `extensions.persistedQuery.sha256Hash` (combined with `wrap: variables`). On GET: `variables` (from requestBody params) and `extensions` are JSON-stringified and URL-encoded into the query string — Relay-style APQ |
 | `page_plan` | PagePlan | Runtime-owned navigation/readiness/warm (see [Page Plan](#page-plan-server-or-operation)) |
 | `build` | BuildMeta | Compiler metadata — **do not edit manually** |
 | `safety` | `safe` \| `caution` | Compiler hint for state-modifying ops |
@@ -146,7 +146,7 @@ PagePlan is ignored when transport is `node`. `response_capture` always uses fre
 
 GraphQL is request-body shaping, not a separate transport. Use:
 - `graphql_query` — inline query string; combined with `wrap: variables`
-- `graphql_hash` — persisted query hash (e.g. `sha256:abc…`); combined with `wrap: variables`
+- `graphql_hash` — persisted-query hash. POST flavor: hash goes in body as `extensions.persistedQuery.sha256Hash` (Apollo APQ, with `wrap: variables`). GET flavor (Relay): `variables` + `extensions` are JSON-stringified then URL-encoded into the query string — no body sent. Runtime auto-selects by HTTP method.
 
 Dynamic query-id scraping and per-response query-id schemes stay in a CustomRunner.
 

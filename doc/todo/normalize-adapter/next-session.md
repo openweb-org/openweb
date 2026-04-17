@@ -30,7 +30,7 @@ Read `doc/todo/tasks.json`, filter `parent: normalize-adapter`, `state: ready`. 
 - `na-rt-browser-fetch-errors` — ✅ done (`9cce6d1`). `TypeError: Failed to fetch` now retries 2x in the executor before surfacing as `retriable`. Grubhub end-to-end still blocked by a separate adapter-loader issue (installed adapter missing `run` export); migration back to `browser_fetch` is the follow-up.
 - `na-rt-warm-page-origin` — `warmSession` on page origin not server URL (unblocks apple-podcasts)
 - `na-rt-query-templating` — param-level template like `tags=story,author_{id}` (unblocks hackernews 3 reads)
-- `na-rt-get-apq` — GET-flavor APQ for `graphql_hash` (unblocks airbnb 2 ops)
+- `na-rt-get-apq` — ✅ done (`44eed82`). `buildGraphqlGetApqQuery()` packs `variables` + `extensions` into URL per Relay GET APQ; POST Apollo path unchanged; auto-selects by HTTP method. Airbnb `getListingReviews` + `getListingAvailability` converted to spec (verify 2/2 PASS). Other 3 airbnb ops still blocked by a pre-existing CustomRunner `run` export mismatch.
 
 **Borderline / lower priority:**
 - `na-rt-apollo-ref` — ✅ done (`3b38519`). `resolve_apollo_refs` + `apollo_cache_path` flags on `ssr_next_data` / `page_global_data`. Goodreads `getBook` migrated to spec (raw Apollo cache).

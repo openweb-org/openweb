@@ -87,6 +87,8 @@ If an object `requestBody` is marked `required: true`, the runtime sends `{}` ev
 
 **Form-encoded bodies:** When a spec declares `requestBody.content['application/x-www-form-urlencoded']`, the runtime serializes body params as `URLSearchParams` instead of JSON and sets `Content-Type: application/x-www-form-urlencoded`. This is needed for APIs that reject JSON bodies (e.g., Reddit's `/api/submit`). The `buildFormRequestBody()` function takes priority over `buildJsonRequestBody()` when the spec declares form-encoded content.
 
+**GraphQL APQ, GET flavor (Relay):** When `x-openweb.graphql_hash` is set on a GET op, `buildGraphqlGetApqQuery()` packs `variables` (built from `requestBody` non-const params, wrap-aware) and `extensions.persistedQuery` into the URL query string — both JSON-stringified and URL-encoded — and skips the request body. The POST flavor (Apollo APQ) is unchanged: body carries `extensions.persistedQuery.sha256Hash`, optionally with a `query` fallback. The runtime auto-selects by HTTP method; the spec declares the variable shape once and works for both wire forms.
+
 -> See: `src/runtime/session-executor.ts`, `src/runtime/request-builder.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`; `src/runtime/executor.ts` — direct HTTP reuse
 
 ---

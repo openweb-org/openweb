@@ -1,3 +1,24 @@
+## 2026-04-17: na-rt-get-apq — Relay-style GET APQ for graphql_hash
+
+**What changed:**
+- `src/runtime/request-builder.ts`: new `buildGraphqlGetApqQuery(op, params)`. When an op declares `x-openweb.graphql_hash`, returns `{ variables, extensions }` as JSON-stringified strings — `variables` built from `requestBody` non-const params (wrap-aware, nested defaults filled), `extensions` carries `persistedQuery.sha256Hash`. Returns `undefined` when hash absent. `sha256:` prefix stripped like the POST path.
+- `src/lib/url-builder.ts`: `buildQueryUrl()` now accepts optional `extraQueryParams`; `URLSearchParams` handles encoding (`{ "foo": 1 }` → `%7B%22foo%22%3A1%7D`), keeping spec-declared params authoritative via a `declaredNames` dedup set.
+- `src/runtime/http-executor.ts`: node-transport GET path computes `apqExtras` and threads them into `buildQueryUrl`. POST body path unchanged — `buildJsonRequestBody` still emits `body.extensions` for Apollo POST APQ. Runtime auto-selects flavor by HTTP method.
+- Test mock update: `http-executor.test.ts` adds `buildGraphqlGetApqQuery: () => undefined` to the `./request-builder.js` vi.mock so the full suite stays green.
+- Proof-of-unblock: `src/sites/airbnb/openapi.yaml` — `getListingReviews` and `getListingAvailability` converted from adapter to spec-driven Relay GET APQ. Real API paths (`/api/v3/StaysPdpReviewsQuery/<hash>`, `/api/v3/PdpAvailabilityCalendar/<hash>`), per-op `servers:` with `transport: node` + Airbnb API-key headers, `requestBody` declaring the raw variable shape. Adapter stubs kept defensive; examples updated to reflect raw-wire inputs (base64 listing id; explicit month/year).
+
+**Why:**
+- Apollo APQ puts the persisted-query hash in the request body; Relay APQ puts it (plus `variables`) in the URL query string. The existing `graphql_hash` primitive only handled the Apollo POST flavor, forcing Relay-style sites onto a CustomRunner. Generalizing the primitive by HTTP method lets one spec field cover both wire forms — and removes the last runtime gap blocking Airbnb's 2 API ops from spec conversion.
+- Raw-API principle honored: runtime wire-level only. Transforms agents could do (base64-encode `StayListing:<id>`, pick `month`/`year`) remain agent-side — spec exposes the raw shape and documents the encoding in parameter descriptions.
+
+**Key files:** `src/runtime/request-builder.ts`, `src/lib/url-builder.ts`, `src/runtime/http-executor.ts`, `src/runtime/request-builder.test.ts`, `src/runtime/http-executor.test.ts`, `src/sites/airbnb/{openapi.yaml,adapters/airbnb.ts,examples/*.json}`
+**Verification:** `pnpm test` → 1014/1014 passed. `pnpm dev verify airbnb --ops getListingReviews,getListingAvailability` → PASS 2/2. Unit tests validate airbnb Relay wire format (`%7B%22...%7D` round-trip), `sha256:` stripping, and const-param exclusion from variables.
+**Commit:** 44eed82
+**Next:** Remaining airbnb adapter ops (`searchListings`, `getListingDetail`, `getHostProfile`) fail with a pre-existing CustomRunner export mismatch (`expected \`run\``) — separate task from this backlog item.
+**Blockers:** None.
+
+---
+
 ## 2026-04-17: test debt — puppeteer page mocks + validator TS errors
 
 **What changed:**
