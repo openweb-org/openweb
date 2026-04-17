@@ -1,14 +1,15 @@
 import type { Page } from 'patchright'
 
 /**
- * Booking.com adapter — Apollo SSR cache + LD+JSON + GraphQL intercept.
+ * Booking.com adapter — Apollo SSR cache + GraphQL intercept.
  *
- * Transport upgrade: DOM selectors → Apollo cache + LD+JSON + GraphQL page.evaluate
  * - searchHotels: Apollo SSR cache (inline JSON with ROOT_QUERY) — zero DOM
- * - getHotelDetail: LD+JSON Hotel schema — zero DOM (unchanged, already stable)
  * - getHotelReviews: GraphQL page.evaluate(fetch) to /dml/graphql — zero DOM
  * - getHotelPrices: GraphQL page.evaluate(fetch) to /dml/graphql — zero DOM
  * - searchFlights: DOM extraction (flights API returns 403, no alternative)
+ *
+ * Note: getHotelDetail was migrated to the declarative `script_json`
+ * extraction (type_filter=Hotel) in openapi.yaml — no adapter code needed.
  *
  * Bot detection: PerimeterX — requires page transport, node fetch blocked.
  * Fetch: NOT patched (native). No client-side signing.
@@ -193,50 +194,6 @@ function resolveRef(cache: Record<string, unknown>, val: unknown): Record<string
     return cache[obj.__ref] as Record<string, unknown> | null
   }
   return obj as Record<string, unknown>
-}
-
-/* ---------- Hotel detail (LD+JSON — unchanged) ---------- */
-
-async function getHotelDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const { country, slug } = params as { country: string; slug: string }
-  const url = new URL(`https://www.booking.com/hotel/${country}/${slug}.html`)
-  if (params.checkin) url.searchParams.set('checkin', String(params.checkin))
-  if (params.checkout) url.searchParams.set('checkout', String(params.checkout))
-  await page.goto(url.toString(), { waitUntil: 'load', timeout: 15_000 })
-  await page.waitForSelector('script[type="application/ld+json"]', { timeout: 10_000 }).catch(() => {})
-
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'Hotel') continue
-        return {
-          name: data.name ?? null,
-          description: data.description ?? null,
-          rating: data.aggregateRating?.ratingValue ?? null,
-          reviewCount: data.aggregateRating?.reviewCount ?? null,
-          priceRange: data.priceRange ?? null,
-          address: data.address ? {
-            street: data.address.streetAddress ?? null,
-            city: data.address.addressLocality ?? null,
-            region: data.address.addressRegion ?? null,
-            postalCode: data.address.postalCode ?? null,
-            country: data.address.addressCountry ?? null,
-          } : null,
-          image: data.image ?? null,
-          url: data.url ?? null,
-        }
-      } catch { /* skip */ }
-    }
-    // Fallback: minimal DOM
-    return {
-      name: document.title?.replace(/ \|.*$/, '').replace(/,.*$/, '').trim() ?? null,
-      description: document.querySelector('[data-testid="property-description"]')?.textContent?.trim() ?? null,
-      rating: null, reviewCount: null, priceRange: null,
-      address: null, image: null, url: window.location.href,
-    }
-  })
 }
 
 /* ---------- Hotel reviews — GraphQL page.evaluate(fetch) ---------- */
@@ -555,7 +512,6 @@ async function searchFlights(page: Page, params: Record<string, unknown>): Promi
 
 const OPERATIONS: Record<string, string> = {
   searchHotels: 'searchHotels',
-  getHotelDetail: 'getHotelDetail',
   getHotelReviews: 'getHotelReviews',
   getHotelPrices: 'getHotelPrices',
   searchFlights: 'searchFlights',
@@ -563,7 +519,7 @@ const OPERATIONS: Record<string, string> = {
 
 const adapter = {
   name: 'booking',
-  description: 'Booking.com — Apollo cache + LD+JSON + GraphQL for hotels, DOM for flights',
+  description: 'Booking.com — Apollo cache + GraphQL for hotels, DOM for flights',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('booking.com')
@@ -588,7 +544,6 @@ const adapter = {
     const p = { ...params }
     switch (operation) {
       case 'searchHotels': return searchHotels(page, p)
-      case 'getHotelDetail': return getHotelDetail(page, p)
       case 'getHotelReviews': return getHotelReviews(page, p, graphqlFetch)
       case 'getHotelPrices': return getHotelPrices(page, p, graphqlFetch)
       case 'searchFlights': return searchFlights(page, p)

@@ -98,19 +98,20 @@ paths:
   /hotel/{country}/{slug}.html:
     get:
       operationId: getHotelDetail
-      summary: Get hotel details — name, rating, description, address, image from LD+JSON Hotel schema
+      summary: Get hotel details — raw schema.org Hotel LD+JSON block (name, aggregateRating, address, image, priceRange)
       x-openweb:
         permission: read
         build:
           verified: true
           stable_id: bk0002
           signature_id: bk0002s
-          tool_version: 1
+          tool_version: 2
           signals:
-          - adapter-verified
-        adapter:
-          name: booking
-          operation: getHotelDetail
+          - script_json
+        extraction:
+          type: script_json
+          selector: script[type="application/ld+json"]
+          type_filter: Hotel
       parameters:
       - name: country
         in: path
@@ -138,45 +139,60 @@ paths:
         description: Check-out date in YYYY-MM-DD format.
       responses:
         '200':
-          description: Hotel detail from LD+JSON Hotel schema.
+          description: Raw schema.org Hotel LD+JSON object from the hotel detail page.
           content:
             application/json:
               schema:
                 type: object
+                description: schema.org/Hotel JSON-LD — fields mirror the wire shape exactly (no runtime reshape).
                 properties:
+                  '@context':
+                    type: [string, 'null']
+                  '@type':
+                    type: [string, 'null']
+                    description: Always "Hotel".
                   name:
                     type: [string, 'null']
                   description:
                     type: [string, 'null']
-                  rating:
-                    type: [number, 'null']
-                    description: Aggregate rating out of 10.
-                  reviewCount:
-                    type: [integer, 'null']
+                  url:
+                    type: [string, 'null']
+                  image:
+                    description: Main hotel image URL (string) or array of URLs.
                   priceRange:
                     type: [string, 'null']
+                  telephone:
+                    type: [string, 'null']
+                  aggregateRating:
+                    type: [object, 'null']
+                    description: Aggregate review score (out of 10 on Booking.com).
+                    properties:
+                      '@type':
+                        type: [string, 'null']
+                      ratingValue:
+                        type: [number, string, 'null']
+                      reviewCount:
+                        type: [integer, string, 'null']
+                      bestRating:
+                        type: [number, string, 'null']
+                      worstRating:
+                        type: [number, string, 'null']
                   address:
                     type: [object, 'null']
+                    description: schema.org/PostalAddress.
                     properties:
-                      street:
+                      '@type':
                         type: [string, 'null']
-                      city:
+                      streetAddress:
                         type: [string, 'null']
-                      region:
+                      addressLocality:
+                        type: [string, 'null']
+                      addressRegion:
                         type: [string, 'null']
                       postalCode:
                         type: [string, 'null']
-                      country:
+                      addressCountry:
                         type: [string, 'null']
-                  image:
-                    type: [string, 'null']
-                    description: Main hotel image URL.
-                  url:
-                    type: [string, 'null']
-                required:
-                - name
-                - url
-                - description
 
   /internal/getHotelReviews:
     get:
