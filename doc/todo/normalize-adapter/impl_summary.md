@@ -97,34 +97,41 @@ paths:
 
 ## Runtime Gaps Surfaced — Concrete Backlog
 
-The migration honestly hit 7 primary primitive gaps plus several smaller composition/transform gaps. Each has a clear unblock path:
-
-**Primary gaps (each has a dedicated `na-rt-*` task):**
+The migration hit 5 primary primitive gaps, each with a dedicated `na-rt-*` task. These are all **wire-level concerns** (protocol, error handling, request construction, extraction mechanics) — not response aesthetics or client-side orchestration.
 
 | Gap | Unblocks | Estimate |
 |---|---|---|
 | Multi-match + `@type` filter on `script_json` | booking `getHotelDetail` + any multi-block LD+JSON site | xs (~30 LoC) |
-| `response_transform` primitive (JSONPath mapping) | hackernews `response_wrap`, booking Hotel reshape, simple thin-adapter survivors. **Does NOT alone unlock costco** — see secondary gaps below. | m (new primitive) |
 | GET-flavor APQ for `graphql_hash` | airbnb 2 ops, Relay-style APIs | s |
 | `browser_fetch` `TypeError: Failed to fetch` normalization | grubhub 3 ops, cross-origin API gateway class | s |
 | `warmSession` on page origin (not API server) | apple-podcasts 4 ops | xs |
-| Param-level template into query values | hackernews 3 reads | s |
-| Patched-fetch reuse for `response_capture` | tiktok read intercepts (architectural tradeoff — loses listener-before-goto safety) | l |
+| Param-level template into query values (e.g. `tags=story,author_{id}`) | hackernews 3 reads | s |
 
-**Secondary gaps surfaced in handoffs but larger scope:**
+**Borderline, lower priority:**
 
-- **Array filter + aggregation transforms** — costco needs `attributes[].name→value` collapse, service-code lookup, hours formatting, etc. `response_transform` alone (simple JSONPath) handles maybe half. Honest scope for costco: `response_transform` + declarative array reducers (`na-rt-array-reducers`).
-- **Apollo `__ref` resolution** for SSR state — goodreads/booking Apollo SSR needs follow-pointer traversal (`na-rt-apollo-ref`).
-- **HTML regex extraction** — for inline `<script>` JSON embedded with surrounding noise (not a fixed JSON block).
-- **Slug/path transform** (e.g. zillow regionId→slug lookup table) — site-specific but a general "lookup table" primitive might compose.
-- **Inventory classifier refinement** (phase4 handoff:57) — `capture-simple` bucket misclassifies signed-fetch sites (`na-classifier-refinement`).
+- `na-rt-apollo-ref` — resolve `__ref` pointers in SSR extraction for Apollo-framework sites (goodreads / booking SSR). Framework-specific extraction helper, same category as existing `ssr_next_data` for Next.js.
+- `na-classifier-refinement` — inventory classifier demote `capture-simple` bucket when signing/interceptApi evidence present (tiktok was misclassified).
 
-**Explicitly NOT a runtime gap in current design — but reopenable later:**
+These are `wire-level` / `framework-specific extraction` / `tooling` — distinct from the cancelled response-reshape + chain + tiktok-signed-capture tasks, which are all client-side concerns that don't belong in runtime.
 
-- **Multi-call composition** (e.g. a single op taking `username`, internally calling `getUserProfile` → extracting `userId` → then `getUserFeed`). OpenWeb's current contract is raw typed API access; agents compose ops via SKILL.md workflow guidance, not runtime. A spec-level chain primitive would violate design principle 1 ("no workflow DSL").
-  - **Hard rule going forward:** do **not** add a `CustomRunner` just to chain two calls. `CustomRunner` is for site-specific logic (signing, module systems, protocol) only. Sites that need chaining should expose the two ops separately and document the workflow in SKILL.md.
-  - **Existing chain CustomRunners** (e.g. if instagram `getUserPosts` wraps profile→feed internally today) are accepted technical debt from before this rule; handled at the next op-level review — either split into separate ops or keep as thin convenience wrapper, but don't use them as precedent.
-  - **Revisit criteria** — trigger a fresh `/design` pass only when at least one of: (a) 10+ sites show the same chain pattern, (b) measurable agent-side chain-composition failure rate, (c) runtime-level batching/caching makes chain-in-runtime materially cheaper than client-side. Until then, this is a design question on file, not a backlog task.
+**Explicitly NOT runtime gaps in current design — but reopenable later:**
+
+The raw-API principle (typed wire access + agent-side composition via SKILL.md) makes three categories of "gap" explicitly out of scope for runtime. Sites that need these stay CustomRunner, or expose raw ops and document semantics in SKILL.md.
+
+1. **Multi-call composition / chain** (e.g. a single op taking `username`, internally calling `getUserProfile` → extract `userId` → then `getUserFeed`). Agents compose via workflow guidance; runtime stays out.
+
+2. **Response reshape for aesthetics** — renaming wire fields to prettier names, composing nested objects, flattening arrays. Response schema = wire shape. If wire returns `{hits, nbHits}`, that's what the schema documents; SKILL.md explains that `nbHits` is the total count. Do NOT build a response-mapping DSL (design §6 explicitly reserved this only for post-Phase-3 revisit if significant mapping-only adapter code survived — Phase 3 finished without justifying a DSL).
+
+3. **Force-fitting permanent-custom-bucket sites into spec primitives** — adding unsafe modes to shared primitives (e.g. `response_capture.reuse_page: true` for tiktok signed-fetch reuse) introduces parallel semantics for the same job. tiktok / bilibili / notion / opentable / telegram / whatsapp / x stay CustomRunner. Don't build runtime escape hatches to move them; that inverts the permanent-custom-bucket principle.
+
+**Hard rules going forward:**
+- Do not add a `CustomRunner` just to chain two calls (splitting into separate ops + SKILL.md is the answer).
+- Do not add a runtime primitive whose only purpose is to rename wire fields or compose nested objects (describe the wire in the schema).
+- Do not add "unsafe mode" flags to shared primitives to accommodate permanent-custom-bucket sites.
+
+**Revisit criteria** — trigger a fresh `/design` pass only when at least one of: (a) 10+ sites show the same pattern, (b) measurable agent-side failure rate, (c) runtime-level batching / caching / validation makes server-side handling materially cheaper than client-side. Until then these sit as design questions on file, not backlog tasks.
+
+**Cancelled tasks on this principle** (see `doc/todo/tasks.json`): `na-rt-multicall-composition`, `na-rt-response-transform`, `na-rt-array-reducers`, `na-rt-tiktok-signed-capture`.
 
 Tasks for array reducers (`na-rt-array-reducers`), Apollo `__ref` (`na-rt-apollo-ref`), classifier refinement (`na-classifier-refinement`) are in the backlog. HTML regex and slug/path-transform are deferred until a specific site demands them.
 
