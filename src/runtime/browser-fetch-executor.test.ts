@@ -12,6 +12,7 @@ function mockBrowser(
     url: () => pageUrl,
     evaluate: vi.fn(async () => evaluateResult),
     content: vi.fn(async () => pageContent),
+    addInitScript: vi.fn(async () => {}),
   }
   const context = {
     pages: () => [page],
@@ -37,7 +38,7 @@ const baseSpec: OpenApiSpec = {
 
 describe('executeBrowserFetch', () => {
   it('executes fetch inside page.evaluate and returns parsed JSON', async () => {
-    const browser = mockBrowser('https://example.com', {
+    const browser = mockBrowser('https://example.com/api', {
       status: 200,
       headers: { 'content-type': 'application/json' },
       text: '{"id":1,"name":"test"}',
@@ -64,9 +65,10 @@ describe('executeBrowserFetch', () => {
       text: '{"ok":true}',
     }))
     const page = {
-      url: () => 'https://example.com',
+      url: () => 'https://example.com/api',
       evaluate: evaluateFn,
       content: vi.fn(async () => '<html><body>ready</body></html>'),
+      addInitScript: vi.fn(async () => {}),
     }
     const context = {
       pages: () => [page],
@@ -114,9 +116,10 @@ describe('executeBrowserFetch', () => {
       text: '{"ok":true}',
     }))
     const page = {
-      url: () => 'https://example.com',
+      url: () => 'https://example.com/api',
       evaluate: evaluateFn,
       content: vi.fn(async () => '<html><body>ready</body></html>'),
+      addInitScript: vi.fn(async () => {}),
     }
     const context = {
       pages: () => [page],
@@ -156,7 +159,7 @@ describe('executeBrowserFetch', () => {
   })
 
   it('throws on HTTP error status', async () => {
-    const browser = mockBrowser('https://example.com', {
+    const browser = mockBrowser('https://example.com/api', {
       status: 401,
       headers: {},
       text: 'Unauthorized',
@@ -182,7 +185,7 @@ describe('executeBrowserFetch', () => {
   })
 
   it('throws on non-JSON response', async () => {
-    const browser = mockBrowser('https://example.com', {
+    const browser = mockBrowser('https://example.com/api', {
       status: 200,
       headers: {},
       text: '<html>Not JSON</html>',
@@ -228,9 +231,10 @@ describe('executeBrowserFetch', () => {
       text: '{"ok":true}',
     }))
     const page = {
-      url: () => 'https://example.com',
+      url: () => 'https://example.com/api',
       evaluate: evaluateFn,
       content: vi.fn(async () => '<html><body>ready</body></html>'),
+      addInitScript: vi.fn(async () => {}),
     }
     const context = {
       pages: () => [page],
@@ -271,6 +275,7 @@ describe('executeBrowserFetch', () => {
       url: () => 'https://unrelated.example.net',
       evaluate: vi.fn(),
       content: vi.fn(async () => '<html><body>other</body></html>'),
+      addInitScript: vi.fn(async () => {}),
     }
     const context = {
       pages: () => [page],
@@ -307,6 +312,7 @@ describe('executeBrowserFetch', () => {
       url: () => 'https://discord.com/channels/@me',
       evaluate: evaluateFn,
       content: vi.fn(async () => '<html><body>discord</body></html>'),
+      addInitScript: vi.fn(async () => {}),
     }
     const context = {
       pages: () => [page],
@@ -345,6 +351,93 @@ describe('executeBrowserFetch', () => {
     // calls[0] is the __name polyfill; calls[1] is the actual fetch
     const callArgs = evaluateFn.mock.calls[1]?.[1] as { url: string }
     expect(callArgs.url).toContain('limit=200')
+  })
+
+  it('retries on TypeError: Failed to fetch and succeeds on retry', async () => {
+    let call = 0
+    const evaluateFn = vi.fn(async () => {
+      call++
+      // First call is the __name polyfill, second is first fetch attempt (fails),
+      // third is the retry attempt (succeeds).
+      if (call === 2) {
+        throw new TypeError('Failed to fetch')
+      }
+      return { status: 200, headers: { 'content-type': 'application/json' }, text: '{"ok":true}' }
+    })
+    const page = {
+      url: () => 'https://example.com/api',
+      evaluate: evaluateFn,
+      content: vi.fn(async () => '<html><body>ready</body></html>'),
+      addInitScript: vi.fn(async () => {}),
+    }
+    const context = {
+      pages: () => [page],
+      cookies: vi.fn(async () => []),
+    }
+    const browser = {
+      contexts: () => [context],
+    } as unknown as import('patchright').Browser
+
+    const result = await executeBrowserFetch(
+      browser,
+      baseSpec,
+      '/users/1',
+      'get',
+      { operationId: 'getUser', responses: {} },
+      {},
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body).toEqual({ ok: true })
+    // __name polyfill + failed fetch + retried fetch = 3 evaluate calls
+    expect(evaluateFn).toHaveBeenCalledTimes(3)
+  })
+
+  it('classifies TypeError: Failed to fetch as retriable after exhausting retries', async () => {
+    let fetchCalls = 0
+    // All evaluate calls with fetch-shaped args throw; other evaluate calls
+    // (polyfills, warm-session probes) return undefined so setup can proceed.
+    const wrapped = vi.fn(async (_fn: unknown, args?: unknown) => {
+      const maybeArgs = args as { url?: string; method?: string } | undefined
+      if (maybeArgs && typeof maybeArgs.url === 'string' && typeof maybeArgs.method === 'string') {
+        fetchCalls++
+        throw new TypeError('Failed to fetch')
+      }
+      return undefined
+    })
+    const page = {
+      url: () => 'https://example.com/api',
+      evaluate: wrapped,
+      content: vi.fn(async () => '<html><body>ready</body></html>'),
+      addInitScript: vi.fn(async () => {}),
+    }
+    const context = {
+      pages: () => [page],
+      cookies: vi.fn(async () => []),
+    }
+    const browser = {
+      contexts: () => [context],
+    } as unknown as import('patchright').Browser
+
+    await expect(
+      executeBrowserFetch(
+        browser,
+        baseSpec,
+        '/users/1',
+        'get',
+        { operationId: 'getUser', responses: {} },
+        {},
+      ),
+    ).rejects.toMatchObject({
+      payload: {
+        code: 'EXECUTION_FAILED',
+        failureClass: 'retriable',
+        retriable: true,
+        message: expect.stringContaining('Failed to fetch'),
+      },
+    })
+    // MAX_ATTEMPTS = 3 fetch attempts made before surfacing
+    expect(fetchCalls).toBe(3)
   })
 
   it('substitutes server-variable {subdomain} from caller params into the request URL', async () => {

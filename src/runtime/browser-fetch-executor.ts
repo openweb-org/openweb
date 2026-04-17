@@ -176,26 +176,41 @@ export async function executeBrowserFetch(
     // because we need browser-native request behavior.
     await ssrfValidator(target)
 
-    // Execute fetch inside the browser page context
-    let fetchResult: { status: number; headers: Record<string, string>; text: string }
-    try {
-      fetchResult = await page.evaluate(
-        async (args: { url: string; method: string; headers: Record<string, string>; body: string | undefined }) => {
-          const resp = await fetch(args.url, {
-            method: args.method,
-            headers: args.headers,
-            body: args.method !== 'GET' && args.method !== 'HEAD' ? args.body : undefined,
-            credentials: 'include',
-          })
-          const respHeaders: Record<string, string> = {}
-          resp.headers.forEach((v, k) => { respHeaders[k] = v })
-          const text = await resp.text()
-          return { status: resp.status, headers: respHeaders, text }
-        },
-        { url: target, method: upperMethod, headers, body: requestBody },
-      )
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
+    // Execute fetch inside the browser page context.
+    // Cross-origin cold-state fetches sometimes throw "TypeError: Failed to fetch"
+    // before bot-detection sensors have warmed up. Retry transparently up to 2x
+    // (3 attempts total) before surfacing as retriable.
+    let fetchResult: { status: number; headers: Record<string, string>; text: string } | undefined
+    let lastError: unknown
+    const MAX_ATTEMPTS = 3
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        fetchResult = await page.evaluate(
+          async (args: { url: string; method: string; headers: Record<string, string>; body: string | undefined }) => {
+            const resp = await fetch(args.url, {
+              method: args.method,
+              headers: args.headers,
+              body: args.method !== 'GET' && args.method !== 'HEAD' ? args.body : undefined,
+              credentials: 'include',
+            })
+            const respHeaders: Record<string, string> = {}
+            resp.headers.forEach((v, k) => { respHeaders[k] = v })
+            const text = await resp.text()
+            return { status: resp.status, headers: respHeaders, text }
+          },
+          { url: target, method: upperMethod, headers, body: requestBody },
+        )
+        break
+      } catch (err) {
+        lastError = err
+        const message = err instanceof Error ? err.message : String(err)
+        const isFailedToFetch = message.includes('Failed to fetch')
+        if (!isFailedToFetch || attempt === MAX_ATTEMPTS) break
+        logger.debug(`browser_fetch: TypeError: Failed to fetch (attempt ${String(attempt)}/${String(MAX_ATTEMPTS)}) — retrying`)
+      }
+    }
+    if (!fetchResult) {
+      const message = lastError instanceof Error ? lastError.message : String(lastError)
       throw new OpenWebError({
         error: 'execution_failed',
         code: 'EXECUTION_FAILED',
