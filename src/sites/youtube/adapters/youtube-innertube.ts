@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto'
 import type { Page } from 'patchright'
-import type { PageFetchOptions, PageFetchResult } from '../../../lib/adapter-helpers.js'
+
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
 
 /**
- * YouTube L2 adapter — composes InnerTube API calls for multi-step operations.
+ * YouTube L2 runner — composes InnerTube API calls for multi-step operations.
  *
  * getComments: two-step — fetch video next page for comment continuation token,
  * then fetch comments via continuation. getPlaylist: wraps /browse with VL-prefixed
@@ -11,14 +12,7 @@ import type { PageFetchOptions, PageFetchResult } from '../../../lib/adapter-hel
  * InnerTube calls with sapisidhash signing.
  */
 
-type Errors = {
-  unknownOp(op: string): Error
-  missingParam(name: string): Error
-  fatal(msg: string): Error
-  retriable(msg: string): Error
-}
-
-type PageFetchFn = (page: Page, options: PageFetchOptions) => Promise<PageFetchResult>
+type Errors = AdapterHelpers['errors']
 
 const API_BASE = 'https://www.youtube.com/youtubei/v1'
 const DEFAULT_KEY = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
@@ -71,13 +65,13 @@ async function getSapisidAuth(page: Page): Promise<string | undefined> {
 }
 
 async function innertubePost(
-  pageFetch: PageFetchFn,
+  helpers: AdapterHelpers,
   page: Page,
   endpoint: string,
   body: Record<string, unknown>,
   config: YtConfig,
-  errors: Errors,
 ): Promise<unknown> {
+  const { pageFetch, errors } = helpers
   const url = `${API_BASE}/${endpoint}?key=${config.key}&prettyPrint=false`
   const result = await pageFetch(page, {
     url,
@@ -97,13 +91,13 @@ async function innertubePost(
 
 /** Authenticated InnerTube POST — includes sapisidhash Authorization header. */
 async function innertubeAuthPost(
-  pageFetch: PageFetchFn,
+  helpers: AdapterHelpers,
   page: Page,
   endpoint: string,
   body: Record<string, unknown>,
   config: YtConfig,
-  errors: Errors,
 ): Promise<unknown> {
+  const { pageFetch, errors } = helpers
   const auth = await getSapisidAuth(page)
   if (!auth) {
     throw errors.fatal('Not logged in to YouTube — SAPISID cookie not found')
@@ -152,13 +146,11 @@ function textRuns(obj: unknown): string {
   return runs.map((r) => String(r.text || '')).join('')
 }
 
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
+
 // --- getComments ---
-async function getComments(
-  page: Page,
-  params: Record<string, unknown>,
-  helpers: { errors: Errors; pageFetch: PageFetchFn },
-): Promise<unknown> {
-  const { errors, pageFetch } = helpers
+const getComments: Handler = async (page, params, helpers) => {
+  const { errors } = helpers
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
 
@@ -166,7 +158,7 @@ async function getComments(
   const context = makeContext(config.clientVersion)
 
   // Step 1: get the comment section continuation token from /next
-  const nextResp = await innertubePost(pageFetch, page, 'next', { context, videoId }, config, errors) as Record<string, unknown>
+  const nextResp = await innertubePost(helpers, page, 'next', { context, videoId }, config) as Record<string, unknown>
 
   // Find comment continuation token in the response
   const resultContents = dig(
@@ -197,7 +189,7 @@ async function getComments(
 
   // Step 2: fetch comments via continuation
   const commentsResp = await innertubePost(
-    pageFetch, page, 'next', { context, continuation: continuationToken }, config, errors,
+    helpers, page, 'next', { context, continuation: continuationToken }, config,
   ) as Record<string, unknown>
 
   // Parse comments from the entity-mutation store (2025+ InnerTube format).
@@ -246,12 +238,8 @@ async function getComments(
 }
 
 // --- getPlaylist ---
-async function getPlaylist(
-  page: Page,
-  params: Record<string, unknown>,
-  helpers: { errors: Errors; pageFetch: PageFetchFn },
-): Promise<unknown> {
-  const { errors, pageFetch } = helpers
+const getPlaylist: Handler = async (page, params, helpers) => {
+  const { errors } = helpers
   const playlistId = String(params.playlistId || '')
   if (!playlistId) throw errors.missingParam('playlistId')
 
@@ -260,7 +248,7 @@ async function getPlaylist(
   const browseId = playlistId.startsWith('VL') ? playlistId : `VL${playlistId}`
 
   const resp = await innertubePost(
-    pageFetch, page, 'browse', { context, browseId }, config, errors,
+    helpers, page, 'browse', { context, browseId }, config,
   ) as Record<string, unknown>
 
   // Parse playlist header
@@ -311,12 +299,8 @@ async function getPlaylist(
 }
 
 // --- addComment ---
-async function addComment(
-  page: Page,
-  params: Record<string, unknown>,
-  helpers: { errors: Errors; pageFetch: PageFetchFn },
-): Promise<unknown> {
-  const { errors, pageFetch } = helpers
+const addComment: Handler = async (page, params, helpers) => {
+  const { errors } = helpers
   const videoId = String(params.videoId || '')
   const text = String(params.text || '')
   if (!videoId) throw errors.missingParam('videoId')
@@ -326,7 +310,7 @@ async function addComment(
   const context = makeContext(config.clientVersion)
 
   // Step 1: get createCommentParams from /next (comment creation token)
-  const nextResp = await innertubePost(pageFetch, page, 'next', { context, videoId }, config, errors) as Record<string, unknown>
+  const nextResp = await innertubePost(helpers, page, 'next', { context, videoId }, config) as Record<string, unknown>
 
   const resultContents = dig(
     nextResp,
@@ -356,9 +340,9 @@ async function addComment(
 
   // Step 2: post the comment via /comment/create_comment
   const commentResp = await innertubePost(
-    pageFetch, page, 'comment/create_comment',
+    helpers, page, 'comment/create_comment',
     { context, createCommentParams: createParams, commentText: text },
-    config, errors,
+    config,
   ) as Record<string, unknown>
 
   // Extract created comment ID from response
@@ -385,12 +369,8 @@ async function addComment(
 }
 
 // --- deleteComment ---
-async function deleteComment(
-  page: Page,
-  params: Record<string, unknown>,
-  helpers: { errors: Errors; pageFetch: PageFetchFn },
-): Promise<unknown> {
-  const { errors, pageFetch } = helpers
+const deleteComment: Handler = async (page, params, helpers) => {
+  const { errors } = helpers
   const videoId = String(params.videoId || '')
   const commentId = String(params.commentId || '')
   if (!videoId) throw errors.missingParam('videoId')
@@ -403,20 +383,16 @@ async function deleteComment(
   // The action is: CAYaJ" + base64(commentId action proto)
   // Simpler approach: use the action endpoint directly with the comment external ID.
   await innertubePost(
-    pageFetch, page, 'comment/perform_comment_action',
+    helpers, page, 'comment/perform_comment_action',
     { context, actions: ['action_remove_comment'], commentId },
-    config, errors,
+    config,
   )
 
   return { videoId, commentId, deleted: true }
 }
 
 // --- getTranscript ---
-async function getTranscript(
-  page: Page,
-  params: Record<string, unknown>,
-  helpers: { errors: Errors; pageFetch: PageFetchFn },
-): Promise<unknown> {
+const getTranscript: Handler = async (page, params, helpers) => {
   const { errors } = helpers
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
@@ -505,38 +481,25 @@ async function getTranscript(
 }
 
 // --- likeVideo / unlikeVideo ---
-async function likeVideo(
-  page: Page,
-  params: Record<string, unknown>,
-  helpers: { errors: Errors; pageFetch: PageFetchFn },
-): Promise<unknown> {
-  const { errors, pageFetch } = helpers
+const likeVideo: Handler = async (page, params, helpers) => {
   const videoId = String(params.videoId || '')
-  if (!videoId) throw errors.missingParam('videoId')
+  if (!videoId) throw helpers.errors.missingParam('videoId')
 
   const config = await getYtConfig(page)
   const context = makeContext(config.clientVersion)
-  return innertubeAuthPost(pageFetch, page, 'like/like', { context, target: { videoId } }, config, errors)
+  return innertubeAuthPost(helpers, page, 'like/like', { context, target: { videoId } }, config)
 }
 
-async function unlikeVideo(
-  page: Page,
-  params: Record<string, unknown>,
-  helpers: { errors: Errors; pageFetch: PageFetchFn },
-): Promise<unknown> {
-  const { errors, pageFetch } = helpers
+const unlikeVideo: Handler = async (page, params, helpers) => {
   const videoId = String(params.videoId || '')
-  if (!videoId) throw errors.missingParam('videoId')
+  if (!videoId) throw helpers.errors.missingParam('videoId')
 
   const config = await getYtConfig(page)
   const context = makeContext(config.clientVersion)
-  return innertubeAuthPost(pageFetch, page, 'like/removelike', { context, target: { videoId } }, config, errors)
+  return innertubeAuthPost(helpers, page, 'like/removelike', { context, target: { videoId } }, config)
 }
 
-const OPERATIONS: Record<
-  string,
-  (page: Page, params: Record<string, unknown>, helpers: { errors: Errors; pageFetch: PageFetchFn }) => Promise<unknown>
-> = {
+const OPERATIONS: Record<string, Handler> = {
   getComments,
   getPlaylist,
   addComment,
@@ -546,29 +509,17 @@ const OPERATIONS: Record<
   unlikeVideo,
 }
 
-const adapter = {
+const runner: CustomRunner = {
   name: 'youtube-innertube',
   description: 'YouTube — comments and playlist composition via InnerTube API',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('youtube.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // Both operations work without auth
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: { errors: Errors; pageFetch: PageFetchFn },
-  ): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('youtube-innertube requires a page (transport: page)')
     const handler = OPERATIONS[operation]
-    if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, helpers)
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, params, helpers)
   },
 }
 
-export default adapter
+export default runner
