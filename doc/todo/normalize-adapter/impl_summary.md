@@ -159,7 +159,7 @@ Unblockers:
 
 ## What's Next (Pending Tasks)
 
-- `na-guardrails` — pattern-report script + biome lint rules + skill/openweb doc sync (still ready, not dispatched)
+- `na-guardrails` — **done** (commit a890f81). Pattern-report script + baseline ratchet + doc sync. `scripts/adapter-pattern-report.ts` counts low-level page primitives per site; `scripts/adapter-pattern-baseline.json` freezes current counts; vitest guard `src/lib/adapter-patterns.test.ts` fails CI on regressions. Allowlist covers the 13 hard-custom + 3 partial sites. doc/main/README.md (Guardrails section), skill/openweb/references/x-openweb.md (page_plan, response_capture, graphql_hash, CustomRunner), and skill/openweb/knowledge/extraction.md (decision flow + response_capture section) synced.
 - `na-phase4-followups` — superseded by per-gap tasks; archive
 - New tasks (see /update-tasks output): production deployment, test debt, 7 runtime-gap tasks, batched site-finishing tasks, final codex review
 
@@ -174,6 +174,9 @@ Code:
 - `src/types/adapter.ts` — single CustomRunner contract
 - `src/lib/spec-loader.ts` — server-variable substitution
 - `scripts/adapter-inventory.ts` — bucket classifier
+- `scripts/adapter-pattern-report.ts` — low-level-primitive guardrail (CI-ratcheted baseline)
+- `scripts/adapter-pattern-baseline.json` — frozen per-site counts
+- `src/lib/adapter-patterns.test.ts` — vitest guard enforcing the baseline
 
 Docs:
 - `doc/todo/normalize-adapter/inventory.md` — regenerable bucket table (323 ops)

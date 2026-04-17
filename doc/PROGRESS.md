@@ -1,3 +1,22 @@
+## 2026-04-17: normalize-adapter guardrails — pattern report + CI ratchet
+
+**What changed:**
+- Added `scripts/adapter-pattern-report.ts` — per-site counts of low-level page primitives (`page.goto`, `page.evaluate(fetch`, `page.on('response')`, `querySelector*`, `__NEXT_DATA__`) in `src/sites/*/adapters/*.ts`. Supports `--json`, `--check`, `--write-baseline`.
+- Froze current counts in `scripts/adapter-pattern-baseline.json` (46 sites with non-zero counts). Permanent custom bucket (13 hard + 3 partial) baked into the script.
+- Added vitest guard `src/lib/adapter-patterns.test.ts`: fails CI when any site exceeds its baseline, stale baseline entries are detected, or the allowlist becomes empty/duplicated. Normalization ratchets downward only.
+- Synced docs: `doc/main/README.md` (Guardrails section + response_capture / script_json(extended) concepts), `doc/main/primitives/README.md` (taxonomy + response_capture primitive), `skill/openweb/references/x-openweb.md` (page_plan block, response_capture row, graphql_hash, CustomRunner adapter contract), `skill/openweb/knowledge/extraction.md` (decision flow, response_capture section, CustomRunner last-resort note).
+
+**Why:**
+- normalize-adapter v2 collapsed per-site lifecycle/extraction/capture into shared runtime primitives (PagePlan, `script_json` extensions, `response_capture`, CustomRunner). Without a guardrail, the next site-adding sprint would silently regress — adapters would re-introduce `page.goto` / `querySelector` even though spec primitives now cover those cases. A baseline ratchet is strictly better than a hard allowlist here because many normalized sites still carry residual low-level code during the long-tail migration.
+
+**Key files:** `scripts/adapter-pattern-report.ts`, `scripts/adapter-pattern-baseline.json`, `src/lib/adapter-patterns.test.ts`, `doc/main/README.md`, `doc/main/primitives/README.md`, `skill/openweb/references/x-openweb.md`, `skill/openweb/knowledge/extraction.md`
+**Verification:** `pnpm tsx scripts/adapter-pattern-report.ts --check` → exit 0. `pnpm vitest run src/lib/adapter-patterns.test.ts` → 3 tests pass.
+**Commit:** a890f81
+**Next:** `na-guardrails` done; remaining backlog in `doc/todo/normalize-adapter/impl_summary.md` § What's Next.
+**Blockers:** None.
+
+---
+
 ## 2026-04-17: verify regressions triage — Phase 5C 4 misses classified
 
 **What changed:**

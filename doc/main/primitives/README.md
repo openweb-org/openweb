@@ -53,7 +53,7 @@ Extraction-only operations skip this auth/CSRF/signing pipeline and call the ext
 | CSRF | cookie_to_header, meta_tag, api_response | Mutations only (POST, PUT, PATCH, DELETE) |
 | Signing | sapisidhash | Every request |
 | Pagination | cursor, link_header | Multi-page fetches |
-| Extraction | script_json, ssr_next_data, html_selector, page_global_data | Extraction-only operations |
+| Extraction | script_json, ssr_next_data, html_selector, page_global_data, response_capture | Extraction-only operations |
 
 ---
 
@@ -165,7 +165,16 @@ extraction:
 
 Used by Walmart for homepage footer modules.
 
--> See: `src/runtime/primitives/ssr-next-data.ts`
+**Apollo `__ref` resolution.** Pages that ship an Apollo Client cache (e.g. Goodreads, Booking) store linked entities as `{ __ref: "TypeName:id" }` pointers that resolve to sibling entries. Set `resolve_apollo_refs: true` to deep-walk the extracted value and substitute every ref with its cache entry. `apollo_cache_path` points to the cache object (the `apolloState`); if omitted, the extracted value itself is used as the cache. Resolution is recursive with cycle detection (depth cap 32).
+
+```yaml
+extraction:
+  type: ssr_next_data
+  path: props.pageProps.apolloState
+  resolve_apollo_refs: true
+```
+
+-> See: `src/runtime/primitives/ssr-next-data.ts`, `src/runtime/apollo-refs.ts`
 
 ### html_selector
 
@@ -198,7 +207,7 @@ extraction:
   path: "viewer.profile.id"
 ```
 
-This shares the same expression safety checks as `page_global` auth resolution.
+This shares the same expression safety checks as `page_global` auth resolution. Supports the same `resolve_apollo_refs` + `apollo_cache_path` flags as `ssr_next_data` for pages whose window-global is an Apollo cache.
 
 -> See: `src/runtime/primitives/page-global-data.ts`
 
