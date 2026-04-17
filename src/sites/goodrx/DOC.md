@@ -42,7 +42,7 @@ openweb goodrx exec getPharmacies '{"zipCode":"90210"}'
 
 ## API Architecture
 - **Next.js App Router with RSC**: Data is server-rendered in DOM and JSON-LD — no classic XHR/fetch JSON APIs
-- **Adapter-based extraction**: All operations use the `goodrx-web` adapter with DOM parsing and JSON-LD
+- **Spec-only extraction**: All operations use the `page_global_data` extraction primitive with inline JS expressions (no custom adapter)
 - **PerimeterX bot detection**: Blocks direct HTTP; browser-only access via `transport: page`
 
 ## Auth
@@ -50,18 +50,20 @@ No auth required. All operations access public drug pricing data.
 
 ## Transport
 - `transport: page` — PerimeterX blocks all node/direct HTTP requests (403 on node fetch)
-- Homepage warm-up required: navigate to goodrx.com before drug pages to build PerimeterX cookies
-- Adapter: `adapters/goodrx-web.ts`
-- **No `__NEXT_DATA__`**: Site uses Next.js App Router (RSC), not Pages Router. `_next/` assets present but no `__NEXT_DATA__` script tag or `window.__NEXT_DATA__` global. No other SSR globals (`__INITIAL_STATE__`, `__APOLLO_STATE__`, `__NUXT__`) found.
-- **Node transport not viable**: PerimeterX returns 403 on direct HTTP. Upgrade to `ssr_next_data` extraction is not possible.
+- Server-level `page_plan: { warm: true }` runs `warmSession()` on first navigation; runtime now detects PerimeterX blocks post-warm and clears cookies + retries (default 3 attempts, linear backoff)
+- **No adapter** — `adapters/goodrx-web.ts` deleted in the Phase-4 normalize-adapter migration
+- **No `__NEXT_DATA__`**: Site uses Next.js App Router (RSC), not Pages Router. `_next/` assets present but no `__NEXT_DATA__` script tag or `window.__NEXT_DATA__` global
+- **Node transport not viable**: PerimeterX returns 403 on direct HTTP
 
 ## Extraction
-- **searchDrugs**: `page.evaluate` fetch to `/api/autocomplete` endpoint from page context, with DOM link fallback
-- **getDrugPrices**: JSON-LD `@type: Drug` for drug name + DOM `<li>` parsing for pharmacy/price pairs
-- **getPharmacies**: DOM link extraction from `a[href*="/pharmacy/"]` elements
+All three operations use `extraction.type: page_global_data` with an inline expression that runs in the navigated page's context:
+- **searchDrugs**: navigates to `/search?query={query}`, scans `a[href]` for drug-slug links and filters by query substring
+- **getDrugPrices**: navigates to `/{slug}`, parses `script[type="application/ld+json"]` for `@type: Drug` (drug name) and walks `<li>` elements for pharmacy / `$X.XX` price pairs
+- **getPharmacies**: navigates to `/pharmacy-near-me`, extracts pharmacy chains from `a[href*="/pharmacy/"]` links
+
+`page_global_data` expressions cannot call `fetch()` (blocked by `evaluatePageExpression`), so the legacy `/api/autocomplete` JSON path was dropped — the DOM-link scan covers the primary signal.
 
 ## Known Issues
-- **Empty results in headless mode**: All ops verify (schema-valid) but return empty arrays. PerimeterX likely blocks headless Playwright; DOM selectors may also be outdated.
-- **PerimeterX bot detection**: Blocks direct HTTP and poisons cookies during sequential operations. Mitigated via inter-op delay + browser context recovery: adapter clears cookies, resets to `about:blank`, and retries with progressive backoff (up to 4 attempts). Adapter `init` also detects and clears poisoned PX state from prior warm-up.
+- **PerimeterX bot detection**: Blocks direct HTTP and may issue press-and-hold CAPTCHAs on cold sessions. Mitigated at the runtime level: `warmSession` detects `#px-captcha` / "Access Denied" titles after the warm delay, clears cookies, and re-navigates with backoff (default 3 retries). No site-specific code required.
 - **Location-dependent pricing**: Pharmacy prices vary by detected geolocation.
-- **DOM structure changes**: Adapter parses DOM elements directly — GoodRx UI changes may break extraction.
+- **DOM structure changes**: Expressions parse DOM elements directly — GoodRx UI changes may break extraction. Update the `expression` body in `openapi.yaml`.

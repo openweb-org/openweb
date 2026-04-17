@@ -28,7 +28,7 @@ How major bot detection systems work, their impact on transport and capture stra
 - **Symptoms:** `403` with JSON `{"appId":"PX...","vid":"...","uuid":"..."}`, block page HTML with `/captcha/` path
 - **Transport impact:** Node transport fails. `page` transport works if the browser has solved the initial challenge.
 - **API call blocking:** On aggressive PX sites (e.g. Zillow), both `page.evaluate(fetch())` AND `page.request.fetch()` are blocked — PX validates at network/cookie level, not just JS interception. Only full page navigation (`page.goto()`) works.
-- **Stale session reset:** Navigate to `about:blank` → `context.clearCookies()` → wait 1s → retry navigation. This resets PX server-side state. First 1-2 attempts may still CAPTCHA; subsequent retries succeed.
+- **Stale session reset:** Navigate to `about:blank` → `context.clearCookies()` → wait 1s → retry navigation. This resets PX server-side state. First 1-2 attempts may still CAPTCHA; subsequent retries succeed. **Built into `warmSession`** — any spec using server- or op-level `page_plan: { warm: true }` inherits the clearCookies + retry loop (default 3 attempts, linear backoff). No adapter code required for this case.
 - **Capture strategy:** Real browser, short sessions.
 - **CDP tab closure:** Some PX-heavy sites close browser tabs after 1-2 sequential `page.goto()` calls via Playwright CDP. Workaround: for adapter-only sites, skip capture->compile and write the adapter directly.
 
