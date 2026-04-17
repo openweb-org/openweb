@@ -1,0 +1,154 @@
+{
+  "generated": "2026-04-17",
+  "note": "Baseline pattern counts per site. See scripts/adapter-pattern-report.ts — ratcheting down is the unit of forward progress for normalize-adapter. Refresh via --write-baseline only after counts legitimately drop.",
+  "counts": {
+    "airbnb": {
+      "page_goto": 1,
+      "query_selector": 3,
+      "next_data": 2
+    },
+    "amazon": {
+      "page_goto": 8,
+      "query_selector": 30
+    },
+    "bilibili": {
+      "page_goto": 1
+    },
+    "booking": {
+      "page_goto": 4,
+      "query_selector": 58
+    },
+    "costco": {
+      "page_goto": 2,
+      "query_selector": 1
+    },
+    "craigslist": {
+      "page_goto": 1,
+      "query_selector": 26
+    },
+    "expedia": {
+      "page_goto": 2,
+      "page_on_response": 2,
+      "query_selector": 1
+    },
+    "glassdoor": {
+      "page_goto": 2,
+      "page_on_response": 1,
+      "query_selector": 9,
+      "next_data": 1
+    },
+    "goodreads": {
+      "next_data": 4
+    },
+    "google-flights": {
+      "page_goto": 1,
+      "query_selector": 4
+    },
+    "google-maps": {
+      "page_goto": 4,
+      "page_evaluate_fetch": 1,
+      "query_selector": 2
+    },
+    "google-search": {
+      "page_goto": 1,
+      "query_selector": 46
+    },
+    "grubhub": {
+      "page_goto": 1
+    },
+    "hackernews": {
+      "page_goto": 2,
+      "query_selector": 3
+    },
+    "homedepot": {
+      "page_goto": 1,
+      "page_evaluate_fetch": 1,
+      "page_on_response": 1,
+      "query_selector": 1
+    },
+    "imdb": {
+      "page_goto": 1,
+      "next_data": 1
+    },
+    "indeed": {
+      "page_goto": 1,
+      "next_data": 1
+    },
+    "instacart": {
+      "page_goto": 4,
+      "page_on_response": 3
+    },
+    "jd": {
+      "page_goto": 2,
+      "page_on_response": 1,
+      "query_selector": 5
+    },
+    "kayak": {
+      "page_goto": 3,
+      "page_on_response": 1,
+      "query_selector": 2
+    },
+    "leetcode": {
+      "page_goto": 1
+    },
+    "linkedin": {
+      "query_selector": 1
+    },
+    "medium": {
+      "page_goto": 2,
+      "query_selector": 11
+    },
+    "opentable": {
+      "page_goto": 1
+    },
+    "producthunt": {
+      "page_goto": 1
+    },
+    "quora": {
+      "page_goto": 1,
+      "page_on_response": 1,
+      "query_selector": 9
+    },
+    "reuters": {
+      "page_goto": 2,
+      "query_selector": 8
+    },
+    "seeking-alpha": {
+      "query_selector": 1
+    },
+    "spotify": {
+      "page_goto": 1
+    },
+    "tiktok": {
+      "page_goto": 3,
+      "page_on_response": 1
+    },
+    "todoist": {
+      "page_goto": 1
+    },
+    "uber": {
+      "page_goto": 1
+    },
+    "ubereats": {
+      "page_goto": 1
+    },
+    "walmart": {
+      "next_data": 4
+    },
+    "x": {
+      "page_goto": 4,
+      "query_selector": 1
+    },
+    "xiaohongshu": {
+      "page_goto": 12
+    },
+    "youtube": {
+      "page_goto": 2
+    },
+    "zillow": {
+      "page_goto": 4,
+      "query_selector": 1,
+      "next_data": 3
+    }
+  }
+}

@@ -185,6 +185,8 @@ src/
 | **Primitive** | Declarative config unit for auth, CSRF, signing, pagination, extraction | [primitives/](primitives/README.md) |
 | **CustomRunner** | L3 escape hatch — single `run(ctx)` entry for sites with signing/module-system/protocol needs | [adapters.md](adapters.md) |
 | **PagePlan** | Runtime-owned page acquisition (entry_url / ready / warm / nav_timeout) — replaces adapter-owned init | [primitives/page-plan.md](primitives/page-plan.md) |
+| **response_capture** | Extraction type — installs the response listener before navigation, captures first URL-matched response | [primitives/README.md](primitives/README.md#response_capture) |
+| **script_json (extended)** | Extraction — covers JSON-LD + HTML-comment-wrapped JSON via `strip_comments`, runs under node or page transport | [primitives/README.md](primitives/README.md#script_json) |
 | **Skill Package** | Per-site artifact: openapi.yaml + manifest.json + adapters/ + examples/ | [compiler.md](compiler.md) |
 | **AsyncAPI Package** | Per-site WS artifact: asyncapi.yaml for real-time event channels | [compiler.md](compiler.md) |
 | **Capture Bundle** | Raw recording: traffic.har + websocket_frames.jsonl + state + DOM | [browser-capture.md](browser-capture.md) |
@@ -249,3 +251,27 @@ Three loading patterns: `add-site/` is sequential workflow, `references/` is ind
 ## Development Workflow
 
 -> See: [doc/dev/development.md](../dev/development.md)
+
+---
+
+## Guardrails
+
+normalize-adapter collapsed per-site page/extraction/capture lifecycle into shared runtime primitives (PagePlan, `script_json`/`ssr_next_data`/`html_selector`/`page_global_data`, `response_capture`, CustomRunner). To keep future site work from re-introducing low-level page primitives, a CI guardrail tracks their usage per site:
+
+```bash
+pnpm tsx scripts/adapter-pattern-report.ts              # human-readable report
+pnpm tsx scripts/adapter-pattern-report.ts --check      # exit 1 on regression vs baseline
+pnpm tsx scripts/adapter-pattern-report.ts --write-baseline  # refresh after legitimate reductions
+```
+
+The report counts `page.goto(`, `page.evaluate(fetch(...))`, `page.on('response', ...)`, `querySelector*`, and `__NEXT_DATA__` in `src/sites/*/adapters/*.ts`. The permanent custom bucket (see `doc/todo/normalize-adapter/final/design.md`) is declared in the script. Baseline counts live in `scripts/adapter-pattern-baseline.json`; a vitest guard (`src/lib/adapter-patterns.test.ts`) fails CI when any site exceeds its baseline, so normalization ratchets downward only.
+
+Replacements:
+
+| Low-level pattern | Use instead |
+|---|---|
+| `page.goto(` / `page.waitForSelector(...)` | `x-openweb.page_plan` — `entry_url`, `ready`, `wait_until`, `settle_ms`, `warm` |
+| `page.evaluate(fetch(...))` | `transport: page` with declared `auth` / `csrf` / `signing`, or `helpers.pageFetch` inside a CustomRunner |
+| `page.on('response', ...)` | `extraction.type: response_capture` with `match_url` + `unwrap` |
+| `querySelector(...)` + `textContent` | `extraction.type: html_selector` (trivial) or `page_global_data` (anything with nesting or logic) |
+| `__NEXT_DATA__` parsing | `extraction.type: ssr_next_data` or `script_json` with `#__NEXT_DATA__` selector |

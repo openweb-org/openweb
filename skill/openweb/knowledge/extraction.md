@@ -6,15 +6,18 @@ How to extract structured data from web responses. Each pattern: technique, dete
 
 ```text
 Is data in an API response (XHR/fetch)?
-  +- Yes -> use the API directly (REST/GraphQL) <- preferred
-  +- No -> Is data in initial HTML?
+  +- Yes — you can call it directly       -> use the API (REST/GraphQL) <- preferred
+  +- Yes — but it only fires on page load -> extraction.type: response_capture
+  +- No  -> Is data in initial HTML?
        +- __NEXT_DATA__ present -> ssr_next_data
-       +- __NUXT__ present -> __NUXT__
-       +- <script type="application/ld+json"> -> script_json
-       +- window.VAR = {...} -> page_global
-       +- Data in DOM elements only -> html_selector
-       +- Data requires interaction -> page.evaluate adapter
+       +- __NUXT__ present -> page_global_data (expression: window.__NUXT__)
+       +- <script type="application/ld+json"> -> script_json (+ type_filter; strip_comments if wrapped)
+       +- window.VAR = {...} -> page_global_data
+       +- Data in DOM elements only -> html_selector (trivial) or page_global_data (nested / per-field logic)
+       +- Data requires interaction -> CustomRunner (last resort)
 ```
+
+All browser-backed extraction inherits PagePlan (`entry_url` / `ready` / `warm` / `nav_timeout_ms`) from the server or operation — you no longer hand-roll `page.goto` / `waitForSelector` in an adapter.
 
 ## ssr_next_data
 
@@ -59,15 +62,31 @@ Structured data in `<script type="application/ld+json">` or similar non-executab
 - **Detection:** `<script type="application/ld+json">`, `<script type="application/json" data-*>`
 - **Transport:** node (parse HTML) or page (query DOM)
 - **Example:** `JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent)`
-- **Gotcha:** Multiple `ld+json` blocks per page -- use `type_filter: <Type>` on the primitive to pick the right block by `@type` (handles string or string[]). Use `multi: true` if you need all blocks. No adapter needed.
+- **Gotcha:** Multiple `ld+json` blocks per page -- use `type_filter: <Type>` on the primitive to pick the right block by `@type` (handles string or string[]). Use `multi: true` if you need all blocks. Use `strip_comments: true` for `<!-- -->`-wrapped inline JSON (Yelp-style). No adapter needed.
 
-## page.evaluate Adapter
+## response_capture
 
-Run arbitrary JavaScript in the browser page context. Used when no simpler pattern works.
+The data you need arrives in a network response fired during page load — triggered by client-side JS, not by a call you can make directly.
 
-- **Detection:** Data only appears after user interaction, or data is computed client-side from multiple sources
-- **Transport:** adapter -- full page control
-- **Gotcha:** Slowest pattern. Use only when simpler extraction fails. Fragile to UI changes.
+- **Detection:** DevTools shows the request/response, but the URL requires cookies/headers only the page can produce, or the payload is only well-formed in that flow
+- **Transport:** page (inherits PagePlan; always fresh navigation — no page reuse)
+- **Example:**
+  ```yaml
+  extraction:
+    type: response_capture
+    page_url: /flights/search
+    match_url: "*/api/search/flights*"
+    unwrap: data.results
+  ```
+- **Gotcha:** Only the first matching response is returned. Tighten `match_url` if two responses share a substring. Progressive / best-of-N / multi-response capture still belongs in a CustomRunner.
+
+## CustomRunner (last resort)
+
+Custom JS in the browser page context when no spec primitive fits — signing, module-system walks, binary protocols, dynamic query-id scraping.
+
+- **When to use:** After spec primitives (`response_capture`, `script_json`, `page_global_data`, `html_selector`) have been ruled out
+- **Transport:** CustomRunner with `run(ctx: PreparedContext)`; PagePlan + auth/CSRF/signing resolved by the runtime before `run`
+- **Gotcha:** Slowest pattern and fragile. Never add `page.goto` / `page.on('response')` / `__NEXT_DATA__` parsing here — those have shared primitives now (see the `scripts/adapter-pattern-report.ts` guardrail).
 
 ## LD+JSON Structured Data
 

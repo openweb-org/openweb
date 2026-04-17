@@ -76,6 +76,8 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `unwrap` | string | Dot-path into parsed response body to extract before returning (e.g. `data`, `0.data`) |
 | `wrap` | string | Wrap non-const request body params under this key (e.g. `variables` for GraphQL) |
 | `graphql_query` | string | GraphQL query string injected at body root when `wrap` is active and the schema property name would conflict with a user-facing param |
+| `graphql_hash` | string | Persisted-query hash (e.g. `sha256:…`) sent instead of a full query; combined with `wrap: variables` |
+| `page_plan` | PagePlan | Runtime-owned navigation/readiness/warm (see [Page Plan](#page-plan-server-or-operation)) |
 | `build` | BuildMeta | Compiler metadata — **do not edit manually** |
 | `safety` | `safe` \| `caution` | Compiler hint for state-modifying ops |
 | `requires_auth` | boolean | Compiler hint — not enforced at runtime |
@@ -103,19 +105,56 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `ssr_next_data` | `page_url?`, `path` | Extract from Next.js `__NEXT_DATA__` JSON |
 | `page_global_data` | `page_url?`, `expression?`, `path?`, `adapter?`, `method?` | Read a `window.*` global variable |
 | `html_selector` | `page_url?`, `selectors`, `attribute?`, `multiple?` | CSS selector on the DOM |
-| `script_json` | `selector`, `path?`, `strip_comments?`, `type_filter?`, `multi?` | Parse `<script>` JSON blocks. `type_filter` picks ld+json by `@type` (string or string[]); `multi: true` returns all matching blocks as array |
+| `script_json` | `selector`, `path?`, `strip_comments?`, `type_filter?`, `multi?` | Parse `<script>` JSON blocks. `strip_comments: true` unwraps `<!-- -->`-wrapped JSON (Yelp-style). `type_filter` picks ld+json by `@type` (string or string[]); `multi: true` returns all matching blocks as array |
+| `response_capture` | `match_url` (glob), `page_url?`, `wait_until?`, `unwrap?` | Navigate via PagePlan and capture the first network response matching `match_url`. Listener installed before `page.goto` — always forces fresh navigation |
 
 See `knowledge/extraction.md` for decision flow and usage guidance.
 
-### Adapter
+### Page Plan (server or operation)
 
-Fields: `name` (required), `operation` (required), `params?`. Runtime bypasses
-URL construction — OpenAPI path is a logical namespace. Adapter navigates and
-extracts via `params`.
+Runtime-owned page acquisition for browser-backed operations. Merges server-level defaults with operation-level overrides (field-by-field; explicit operation values win, including falsy).
 
-Adapters must be **self-contained** — no imports from outside the adapter file.
-The runtime injects shared helpers (`pageFetch`, `graphqlFetch`, error factories)
-via the `execute()` 4th parameter.
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `entry_url` | string | server URL | Where to navigate before executing. Supports server-variable + caller-param interpolation |
+| `ready` | string | — | CSS selector awaited after navigation |
+| `wait_until` | string | `load` | Playwright `waitUntil` (`domcontentloaded` / `load` / `networkidle` / `commit`) |
+| `settle_ms` | number | `0` | Extra delay after `ready` (escape hatch — prefer a tighter selector) |
+| `warm` | boolean | `false` | Run `warmSession()` after readiness (PX / DataDome / Akamai) |
+| `nav_timeout_ms` | number | `30000` | Navigation + readiness timeout |
+
+```yaml
+servers:
+  - url: https://www.example.com
+    x-openweb:
+      transport: page
+      page_plan:
+        ready: "#app"
+        warm: true
+paths:
+  /search:
+    get:
+      x-openweb:
+        page_plan:
+          entry_url: /search
+          ready: ".search-results"
+```
+
+PagePlan is ignored when transport is `node`. `response_capture` always uses fresh navigation (no page reuse).
+
+### GraphQL
+
+GraphQL is request-body shaping, not a separate transport. Use:
+- `graphql_query` — inline query string; combined with `wrap: variables`
+- `graphql_hash` — persisted query hash (e.g. `sha256:abc…`); combined with `wrap: variables`
+
+Dynamic query-id scraping and per-response query-id schemes stay in a CustomRunner.
+
+### Adapter (CustomRunner)
+
+Fields: `name` (required), `operation` (required), `params?`. The runtime resolves PagePlan, auth, CSRF, and signing **before** invoking the runner — a single `run(ctx: PreparedContext)` entry. No separate `init()` / `isAuthenticated()`. Opt out per operation with `adapter: false`.
+
+Runners must be **self-contained** — no imports from outside the adapter file. Helpers arrive via `ctx.helpers` (`pageFetch`, `graphqlFetch`, `nodeFetch`, `interceptResponse`, `ssrExtract`, `jsonLdExtract`, `domExtract`, `errors`).
 
 ### Response Unwrap
 
