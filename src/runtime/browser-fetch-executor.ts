@@ -13,7 +13,7 @@ import { ensurePagePolyfills } from './page-polyfill.js'
 import { acquirePage } from './page-plan.js'
 import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
-import { buildHeaderParams, buildJsonRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
+import { buildHeaderParams, buildRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
 import type { SessionHttpDependencies } from './session-executor.js'
 import { warmSession } from './warm-session.js'
@@ -115,11 +115,16 @@ export async function executeBrowserFetch(
     // Build URL (returns raw string with minimal encoding)
     const target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams, authResult?.queryParams)
 
-    // Build request body
-    let jsonBody: string | undefined
+    // Build request body (JSON or form-urlencoded per spec content type)
+    let requestBody: string | undefined
+    let bodyContentType: string | undefined
     const upperMethod = method.toUpperCase()
     if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
-      jsonBody = buildJsonRequestBody(operation, inputParams)
+      const built = buildRequestBody(operation, inputParams)
+      if (built) {
+        requestBody = built.body
+        bodyContentType = built.contentType
+      }
     }
 
     // Build headers — browser_fetch does NOT need Cookie header (credentials:'include' handles it)
@@ -127,8 +132,8 @@ export async function executeBrowserFetch(
       Accept: 'application/json',
       ...headerParams,
     }
-    if (jsonBody && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json'
+    if (requestBody && bodyContentType && !headers['Content-Type']) {
+      headers['Content-Type'] = bodyContentType
     }
 
     // Resolve auth headers (query params already handled by buildTargetUrl)
@@ -186,7 +191,7 @@ export async function executeBrowserFetch(
           const text = await resp.text()
           return { status: resp.status, headers: respHeaders, text }
         },
-        { url: target, method: upperMethod, headers, body: jsonBody },
+        { url: target, method: upperMethod, headers, body: requestBody },
       )
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

@@ -176,6 +176,25 @@ export function buildFormRequestBody(operation: OpenApiOperation, params: Record
   return entries.length > 0 ? new URLSearchParams(entries).toString() : undefined
 }
 
+/**
+ * Consolidated request-body builder. Picks form-urlencoded when the spec
+ * declares that content type, else falls back to JSON. Returns both the
+ * wire body string and the matching Content-Type so callers don't need
+ * to re-inspect the operation.
+ */
+export function buildRequestBody(
+  operation: OpenApiOperation,
+  params: Record<string, unknown>,
+): { body: string; contentType: string } | undefined {
+  const formBody = buildFormRequestBody(operation, params)
+  if (formBody !== undefined) return { body: formBody, contentType: 'application/x-www-form-urlencoded' }
+
+  const jsonBody = buildJsonRequestBody(operation, params)
+  if (jsonBody !== undefined) return { body: jsonBody, contentType: 'application/json' }
+
+  return undefined
+}
+
 /** Collect parameters from operation + $ref components resolution */
 export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperation): OpenApiParameter[] {
   const params = operation.parameters ?? []
