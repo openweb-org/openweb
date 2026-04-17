@@ -1832,10 +1832,7 @@ paths:
         safety: safe
         build:
           stable_id: weibo0012
-          tool_version: 1
-        adapter:
-          name: weibo-web
-          operation: repost
+          tool_version: 2
       requestBody:
         required: true
         content:
@@ -2055,14 +2052,11 @@ paths:
         safety: safe
         build:
           stable_id: weibo0013
-          tool_version: 1
-        adapter:
-          name: weibo-web
-          operation: followUser
+          tool_version: 2
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -2136,14 +2130,11 @@ paths:
         safety: safe
         build:
           stable_id: weibo0014
-          tool_version: 1
-        adapter:
-          name: weibo-web
-          operation: bookmarkPost
+          tool_version: 2
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -2362,14 +2353,11 @@ paths:
         safety: caution
         build:
           stable_id: weibo0015
-          tool_version: 1
-        adapter:
-          name: weibo-web
-          operation: unlikePost
+          tool_version: 2
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -2397,14 +2385,11 @@ paths:
         safety: caution
         build:
           stable_id: weibo0016
-          tool_version: 1
-        adapter:
-          name: weibo-web
-          operation: unfollowUser
+          tool_version: 2
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -2432,14 +2417,11 @@ paths:
         safety: caution
         build:
           stable_id: weibo0017
-          tool_version: 1
-        adapter:
-          name: weibo-web
-          operation: unbookmarkPost
+          tool_version: 2
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
