@@ -13,3 +13,9 @@
 - DOC.md lacked cross-operation data flow and workflow guidance
 
 **Verification:** Runtime verify pass (10 API ops), spec curation standards, doc template compliance
+
+## 2026-04-17 — Phase 3 Normalize-Adapter
+
+**Context:** Audit pass to remove dead adapter code across sites where the spec already covered all operations.
+**Changes:** Deleted unreferenced `adapters/douban-dom.ts` (349 lines). Spec already routed all 14 ops through the L1 mobile JSON API; adapter file was unused. Commit `b38e86b`.
+**Verification:** 14/14 PASS

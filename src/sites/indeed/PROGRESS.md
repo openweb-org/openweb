@@ -28,3 +28,14 @@
 - Updated openapi.yaml response schemas to match new richer data shapes.
 - Removed known issues for broken DOM selectors.
 **Verification:** `pnpm dev verify indeed --browser` — 8/8 ops PASS.
+
+## 2026-04-17 — Phase 3 Normalize-Adapter (d1723ce)
+
+**Context:** Move extraction logic from adapter handlers into spec `x-openweb.extraction` blocks so the runtime can drive extraction directly.
+**Changes:**
+- `searchJobs`, `getJobDetail`, `getCompanyOverview`, `getCompanyReviews`, `getCompanySalaries` → migrated to `page_global_data` (reads `_initialData` / `mosaic.providerData` / LD+JSON)
+- `getSalary` → kept on `indeed-web` adapter (title→slug URL transform required)
+- `autocompleteJobTitle`, `autocompleteLocation` → kept on adapter (in-page `fetch()` to `autocomplete.indeed.com`)
+- Adapter shrunk from ~245 lines to ~110 lines
+**Verification:** 8/8 PASS via `pnpm dev verify indeed --browser`.
+**Key discovery:** Stale shadow copies at `~/.openweb/sites/` and `dist/sites/` can mask migrations during verify — clear them when extraction blocks appear to take no effect.

@@ -1,5 +1,12 @@
 # eBay — Progress
 
+## 2026-04-17 — Phase 3 Normalize-Adapter
+
+**Context:** Convert adapter-based ops to spec extraction primitives so the runtime drives extraction directly from `x-openweb.extraction` blocks.
+**Changes:** All 3 ops (`searchItems`, `getItemDetail`, `getSellerProfile`) migrated to `page_global_data` (LD+JSON for item detail, DOM for search/seller). `adapters/ebay.ts` deleted; manifest updated.
+**Verification:** 3/3 PASS via `pnpm dev verify ebay --browser`.
+**Commit:** `4db66b6` — feat(ebay): migrate to spec extraction — delete adapter
+
 ## 2026-04-09: Polish site package
 
 **What changed:**

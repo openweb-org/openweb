@@ -42,7 +42,7 @@ Not needed for basic site usage.
 
 ### API Architecture
 - `autocompleteBusinesses` hits a JSON API at `/search_suggest/v2/prefetch` — works via direct HTTP (node transport)
-- `searchBusinesses` loads the search results page and extracts data via a custom adapter — dual extraction from SSR JSON (`<script type="application/json">`) with DOM fallback (`[data-testid="serp-ia-card"]`)
+- `searchBusinesses` loads the search results page; data is extracted via spec-driven `page_global_data` — dual extraction from SSR JSON (`<script type="application/json">`) with DOM fallback (`[data-testid="serp-ia-card"]`)
 - Search results include both organic results and ads (marked with `isAd: true`)
 
 ### Auth
@@ -50,10 +50,13 @@ No auth required. All operations are public read.
 
 ### Transport
 - `autocompleteBusinesses`: node (direct HTTP) — `/search_suggest/v2/prefetch` not DataDome-protected
-- `searchBusinesses`: page (browser via `yelp-web` adapter) — all search endpoints DataDome-protected
+- `searchBusinesses`: page (browser) with `x-openweb.extraction.page_global_data` — all search endpoints DataDome-protected
 
 ### Extraction
-- **searchBusinesses**: SSR JSON extraction from large `<script type="application/json">` blocks, merged with DOM fallback from `[data-testid="serp-ia-card"]` elements. Ad results are detected via redirect URLs and handled separately.
+- **searchBusinesses**: `page_global_data` expression embedded in `openapi.yaml` parses large `<script type="application/json">` SSR blocks, merged with DOM fallback from `[data-testid="serp-ia-card"]` elements. Ad results detected via redirect URLs and handled within the expression.
+
+### Adapter Patterns
+Adapter removed in Phase 3 (normalize-adapter); searchBusinesses now uses the `page_global_data` extraction primitive.
 
 ### Bot Detection
 - **DataDome** — aggressive single-layer detection on all HTML pages and search-related API endpoints
@@ -80,7 +83,7 @@ Probed for node-viable search endpoints:
 **Conclusion:** Transport upgrade not viable. DataDome blocks all search-related endpoints from both node and automated browsers. Only the autocomplete API bypasses DataDome. The Yelp Fusion API (v3) exists but requires OAuth credentials, which is out of scope.
 
 ### Known Issues
-- **searchBusinesses currently broken** — DataDome blocks automated browsers (Patchright) from loading any Yelp page. The `yelp-web` adapter receives a 1591-byte challenge page instead of search results. This is a DataDome policy change since the adapter was last verified (2026-04-06).
+- **searchBusinesses currently broken** — DataDome blocks automated browsers (Patchright) from loading any Yelp page. Page extraction receives a 1591-byte challenge page instead of search results. This is a DataDome policy change since the extraction was last verified (2026-04-06).
 - `autocompleteBusinesses` continues to work on node transport (not DataDome-protected)
-- SSR JSON structure may change across Yelp deployments; DOM fallback provides resilience
-- Ad results use redirect URLs; the adapter resolves these to extract the actual business alias
+- SSR JSON structure may change across Yelp deployments; DOM fallback in the extraction expression provides resilience
+- Ad results use redirect URLs; the extraction expression resolves these to extract the actual business alias

@@ -55,17 +55,20 @@ openweb etsy exec getShop '{"shopName":"nealpottery"}'
 No auth required. All operations are public read-only.
 
 ### Transport
-- `page` transport for all operations (adapter-based)
+- `page` transport for all operations, driven by spec extraction (`x-openweb.extraction.page_global_data`)
 - Bot detection: Cloudflare (`cf_clearance`) + PerimeterX (`_px3`, `_pxvid`) + DataDome — blocks all direct HTTP
-- Adapter file: `adapters/etsy.ts`
 
 ### Extraction
+- All 4 ops use the `page_global_data` primitive with expressions embedded in `openapi.yaml` (LD+JSON parsing + DOM fallback in the same expression).
 - **Search**: DOM extraction from `a[data-listing-id]` cards — provides title, price, shop, rating
 - **Listing detail**: LD+JSON `Product` — name, sku, description, image, brand, aggregateRating, offers, material
 - **Reviews**: LD+JSON `Product.review` array (~4 recent reviews) + `aggregateRating`
 - **Shop**: LD+JSON `Organization` — name, description, location, logo, slogan, employee, aggregateRating; DOM for sales count and years on Etsy
 
+### Adapter Patterns
+Adapter removed in Phase 3 (normalize-adapter); all ops now use spec extraction primitives.
+
 ### Known Issues
-- LD+JSON on search pages contains only ~11 items; adapter uses DOM extraction for full results
+- LD+JSON on search pages contains only ~11 items; the search expression uses DOM extraction for full results
 - Review data from LD+JSON is limited to ~4 recent reviews; aggregate stats are complete
 - Heavy bot detection means direct HTTP is not viable — page transport required

@@ -1,3 +1,10 @@
+## 2026-04-17 — Phase 3 Normalize-Adapter
+
+**Context:** Convert adapter-based ops to spec extraction primitives so the runtime drives extraction directly from `x-openweb.extraction` blocks.
+**Changes:** `searchBusinesses` migrated from `yelp-web` adapter to `page_global_data` (SSR JSON parsing + DOM fallback expression embedded in `openapi.yaml`). `adapters/yelp-web.ts` deleted. `autocompleteBusinesses` (node transport) unchanged.
+**Verification:** 2/2 PASS via `pnpm dev verify yelp --browser`.
+**Commit:** `dc2062a` — feat(yelp): migrate searchBusinesses to spec extraction
+
 ## 2026-04-14: Transport upgrade investigation — blocked by DataDome
 
 **What changed:**

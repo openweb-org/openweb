@@ -57,17 +57,18 @@ Not needed for basic site usage.
 No auth required for reading job data. Session cookie `__zp_stoken__` exists but is not needed for core operations.
 
 ## Transport
-- `page` (L3 adapter) — all core operations via page context with DOM extraction
+- `page` transport — all core operations driven by spec extraction (`x-openweb.extraction.page_global_data`); runtime navigates to `page_url` then evaluates the embedded expression
 - Reference data ops (getCities, getIndustries, getFilterConditions) use `node` transport — public APIs that bypass bot detection
-- Adapter navigates to operation-specific URLs before DOM extraction (adapter paths are logical namespaces, not real URLs)
 
 ## Extraction
-- All core ops use adapter DOM extraction (`adapters/boss-web.ts`): navigate to operation URL, wait for content selectors, then `page.evaluate()` to extract structured data from CSS selectors
+- All 4 core ops (`searchJobs`, `getJobDetail`, `getCompanyProfile`, `getSalary`) use `page_global_data` with DOM expressions (CSS-selector queries via `document.querySelectorAll`) embedded in `openapi.yaml`
 - Reference data ops (getCities, getIndustries, getFilterConditions) return JSON directly — no extraction needed
 
+## Adapter Patterns
+Adapter removed in Phase 3 (normalize-adapter); all ops now use spec extraction primitives.
+
 ## Known Issues
-- **Bot detection**: Fingerprint-based detection blocks new automated tabs. Adapter works in a browser session where a human has already passed verification.
+- **Bot detection**: Fingerprint-based detection blocks new automated tabs. Page extraction works in a browser session where a human has already passed verification.
 - **Job detail / company pages may require login**: Detail and company profile pages intermittently show login prompts under bot detection. Search results are more reliable.
 - **Salary hidden on search cards**: Boss直聘 hides salary text in search result cards from automated extraction (anti-scraping). `salaryDesc` may return empty. `getSalary` depends on this and may return empty results.
-- **SPA navigation**: zhipin.com's Vue router may abort Playwright `page.goto()` with `ERR_ABORTED` — adapter catches this since the SPA handles the route internally.
 - **DOM selectors may drift**: Boss直聘 updates frontend frequently; CSS class names may change.

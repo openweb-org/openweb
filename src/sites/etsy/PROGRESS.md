@@ -1,5 +1,12 @@
 # Etsy — Progress
 
+## 2026-04-17 — Phase 3 Normalize-Adapter
+
+**Context:** Convert adapter-based ops to spec extraction primitives so the runtime drives extraction directly from `x-openweb.extraction` blocks.
+**Changes:** All 4 ops (`searchListings`, `getListingDetail`, `getReviews`, `getShop`) migrated to `page_global_data` with embedded LD+JSON parsing and DOM fallback expressions in `openapi.yaml`. `adapters/etsy.ts` deleted; manifest updated.
+**Verification:** 4/4 PASS via `pnpm dev verify etsy --browser`.
+**Commit:** `d16fffa` — feat(etsy): migrate all 4 ops to spec extraction
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**

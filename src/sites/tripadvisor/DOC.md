@@ -91,15 +91,20 @@ No auth required. All operations read public data.
 
 ### Transport
 Page transport (real Chrome via CDP). DataDome blocks node transport entirely.
+**Hybrid**: 6 of 7 ops use spec `x-openweb.extraction` (`page_global_data` reading LD+JSON `<script type="application/ld+json">` with DOM fallbacks). `searchLocation` stays on the thin `tripadvisor` adapter because it calls the TypeAheadJson endpoint via in-page `fetch()` — DataDome rejects programmatic fetches initiated outside of a navigated page context, and the page itself doesn't expose the typeahead results in any global.
 
 ### Extraction
-- **searchLocation**: TypeAheadJson API via `page.evaluate(fetch)` → parse geoId and slug from results
-- **searchHotels**: LD+JSON `ItemList` → `itemListElement[].item` (type `Hotel`/`LodgingBusiness`), DOM `[data-automation="hotel-card-title"]` fallback
-- **getHotelDetail**: LD+JSON `Hotel`/`LodgingBusiness` from `<script type="application/ld+json">` — amenityFeature, starRating, checkinTime
-- **searchRestaurants**: LD+JSON `ItemList` → `itemListElement[].item` (type `Restaurant`), DOM `a[href*="Restaurant_Review"]` fallback
-- **getRestaurant**: LD+JSON `Restaurant`/`FoodEstablishment`/`LocalBusiness` from `<script type="application/ld+json">`
-- **getAttractionDetail**: LD+JSON `TouristAttraction`/`LocalBusiness` — description, openingHoursSpecification
-- **getAttractionReviews**: LD+JSON for attraction info + DOM reviews via `[data-reviewid]`, `[data-test-target="review-title"]`, `[data-automation*="reviewText"]`
+- `searchHotels` → `page_global_data`: LD+JSON `ItemList` → `Hotel`/`LodgingBusiness`, DOM `[data-automation="hotel-card-title"]` fallback
+- `getHotelDetail` → `page_global_data`: LD+JSON `Hotel`/`LodgingBusiness` (amenityFeature, starRating, checkin/out)
+- `searchRestaurants` → `page_global_data`: LD+JSON `ItemList` → `Restaurant`, DOM `a[href*="Restaurant_Review"]` fallback
+- `getRestaurant` → `page_global_data`: LD+JSON `Restaurant`/`FoodEstablishment`/`LocalBusiness`
+- `getAttractionDetail` → `page_global_data`: LD+JSON `TouristAttraction`/`LocalBusiness`
+- `getAttractionReviews` → `page_global_data`: LD+JSON for attraction info + DOM `[data-reviewid]`/`[data-test-target="review-title"]`/`[data-automation*="reviewText"]`
+- `searchLocation` → adapter: `page.evaluate(fetch)` to TypeAheadJson, parse geoId/slug from result URLs
+
+### Adapter Patterns
+- `searchLocation` — uses browser-side `fetch('/TypeAheadJson?...')` with `credentials: 'same-origin'` to inherit DataDome cookies; the response isn't surfaced as a window global so spec extraction can't reach it.
+- The adapter runner also wraps every op with a DataDome CAPTCHA gate (poll up to 30s for resolution) before delegating.
 
 ### Known Issues
 - **DataDome:** Aggressive bot detection on all endpoints. Must use page transport with real Chrome profile. If captcha appears, solve it manually in the headed browser, then retry.

@@ -1,3 +1,14 @@
+## 2026-04-17 — Phase 3 Normalize-Adapter (4ac2f3b)
+
+**Context:** Move extraction logic from adapter handlers into spec `x-openweb.extraction` blocks so the runtime can drive extraction directly.
+**Changes:**
+- `getPropertyDetail`, `getZestimate`, `getNeighborhood` → migrated to `page_global_data` (`__NEXT_DATA__` → `gdpClientCache` → `value.property`); per-op projection in the spec expression
+- `searchProperties` → kept on `zillow-detail` adapter (regionId → city-slug translation + region landing page navigation; complex search state)
+- Added server-level `page_plan.warm: true` so the runtime's generic PerimeterX retry (about:blank → clearCookies → retry) covers the spec-extraction ops; adapter retains its own `navigateWithPxRetry` for `searchProperties`
+- Adapter shrunk from ~410 lines to ~173 lines; removed propertyCache (no longer needed since detail ops are spec-driven)
+**Verification:** 4/4 PASS via `pnpm dev verify zillow --browser`.
+**Key discovery:** `page_plan.warm: true` is the right hook for sites where the first navigation usually trips a bot wall — the runtime handles the warm-up + retry generically, so each spec op no longer needs a custom adapter wrapper.
+
 ## 2026-04-14 — Fix PerimeterX stale page crash during verify
 
 **Context:** `pnpm dev verify zillow` crashes with `Cannot find parent object page@... to create disposable@...` — verify warm-up navigates to zillow.com before the adapter runs, triggering PX CAPTCHA which closes the CDP tab. The adapter then tries to use the stale page object.

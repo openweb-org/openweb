@@ -22,3 +22,10 @@
 - Goodreads is the largest book community — rich book, review, and author data
 
 **Verification:** 4/4 PASS with `pnpm --silent dev verify goodreads --browser`
+
+## 2026-04-17 — Phase 3 Normalize-Adapter
+
+**Context:** Audit pass to migrate site adapters to spec extraction primitives or shared helpers.
+**Changes:** Refactored `adapters/goodreads.ts` to use the injected `nodeFetch` helper (SSRF + redirect + timeout guards) in place of raw `fetch()`. All 4 ops remain on the thin adapter. Commit `33ca3ce`.
+**Verification:** 4/4 PASS
+**Key discovery:** Full spec extraction migration blocked because `apolloState` post-processing (Book + Work + Contributor + Review + User entity stitching) is too site-specific for generic primitives.

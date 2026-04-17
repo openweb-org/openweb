@@ -71,18 +71,21 @@ openweb indeed exec autocompleteJobTitle '{"q":"softw"}'
 No auth required. All 8 operations return public data.
 
 ## Transport
-- `page` (L3 adapter) — all operations via page navigation + data extraction
-- Cloudflare bot detection blocks direct HTTP requests
-- Autocomplete APIs called via `page.evaluate(fetch)` to inherit browser context
+- `page` for all 8 ops (Cloudflare bot detection blocks direct HTTP)
+- **Hybrid**: 5 of 8 ops use spec `x-openweb.extraction` (`page_global_data` reading `_initialData` / `mosaic.providerData` / LD+JSON). Remaining 3 ops stay on the thin `indeed-web` adapter because they need a slug transform (`getSalary`) or in-page `fetch()` to the autocomplete subdomain (`autocompleteJobTitle`, `autocompleteLocation`).
 
 ## Extraction
-- Job search: `window.mosaic.providerData` → `mosaicProviderJobCardsModel.results`
-- Job detail: `application/ld+json` (JobPosting) + `window._initialData`
-- Salary: `__NEXT_DATA__` props.pageProps (Next.js SSR)
-- Company: `window._initialData` (section view models)
-- Reviews: `window._initialData.reviewsList.items` (20 reviews per page with subcategory ratings) + LD+JSON `EmployerAggregateRating`
-- Company salaries: `window._initialData.categorySalarySection.categories` (salary data by category) + `salaryPopularJobsSection.popularJobTitles`
-- Autocomplete: `page.evaluate(fetch)` to autocomplete subdomain
+- `searchJobs` → `page_global_data`: `window.mosaic.providerData['mosaic-provider-jobcards']` → `mosaicProviderJobCardsModel.results` + `_initialData` totals
+- `getJobDetail` → `page_global_data`: LD+JSON `JobPosting` merged with `window._initialData`
+- `getCompanyOverview` → `page_global_data`: `_initialData` section view models
+- `getCompanyReviews` → `page_global_data`: `_initialData.reviewsList.items` + LD+JSON `EmployerAggregateRating`
+- `getCompanySalaries` → `page_global_data`: `_initialData.categorySalarySection.categories` + `salaryPopularJobsSection.popularJobTitles`
+- `getSalary` → adapter: `__NEXT_DATA__` props.pageProps (after slug transform)
+- `autocompleteJobTitle` / `autocompleteLocation` → adapter: `page.evaluate(fetch)` to `autocomplete.indeed.com`
+
+## Adapter Patterns
+- `getSalary` — title is converted to a URL slug (`software engineer` → `software-engineer`) before navigation; spec extraction can't compute the URL.
+- `autocompleteJobTitle`, `autocompleteLocation` — call the `autocomplete.indeed.com` JSON API via in-page `fetch()` to inherit Cloudflare cookies.
 
 ## Known Issues
 - **Mosaic data timing** — `mosaic.providerData` loads asynchronously. The 3-second wait after navigation is required.

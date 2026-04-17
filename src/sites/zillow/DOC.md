@@ -67,15 +67,18 @@ openweb zillow exec getNeighborhood '{"zpid":"15076238","slug":"1000-Fell-St-San
 - No login required for public property data (`requires_auth: false`)
 
 ### Transport
-- `page` — all 4 ops use adapter (`adapters/zillow-detail.ts`) with `__NEXT_DATA__` extraction
-- **GraphQL API (`/graphql/`) is fully blocked by PerimeterX** — both `page.evaluate(fetch())` and `page.request.fetch()` return 403 with CAPTCHA HTML. Only page navigation works.
-- searchProperties also uses adapter (page navigation to search URL + `__NEXT_DATA__`)
-- Property data cached per-zpid within adapter — getPropertyDetail/getZestimate/getNeighborhood share one navigation
+- `page` for all 4 ops (PerimeterX blocks all programmatic API calls — only full page navigation works)
+- **Hybrid**: 3 of 4 ops (`getPropertyDetail`, `getZestimate`, `getNeighborhood`) use spec `x-openweb.extraction` (`page_global_data` reading `__NEXT_DATA__` → `gdpClientCache` → `value.property`). `searchProperties` stays on the thin `zillow-detail` adapter because it has to translate the `regionSelection.regionId` into a city slug (e.g. `20330 → san-francisco-ca`) before navigation, then read `searchPageState.cat1` from `__NEXT_DATA__`.
+- Server-level `page_plan.warm: true` enables the runtime's generic PerimeterX retry path (about:blank → clearCookies → retry) for all ops, including the spec-extraction ones.
+- **GraphQL API (`/graphql/`) is fully blocked by PerimeterX** — both `page.evaluate(fetch())` and `page.request.fetch()` return 403 with CAPTCHA HTML.
 
 ### Extraction
-- All ops: navigate to target URL → extract `script#__NEXT_DATA__` → parse `gdpClientCache` (property ops) or `searchPageState` (search)
-- Property cache key pattern: `NotForSalePriorityQuery{...}` → `value.property` contains 118+ fields
-- Schools, nearbyHomes, taxHistory may be null in SSR data (lazy-loaded via secondary GraphQL queries)
+- `getPropertyDetail`, `getZestimate`, `getNeighborhood` → `page_global_data`: navigate `https://www.zillow.com/homedetails/{slug}/{zpid}_zpid/` → parse `script#__NEXT_DATA__` → walk `pageProps.componentProps.gdpClientCache` for `value.property` (118+ fields, projected per-op)
+- `searchProperties` → adapter: regionId → known city slug → navigate region landing page → extract `searchPageState.cat1` from `__NEXT_DATA__`
+
+### Adapter Patterns
+- `searchProperties` — encodes a small `regionId → slug` table (SF, LA, NYC, Seattle, Chicago, Houston, Miami, Austin, Denver, Portland) and toggles `/rentals/` for `category: cat2`. Adapter also runs the explicit `navigateWithPxRetry` (about:blank + clearCookies, up to 4 attempts) and stale-page recovery in `init()`.
+- The detail ops no longer need the adapter's manual PX retry — `page_plan.warm: true` lets the runtime perform the same about:blank/clearCookies cycle generically before the spec extraction runs.
 
 ### PerimeterX Handling (adapter pattern)
 - Initial page load after browser start triggers CAPTCHA — verify warm-up poisons the PX session

@@ -57,9 +57,17 @@ openweb producthunt exec getPost '{"slug": "novavoice"}'
 No auth required for all read operations. Public data only.
 
 ### Transport
-- `page` — all operations use adapter with Apollo Client cache extraction
-- Adapter navigates to appropriate page, waits for hydration, reads `__APOLLO_CLIENT__.cache.extract()`
-- Persisted query hashes are deployment-specific — adapter avoids hash dependency by reading from cache
+- `page` for all 4 ops
+- **Hybrid**: 3 of 4 ops use spec `x-openweb.extraction` (`page_global_data` reading the Apollo Client cache via `__APOLLO_CLIENT__.cache.extract()`). `getPost` stays on the thin `producthunt` adapter — a single expression couldn't reliably resolve product/post/maker/category refs across the cache for individual post pages.
+
+### Extraction
+- `getToday` → `page_global_data`: Apollo cache, filter `__typename === 'Post'` for today's section
+- `getPosts` → `page_global_data`: Apollo cache, filter posts by section (TODAY/YESTERDAY/LAST_WEEK/LAST_MONTH)
+- `searchProducts` → `page_global_data`: Apollo cache, filter `__typename === 'Product'` matching the query
+- `getPost` → adapter: Apollo cache walk + `__ref` resolution to merge Product, Post, makers (User entries), and categories
+
+### Adapter Patterns
+- `getPost` — needs cross-entity resolution (Product + Post by slug, makers from User entries, categories via `__ref` lookup). Kept in adapter because resolving Apollo's normalized cache references inline in a `page_global_data` expression was fragile.
 
 ### Known Issues
 - No bot detection observed

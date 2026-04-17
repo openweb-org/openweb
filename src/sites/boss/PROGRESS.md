@@ -1,3 +1,10 @@
+## 2026-04-17 — Phase 3 Normalize-Adapter
+
+**Context:** Convert adapter-based ops to spec extraction primitives so the runtime drives extraction directly from `x-openweb.extraction` blocks.
+**Changes:** Migrated all 4 page ops (`searchJobs`, `getJobDetail`, `getCompanyProfile`, `getSalary`) to `page_global_data` with DOM expressions embedded in `openapi.yaml`. `adapters/boss-web.ts` deleted; manifest updated. Reference data ops (node transport) unchanged.
+**Verification:** 7/7 PASS via `pnpm dev verify boss --browser`.
+**Commit:** `04b4f82` — feat(boss): migrate all 4 page ops to spec extraction
+
 ## 2026-04-02: Fix adapter navigation — 7/7 PASS
 
 **What changed:**

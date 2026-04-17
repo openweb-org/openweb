@@ -49,16 +49,20 @@ openweb ebay exec getSellerProfile '{"username": "freegeekportland"}'
 No auth required for public read operations.
 
 ### Transport
-- `page` transport with adapter — bot detection blocks non-browser requests after rate threshold
-- Adapter: `adapters/ebay.ts`
-- getItemDetail uses LD+JSON as primary extraction (Tier 3) with DOM fallback
-- searchItems and getSellerProfile use DOM extraction (Tier 2)
+- `page` transport with spec extraction — bot detection blocks non-browser requests after rate threshold
+- All 3 ops driven by `x-openweb.extraction.page_global_data` (no adapter file)
+- getItemDetail uses LD+JSON as primary source within the extraction expression, with DOM fallback
+- searchItems and getSellerProfile use DOM extraction
 - Node transport NOT viable — see Transport Upgrade Probe below
 
 ### Extraction
+- All 3 ops use the `page_global_data` primitive; expressions are embedded in `openapi.yaml` and evaluated in the page context after navigation to `page_url`.
 - **Search**: DOM extraction from `.s-card` elements; `data-listingid` for item ID, `.s-card__title`/`.s-card__price`/`.s-card__subtitle` for data
 - **Item detail**: LD+JSON `@type: Product` (primary) — extracts price, condition, availability, images, shipping, returns, brand, model. DOM fallback for seller card info only.
 - **Seller profile**: DOM extraction from `.str-seller-card`; regex parsing of feedback text for stats
+
+### Adapter Patterns
+Adapter removed in Phase 3 (normalize-adapter); all ops now use spec extraction primitives.
 
 ### Known Issues
 - Heavy bot detection (Radware StormCaster) — requires real browser with page transport

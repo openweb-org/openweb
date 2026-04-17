@@ -91,7 +91,7 @@ openweb douban exec getMusicDetail '{"id": 1401853}'
 ## Site Internals
 
 ## API Architecture
-Single data source: **Mobile JSON API** (`m.douban.com/rexxar/api/v2/`). RESTful JSON, requires `Referer: https://m.douban.com/` header. All 14 operations use this API directly via node transport.
+Single data source: **Mobile JSON API** (`m.douban.com/rexxar/api/v2/`). RESTful JSON, requires `Referer: https://m.douban.com/` header. All 14 operations are direct REST API calls via node transport — no adapter or extraction primitive needed.
 
 ## Auth
 - Auth type: `cookie_session`
