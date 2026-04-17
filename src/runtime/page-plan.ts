@@ -24,6 +24,16 @@ export interface PagePlan {
   readonly warm?: boolean
   /** Navigation timeout (ms) — defaults to TIMEOUT.navigation. */
   readonly nav_timeout_ms?: number
+  /**
+   * When true, acquirePage skips the page-reuse lookup AND skips page.goto().
+   * It opens a blank page (owned=true) and returns it un-navigated so the
+   * caller can install listeners before navigation. Post-acquire hooks
+   * (ready/settle_ms/warm) are also skipped — the caller owns the nav lifecycle.
+   *
+   * Used by response_capture extraction to avoid racing the response listener
+   * against a page that has already loaded.
+   */
+  readonly forceFresh?: boolean
 }
 
 export interface AcquiredPage {
@@ -112,6 +122,12 @@ export async function acquirePage(
   serverUrl: string,
   plan: PagePlan,
 ): Promise<AcquiredPage> {
+  // forceFresh: hand back an un-navigated new page. Caller owns the nav lifecycle.
+  if (plan.forceFresh) {
+    const page = await context.newPage()
+    return { page, owned: true }
+  }
+
   // 1. Reuse an existing page that already covers entry_url.
   const entryMatch = await findPageMatchingEntry(context, plan.entry_url)
   if (entryMatch) {

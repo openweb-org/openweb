@@ -140,4 +140,23 @@ describe('acquirePage', () => {
       payload: { failureClass: 'needs_page' },
     })
   })
+
+  it('forceFresh returns an un-navigated new page even when a matching tab exists', async () => {
+    const existing = mockPage('https://a.com/search?q=foo')
+    const newPage = mockPage('about:blank', { goto: vi.fn(async () => null) })
+    const context = {
+      pages: () => [existing],
+      newPage: vi.fn(async () => newPage),
+    } as unknown as BrowserContext
+
+    const result = await acquirePage(context, 'https://a.com', {
+      entry_url: 'https://a.com/search?q=foo',
+      forceFresh: true,
+    })
+    expect(result.page).toBe(newPage)
+    expect(result.owned).toBe(true)
+    expect(context.newPage).toHaveBeenCalledTimes(1)
+    // forceFresh MUST NOT navigate — caller owns the nav lifecycle.
+    expect(newPage.goto).not.toHaveBeenCalled()
+  })
 })

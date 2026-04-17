@@ -11471,9 +11471,12 @@ paths:
           verified: true
           signals:
             - status-match
-        adapter:
-          name: bilibili-web
-          operation: searchVideos
+        transport: page
+        adapter: false
+        extraction:
+          type: response_capture
+          page_url: https://search.bilibili.com/all?keyword={keyword}
+          match_url: '*/x/web-interface/wbi/search/all/v2*'
       parameters:
         - name: keyword
           in: query

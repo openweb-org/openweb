@@ -101,3 +101,9 @@ export type ExtractionPrimitive =
       readonly strip_comments?: boolean
     }
   | { readonly type: 'page_global_data'; readonly page_url?: string; readonly expression?: string; readonly path?: string; readonly adapter?: string; readonly method?: string }
+  | {
+      readonly type: 'response_capture'
+      readonly page_url?: string
+      readonly match_url: string
+      readonly unwrap?: string
+    }
