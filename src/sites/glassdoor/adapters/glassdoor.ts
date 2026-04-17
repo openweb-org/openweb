@@ -1,17 +1,13 @@
 import type { Page } from 'patchright'
 
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
 
 const GD_ORIGIN = 'https://www.glassdoor.com'
 const GRAPHQL_URL = `${GD_ORIGIN}/graph`
 const CF_POLL_MS = 2_000
 const CF_MAX_WAIT_MS = 30_000
+
+type Errors = AdapterHelpers['errors']
 
 async function isCloudflareBlocked(page: Page): Promise<boolean> {
   try {
@@ -22,21 +18,18 @@ async function isCloudflareBlocked(page: Page): Promise<boolean> {
   }
 }
 
-async function waitForCloudflare(page: Page): Promise<void> {
+async function waitForCloudflare(page: Page, errors: Errors): Promise<void> {
   const start = Date.now()
   while (Date.now() - start < CF_MAX_WAIT_MS) {
     if (!(await isCloudflareBlocked(page))) return
     await page.waitForTimeout(CF_POLL_MS)
   }
-  throw Object.assign(
-    new Error('Cloudflare challenge not resolved. Run `openweb browser restart --no-headless`, solve CAPTCHA if visible, then retry.'),
-    { failureClass: 'bot_blocked' },
-  )
+  throw errors.botBlocked('Cloudflare challenge not resolved. Run `openweb browser restart --no-headless`, solve CAPTCHA if visible, then retry.')
 }
 
-async function navigateTo(page: Page, url: string): Promise<void> {
+async function navigateTo(page: Page, url: string, errors: Errors): Promise<void> {
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-  await waitForCloudflare(page)
+  await waitForCloudflare(page, errors)
   await page.waitForTimeout(2_000)
 }
 
@@ -86,11 +79,11 @@ async function graphqlFetch(
 
 /* ---------- searchCompanies (Tier 3 — SSR/NEXT_DATA) ---------- */
 
-async function searchCompanies(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function searchCompanies(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
-  if (!query) throw new Error('query is required')
+  if (!query) throw errors.missingParam('query')
 
-  await navigateTo(page, `${GD_ORIGIN}/Reviews/company-reviews.htm?sc.keyword=${encodeURIComponent(query)}`)
+  await navigateTo(page, `${GD_ORIGIN}/Reviews/company-reviews.htm?sc.keyword=${encodeURIComponent(query)}`, errors)
 
   return page.evaluate(() => {
     const el = document.querySelector('#__NEXT_DATA__')
@@ -127,11 +120,11 @@ async function searchCompanies(page: Page, params: Readonly<Record<string, unkno
 
 /* ---------- getReviews (Tier 5 — page navigate + GraphQL fetch) ---------- */
 
-async function getReviews(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getReviews(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const employerId = params.employerId
-  if (!employerId) throw new Error('employerId is required')
+  if (!employerId) throw errors.missingParam('employerId')
 
-  await navigateTo(page, `${GD_ORIGIN}/Reviews/Company-Reviews-E${employerId}.htm`)
+  await navigateTo(page, `${GD_ORIGIN}/Reviews/Company-Reviews-E${employerId}.htm`, errors)
   await page.waitForSelector('article[data-test="review-detail"]', { timeout: 10_000 }).catch(() => {})
 
   // Extract review IDs from data-brandviews attributes
@@ -222,11 +215,11 @@ async function getReviews(page: Page, params: Readonly<Record<string, unknown>>)
 
 /* ---------- getSalaries (Tier 2 — DOM extraction, no GraphQL available) ---------- */
 
-async function getSalaries(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getSalaries(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const employerId = params.employerId
-  if (!employerId) throw new Error('employerId is required')
+  if (!employerId) throw errors.missingParam('employerId')
 
-  await navigateTo(page, `${GD_ORIGIN}/Salary/Company-Salaries-E${employerId}.htm`)
+  await navigateTo(page, `${GD_ORIGIN}/Salary/Company-Salaries-E${employerId}.htm`, errors)
   await page.waitForSelector('a[href*="/Salary/"]', { timeout: 10_000 }).catch(() => {})
 
   return page.evaluate(() => {
@@ -262,9 +255,9 @@ async function getSalaries(page: Page, params: Readonly<Record<string, unknown>>
 
 /* ---------- getInterviews (Tier 4+5 — intercept GraphQL + DOM metadata) ---------- */
 
-async function getInterviews(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getInterviews(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const employerId = params.employerId
-  if (!employerId) throw new Error('employerId is required')
+  if (!employerId) throw errors.missingParam('employerId')
 
   // Intercept GraphQL responses during page navigation
   const graphqlInterviews: Array<{ id: number; description: string | null; role: string | null }> = []
@@ -290,7 +283,7 @@ async function getInterviews(page: Page, params: Readonly<Record<string, unknown
   await page.goto(`${GD_ORIGIN}/Interview/Company-Interview-Questions-E${employerId}.htm`, {
     waitUntil: 'domcontentloaded', timeout: 30_000,
   })
-  await waitForCloudflare(page)
+  await waitForCloudflare(page, errors)
   await page.waitForTimeout(5_000) // Allow GraphQL requests to complete
   page.removeListener('response', responseHandler)
 
@@ -371,38 +364,32 @@ async function getInterviews(page: Page, params: Readonly<Record<string, unknown
   }
 }
 
-/* ---------- adapter export ---------- */
+/* ---------- runner export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) => Promise<unknown>
+
+const OPERATIONS: Record<string, Handler> = {
   searchCompanies,
   getReviews,
   getSalaries,
   getInterviews,
 }
 
-const adapter: CodeAdapter = {
+const runner: CustomRunner = {
   name: 'glassdoor',
   description: 'Glassdoor — company reviews, salaries, interviews via GraphQL + SSR + DOM extraction',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('glassdoor.com') || url === 'about:blank'
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers
+    if (!page) throw errors.fatal('glassdoor requires a page (transport: page)')
     const handler = OPERATIONS[operation]
-    if (!handler) {
-      throw new Error(`Unknown operation: ${operation}. Available: ${Object.keys(OPERATIONS).join(', ')}`)
-    }
+    if (!handler) throw errors.unknownOp(operation)
     if (await isCloudflareBlocked(page)) {
-      await waitForCloudflare(page)
+      await waitForCloudflare(page, errors)
     }
-    return handler(page, params)
+    return handler(page, params, errors)
   },
 }
 
-export default adapter
+export default runner
