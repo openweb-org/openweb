@@ -134,14 +134,17 @@ paths:
 
 `response_field` and `request_param` accept **dotted paths** for nested JSON structures (e.g., `data.actor.entitySearch.results.nextCursor` for reading, `variables.cursor` for writing into GraphQL request bodies).
 
-### Extraction (4 types)
+### Extraction (5 types)
 
 | Type | Description | Key config |
 |------|-------------|------------|
 | `ssr_next_data` | Next.js SSR data | `page_url`, `path` |
 | `html_selector` | CSS selector | `page_url`, `selectors`, `attribute`, `multiple` |
-| `script_json` | Script tag JSON | `selector`, `path` |
+| `script_json` | Script tag JSON (supports JSON-LD, `<!-- -->`-wrapped payloads, multi-block pages) | `selector`, `path`, `strip_comments`, `type_filter`, `multi` |
 | `page_global_data` | Window global | `page_url`, `expression`, `path`, `adapter`, `method` |
+| `response_capture` | Intercept first network response during navigation | `match_url` (glob), `unwrap` |
+
+`script_json` with `strip_comments: true` unwraps Yelp-style HTML-comment-wrapped JSON and runs under both page and node transports (generalized via `node-ssr-executor`). `response_capture` always forces a fresh page navigation — the listener is installed before `page.goto` to avoid racing fast responses.
 
 -> See: `src/types/primitives.ts` — full TypeScript definitions
 

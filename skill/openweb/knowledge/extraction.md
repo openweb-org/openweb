@@ -59,7 +59,7 @@ Structured data in `<script type="application/ld+json">` or similar non-executab
 - **Detection:** `<script type="application/ld+json">`, `<script type="application/json" data-*>`
 - **Transport:** node (parse HTML) or page (query DOM)
 - **Example:** `JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent)`
-- **Gotcha:** Multiple `ld+json` blocks per page -- filter by `@type`.
+- **Gotcha:** Multiple `ld+json` blocks per page -- use `type_filter: <Type>` on the primitive to pick the right block by `@type` (handles string or string[]). Use `multi: true` if you need all blocks. No adapter needed.
 
 ## page.evaluate Adapter
 

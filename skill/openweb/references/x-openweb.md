@@ -103,7 +103,7 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `ssr_next_data` | `page_url?`, `path` | Extract from Next.js `__NEXT_DATA__` JSON |
 | `page_global_data` | `page_url?`, `expression?`, `path?`, `adapter?`, `method?` | Read a `window.*` global variable |
 | `html_selector` | `page_url?`, `selectors`, `attribute?`, `multiple?` | CSS selector on the DOM |
-| `script_json` | `selector`, `path?` | Parse `<script type="application/json">` blocks |
+| `script_json` | `selector`, `path?`, `strip_comments?`, `type_filter?`, `multi?` | Parse `<script>` JSON blocks. `type_filter` picks ld+json by `@type` (string or string[]); `multi: true` returns all matching blocks as array |
 
 See `knowledge/extraction.md` for decision flow and usage guidance.
 

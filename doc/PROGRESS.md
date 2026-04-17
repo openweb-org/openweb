@@ -1,3 +1,20 @@
+## 2026-04-17: script_json multi-match + @type filter
+
+**What changed:**
+- Added `type_filter: string` and `multi: boolean` to the `script_json` extraction primitive. With `type_filter`, iterate all matching `<script>` blocks and return the first whose `@type` matches (handles string or string[]). With `multi: true`, return an array of all parsed blocks (post `type_filter` if both set).
+- Wired through both paths: browser (`querySelectorAll` in `src/runtime/primitives/script-json.ts`) and node (new `findAllScripts` + `parseScriptContents` in `src/runtime/primitives/script-json-parse.ts` → used by `node-ssr-executor`).
+- Extended primitive types (`src/types/primitives.ts`) and JSON schema (`src/types/primitive-schemas.ts`).
+- Invalid-JSON blocks are skipped during multi-iteration; non-match with `type_filter` throws a fatal error naming the missing `@type`.
+
+**Why:**
+- Booking-style detail pages embed several `ld+json` blocks (Hotel + BreadcrumbList + FAQPage). Before, adapters walked blocks and reshaped by `@type`. With `type_filter` in the primitive, those adapters disappear — runtime does the pick.
+
+**Key files:** `src/runtime/primitives/script-json.ts`, `src/runtime/primitives/script-json-parse.ts`, `src/runtime/node-ssr-executor.ts`, `src/types/primitives.ts`, `src/types/primitive-schemas.ts`
+**Verification:** `pnpm vitest run src/runtime/primitives src/runtime/node-ssr-executor.test.ts src/runtime/http-executor.test.ts --no-coverage` → 161 passed (6 new cases in `script-json-parse.test.ts` covering Hotel/Breadcrumb/FAQPage filtering, `@type` as array, multi+filter combo, no-match error, invalid-JSON skip).
+**Commit:** b44999f
+**Next:** Migrate hotel/travel adapters that currently hand-pick `@type === Hotel` to declare `type_filter: Hotel` in the spec instead.
+**Blockers:** None
+
 ## 2026-04-17: normalize-adapter v2 milestone — rollup
 
 **What changed (rollup of 67 commits on `task/normalize-adapter`):**

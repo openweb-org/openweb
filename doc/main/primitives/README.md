@@ -113,14 +113,15 @@ Extraction primitives read data directly from the page DOM or SSR state — no A
 
 | Type | What it does | Implemented |
 |------|-------------|-------------|
-| `script_json` | Extract JSON from `<script>` tags | Yes |
+| `script_json` | Extract JSON from `<script>` tags (JSON-LD, HTML-comment-wrapped, multi-block) | Yes |
 | `ssr_next_data` | Read `__NEXT_DATA__` | Yes |
 | `html_selector` | CSS selector extraction | Yes |
 | `page_global_data` | Read page global variable | Yes |
+| `response_capture` | Navigate + capture first URL-matched network response | Yes |
 
 ### script_json
 
-Extracts structured data from `<script type="application/json">` or inline JSON.
+Extracts structured data from `<script type="application/json">` or inline JSON. Runs under both node (`node-ssr-executor`) and page transports.
 
 ```yaml
 extraction:
@@ -130,6 +131,24 @@ extraction:
 ```
 
 Used by GitHub for SSR-embedded data.
+
+**Strip HTML comments:** some sites (e.g. Yelp) wrap inline JSON in `<!-- ... -->` to prevent early parsing. Set `strip_comments: true` to unwrap before parsing.
+
+```yaml
+extraction:
+  type: script_json
+  selector: "script#wrapped-data"
+  strip_comments: true
+```
+
+**Multi-block ld+json:** when a page contains several `<script type="application/ld+json">` blocks (hotels, breadcrumbs, FAQs), set `type_filter` to pick the block whose `@type` matches (handles string or string[]). Set `multi: true` to return all parsed blocks as an array (post `type_filter` if both are set).
+
+```yaml
+extraction:
+  type: script_json
+  selector: 'script[type="application/ld+json"]'
+  type_filter: Hotel
+```
 
 -> See: `src/runtime/primitives/script-json.ts`
 
@@ -182,6 +201,22 @@ extraction:
 This shares the same expression safety checks as `page_global` auth resolution.
 
 -> See: `src/runtime/primitives/page-global-data.ts`
+
+### response_capture
+
+Navigate to a page via PagePlan and return the first network response whose URL matches a glob. The response listener is installed before `page.goto` so fast responses that fire before navigation resolves are not missed. Capture always forces fresh navigation (no page reuse).
+
+```yaml
+extraction:
+  type: response_capture
+  page_url: /flights/search
+  match_url: "*/api/search/flights*"
+  unwrap: data.results
+```
+
+`page_url` aliases PagePlan's `entry_url` for capture operations; when both are set, `page_url` wins. Only the first matching response is returned — progressive / best-of-N / multi-response capture stays in a CustomRunner.
+
+-> See: `src/runtime/primitives/response-capture.ts`
 
 ---
 

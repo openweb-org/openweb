@@ -26,7 +26,7 @@ Read `doc/todo/tasks.json`, filter `parent: normalize-adapter`, `state: ready`. 
 - `na-guardrails` — pattern-report script + biome lint rules + skill/openweb doc sweep
 
 **Second wave (primary runtime gaps — parallel, unblocks finishing-ops):**
-- `na-rt-script-json-multimatch` — `type_filter` + multi-match on `script_json` (unblocks booking getHotelDetail)
+- `na-rt-script-json-multimatch` — ✅ done (b44999f). `type_filter` + `multi` on `script_json`; hotel/travel adapter migrations queued under `na-finishing-ops`.
 - `na-rt-browser-fetch-errors` — `TypeError: Failed to fetch` retry normalization (unblocks grubhub)
 - `na-rt-warm-page-origin` — `warmSession` on page origin not server URL (unblocks apple-podcasts)
 - `na-rt-query-templating` — param-level template like `tags=story,author_{id}` (unblocks hackernews 3 reads)
