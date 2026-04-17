@@ -17,8 +17,8 @@ import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../typ
 // page settle. Wait for `WAWebChatCollection` to be require-able, then verify
 // at least one chat is populated (proxy for valid session).
 
-async function ensureReady(page: Page, helpers: AdapterHelpers): Promise<void> {
-  const moduleReady = await page.evaluate(() => {
+async function checkModuleReady(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
     try {
       return typeof (window as Record<string, unknown>).require === 'function'
         && !!(window as Record<string, unknown>).require('WAWebChatCollection' as never)
@@ -26,6 +26,17 @@ async function ensureReady(page: Page, helpers: AdapterHelpers): Promise<void> {
       return false
     }
   })
+}
+
+async function ensureReady(page: Page, helpers: AdapterHelpers): Promise<void> {
+  // WhatsApp Web's Metro modules load lazily after the page settles. Match the
+  // legacy runtime's init-retry: try once, reload + wait, try again.
+  let moduleReady = await checkModuleReady(page)
+  if (!moduleReady) {
+    await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})
+    await page.waitForTimeout(3000)
+    moduleReady = await checkModuleReady(page)
+  }
   if (!moduleReady) throw helpers.errors.retriable('WhatsApp internal modules not loaded')
 
   const authed = await page.evaluate(() => {
