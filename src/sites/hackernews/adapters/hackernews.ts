@@ -17,17 +17,6 @@ async function getStoryComments(_page: Page | null, params: Readonly<Record<stri
   return { storyId: Number(id), commentCount: data.nbHits, comments: data.hits }
 }
 
-async function getStoriesByDomain(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-  const site = params.site
-  if (!site) throw new Error('site parameter is required')
-
-  const url = `${ALGOLIA_BASE}/search?tags=story&query=${encodeURIComponent(String(site))}&restrictSearchableAttributes=url&hitsPerPage=30`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Algolia HTTP ${res.status}`)
-  const data = (await res.json()) as { hits: unknown[] }
-  return data.hits
-}
-
 async function getUserSubmissions(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const id = params.id
   if (!id) throw new Error('id parameter is required')
@@ -113,7 +102,6 @@ const OPERATIONS: Record<
   (page: Page | null, params: Readonly<Record<string, unknown>>) => Promise<unknown>
 > = {
   getStoryComments,
-  getStoriesByDomain,
   getUserSubmissions,
   getUserComments,
   upvoteStory,

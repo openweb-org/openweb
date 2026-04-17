@@ -703,27 +703,40 @@ paths:
                 required:
                 - storyId
                 - comments
-  /internal/getStoriesByDomain:
+  /search~getStoriesByDomain:
     get:
       operationId: getStoriesByDomain
       summary: 'Stories submitted from a specific domain'
       x-openweb:
         permission: read
-        transport: node
+        actual_path: /api/v1/search
+        unwrap: hits
         build:
           stable_id: hn0012
           tool_version: 3
           verified: true
-        adapter:
-          name: hackernews
-          operation: getStoriesByDomain
       parameters:
-      - name: site
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: story
+      - name: query
         in: query
         required: true
         schema:
           type: string
         description: 'Domain name to filter by (e.g. "github.com").'
+      - name: restrictSearchableAttributes
+        in: query
+        schema:
+          type: string
+          default: url
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
       responses:
         '200':
           description: Stories from the given domain.

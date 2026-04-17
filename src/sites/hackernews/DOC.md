@@ -23,7 +23,7 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 3. `getUserComments(id)` → their comment history
 
 ### Find stories from a domain
-1. `getStoriesByDomain(site)` → all stories linking to that domain
+1. `getStoriesByDomain(query)` → all stories linking to that domain
 
 ### Read latest activity
 1. `getNewComments` → newest comments across all stories
@@ -43,7 +43,7 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 | getUserProfile | user profile | id (username) | id, karma, created, about | L1 node (Firebase) |
 | getNewComments | newest comments | — | objectID, author, comment_text, story_title | L1 node (Algolia) |
 | getStoryComments | comment thread | id, limit? | storyId, commentCount, comments[] | adapter node (Algolia) |
-| getStoriesByDomain | domain stories | site | objectID, title, url, author, points | adapter node (Algolia) |
+| getStoriesByDomain | domain stories | query (domain) | objectID, title, url, author, points | L1 node (Algolia) |
 | getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter node (Algolia) |
 | getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter node (Algolia) |
 | upvoteStory | upvote item | id | ok, id | adapter (page) |
@@ -68,7 +68,7 @@ openweb hackernews exec getUserProfile '{"id": "pg"}'
 openweb hackernews exec getUserSubmissions '{"id": "pg"}'
 
 # Stories from a domain
-openweb hackernews exec getStoriesByDomain '{"site": "github.com"}'
+openweb hackernews exec getStoriesByDomain '{"query": "github.com"}'
 
 # Latest comments site-wide
 openweb hackernews exec getNewComments '{}'

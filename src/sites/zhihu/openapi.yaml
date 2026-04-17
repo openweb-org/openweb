@@ -4189,19 +4189,17 @@ paths:
                   - success
                   - voting
                   - voteup_count
-  /cancel-upvote/{answer_id}:
+  /api/v4/answers/{answer_id}/voters~cancelUpvote:
     post:
       operationId: cancelUpvote
       summary: Cancel an upvote on an answer — POSTs type=neutral to voters endpoint
       x-openweb:
         permission: write
         safety: caution
+        actual_path: /api/v4/answers/{answer_id}/voters
         build:
           stable_id: zhihu0014
           tool_version: 1
-        adapter:
-          name: zhihu
-          operation: cancelUpvote
       parameters:
         - name: answer_id
           in: path
@@ -4209,6 +4207,19 @@ paths:
           schema:
             type: string
           description: Answer ID to cancel upvote on (numeric string).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  const: neutral
+                  description: "Always 'neutral' — cancels the vote."
+              required:
+                - type
       responses:
         "200":
           description: Vote cancelled.

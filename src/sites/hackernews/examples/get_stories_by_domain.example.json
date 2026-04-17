@@ -3,7 +3,7 @@
   "cases": [
     {
       "input": {
-        "site": "github.com"
+        "query": "github.com"
       },
       "assertions": {
         "status": 200,

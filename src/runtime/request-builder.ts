@@ -133,6 +133,10 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
       }
     } else if (param.schema?.type === 'object') {
       target[param.name] = applySchemaDefaults(param.schema as Record<string, unknown>) ?? {}
+    } else if (isConst) {
+      target[param.name] = structuredClone(param.schema?.const)
+    } else if (param.schema?.default !== undefined) {
+      target[param.name] = structuredClone(param.schema.default)
     }
   }
 

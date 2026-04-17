@@ -56,7 +56,7 @@ Chinese Q&A knowledge-sharing platform (Quora archetype). Users ask questions, w
 | **upvoteAnswer** | Upvote an answer | `answer_id` ← searchContent | voting status | write/caution |
 | **followUser** | Follow a user | `url_token` ← getMember | is_following | write/caution |
 | **followQuestion** | Follow a question | `question_id` ← searchContent | is_following | write/caution |
-| **cancelUpvote** | Cancel an upvote | `answer_id` ← searchContent | voting, voteup_count | write/caution, adapter |
+| **cancelUpvote** | Cancel an upvote | `answer_id` ← searchContent | voting, voteup_count | write/caution |
 | **unfollowUser** | Unfollow a user | `url_token` ← getMember | follower_count | write/caution |
 | **unfollowQuestion** | Unfollow a question | `question_id` ← searchContent | (empty, 204) | write/caution |
 
