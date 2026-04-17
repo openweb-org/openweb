@@ -11,6 +11,7 @@ import {
   type OpenApiSpec,
   getRequestBodyParameters,
   getServerUrl,
+  getSpecDefaultServerUrl,
 } from '../lib/spec-loader.js'
 import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
@@ -19,7 +20,7 @@ import type { ExecutorResult } from './executor-result.js'
 import type { ExecuteDependencies } from './http-executor.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { fetchWithRedirects } from './redirect.js'
-import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
+import { buildHeaderParams, buildRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
 import { type CachedTokens, DEFAULT_TTL_SECONDS, clearTokenCache, extractJwtExp, readTokenCache, writeTokenCache } from './token-cache.js'
 
@@ -37,7 +38,7 @@ export async function executeCachedFetch(
   const auth = serverExt?.auth
   if (auth?.type === 'exchange_chain') return null
 
-  const serverUrl = getServerUrl(spec, operationRef.operation)
+  const serverUrl = getServerUrl(spec, operationRef.operation, params)
   const allParams = resolveAllParameters(spec, operationRef.operation)
   const inputParams = validateParams(
     [...allParams, ...getRequestBodyParameters(operationRef.operation)],
@@ -82,12 +83,16 @@ export async function executeCachedFetch(
   }
 
   const upperMethod = operationRef.method.toUpperCase()
-  const jsonBody = upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH'
-    ? buildJsonRequestBody(operationRef.operation, inputParams)
-    : undefined
-  if (jsonBody && !requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/json'
+  let requestBody: string | undefined
+  if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
+    const built = buildRequestBody(operationRef.operation, inputParams)
+    if (built) {
+      requestBody = built.body
+      if (!requestHeaders['Content-Type']) requestHeaders['Content-Type'] = built.contentType
+    }
+  }
 
-  const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, jsonBody, {
+  const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, requestBody, {
     fetchImpl: deps.fetchImpl ?? fetch,
     ssrfValidator: deps.ssrfValidator ?? validateSSRF,
   })
@@ -125,7 +130,7 @@ export async function writeBrowserCookiesToCache(
     const context = browser.contexts()[0]
     if (!context) return
 
-    const serverUrl = spec.servers?.[0]?.url
+    const serverUrl = getSpecDefaultServerUrl(spec)
     if (!serverUrl) return
 
     const origin = new URL(serverUrl).hostname

@@ -346,4 +346,57 @@ describe('executeBrowserFetch', () => {
     const callArgs = evaluateFn.mock.calls[1]?.[1] as { url: string }
     expect(callArgs.url).toContain('limit=200')
   })
+
+  it('substitutes server-variable {subdomain} from caller params into the request URL', async () => {
+    const evaluateFn = vi.fn(async () => ({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      text: '{"ok":true}',
+    }))
+    const page = {
+      url: () => 'https://test.substack.com/',
+      evaluate: evaluateFn,
+      content: vi.fn(async () => '<html><body>ready</body></html>'),
+      addInitScript: vi.fn(async () => {}),
+    }
+    const context = {
+      pages: () => [page],
+      cookies: vi.fn(async () => []),
+      newPage: vi.fn(async () => page),
+    }
+    const browser = {
+      contexts: () => [context],
+    } as unknown as import('patchright').Browser
+
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Substack', version: '1.0' },
+      servers: [
+        {
+          url: 'https://{subdomain}.substack.com',
+          variables: { subdomain: { default: 'www' } },
+          'x-openweb': { transport: 'page' },
+        } as OpenApiSpec['servers'][0],
+      ],
+      paths: {},
+    }
+
+    await executeBrowserFetch(
+      browser,
+      spec,
+      '/api/v1/feed',
+      'get',
+      {
+        operationId: 'getFeed',
+        parameters: [
+          { name: 'subdomain', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: {},
+      },
+      { subdomain: 'test' },
+    )
+
+    const callArgs = evaluateFn.mock.calls[1]?.[1] as { url: string }
+    expect(callArgs.url.startsWith('https://test.substack.com/api/v1/feed')).toBe(true)
+  })
 })

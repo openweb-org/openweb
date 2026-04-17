@@ -161,6 +161,15 @@ export function findOperation(spec: OpenApiSpec, operationId: string): Operation
   return operation
 }
 
+/** Substitute {var} tokens in the first spec-level server URL using defaults.
+ *  Used by helpers that don't have an operation context (e.g. cookie
+ *  domain derivation). Returns undefined when no servers are declared. */
+export function getSpecDefaultServerUrl(spec: OpenApiSpec): string | undefined {
+  const server = spec.servers?.[0]
+  if (!server) return undefined
+  return substituteServerVariables(server, undefined)
+}
+
 export function getServerUrl(
   spec: OpenApiSpec,
   operation: OpenApiOperation,

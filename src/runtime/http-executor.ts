@@ -30,6 +30,7 @@ import type { ExecutorResult } from './executor-result.js'
 import { withHttpRetry } from './http-retry.js'
 import { executeNodeExtraction } from './node-ssr-executor.js'
 import { getServerXOpenWeb, resolveAdapterRef, resolvePagePlan, resolveTransport } from './operation-context.js'
+import { interpolateEntryUrl } from './page-plan.js'
 import { resolveAuth } from './primitives/index.js'
 import { fetchWithRedirects } from './redirect.js'
 import { buildHeaderParams, buildRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
@@ -130,7 +131,8 @@ export async function executeOperation(
     )
     const serverExt = getServerXOpenWeb(spec, operationRef.operation)
     const requiresAuth = !!(serverExt?.auth) || !!manifest?.requires_auth
-    const serverUrlForAuth = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
+    const hasServer = !!(operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url)
+    const serverUrlForAuth = hasServer ? getServerUrl(spec, operationRef.operation, adapterParams) : ''
     const authPrimitive = serverExt?.auth
     // Runtime default for isAuthenticated: "auth primitive resolves" = configured.
     // Real validity is only confirmed by the first real call below — that's the
@@ -168,10 +170,10 @@ export async function executeOperation(
       if (!browser) throw new Error('No browser available — ensureBrowser returned an invalid handle')
       try {
         const adapter = await loadAdapter(siteRoot, adapterRef.name)
-        const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
+        const serverUrl = hasServer ? getServerUrl(spec, operationRef.operation, adapterParams) : ''
         const planConfig = resolvePagePlan(spec, operationRef.operation) ?? {}
         const plan = {
-          entry_url: planConfig.entry_url ?? serverUrl,
+          entry_url: interpolateEntryUrl(planConfig.entry_url, adapterParams) ?? serverUrl,
           ready: planConfig.ready,
           wait_until: planConfig.wait_until,
           settle_ms: planConfig.settle_ms,
@@ -230,7 +232,7 @@ export async function executeOperation(
         if (deps.cdpEndpoint || deps.browser) {
           // External browser — skip profile refresh, try login cascade directly
           if (!deps.cdpEndpoint || isLocalhost(deps.cdpEndpoint)) {
-            const loginUrl = manifest?.site_url ?? spec.servers?.[0]?.url ?? ''
+            const loginUrl = manifest?.site_url ?? serverUrlForAuth
             await handleLoginRequired(loginUrl, async () => {
               try { body = await adapterAttempt(); return true } catch (e) {
                 if (e instanceof OpenWebError && e.payload.failureClass === 'needs_login') return false
@@ -247,7 +249,7 @@ export async function executeOperation(
             body = await adapterAttempt()
           } catch (err2) {
             if (!(err2 instanceof OpenWebError && err2.payload.failureClass === 'needs_login')) throw err2
-            const loginUrl = manifest?.site_url ?? spec.servers?.[0]?.url ?? ''
+            const loginUrl = manifest?.site_url ?? serverUrlForAuth
             await handleLoginRequired(loginUrl, async () => {
               try { body = await adapterAttempt(); return true } catch (e) {
                 if (e instanceof OpenWebError && e.payload.failureClass === 'needs_login') return false
@@ -266,12 +268,12 @@ export async function executeOperation(
 
     if (!needsBrowser && transport === 'node' && (extraction.type === 'ssr_next_data' || extraction.type === 'script_json')) {
       // Node-based extraction: fetch HTML page and parse embedded data — no browser needed
-      const serverUrl = getServerUrl(spec, operationRef.operation)
       const allParams = resolveAllParameters(spec, operationRef.operation)
       const inputParams = validateParams(
         [...allParams, ...getRequestBodyParameters(operationRef.operation)],
         params,
       )
+      const serverUrl = getServerUrl(spec, operationRef.operation, inputParams)
       const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
       const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
       const result = await executeNodeExtraction(url, extraction, {
@@ -378,7 +380,7 @@ export async function executeOperation(
           // Tier 4: only if localhost
           if (deps.cdpEndpoint || deps.browser) {
             if (!deps.cdpEndpoint || isLocalhost(deps.cdpEndpoint)) {
-              const loginUrl = manifest?.site_url ?? getServerUrl(spec, operationRef.operation)
+              const loginUrl = manifest?.site_url ?? getServerUrl(spec, operationRef.operation, params)
               await handleLoginRequired(loginUrl, async () => {
                 try {
                   const { result, handle } = await browserSessionExec()
@@ -410,7 +412,7 @@ export async function executeOperation(
 
               // Tier 4: User login — open system browser, poll with backoff
               // Use site_url from manifest (human login page), not API server URL
-              const loginUrl = manifest?.site_url ?? getServerUrl(spec, operationRef.operation)
+              const loginUrl = manifest?.site_url ?? getServerUrl(spec, operationRef.operation, params)
               await handleLoginRequired(loginUrl, async () => {
                 try {
                   const { result, handle } = await browserSessionExec()
@@ -430,12 +432,12 @@ export async function executeOperation(
         }
       }
     } else {
-      const serverUrl = getServerUrl(spec, operationRef.operation)
       const allParams = resolveAllParameters(spec, operationRef.operation)
       const inputParams = validateParams(
         [...allParams, ...getRequestBodyParameters(operationRef.operation)],
         params,
       )
+      const serverUrl = getServerUrl(spec, operationRef.operation, inputParams)
       const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
       const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
       const requestHeaders = buildHeaderParams(allParams, inputParams)

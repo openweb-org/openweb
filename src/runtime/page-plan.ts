@@ -42,6 +42,24 @@ export interface AcquiredPage {
   readonly owned: boolean
 }
 
+/** Substitute {var} tokens in a PagePlan entry_url using caller params.
+ *  Undefined input passes through. Unresolvable tokens are left intact
+ *  (the URL may be passed to findPageMatchingEntry where a literal { is
+ *  harmless for equality/prefix checks — real navigation failures will
+ *  surface as needs_page rather than corrupted URLs). */
+export function interpolateEntryUrl(
+  template: string | undefined,
+  params: Record<string, unknown> | undefined,
+): string | undefined {
+  if (template === undefined) return undefined
+  if (!params) return template
+  return template.replace(/\{([^}]+)\}/g, (match, name: string) => {
+    const v = params[name]
+    if (v === undefined || v === null) return match
+    return String(v)
+  })
+}
+
 /** True when pageUrl is same-origin with entry_url, its pathname is at/under
  *  entry's, and — when entry_url carries query params — every entry param
  *  appears verbatim on the page URL (page may carry extra params). Hash is

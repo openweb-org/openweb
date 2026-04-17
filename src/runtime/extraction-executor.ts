@@ -3,11 +3,12 @@ import type { Browser, Page } from 'patchright'
 import { CDP_PORT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiSpec } from '../lib/spec-loader.js'
+import { getServerUrl } from '../lib/spec-loader.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
 import type { ExecutorResult } from './executor-result.js'
 import { detectPageBotBlock } from './bot-detect.js'
 import { resolvePagePlan } from './operation-context.js'
-import { acquirePage } from './page-plan.js'
+import { acquirePage, interpolateEntryUrl } from './page-plan.js'
 import { resolveHtmlSelector } from './primitives/html-selector.js'
 import { resolvePageGlobalData } from './primitives/page-global-data.js'
 import { resolveResponseCapture } from './primitives/response-capture.js'
@@ -107,8 +108,8 @@ export async function executeExtraction(
     })
   }
 
-  const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
-  if (!serverUrl) {
+  const hasServer = !!(operation.servers?.[0]?.url ?? spec.servers?.[0]?.url)
+  if (!hasServer) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
@@ -118,6 +119,7 @@ export async function executeExtraction(
       failureClass: 'fatal',
     })
   }
+  const serverUrl = getServerUrl(spec, operation, params)
 
   const extraction = getExtraction(operation)
   const targetPageUrl = resolvePageUrl(serverUrl, extraction, pathTemplate, spec, operation, params)
@@ -127,7 +129,7 @@ export async function executeExtraction(
   let ownedPage: boolean
   try {
     const acquired = await acquirePage(context, serverUrl, {
-      entry_url: isResponseCapture ? targetPageUrl : (planConfig.entry_url ?? targetPageUrl),
+      entry_url: isResponseCapture ? targetPageUrl : (interpolateEntryUrl(planConfig.entry_url, params) ?? targetPageUrl),
       ready: planConfig.ready,
       wait_until: planConfig.wait_until,
       settle_ms: planConfig.settle_ms,

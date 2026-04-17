@@ -4,13 +4,13 @@ import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
 import { validateParams } from '../lib/param-validator.js'
-import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters } from '../lib/spec-loader.js'
+import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters, getServerUrl } from '../lib/spec-loader.js'
 import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { ExecutorResult } from './executor-result.js'
 import { getServerXOpenWeb, resolvePagePlan } from './operation-context.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
-import { acquirePage } from './page-plan.js'
+import { acquirePage, interpolateEntryUrl } from './page-plan.js'
 import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { buildHeaderParams, buildRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
@@ -56,8 +56,8 @@ export async function executeBrowserFetch(
   deps: SessionHttpDependencies = {},
 ): Promise<ExecutorResult> {
   const serverExt = getServerXOpenWeb(spec, operation)
-  const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
-  if (!serverUrl) {
+  const hasServer = !!(operation.servers?.[0]?.url ?? spec.servers?.[0]?.url)
+  if (!hasServer) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
@@ -67,6 +67,7 @@ export async function executeBrowserFetch(
       failureClass: 'fatal',
     })
   }
+  const serverUrl = getServerUrl(spec, operation, params)
 
   const context = browser.contexts()[0]
   if (!context) {
@@ -82,7 +83,7 @@ export async function executeBrowserFetch(
 
   const planConfig = resolvePagePlan(spec, operation) ?? {}
   const { page, owned: ownedPage } = await acquirePage(context, serverUrl, {
-    entry_url: planConfig.entry_url ?? serverUrl,
+    entry_url: interpolateEntryUrl(planConfig.entry_url, params) ?? serverUrl,
     ready: planConfig.ready,
     wait_until: planConfig.wait_until,
     settle_ms: planConfig.settle_ms,

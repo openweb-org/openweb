@@ -364,6 +364,80 @@ describe('executeCachedFetch', () => {
     const headers = init.headers as Record<string, string>
     expect(headers.Cookie).toBeUndefined()
   })
+
+  it('substitutes server-variable {subdomain} from caller params into the cache-scope fetch URL', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ ok: true }))
+    const spec = {
+      openapi: '3.1.0',
+      info: { title: 'Substack', version: '1.0' },
+      servers: [
+        {
+          url: 'https://{subdomain}.substack.com',
+          variables: { subdomain: { default: 'www' } },
+        },
+      ],
+      paths: {},
+    }
+    const opRef = minimalOperation({
+      parameters: [{ name: 'subdomain', in: 'query', schema: { type: 'string' } }],
+    })
+    const cached = sampleCached()
+
+    await executeCachedFetch(
+      spec as never,
+      opRef as never,
+      undefined,
+      { subdomain: 'stratechery' },
+      cached,
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    const [url] = fetchImpl.mock.calls[0] as [string]
+    expect(url.startsWith('https://stratechery.substack.com/api/test')).toBe(true)
+  })
+
+  it('builds form-urlencoded body when spec declares that content type', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ ok: true }))
+    const spec = minimalSpec('https://api.example.com')
+    const opRef = {
+      path: '/login',
+      method: 'post',
+      operation: {
+        operationId: 'login',
+        parameters: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/x-www-form-urlencoded': {
+              schema: {
+                type: 'object',
+                properties: {
+                  username: { type: 'string' },
+                  password: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+      },
+    }
+    const cached = sampleCached()
+
+    await executeCachedFetch(
+      spec as never,
+      opRef as never,
+      undefined,
+      { username: 'alice', password: 'secret' },
+      cached,
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit]
+    const headers = init.headers as Record<string, string>
+    expect(headers['Content-Type']).toBe('application/x-www-form-urlencoded')
+    expect(init.body).toBe('username=alice&password=secret')
+  })
 })
 
 // ── writeBrowserCookiesToCache ───────────────────────

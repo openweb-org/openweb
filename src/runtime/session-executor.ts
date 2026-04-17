@@ -6,7 +6,7 @@ import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
 import { validateParams } from '../lib/param-validator.js'
-import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters } from '../lib/spec-loader.js'
+import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters, getServerUrl } from '../lib/spec-loader.js'
 import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { ExecutorResult } from './executor-result.js'
@@ -181,8 +181,8 @@ export async function executeSessionHttp(
   const fetchImpl = deps.fetchImpl ?? fetch
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
   const serverExt = getServerXOpenWeb(spec, operation)
-  const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
-  if (!serverUrl) {
+  const hasServer = !!(operation.servers?.[0]?.url ?? spec.servers?.[0]?.url)
+  if (!hasServer) {
     throw new OpenWebError({
       error: 'execution_failed', code: 'EXECUTION_FAILED',
       message: 'No server URL found in OpenAPI spec.',
@@ -190,6 +190,7 @@ export async function executeSessionHttp(
       retriable: false, failureClass: 'fatal',
     })
   }
+  const serverUrl = getServerUrl(spec, operation, params)
 
   const context = browser.contexts()[0]
   if (!context) {
