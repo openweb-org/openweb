@@ -1,43 +1,6 @@
 import type { Page } from 'patchright'
 
-const ALGOLIA_BASE = 'https://hn.algolia.com/api/v1'
 const HN_ORIGIN = 'https://news.ycombinator.com'
-
-// ── Adapter read ops: Node.js fetch to Algolia (zero DOM, transport:node) ──
-
-async function getStoryComments(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-  const id = params.id
-  if (!id) throw new Error('id parameter is required')
-  const limit = Number(params.limit ?? 50)
-
-  const url = `${ALGOLIA_BASE}/search_by_date?tags=comment&numericFilters=${encodeURIComponent(`story_id=${id}`)}&hitsPerPage=${limit}`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Algolia HTTP ${res.status}`)
-  const data = (await res.json()) as { nbHits: number; hits: unknown[] }
-  return { storyId: Number(id), commentCount: data.nbHits, comments: data.hits }
-}
-
-async function getUserSubmissions(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-  const id = params.id
-  if (!id) throw new Error('id parameter is required')
-
-  const url = `${ALGOLIA_BASE}/search_by_date?tags=${encodeURIComponent(`story,author_${id}`)}&hitsPerPage=30`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Algolia HTTP ${res.status}`)
-  const data = (await res.json()) as { hits: unknown[] }
-  return data.hits
-}
-
-async function getUserComments(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-  const id = params.id
-  if (!id) throw new Error('id parameter is required')
-
-  const url = `${ALGOLIA_BASE}/search_by_date?tags=${encodeURIComponent(`comment,author_${id}`)}&hitsPerPage=30`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Algolia HTTP ${res.status}`)
-  const data = (await res.json()) as { hits: unknown[] }
-  return data.hits
-}
 
 // ── Write ops: browser page context for auth token extraction ───────
 
@@ -99,11 +62,8 @@ async function addComment(page: Page, params: Readonly<Record<string, unknown>>)
 
 const OPERATIONS: Record<
   string,
-  (page: Page | null, params: Readonly<Record<string, unknown>>) => Promise<unknown>
+  (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>
 > = {
-  getStoryComments,
-  getUserSubmissions,
-  getUserComments,
   upvoteStory,
   addComment,
 }
@@ -129,6 +89,7 @@ const adapter = {
   ): Promise<unknown> {
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)
+    if (!page) throw new Error(`Operation ${operation} requires a page context`)
     return handler(page, params)
   },
 }

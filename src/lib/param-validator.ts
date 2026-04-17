@@ -1,6 +1,13 @@
+import type { XOpenWebParameter } from '../types/extensions.js'
 import { OpenWebError } from './errors.js'
 import type { JsonSchema, OpenApiParameter } from './spec-loader.js'
 import { getSchemaTypes } from './spec-loader.js'
+
+const TEMPLATE_PLACEHOLDER = /\{([^{}]+)\}/g
+
+function paramExt(param: OpenApiParameter): XOpenWebParameter | undefined {
+  return (param as unknown as Record<string, unknown>)['x-openweb'] as XOpenWebParameter | undefined
+}
 
 /**
  * Validate and apply defaults to user-supplied params against OpenAPI parameter definitions.
@@ -27,6 +34,21 @@ export function validateParams(
   }
 
   for (const param of parameters) {
+    const template = paramExt(param)?.template
+    if (template !== undefined) {
+      const callerValue = inputParams[param.name]
+      if (callerValue !== undefined && callerValue !== null) {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'INVALID_PARAMS',
+          message: `Parameter ${param.name} is templated and cannot be overridden`,
+          action: 'Remove this parameter from your input — it is derived from other parameters via x-openweb.template.',
+          retriable: false,
+          failureClass: 'fatal',
+        })
+      }
+      continue
+    }
     // Enforce const: field is immutable, caller cannot override
     if (param.schema?.const !== undefined) {
       const callerValue = result[param.name]
@@ -72,7 +94,37 @@ export function validateParams(
     }
   }
 
+  // Templating pass: substitute {name} placeholders from resolved values.
+  // Runs after defaults so templates can reference params whose values come
+  // from schema.default. Missing referenced params raise a fatal error.
+  for (const param of parameters) {
+    const template = paramExt(param)?.template
+    if (template === undefined) continue
+    result[param.name] = substituteTemplate(param.name, template, result)
+  }
+
   return result
+}
+
+function substituteTemplate(
+  paramName: string,
+  template: string,
+  resolved: Record<string, unknown>,
+): string {
+  return template.replace(TEMPLATE_PLACEHOLDER, (_match, refName: string) => {
+    const value = resolved[refName]
+    if (value === undefined || value === null) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'INVALID_PARAMS',
+        message: `Parameter ${paramName} template references missing parameter: ${refName}`,
+        action: `Provide a value for ${refName}, or define it with a default in the spec.`,
+        retriable: false,
+        failureClass: 'fatal',
+      })
+    }
+    return String(value)
+  })
 }
 
 export function validateType(name: string, value: unknown, schema: JsonSchema | undefined): void {

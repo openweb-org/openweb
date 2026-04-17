@@ -633,76 +633,79 @@ paths:
 
                   required:
                   - objectID
-  /internal/getStoryComments:
+  /search_by_date~getStoryComments:
     get:
       operationId: getStoryComments
-      summary: 'Comment thread for a story via Algolia search'
+      summary: 'Comment thread for a story via Algolia search (returns raw hit objects)'
+      description: |
+        Fetches comments for a story from the Algolia search_by_date endpoint.
+        The `numericFilters` parameter is derived from `id` via x-openweb.template.
+        Returns the raw Algolia `hits` array (unwrapped). An earlier adapter-based
+        version wrapped the response as `{ storyId, commentCount, comments }`; that
+        wrapper is blocked by the lack of a response_transform primitive and is
+        omitted in this spec-only version (see doc/todo for na-rt-response-transform).
       x-openweb:
         permission: read
-        transport: node
+        actual_path: /api/v1/search_by_date
+        unwrap: hits
         build:
           stable_id: hn0010
-          tool_version: 3
+          tool_version: 4
           verified: true
-        adapter:
-          name: hackernews
-          operation: getStoryComments
       parameters:
       - name: id
         in: query
         required: true
         schema:
           type: integer
-        description: 'Hacker News item ID (numeric, e.g. 42407357).'
-      - name: limit
+        description: 'Hacker News story item ID (numeric, e.g. 42407357). Referenced by numericFilters via x-openweb.template.'
+      - name: hitsPerPage
         in: query
-        required: false
         schema:
           type: integer
           default: 50
         description: Maximum number of comments to return.
+      - name: tags
+        in: query
+        schema:
+          type: string
+          const: comment
+      - name: numericFilters
+        in: query
+        schema:
+          type: string
+        x-openweb:
+          template: story_id={id}
       responses:
         '200':
-          description: Comment thread for the story.
+          description: Comments for the story (Algolia hits, newest first).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  storyId:
-                    type: integer
-                    description: The item ID of the story.
-                  commentCount:
-                    type: integer
-                    description: Total comments matching this story.
-                  comments:
-                    type: array
-                    description: Comments sorted by date (newest first).
-                    items:
-                      type: object
-                      properties:
-                        objectID:
-                          type: string
-                        author:
-                          type:
-                          - string
-                          - 'null'
-                        comment_text:
-                          type:
-                          - string
-                          - 'null'
-                        created_at:
-                          type: string
-                        created_at_i:
-                          type: integer
-                        parent_id:
-                          type: integer
-                        story_id:
-                          type: integer
-
-                required:
-                - storyId
-                - comments
+                type: array
+                items:
+                  type: object
+                  properties:
+                    objectID:
+                      type: string
+                    author:
+                      type:
+                      - string
+                      - 'null'
+                    comment_text:
+                      type:
+                      - string
+                      - 'null'
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+                    parent_id:
+                      type: integer
+                    story_id:
+                      type: integer
+                  required:
+                  - objectID
   /search~getStoriesByDomain:
     get:
       operationId: getStoriesByDomain
@@ -775,27 +778,36 @@ paths:
                   required:
                   - objectID
                   - title
-  /internal/getUserSubmissions:
+  /search_by_date~getUserSubmissions:
     get:
       operationId: getUserSubmissions
       summary: "User's submitted stories"
       x-openweb:
         permission: read
-        transport: node
+        actual_path: /api/v1/search_by_date
+        unwrap: hits
         build:
           stable_id: hn0013
-          tool_version: 3
+          tool_version: 4
           verified: true
-        adapter:
-          name: hackernews
-          operation: getUserSubmissions
       parameters:
       - name: id
         in: query
         required: true
         schema:
           type: string
-        description: 'Hacker News username (case-sensitive, e.g. "pg").'
+        description: 'Hacker News username (case-sensitive, e.g. "pg"). Referenced by tags via x-openweb.template.'
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+        x-openweb:
+          template: story,author_{id}
       responses:
         '200':
           description: Stories submitted by the user.
@@ -834,27 +846,36 @@ paths:
                   required:
                   - objectID
                   - title
-  /internal/getUserComments:
+  /search_by_date~getUserComments:
     get:
       operationId: getUserComments
       summary: "User's comment history"
       x-openweb:
         permission: read
-        transport: node
+        actual_path: /api/v1/search_by_date
+        unwrap: hits
         build:
           stable_id: hn0014
-          tool_version: 3
+          tool_version: 4
           verified: true
-        adapter:
-          name: hackernews
-          operation: getUserComments
       parameters:
       - name: id
         in: query
         required: true
         schema:
           type: string
-        description: 'Hacker News username (case-sensitive, e.g. "pg").'
+        description: 'Hacker News username (case-sensitive, e.g. "pg"). Referenced by tags via x-openweb.template.'
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+        x-openweb:
+          template: comment,author_{id}
       responses:
         '200':
           description: Comments posted by the user.
