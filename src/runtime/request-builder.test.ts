@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { OpenApiOperation } from '../lib/spec-loader.js'
-import { buildFormRequestBody, buildJsonRequestBody, buildRequestBody } from './request-builder.js'
+import { buildFormRequestBody, buildGraphqlGetApqQuery, buildJsonRequestBody, buildRequestBody } from './request-builder.js'
 
 function formOperation(): OpenApiOperation {
   return {
@@ -146,5 +146,76 @@ describe('buildJsonRequestBody — graphql_hash (Apollo APQ)', () => {
       userId: 'u1',
       extensions: { persistedQuery: { version: 1, sha256Hash: 'abc123' } },
     })
+  })
+})
+
+describe('buildGraphqlGetApqQuery — Relay-style GET APQ', () => {
+  it('returns undefined when graphql_hash absent', () => {
+    const op = graphqlOperation({ wrap: 'variables' })
+    expect(buildGraphqlGetApqQuery(op, {})).toBeUndefined()
+  })
+
+  it('airbnb reviews wire format: variables + extensions both JSON-stringified', () => {
+    // Mirrors airbnb StaysPdpReviewsQuery: nested object variables + APQ extensions.
+    const op = graphqlOperation({ graphql_hash: '2ed951bfedf71b87d9d30e24a419e15517af9fbed7ac560a8d1cc7feadfa22e6' })
+    const extras = buildGraphqlGetApqQuery(op, {
+      userId: 'U3RheUxpc3Rpbmc6MjA3MTM4MTY=',
+    })
+    expect(extras).toBeDefined()
+    // variables is the JSON of non-const body params
+    expect(JSON.parse(extras?.variables ?? '')).toEqual({
+      userId: 'U3RheUxpc3Rpbmc6MjA3MTM4MTY=',
+    })
+    // extensions carries the persistedQuery hash
+    expect(JSON.parse(extras?.extensions ?? '')).toEqual({
+      persistedQuery: {
+        version: 1,
+        sha256Hash: '2ed951bfedf71b87d9d30e24a419e15517af9fbed7ac560a8d1cc7feadfa22e6',
+      },
+    })
+  })
+
+  it('strips sha256: prefix from hash', () => {
+    const op = graphqlOperation({ graphql_hash: 'sha256:deadbeef' })
+    const extras = buildGraphqlGetApqQuery(op, { userId: 'u1' })
+    expect(JSON.parse(extras?.extensions ?? '').persistedQuery.sha256Hash).toBe('deadbeef')
+  })
+
+  it('URL-encoded placement: extras pass through URLSearchParams produce Relay wire format', () => {
+    const op = graphqlOperation({ graphql_hash: 'abc' })
+    const extras = buildGraphqlGetApqQuery(op, { userId: 'u1' })
+    const url = new URL('https://www.airbnb.com/api/v3/Q/abc')
+    url.searchParams.set('operationName', 'Q')
+    url.searchParams.set('variables', extras?.variables ?? '')
+    url.searchParams.set('extensions', extras?.extensions ?? '')
+    // encodeURIComponent semantics: { → %7B, " → %22, } → %7D, : → %3A
+    expect(url.toString()).toBe(
+      'https://www.airbnb.com/api/v3/Q/abc?operationName=Q' +
+      '&variables=%7B%22userId%22%3A%22u1%22%7D' +
+      '&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22abc%22%7D%7D',
+    )
+  })
+
+  it('const body params are excluded from variables (they belong in query string)', () => {
+    const op = {
+      operationId: 'gqlOp',
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                operationName: { type: 'string', const: 'StaysPdpReviewsQuery' },
+                userId: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+      'x-openweb': { graphql_hash: 'abc' },
+    } as unknown as OpenApiOperation
+    const extras = buildGraphqlGetApqQuery(op, { userId: 'u1' })
+    expect(JSON.parse(extras?.variables ?? '')).toEqual({ userId: 'u1' })
   })
 })

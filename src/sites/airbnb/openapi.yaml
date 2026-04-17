@@ -213,187 +213,176 @@ paths:
                         type: object
                         description: Page-level metadata (listing title, location, sharing info).
 
-  /rooms/{id}/reviews:
+  /api/v3/StaysPdpReviewsQuery/2ed951bfedf71b87d9d30e24a419e15517af9fbed7ac560a8d1cc7feadfa22e6:
     get:
       operationId: getListingReviews
-      summary: Get reviews for a listing — ratings, reviewer info, review text
+      summary: Get reviews for a listing — ratings, reviewer info, review text (Relay GET APQ)
+      servers:
+        - url: https://www.airbnb.com
+          x-openweb:
+            transport: node
+            headers:
+              User-Agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+              Accept-Language: 'en-US,en;q=0.9'
+              X-Airbnb-API-Key: 'd306zoyjsyarp7ifhu67rjxn52tv0t20'
+              X-Airbnb-GraphQL-Platform-Client: 'minimalist-niobe'
+              X-Airbnb-GraphQL-Platform: 'web'
       x-openweb:
         permission: read
+        adapter: false
+        unwrap: 'data.presentation.stayProductDetailPage.reviews'
+        graphql_hash: '2ed951bfedf71b87d9d30e24a419e15517af9fbed7ac560a8d1cc7feadfa22e6'
         build:
           stable_id: ab0003
           tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: airbnb
-          operation: getListingReviews
       parameters:
-        - name: id
-          in: path
+        - name: operationName
+          in: query
           required: true
           schema:
             type: string
-          description: Listing ID from searchListings results.
-          example: '20713816'
+            const: StaysPdpReviewsQuery
+        - name: locale
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en
+        - name: currency
+          in: query
+          required: false
+          schema:
+            type: string
+            default: USD
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              description: 'GraphQL variables packed into ?variables= query param per Relay GET APQ.'
+              properties:
+                id:
+                  type: string
+                  description: |-
+                    Base64 of "StayListing:<numeric_id>". Agents compute via
+                    `Buffer.from('StayListing:' + numericId).toString('base64')`.
+                  example: U3RheUxpc3Rpbmc6MjA3MTM4MTY=
+                pdpReviewsRequest:
+                  type: object
+                  description: Review query shape; defaults match Airbnb web client.
+                  properties:
+                    fieldSelector:
+                      type: string
+                      default: for_p3_translation_only
+                    forPreview:
+                      type: boolean
+                      default: false
+                    limit:
+                      type: integer
+                      default: 24
+                    offset:
+                      type: string
+                      default: '0'
+                    showingTranslationButton:
+                      type: boolean
+                      default: false
+                    first:
+                      type: integer
+                      default: 24
+                    sortingPreference:
+                      type: string
+                      default: BEST_QUALITY
       responses:
         '200':
-          description: Reviews from direct GraphQL API call (zero browser).
+          description: Reviews payload from Relay GET APQ call.
           content:
             application/json:
               schema:
                 type: object
-                required: [listingId, reviews, reviewsCount]
-                properties:
-                  listingId:
-                    type: string
-                    description: The listing ID these reviews belong to.
-                  reviews:
-                    type: array
-                    description: Guest reviews for the listing.
-                    items:
-                      type: object
-                      required: [id]
-                      description: A single guest review.
-                      properties:
-                        id:
-                          type: string
-                          description: Unique review identifier.
-                        comments:
-                          type: [string, 'null']
-                          description: Full review text from the guest.
-                        rating:
-                          type: [integer, 'null']
-                          description: Star rating (1-5) given by the reviewer.
-                        createdAt:
-                          type: [string, 'null']
-                          description: ISO timestamp when the review was created.
-                        localizedDate:
-                          type: [string, 'null']
-                          description: 'Human-readable review date (e.g. "March 2026").'
-                        reviewer:
-                          type: [object, 'null']
-                          description: Reviewer profile info (name, avatar, location).
-                        language:
-                          type: [string, 'null']
-                          description: Language code of the review text.
-                        highlightType:
-                          type: [string, 'null']
-                          description: 'Review highlight category (e.g. "RECENT", "POSITIVE").'
-                        reviewHighlight:
-                          type: [string, 'null']
-                          description: Short highlighted excerpt from the review.
-                  reviewsCount:
-                    type: integer
-                    description: Total number of reviews for this listing.
-                  overallRating:
-                    type: [number, 'null']
-                    description: Average rating across all reviews (0-5 scale).
-                  ratings:
-                    type: [array, 'null']
-                    description: Rating breakdown by category (cleanliness, accuracy, etc.).
-                    items:
-                      type: object
-                      description: A single rating category with its score.
+                description: 'Unwrapped via x-openweb.unwrap to presentation.stayProductDetailPage.reviews.'
 
-  /rooms/{id}/availability:
+  /api/v3/PdpAvailabilityCalendar/b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914:
     get:
       operationId: getListingAvailability
-      summary: Get availability, pricing, and booking info for a listing
+      summary: Get availability calendar for a listing (Relay GET APQ)
+      servers:
+        - url: https://www.airbnb.com
+          x-openweb:
+            transport: node
+            headers:
+              User-Agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+              Accept-Language: 'en-US,en;q=0.9'
+              X-Airbnb-API-Key: 'd306zoyjsyarp7ifhu67rjxn52tv0t20'
+              X-Airbnb-GraphQL-Platform-Client: 'minimalist-niobe'
+              X-Airbnb-GraphQL-Platform: 'web'
       x-openweb:
         permission: read
+        adapter: false
+        unwrap: 'data.merlin.pdpAvailabilityCalendar'
+        graphql_hash: 'b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914'
         build:
           stable_id: ab0004
           tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: airbnb
-          operation: getListingAvailability
       parameters:
-        - name: id
-          in: path
+        - name: operationName
+          in: query
           required: true
           schema:
             type: string
-          description: Listing ID from searchListings results.
-          example: '20713816'
-        - name: check_in
+            const: PdpAvailabilityCalendar
+        - name: locale
           in: query
           required: false
           schema:
             type: string
-          description: Check-in date in YYYY-MM-DD format.
-          example: '2026-06-01'
-        - name: check_out
+            default: en
+        - name: currency
           in: query
           required: false
           schema:
             type: string
-          description: Check-out date in YYYY-MM-DD format.
-          example: '2026-06-05'
+            default: USD
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request]
+              description: 'GraphQL variables packed into ?variables= query param per Relay GET APQ.'
+              properties:
+                request:
+                  type: object
+                  required: [listingId, month, year]
+                  properties:
+                    listingId:
+                      type: string
+                      description: Raw numeric listing ID (unencoded).
+                      example: '20713816'
+                    month:
+                      type: integer
+                      description: Calendar month (1-12) to start the window.
+                      example: 6
+                    year:
+                      type: integer
+                      description: Calendar year (YYYY).
+                      example: 2026
+                    count:
+                      type: integer
+                      default: 12
+                      description: Number of consecutive months to return.
       responses:
         '200':
-          description: Calendar availability from direct GraphQL API call (zero browser).
+          description: Calendar payload from Relay GET APQ call.
           content:
             application/json:
               schema:
                 type: object
-                required: [listingId, calendarMonths]
-                properties:
-                  listingId:
-                    type: string
-                    description: The listing ID this availability data belongs to.
-                  checkIn:
-                    type: [string, 'null']
-                    description: Requested check-in date, if provided.
-                  checkOut:
-                    type: [string, 'null']
-                    description: Requested check-out date, if provided.
-                  calendarMonths:
-                    type: array
-                    description: Monthly availability calendars.
-                    items:
-                      type: object
-                      required: [month, year, days]
-                      description: A single month of availability data.
-                      properties:
-                        month:
-                          type: integer
-                          description: Month number (1-12).
-                        year:
-                          type: integer
-                          description: Calendar year.
-                        days:
-                          type: array
-                          description: Daily availability entries for this month.
-                          items:
-                            type: object
-                            required: [calendarDate, available]
-                            description: Availability and pricing for a single day.
-                            properties:
-                              calendarDate:
-                                type: string
-                                description: Date in YYYY-MM-DD format.
-                              available:
-                                type: boolean
-                                description: Whether the listing is available for booking on this date.
-                              minNights:
-                                type: [integer, 'null']
-                                description: Minimum stay requirement starting from this date.
-                              maxNights:
-                                type: [integer, 'null']
-                                description: Maximum stay allowed starting from this date.
-                              availableForCheckin:
-                                type: boolean
-                                description: Whether this date can be selected as a check-in date.
-                              availableForCheckout:
-                                type: boolean
-                                description: Whether this date can be selected as a check-out date.
-                              price:
-                                type: [object, 'null']
-                                description: Nightly price info for this date; null if unavailable.
+                description: 'Unwrapped via x-openweb.unwrap to merlin.pdpAvailabilityCalendar.'
 
   /users/{hostId}:
     get:

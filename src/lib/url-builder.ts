@@ -7,6 +7,7 @@ export function buildQueryUrl(
   apiPath: string,
   parameters: OpenApiParameter[] | undefined,
   inputParams: Record<string, unknown>,
+  extraQueryParams?: Readonly<Record<string, string>>,
 ): string {
   const baseUrl = new URL(baseServerUrl)
   const fullPath = baseUrl.origin + baseUrl.pathname.replace(/\/$/, '') + apiPath
@@ -14,6 +15,7 @@ export function buildQueryUrl(
 
   const allParameters = parameters ?? []
   const queryParameters = allParameters.filter((param) => param.in === 'query')
+  const declaredNames = new Set(queryParameters.map((p) => p.name))
 
   for (const parameter of queryParameters) {
     const value = inputParams[parameter.name] ?? (
@@ -44,6 +46,12 @@ export function buildQueryUrl(
     }
 
     target.searchParams.set(parameter.name, String(value))
+  }
+
+  if (extraQueryParams) {
+    for (const [key, value] of Object.entries(extraQueryParams)) {
+      if (!declaredNames.has(key)) target.searchParams.set(key, value)
+    }
   }
 
   return target.toString()

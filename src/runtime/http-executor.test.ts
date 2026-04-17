@@ -175,6 +175,7 @@ vi.mock('./request-builder.js', () => ({
   substitutePath: (...a: unknown[]) => mockSubstitutePath(...a),
   buildHeaderParams: (...a: unknown[]) => mockBuildHeaderParams(...a),
   buildRequestBody: (...a: unknown[]) => mockBuildRequestBody(...a),
+  buildGraphqlGetApqQuery: () => undefined,
 }))
 
 // Mock response-unwrap

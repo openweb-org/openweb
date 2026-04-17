@@ -4,9 +4,11 @@
   "cases": [
     {
       "input": {
-        "id": "20713816",
-        "check_in": "2026-06-01",
-        "check_out": "2026-06-05"
+        "request": {
+          "listingId": "20713816",
+          "month": 6,
+          "year": 2026
+        }
       },
       "assertions": {
         "status": 200,

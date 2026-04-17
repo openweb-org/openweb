@@ -167,6 +167,54 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
   return JSON.stringify(body)
 }
 
+/**
+ * Compute GET-flavor Apollo/Relay APQ query params for GraphQL operations.
+ *
+ * When the operation declares `x-openweb.graphql_hash` and a requestBody schema,
+ * this returns `{ variables, extensions }` — both JSON-stringified. Callers merge
+ * these into the URL query string (URL-encoded) to produce a Relay-style APQ GET:
+ *   /path?variables={...}&extensions={"persistedQuery":{"version":1,"sha256Hash":"..."}}
+ *
+ * Variables are built from requestBody params (non-const), mirroring the POST
+ * wrap-in-`variables` shape so the same spec declares the variable payload for
+ * both GET and POST GraphQL flavors. Returns undefined when graphql_hash is absent.
+ */
+export function buildGraphqlGetApqQuery(
+  operation: OpenApiOperation,
+  params: Record<string, unknown>,
+): { variables: string; extensions: string } | undefined {
+  const opExt = (operation as { 'x-openweb'?: unknown })['x-openweb'] as XOpenWebOperation | undefined
+  if (!opExt?.graphql_hash) return undefined
+
+  const hash = opExt.graphql_hash.startsWith('sha256:')
+    ? opExt.graphql_hash.slice('sha256:'.length)
+    : opExt.graphql_hash
+
+  const variables: Record<string, unknown> = {}
+  for (const param of getRequestBodyParameters(operation)) {
+    if (param.schema?.const !== undefined) continue
+    const value = params[param.name]
+    if (value !== undefined) {
+      if (param.schema?.type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const defaults = applySchemaDefaults(param.schema as Record<string, unknown>)
+        variables[param.name] = defaults ? { ...defaults, ...(value as Record<string, unknown>) } : value
+      } else {
+        variables[param.name] = value
+      }
+    } else if (param.schema?.type === 'object') {
+      const defaults = applySchemaDefaults(param.schema as Record<string, unknown>)
+      if (defaults) variables[param.name] = defaults
+    } else if (param.schema?.default !== undefined) {
+      variables[param.name] = structuredClone(param.schema.default)
+    }
+  }
+
+  return {
+    variables: JSON.stringify(variables),
+    extensions: JSON.stringify({ persistedQuery: { version: 1, sha256Hash: hash } }),
+  }
+}
+
 /** Build form-urlencoded request body when spec declares that content type. Returns undefined if not form-encoded. */
 export function buildFormRequestBody(operation: OpenApiOperation, params: Record<string, unknown>): string | undefined {
   if (getRequestBodyContentType(operation) !== 'application/x-www-form-urlencoded') return undefined

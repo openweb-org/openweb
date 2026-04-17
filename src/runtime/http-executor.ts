@@ -33,7 +33,7 @@ import { getServerXOpenWeb, resolveAdapterRef, resolvePagePlan, resolveTransport
 import { interpolateEntryUrl } from './page-plan.js'
 import { resolveAuth } from './primitives/index.js'
 import { fetchWithRedirects } from './redirect.js'
-import { buildHeaderParams, buildRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
+import { buildHeaderParams, buildGraphqlGetApqQuery, buildRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
 import {
   type AutoNavigateResult,
@@ -436,9 +436,12 @@ export async function executeOperation(
       )
       const serverUrl = getServerUrl(spec, operationRef.operation, inputParams)
       const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
-      const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
-      const requestHeaders = buildHeaderParams(allParams, inputParams)
       const upperMethod = operationRef.method.toUpperCase()
+      const apqExtras = upperMethod === 'GET'
+        ? buildGraphqlGetApqQuery(operationRef.operation, inputParams)
+        : undefined
+      const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams, apqExtras)
+      const requestHeaders = buildHeaderParams(allParams, inputParams)
       let requestBody: string | undefined
       if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
         const built = buildRequestBody(operationRef.operation, inputParams)
