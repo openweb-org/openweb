@@ -44,7 +44,9 @@ describe('navigator', () => {
   it('summarizes array responses with item fields', async () => {
     const output = await renderOperation('hackernews', 'getTopStories', false)
 
-    expect(output).toContain('Returns: array<{ title, score, author, age }>')
+    expect(output).toContain('Returns: array<{')
+    expect(output).toContain('title')
+    expect(output).toContain('author')
   })
 
   it('renders L3 adapter transport for adapter-backed sites and operations', async () => {

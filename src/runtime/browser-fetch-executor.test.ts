@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import type { OpenApiSpec } from '../lib/spec-loader.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 
+vi.mock('./warm-session.js', () => ({
+  warmSession: vi.fn(async () => {}),
+  _resetWarmCache: vi.fn(),
+}))
+
 function mockBrowser(
   pageUrl: string,
   evaluateResult: { status: number; headers: Record<string, string>; text: string },
@@ -309,7 +314,7 @@ describe('executeBrowserFetch', () => {
       text: '{"ok":true}',
     }))
     const page = {
-      url: () => 'https://discord.com/channels/@me',
+      url: () => 'https://discord.com/api/v9/users/@me/guilds',
       evaluate: evaluateFn,
       content: vi.fn(async () => '<html><body>discord</body></html>'),
       addInitScript: vi.fn(async () => {}),

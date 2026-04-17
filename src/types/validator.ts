@@ -169,12 +169,14 @@ export function validateAsyncApiSpec(spec: AsyncApiLike): ValidationResult {
     return { valid: false, errors }
   }
 
+  const asyncSpec = spec as AsyncApiLike
+
   // Validate server-level x-openweb
-  const servers = typeof spec.servers === 'object' && spec.servers !== null ? spec.servers : {}
+  const servers = typeof asyncSpec.servers === 'object' && asyncSpec.servers !== null ? asyncSpec.servers : {}
   for (const [name, server] of Object.entries(servers)) {
     if (typeof server !== 'object' || server === null) continue
 
-    const ext = server['x-openweb']
+    const ext = (server as { 'x-openweb'?: unknown })['x-openweb']
     if (ext == null) continue
 
     if (!validateWsServerExt(ext)) {
@@ -184,11 +186,11 @@ export function validateAsyncApiSpec(spec: AsyncApiLike): ValidationResult {
 
   // Validate operation-level x-openweb
   const operations =
-    typeof spec.operations === 'object' && spec.operations !== null ? spec.operations : {}
+    typeof asyncSpec.operations === 'object' && asyncSpec.operations !== null ? asyncSpec.operations : {}
   for (const [opId, op] of Object.entries(operations)) {
     if (typeof op !== 'object' || op === null) continue
 
-    const ext = op['x-openweb']
+    const ext = (op as { 'x-openweb'?: unknown })['x-openweb']
     if (ext == null) continue
 
     if (!validateWsOperationExt(ext)) {

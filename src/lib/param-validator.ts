@@ -64,7 +64,7 @@ export function validateParams(
       if (
         typeof val === 'object' && val !== null &&
         getSchemaTypes(param.schema).includes('string') &&
-        (param as Record<string, unknown>)['x-openweb-json-schema']
+        (param as unknown as Record<string, unknown>)['x-openweb-json-schema']
       ) {
         result[param.name] = JSON.stringify(val)
       }

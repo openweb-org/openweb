@@ -15,6 +15,7 @@ function extractionBrowser(
             url: () => page.url,
             content: vi.fn(async () => page.content ?? '<html><body>ready</body></html>'),
             evaluate: vi.fn(async () => page.evaluateResult),
+            addInitScript: vi.fn(async () => {}),
           })),
       },
     ],
