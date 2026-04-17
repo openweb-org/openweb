@@ -59,7 +59,8 @@ No auth required for all 4 operations. Some data is premium-locked (`is_locked: 
 ### Transport
 - `transport: page` — heavy bot detection blocks Node requests
 - Bot detection: Cloudflare + DataDome + Akamai + PerimeterX (all 4 systems active)
-- Adapter uses `pageFetch` (browser-context fetch) for all API calls
+- searchArticles, getArticle: pure spec, declarative browser-context fetch
+- getStockAnalysis, getEarnings: still adapter-backed (multi-call composition + nested response reshape — not declaratively expressible)
 - Dormant PerimeterX `#px-captcha` div present on all pages (cleaned up in adapter to avoid false positive)
 
 ### Known Issues

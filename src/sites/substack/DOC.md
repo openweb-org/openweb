@@ -56,17 +56,18 @@ openweb substack exec getTrending '{"limit":10}'
 ## API Architecture
 REST API at `/api/v1/*` on each publication's domain. Main site (`substack.com`)
 hosts search and trending. Each publication lives on `{subdomain}.substack.com`
-(or a custom domain that redirects). The adapter navigates to the correct domain
-before making same-origin API calls.
+(or a custom domain that redirects).
 
 ## Auth
 No auth required for public read operations. Paywalled posts return truncated
 `body_html`. Login required only for subscriber-only content.
 
 ## Transport
-`page` — adapter navigates the browser to the publication's subdomain, then uses
-`page.evaluate(fetch())` for same-origin API calls. Required because publications
-live on different subdomains; node transport cannot dynamically switch origins.
+`page` — pure spec, no adapter. Per-publication ops (getArchive, getPost,
+getPostComments) use operation-level `servers: - url: https://{subdomain}.substack.com`
+with the `subdomain` param consumed as a server variable. The runtime acquires a
+page on the resolved subdomain, then `page.evaluate(fetch())` runs same-origin.
+searchPosts and getTrending stay on the default `substack.com` server.
 
 ## Known Issues
 - `searchPosts` returns empty results in headless browser context — likely bot detection on the search endpoint. Use `getArchive` with `search` param as a workaround for per-publication search.

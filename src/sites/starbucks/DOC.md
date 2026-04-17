@@ -51,9 +51,8 @@ openweb starbucks exec getMenu '{}'
 - `requires_auth: false`
 
 ### Transport
-- **All operations: page** — browser-context fetch via pageFetch
-- Store API requires `X-Requested-With: XMLHttpRequest` header (returns 400 without it)
-- Menu API works without special headers
+- **searchStores, getMenu: page (pure spec)** — declarative `transport: page` with browser-context fetch. Adapter removed; `X-Requested-With: XMLHttpRequest` declared as a parameter default on searchStores.
+- **getStoreDetail: page + adapter** — kept adapter-backed because the upstream `/locations` endpoint returns an array filtered client-side by `storeNumber`. No declarative array-filter primitive today.
 
 ### Bot Detection
 - Heavy: Cloudflare (`cf_clearance`), Akamai (`_abck`), PerimeterX (`_px3`, `_pxhd`), DataDome (`datadome`)

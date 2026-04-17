@@ -99,13 +99,13 @@ openweb weibo exec listReposts '{"id": 5281762063682574, "page": 1, "count": 10}
 - `page` — node transport blocked by anti-bot (returns 403)
 - Requires managed browser with open weibo.com tab
 - All API calls execute via `page.evaluate(fetch(...))` in browser context
-- Write ops (repost, followUser, bookmarkPost, unlikePost, unfollowUser, unbookmarkPost) use adapter for CSRF + body encoding
+- Write ops are pure spec — server-level `cookie_session` + `cookie_to_header` CSRF cover what the adapter previously did. `repost` uses `application/json` body; the other 5 use `application/x-www-form-urlencoded`.
 
 ## Known Issues
 - **Login required** — all ops need an active Weibo session (SUB cookie)
 - **Anti-bot detection** — node HTTP always returns 403; must use page transport
 - **Rate limiting** — aggressive limits on feed/search APIs; may return 418 or empty data
-- **CSRF rotation** — XSRF-TOKEN rotates every response; adapter handles automatically
+- **CSRF rotation** — XSRF-TOKEN rotates every response; runtime resolves a fresh token from the browser cookie before each call.
 - **Long text truncation** — posts over ~140 chars truncated; use `isGetLongText=true` in getPost or getLongtext
 - **listReposts empty** — may return empty data array with "前方拥堵" tip when rate-limited or session weak
 - **listComments missing** — comments endpoint (`/ajax/comment/buildComments`) not yet compiled; DOC workflows reference it but op not in spec

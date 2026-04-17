@@ -21,3 +21,14 @@
 - New site addition — investment research and analysis platform
 
 **Verification:** All 4 ops PASS via `pnpm dev verify seeking-alpha --browser`
+
+## 2026-04-17 — Phase 3 Pure-Spec Migration
+
+**Context:** Phase 3 of normalize-adapter.
+**Changes:** searchArticles and getArticle migrated to pure spec:
+- `/api/v3/searches/all` and `/api/v3/articles/{articleId}` paths.
+- JSON:API bracket params (`filter[query]`, `page[size]`, `page[number]`, `filter[period]`, `filter[list]`, `include`) declared as query parameters; URLSearchParams encodes them through correctly and SA accepts them.
+- Response schemas relaxed to raw JSON:API shape (`additionalProperties: true`).
+- getStockAnalysis and getEarnings kept adapter-backed: both compose multiple parallel upstream calls (3 for analysis; ticker-id lookup + 2 for earnings) and reshape deeply nested response maps. Not declaratively expressible today.
+- Adapter trimmed to the two remaining ops.
+**Verification:** `pnpm dev verify seeking-alpha` → 4/4 PASS.

@@ -70,11 +70,11 @@ openweb fidelity exec getFundPerformance '{"cusip":"315911750","funduniverse":"R
 ## Auth
 - No login required for included operations (all public market data)
 - POST endpoints on digital.fidelity.com use CSRF tokens (`api_response` type from `/prgw/digital/research/api/tokens`, field: `csrfToken`)
-- Adapter fetches CSRF automatically before each API call
+- CSRF resolved declaratively at server-level — runtime fetches the token before each call
 - Account/trading endpoints require full auth (not included)
 
 ## Transport
-- **digital.fidelity.com**: `page` transport with `fidelity-api` adapter — navigates to `/research/quote-and-research/`, fetches CSRF, calls APIs via `page.evaluate(fetch)`
+- **digital.fidelity.com**: `page` transport, **pure spec** (no adapter). Server-level `cookie_session` auth + `api_response` CSRF cover what the adapter previously did manually.
 - **fundresearch.fidelity.com**: `node` transport (direct HTTP works)
 
 ## Known Issues

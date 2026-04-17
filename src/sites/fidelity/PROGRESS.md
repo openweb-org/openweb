@@ -29,3 +29,12 @@
 - searchFunds added via fund-screener POST API discovered during capture
 
 **Verification:** 6/13 PASS (all node-transport fundresearch.fidelity.com ops). Page-transport ops (digital.fidelity.com) fail with ssrfValidator bug in browser-fetch-executor CSRF resolution — runtime issue, not spec issue.
+
+## 2026-04-17 — Phase 3 Pure-Spec Migration
+
+**Context:** Phase 3 of normalize-adapter.
+**Changes:** All 7 research ops (getQuote, getMarketSummary, getCompanyProfile, getNewsHeadlines, getIndexQuotes, getResearchData, getCompanyLogo) moved to pure spec.
+- Server-level `cookie_session` auth + `api_response` CSRF (extract `csrfToken` from `/prgw/digital/research/api/tokens` → inject as `X-CSRF-TOKEN`) already cover what the adapter did manually — no per-op overrides needed.
+- Response schemas already matched the raw upstream JSON; adapter passed payloads through.
+- Adapter file deleted.
+**Verification:** `pnpm dev verify fidelity` → 13/13 PASS at conversion time. Subsequent re-verify shows 1 pre-existing `auth_expired` (varies between getCompanyLogo / getQuote / getResearchData depending on session state) — not a regression, just session expiry.

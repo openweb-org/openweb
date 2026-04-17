@@ -42,3 +42,12 @@
 **Context:** `retweeted_status` fields are omitted when the original retweet has been deleted by the author.
 **Changes:** openapi.yaml — relaxed `required` on `retweeted_status` object properties.
 **Verification:** Verify pass — schema now handles both present and deleted retweet cases.
+
+## 2026-04-17 — Phase 3 Pure-Spec Migration
+
+**Context:** Phase 3 of normalize-adapter.
+**Changes:** All 6 write ops (bookmarkPost, followUser, repost, unbookmarkPost, unfollowUser, unlikePost) moved to pure spec.
+- Server-level `cookie_session` auth + `cookie_to_header` CSRF (`XSRF-TOKEN` cookie → `x-xsrf-token` header) already covered the adapter's behavior.
+- `repost` uses `application/json` body; the other 5 use `application/x-www-form-urlencoded` — matching the adapter's postJson / postForm split.
+- Adapter file deleted (entire `adapters/` directory removed).
+**Verification:** `pnpm dev verify weibo` → 6/8 PASS (write ops skipped without `--write`, as expected); 2 read ops are pre-existing `auth_expired` (getFriendsFeed, getUserStatuses).
