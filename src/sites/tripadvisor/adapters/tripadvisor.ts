@@ -1,12 +1,6 @@
 import type { Page } from 'patchright'
 
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
 
 const CAPTCHA_POLL_MS = 2_000
 const CAPTCHA_WAIT_MS = 30_000
@@ -47,9 +41,9 @@ async function waitForCaptchaResolution(page: Page, timeoutMs = CAPTCHA_WAIT_MS)
  * Kept on adapter: the TypeAheadJson endpoint is accessed via browser-side
  * fetch() which is blocked for spec-based page_global_data expressions. */
 
-async function searchLocation(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function searchLocation(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
   const query = String(params.query ?? '')
-  if (!query) throw new Error('query is required')
+  if (!query) throw helpers.errors.missingParam('query')
 
   return page.evaluate(`
     (async () => {
@@ -86,33 +80,26 @@ async function searchLocation(page: Page, params: Readonly<Record<string, unknow
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
+
+const OPERATIONS: Record<string, Handler> = {
   searchLocation,
 }
 
-const adapter: CodeAdapter = {
+const runner: CustomRunner = {
   name: 'tripadvisor',
   description: 'TripAdvisor adapter — searchLocation via TypeAheadJson (other ops use spec-based extraction)',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('tripadvisor.com') || url === 'about:blank'
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('tripadvisor requires a page (transport: page)')
     const handler = OPERATIONS[operation]
-    if (!handler) {
-      throw new Error(`Unknown operation: ${operation}. Available: ${Object.keys(OPERATIONS).join(', ')}`)
-    }
+    if (!handler) throw helpers.errors.unknownOp(operation)
     if (await isDataDomeBlocked(page)) {
       await waitForCaptchaResolution(page)
     }
-    return handler(page, params)
+    return handler(page, params, helpers)
   },
 }
 
-export default adapter
+export default runner
