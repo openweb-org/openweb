@@ -188,19 +188,50 @@ export function getServerUrl(
 
 /**
  * Resolves OpenAPI server variable placeholders: caller-provided param wins,
- * then the variable's `default`. Unknown placeholders are left unchanged.
+ * then the variable's `default`. OAS 3.x requires every `{var}` in a server
+ * URL to have a declared variable with a default, so an unresolvable
+ * placeholder is a spec bug and is rejected.
+ *
+ * Substituted values are rejected if they contain characters that would alter
+ * URL structure (authority/path separators, whitespace) — these indicate the
+ * caller is passing the wrong kind of value (e.g. a path segment into a host
+ * slot) and should fail loudly rather than build a malformed URL.
  */
+const UNSAFE_VAR_VALUE = /[\s/?#@\\]/
+
 function substituteServerVariables(
   server: OpenApiServer,
   params: Record<string, unknown> | undefined,
 ): string {
-  return server.url.replace(/\{([^}]+)\}/g, (match, name: string) => {
+  return server.url.replace(/\{([^}]+)\}/g, (_match, name: string) => {
     const fromParam = params?.[name]
-    if (fromParam !== undefined && fromParam !== null) {
-      return String(fromParam)
+    const value = fromParam !== undefined && fromParam !== null
+      ? String(fromParam)
+      : server.variables?.[name]?.default
+
+    if (value === undefined) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Server URL variable {${name}} has no value: provide it as a param or declare a default in servers[].variables.`,
+        action: `Add servers[].variables.${name}.default to the OpenAPI spec, or pass ${name} in the call.`,
+        retriable: false,
+        failureClass: 'fatal',
+      })
     }
-    const fallback = server.variables?.[name]?.default
-    return fallback ?? match
+
+    if (UNSAFE_VAR_VALUE.test(value)) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Server URL variable {${name}} value contains URL-unsafe characters: ${JSON.stringify(value)}`,
+        action: `Pass a value for ${name} without "/", "?", "#", "@", "\\\\" or whitespace.`,
+        retriable: false,
+        failureClass: 'fatal',
+      })
+    }
+
+    return value
   })
 }
 

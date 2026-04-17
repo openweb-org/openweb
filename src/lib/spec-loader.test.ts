@@ -64,8 +64,32 @@ describe('getServerUrl', () => {
     expect(getServerUrl(s, op, { sub: 'api', tld: 'io' })).toBe('https://api.example.io')
   })
 
-  it('leaves unknown placeholders unchanged when no default and no param', () => {
+  it('throws when a placeholder has no param and no declared default (OAS 3.x strictness)', () => {
     const s = spec([{ url: 'https://{unknown}.example.com' }])
-    expect(getServerUrl(s, op)).toBe('https://{unknown}.example.com')
+    expect(() => getServerUrl(s, op)).toThrow(/\{unknown\}/)
+  })
+
+  it('coerces numeric params with String()', () => {
+    const s = spec([
+      { url: 'https://api.example.com:{port}', variables: { port: { default: '443' } } },
+    ])
+    expect(getServerUrl(s, op, { port: 8080 })).toBe('https://api.example.com:8080')
+  })
+
+  it('coerces boolean params with String()', () => {
+    const s = spec([
+      { url: 'https://{flag}.example.com', variables: { flag: { default: 'false' } } },
+    ])
+    expect(getServerUrl(s, op, { flag: true })).toBe('https://true.example.com')
+  })
+
+  it('rejects values containing URL-unsafe characters', () => {
+    const s = spec([
+      { url: 'https://{subdomain}.example.com', variables: { subdomain: { default: 'www' } } },
+    ])
+    expect(() => getServerUrl(s, op, { subdomain: 'evil.com/path' })).toThrow(/URL-unsafe/)
+    expect(() => getServerUrl(s, op, { subdomain: 'a b' })).toThrow(/URL-unsafe/)
+    expect(() => getServerUrl(s, op, { subdomain: 'foo?x=1' })).toThrow(/URL-unsafe/)
+    expect(() => getServerUrl(s, op, { subdomain: 'evil@host' })).toThrow(/URL-unsafe/)
   })
 })
