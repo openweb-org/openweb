@@ -136,3 +136,27 @@ Action for next worker: open WhatsApp Web tab manually, wait for chats to appear
 ## Acceptance for na-verify-fix-regressions
 
 The only thing this milestone (normalize-adapter) needed to gate was zero adapter-export errors. **That's met.** Everything in the table above is downstream-of-milestone work. Treat the four batches as separate PRs; whatsapp + bilibili can stay open if they're pre-existing.
+
+## na-verify-fix-regressions — outcome (2026-04-17)
+
+### Fixed
+| Site | Op | Verdict | Fix | Re-verify |
+|---|---|---|---|---|
+| whatsapp | getChats (+ all 3 ops) | **REGRESSION-SHIM** | Added single retry (reload + 3s wait) inside `ensureReady()` of `whatsapp-modules.ts`. Mirrors the runtime-level retry that lived in `main:src/runtime/adapter-executor.ts:127-133` (try init → page.reload → waitForTimeout → retry init), which the new CustomRunner architecture dropped. | `pnpm dev verify whatsapp` → 3/3 PASS |
+| medium | getRecommendedFeed | PRE-EXISTING (upstream GraphQL drift) | Relaxed `pagingInfo` to nullable, dropped `required: [next]`, dropped `required: [to]` on `pagingInfo.next` in `openapi.yaml`. | `pnpm dev verify medium` → 9/9 PASS |
+
+### Skipped (out of scope, per task instructions)
+| Group | Sites/ops | Why skipped |
+|---|---|---|
+| auth_expired | fidelity, instagram (5 ops), notion (4 ops), pinterest, trello, weibo (2 ops) | Need interactive login |
+| schema_drift (no field-level diff in report) | instagram getExplore/getPost/getPostComments/getStories, reddit getMe/getNotifications, ubereats getEatsOrderHistory, walmart getProductDetail/getProductPricing | Verify report only says `schema=false` — no field-level diff. Cannot mechanically fix without recapture (out of scope) |
+| upstream HTTP 404 / endpoint removed | x getUserFollowers/searchTweets/getBookmarks, substack getTrending, uber getRideEstimate, instagram getNotifications | New endpoint unknown; recapture needed (out of scope) |
+| transient page_global / browser_fetch | bloomberg (3 ops), ebay (2 ops), bluesky searchPosts, substack (3 datadog ops), uber getRideHistory, ubereats getCart | Transient / 3rd-party blockers; existing retry already in place |
+| env / rate-limit / anti-bot | bilibili (no tab), guardian (HTTP 429), bloomberg searchBloomberg (CAPTCHA), kayak selector timeout, ubereats addToCart (permission flag) | Not code regressions |
+
+### whatsapp verdict
+**REGRESSION-SHIM, fixed.** Confirmed by reading `git show main:src/runtime/adapter-executor.ts` lines 127-133: main retried `adapter.init(page)` once after `page.reload()` + `waitForTimeout(adapterRetry)`. The new branch's `executeAdapter()` (post-CustomRunner refactor) does no such retry — `ensureReady()` is called inline within `run()` and throws `retriable` on first failure. Restored equivalent behavior in the whatsapp adapter itself (cleanest fix; runtime stays simple).
+
+### Final touched-site verify counts
+- `pnpm dev verify medium`: 9/9 PASS
+- `pnpm dev verify whatsapp`: 3/3 PASS
