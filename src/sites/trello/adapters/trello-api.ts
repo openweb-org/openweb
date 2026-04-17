@@ -1,35 +1,12 @@
 import type { Page } from 'patchright'
 
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: {
-      pageFetch: (page: Page, opts: {
-        url: string; method?: 'GET' | 'POST'; body?: string;
-        headers?: Record<string, string>; timeout?: number
-      }) => Promise<{ status: number; text: string }>
-      errors: {
-        unknownOp: (op: string, available: string[]) => Error
-        missingParam: (name: string) => Error
-        httpError: (status: number, body: string) => Error
-        apiError: (context: string, message: string) => Error
-        needsLogin: () => Error
-      }
-    },
-  ): Promise<unknown>
-}
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
 
 const API_BASE = 'https://trello.com/1'
 
 async function apiFetch(
   page: Page,
-  helpers: { pageFetch: CodeAdapter['execute'] extends (p: Page, o: string, pa: unknown, h: infer H) => unknown ? H['pageFetch'] : never },
+  helpers: AdapterHelpers,
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   query?: Record<string, string>,
@@ -54,7 +31,7 @@ async function apiFetch(
 
   const result = await helpers.pageFetch(page, {
     url: url.toString(),
-    method,
+    method: method as 'GET' | 'POST',
     body: requestBody,
     headers: requestHeaders,
     timeout: 15_000,
@@ -79,7 +56,7 @@ async function apiFetch(
 async function getBoards(
   page: Page,
   _params: Readonly<Record<string, unknown>>,
-  helpers: Parameters<CodeAdapter['execute']>[3],
+  helpers: AdapterHelpers,
 ): Promise<unknown> {
   const data = await apiFetch(page, helpers, 'GET', '/members/me/boards', {
     fields: 'name,desc,url,closed,dateLastActivity,shortUrl,idOrganization',
@@ -106,7 +83,7 @@ async function getBoards(
 async function getBoard(
   page: Page,
   params: Readonly<Record<string, unknown>>,
-  helpers: Parameters<CodeAdapter['execute']>[3],
+  helpers: AdapterHelpers,
 ): Promise<unknown> {
   const boardId = String(params.boardId ?? '')
   if (!boardId) throw helpers.errors.missingParam('boardId')
@@ -167,7 +144,7 @@ async function getBoard(
 async function getLists(
   page: Page,
   params: Readonly<Record<string, unknown>>,
-  helpers: Parameters<CodeAdapter['execute']>[3],
+  helpers: AdapterHelpers,
 ): Promise<unknown> {
   const boardId = String(params.boardId ?? '')
   if (!boardId) throw helpers.errors.missingParam('boardId')
@@ -194,7 +171,7 @@ async function getLists(
 async function getCards(
   page: Page,
   params: Readonly<Record<string, unknown>>,
-  helpers: Parameters<CodeAdapter['execute']>[3],
+  helpers: AdapterHelpers,
 ): Promise<unknown> {
   const listId = String(params.listId ?? '')
   if (!listId) throw helpers.errors.missingParam('listId')
@@ -230,7 +207,7 @@ async function getCards(
 async function createCard(
   page: Page,
   params: Readonly<Record<string, unknown>>,
-  helpers: Parameters<CodeAdapter['execute']>[3],
+  helpers: AdapterHelpers,
 ): Promise<unknown> {
   const idList = String(params.idList ?? '')
   if (!idList) throw helpers.errors.missingParam('idList')
@@ -262,7 +239,7 @@ async function createCard(
 async function deleteCard(
   page: Page,
   params: Readonly<Record<string, unknown>>,
-  helpers: Parameters<CodeAdapter['execute']>[3],
+  helpers: AdapterHelpers,
 ): Promise<unknown> {
   const cardId = String(params.cardId ?? '')
   if (!cardId) throw helpers.errors.missingParam('cardId')
@@ -277,7 +254,7 @@ async function deleteCard(
 async function archiveCard(
   page: Page,
   params: Readonly<Record<string, unknown>>,
-  helpers: Parameters<CodeAdapter['execute']>[3],
+  helpers: AdapterHelpers,
 ): Promise<unknown> {
   const cardId = String(params.cardId ?? '')
   if (!cardId) throw helpers.errors.missingParam('cardId')
@@ -293,9 +270,11 @@ async function archiveCard(
   }
 }
 
-/* ---------- adapter export ---------- */
+/* ---------- runner export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>, helpers: Parameters<CodeAdapter['execute']>[3]) => Promise<unknown>> = {
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
+
+const OPERATIONS: Record<string, Handler> = {
   getBoards,
   getBoard,
   getLists,
@@ -305,25 +284,17 @@ const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, un
   archiveCard,
 }
 
-const adapter: CodeAdapter = {
+const runner: CustomRunner = {
   name: 'trello-api',
   description: 'Trello REST API — boards, lists, cards via cookie session',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('trello.com') || url === 'about:blank'
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const hasCookie = await page.evaluate(() => document.cookie.includes('token'))
-    return hasCookie
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Parameters<CodeAdapter['execute']>[3]): Promise<unknown> {
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('trello-api requires a page (transport: page)')
     const handler = OPERATIONS[operation]
-    if (!handler) throw helpers.errors.unknownOp(operation, Object.keys(OPERATIONS))
+    if (!handler) throw helpers.errors.unknownOp(operation)
     return handler(page, params, helpers)
   },
 }
 
-export default adapter
+export default runner
