@@ -81,10 +81,63 @@ paths:
           stable_id: ta0001
           tool_version: 1
           signals:
-            - adapter-verified
-        adapter:
-          name: tripadvisor
-          operation: searchHotels
+            - dom
+        extraction:
+          type: page_global_data
+          page_url: https://www.tripadvisor.com/Hotels-g{geoId}-{location}-Hotels.html
+          expression: |
+            (() => {
+              const addr = (a) => {
+                if (!a) return null;
+                const c = a.addressCountry;
+                return {
+                  street: a.streetAddress ?? null,
+                  city: a.addressLocality ?? null,
+                  region: a.addressRegion ?? null,
+                  country: typeof c === 'object' && c ? (c.name ?? null) : (c ?? null),
+                  postalCode: a.postalCode ?? null,
+                };
+              };
+              const hotelFrom = (item) => {
+                const agg = item.aggregateRating || null;
+                return {
+                  name: item.name ?? null, url: item.url ?? null,
+                  rating: agg?.ratingValue ?? null, reviewCount: agg?.reviewCount ?? null,
+                  priceRange: item.priceRange ?? null,
+                  address: addr(item.address || null),
+                  telephone: item.telephone ?? null, image: item.image ?? null,
+                };
+              };
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  if (d['@type'] !== 'ItemList') continue;
+                  const hotels = (d.itemListElement ?? []).map(li => hotelFrom(li.item ?? li));
+                  return { count: hotels.length, hotels };
+                } catch {}
+              }
+              const hotelTypes = new Set(['Hotel','LodgingBusiness','Hostel','Motel','BedAndBreakfast','Resort']);
+              const hotels = [];
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  const t = d['@type'];
+                  const types = Array.isArray(t) ? t : [t];
+                  if (types.some(x => hotelTypes.has(x))) hotels.push(hotelFrom(d));
+                } catch {}
+              }
+              if (hotels.length) return { count: hotels.length, hotels };
+              const domHotels = [];
+              for (const card of document.querySelectorAll('div[data-automation="hotel-card-title"], span.listItem, [data-testid*="hotel"]')) {
+                const a = card.querySelector('a[href*="Hotel_Review"]') ?? card.closest('a[href*="Hotel_Review"]');
+                if (!a) continue;
+                const name = (a.textContent?.trim() || card.textContent?.trim() || '');
+                if (name) domHotels.push({ name: name.substring(0, 120), url: a.href || null });
+              }
+              if (domHotels.length) return { count: domHotels.length, hotels: domHotels };
+              return { count: 0, hotels: [] };
+            })()
       parameters:
         - name: geoId
           in: query
@@ -172,10 +225,52 @@ paths:
           stable_id: ta0002
           tool_version: 1
           signals:
-            - adapter-verified
-        adapter:
-          name: tripadvisor
-          operation: getRestaurant
+            - dom
+        extraction:
+          type: page_global_data
+          page_url: https://www.tripadvisor.com/Restaurant_Review-g{geoId}-d{locationId}-Reviews-{slug}.html
+          expression: |
+            (() => {
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              const restTypes = new Set(['Restaurant','FoodEstablishment','BarOrPub','CafeOrCoffeeShop','FastFoodRestaurant','LocalBusiness']);
+              const parse = (data) => {
+                const a = data.address || null;
+                const c = a?.addressCountry;
+                const agg = data.aggregateRating || null;
+                const hours = data.openingHoursSpecification ?? [];
+                return {
+                  name: data.name ?? null, url: data.url ?? null, cuisine: data.servesCuisine ?? [],
+                  rating: agg?.ratingValue ?? null, reviewCount: agg?.reviewCount ?? null,
+                  priceRange: data.priceRange ?? null, telephone: data.telephone ?? null,
+                  menuUrl: data.hasMenu ?? data.menu ?? null,
+                  address: a ? {
+                    street: a.streetAddress ?? null, city: a.addressLocality ?? null,
+                    region: a.addressRegion ?? null,
+                    country: typeof c === 'object' && c ? (c.name ?? null) : (c ?? null),
+                    postalCode: a.postalCode ?? null,
+                  } : null,
+                  openingHours: hours.map(h => ({
+                    day: h.dayOfWeek ?? null, opens: h.opens ?? null, closes: h.closes ?? null,
+                  })),
+                  image: data.image ?? null,
+                };
+              };
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  const t = d['@type'];
+                  const types = Array.isArray(t) ? t : [t];
+                  if (types.some(x => restTypes.has(x))) return parse(d);
+                } catch {}
+              }
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  if (d.aggregateRating && d.name) return parse(d);
+                } catch {}
+              }
+              return { name: null };
+            })()
       parameters:
         - name: geoId
           in: query
@@ -284,10 +379,77 @@ paths:
           stable_id: ta0003
           tool_version: 1
           signals:
-            - adapter-verified
-        adapter:
-          name: tripadvisor
-          operation: getAttractionReviews
+            - dom
+        extraction:
+          type: page_global_data
+          page_url: https://www.tripadvisor.com/Attraction_Review-g{geoId}-d{locationId}-Reviews-{slug}.html
+          expression: |
+            (() => {
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              const attrTypes = new Set(['LocalBusiness','TouristAttraction','LandmarksOrHistoricalBuildings','Place','CivicStructure','Museum','Park']);
+              let attraction = { name: null };
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  const t = d['@type'];
+                  const types = Array.isArray(t) ? t : [t];
+                  const isMatch = types.some(x => attrTypes.has(x)) || (!attraction.name && d.aggregateRating && d.name);
+                  if (!isMatch) continue;
+                  const a = d.address || null;
+                  const c = a?.addressCountry;
+                  const agg = d.aggregateRating || null;
+                  attraction = {
+                    name: d.name ?? null,
+                    rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+                    reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
+                    address: a ? {
+                      street: a.streetAddress ?? null, city: a.addressLocality ?? null,
+                      region: a.addressRegion ?? null,
+                      country: typeof c === 'object' && c ? (c.name ?? null) : (c ?? null),
+                      postalCode: a.postalCode ?? null,
+                    } : null,
+                    telephone: d.telephone ?? null, image: d.image ?? null,
+                  };
+                  break;
+                } catch {}
+              }
+              const parseReview = (el) => {
+                const titleEl = el.querySelector('[data-test-target="review-title"] span, a[href*="Review"] span, [data-automation="reviewTitle"]');
+                const textEl = el.querySelector('[data-automation*="reviewText"] span, [data-automation*="reviewText"]');
+                let text = textEl?.textContent?.trim() ?? null;
+                if (!text) {
+                  for (const span of el.querySelectorAll('span')) {
+                    const t = span.textContent?.trim() ?? '';
+                    if (t.length > 30 && (!text || t.length > text.length)) text = t;
+                  }
+                }
+                const dateMatch = el.textContent?.match(/((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/);
+                const ratingEl = el.querySelector('[class*="ui_bubble_rating"], [data-test-target="review-rating"] span');
+                let rating = null;
+                if (ratingEl) {
+                  const m = (ratingEl.className || '').match(/bubble_(\d)/);
+                  if (m) rating = Number(m[1]);
+                }
+                return {
+                  title: titleEl?.textContent?.trim() ?? null,
+                  text: text ? text.substring(0, 500) : null,
+                  date: dateMatch?.[1] ?? null,
+                  ...(rating != null ? { rating } : {}),
+                };
+              };
+              let reviewEls = document.querySelectorAll('[data-reviewid]');
+              if (!reviewEls.length) reviewEls = document.querySelectorAll('[data-automation="reviewCard"]');
+              const reviews = [];
+              if (reviewEls.length) {
+                for (const card of reviewEls) reviews.push(parseReview(card));
+              } else {
+                for (const titleEl of document.querySelectorAll('[data-test-target="review-title"]')) {
+                  const container = titleEl.closest('[class*="review"]') ?? titleEl.parentElement?.parentElement?.parentElement;
+                  if (container) reviews.push(parseReview(container));
+                }
+              }
+              return { ...attraction, reviews };
+            })()
       parameters:
         - name: geoId
           in: query
@@ -381,10 +543,59 @@ paths:
           stable_id: ta0005
           tool_version: 1
           signals:
-            - adapter-verified
-        adapter:
-          name: tripadvisor
-          operation: getHotelDetail
+            - dom
+        extraction:
+          type: page_global_data
+          page_url: https://www.tripadvisor.com/Hotel_Review-g{geoId}-d{locationId}-Reviews-{slug}.html
+          expression: |
+            (() => {
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              const hotelTypes = new Set(['Hotel','LodgingBusiness','Hostel','Motel','BedAndBreakfast','Resort']);
+              const parseAddr = (a) => {
+                if (!a) return null;
+                const c = a.addressCountry;
+                return {
+                  street: a.streetAddress ?? null, city: a.addressLocality ?? null,
+                  region: a.addressRegion ?? null,
+                  country: typeof c === 'object' && c ? (c.name ?? null) : (c ?? null),
+                  postalCode: a.postalCode ?? null,
+                };
+              };
+              const parse = (d) => {
+                const agg = d.aggregateRating || null;
+                const amenities = d.amenityFeature;
+                return {
+                  name: d.name ?? null,
+                  url: d.url ?? null,
+                  rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+                  reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
+                  priceRange: d.priceRange ?? null,
+                  starRating: d.starRating != null ? Number(d.starRating?.ratingValue ?? d.starRating) : null,
+                  description: d.description ?? null,
+                  amenities: (amenities ?? []).map(a => (a.name ?? a.value ?? '')).filter(Boolean),
+                  address: parseAddr(d.address || null),
+                  telephone: d.telephone ?? null,
+                  checkinTime: d.checkinTime ?? null,
+                  checkoutTime: d.checkoutTime ?? null,
+                  image: d.image ?? null,
+                };
+              };
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  const t = d['@type'];
+                  const types = Array.isArray(t) ? t : [t];
+                  if (types.some(x => hotelTypes.has(x))) return parse(d);
+                } catch {}
+              }
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  if (d.aggregateRating && d.name) return parse(d);
+                } catch {}
+              }
+              return { name: null };
+            })()
       parameters:
         - name: geoId
           in: query
@@ -485,10 +696,59 @@ paths:
           stable_id: ta0006
           tool_version: 1
           signals:
-            - adapter-verified
-        adapter:
-          name: tripadvisor
-          operation: getAttractionDetail
+            - dom
+        extraction:
+          type: page_global_data
+          page_url: https://www.tripadvisor.com/Attraction_Review-g{geoId}-d{locationId}-Reviews-{slug}.html
+          expression: |
+            (() => {
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              const attrTypes = new Set(['LocalBusiness','TouristAttraction','LandmarksOrHistoricalBuildings','Place','CivicStructure','Museum','Park']);
+              const parseAddr = (a) => {
+                if (!a) return null;
+                const c = a.addressCountry;
+                return {
+                  street: a.streetAddress ?? null, city: a.addressLocality ?? null,
+                  region: a.addressRegion ?? null,
+                  country: typeof c === 'object' && c ? (c.name ?? null) : (c ?? null),
+                  postalCode: a.postalCode ?? null,
+                };
+              };
+              const parse = (d) => {
+                const agg = d.aggregateRating || null;
+                const hours = d.openingHoursSpecification ?? [];
+                return {
+                  name: d.name ?? null,
+                  url: d.url ?? null,
+                  description: d.description ?? null,
+                  rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+                  reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
+                  address: parseAddr(d.address || null),
+                  telephone: d.telephone ?? null,
+                  image: d.image ?? null,
+                  openingHours: hours.map(h => ({
+                    day: h.dayOfWeek ?? null,
+                    opens: h.opens ?? null,
+                    closes: h.closes ?? null,
+                  })),
+                };
+              };
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  const t = d['@type'];
+                  const types = Array.isArray(t) ? t : [t];
+                  if (types.some(x => attrTypes.has(x))) return parse(d);
+                } catch {}
+              }
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  if (d.aggregateRating && d.name) return parse(d);
+                } catch {}
+              }
+              return { name: null };
+            })()
       parameters:
         - name: geoId
           in: query
@@ -588,10 +848,78 @@ paths:
           stable_id: ta0007
           tool_version: 1
           signals:
-            - adapter-verified
-        adapter:
-          name: tripadvisor
-          operation: searchRestaurants
+            - dom
+        extraction:
+          type: page_global_data
+          page_url: https://www.tripadvisor.com/Restaurants-g{geoId}-{location}.html
+          expression: |
+            (() => {
+              const parseAddr = (a) => {
+                if (!a) return null;
+                const c = a.addressCountry;
+                return {
+                  street: a.streetAddress ?? null, city: a.addressLocality ?? null,
+                  region: a.addressRegion ?? null,
+                  country: typeof c === 'object' && c ? (c.name ?? null) : (c ?? null),
+                  postalCode: a.postalCode ?? null,
+                };
+              };
+              const restFrom = (item) => {
+                const agg = item.aggregateRating || null;
+                const cuisineRaw = item.servesCuisine;
+                const imgRaw = item.image;
+                const image = typeof imgRaw === 'string' ? imgRaw
+                  : Array.isArray(imgRaw) ? (imgRaw[0] ?? null)
+                  : imgRaw && typeof imgRaw === 'object' ? (imgRaw.url ?? null)
+                  : null;
+                return {
+                  name: item.name ?? null,
+                  url: item.url ?? null,
+                  rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+                  reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
+                  priceRange: item.priceRange ?? null,
+                  cuisine: Array.isArray(cuisineRaw) ? cuisineRaw : cuisineRaw ? [cuisineRaw] : [],
+                  address: parseAddr(item.address || null),
+                  telephone: item.telephone ?? null,
+                  image,
+                };
+              };
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  if (d['@type'] !== 'ItemList') continue;
+                  const restaurants = (d.itemListElement ?? []).map(li => restFrom(li.item ?? li));
+                  return { count: restaurants.length, restaurants };
+                } catch {}
+              }
+              const restTypes = new Set(['Restaurant','FoodEstablishment','BarOrPub','CafeOrCoffeeShop','FastFoodRestaurant','LocalBusiness']);
+              const restaurants = [];
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent ?? '');
+                  const t = d['@type'];
+                  const types = Array.isArray(t) ? t : [t];
+                  if (types.some(x => restTypes.has(x))) restaurants.push(restFrom(d));
+                } catch {}
+              }
+              if (restaurants.length) return { count: restaurants.length, restaurants };
+              const domRestaurants = [];
+              for (const link of document.querySelectorAll('a[href*="Restaurant_Review"]')) {
+                const name = link.textContent?.trim() || '';
+                if (name && name.length > 1 && name.length < 120) {
+                  domRestaurants.push({ name, url: link.href || null });
+                }
+              }
+              const seen = new Set();
+              const unique = domRestaurants.filter(r => {
+                if (seen.has(r.name)) return false;
+                seen.add(r.name);
+                return true;
+              });
+              if (unique.length) return { count: unique.length, restaurants: unique };
+              return { count: 0, restaurants: [] };
+            })()
       parameters:
         - name: geoId
           in: query
