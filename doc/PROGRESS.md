@@ -1,3 +1,23 @@
+## 2026-04-17: na-verify-fix-regressions — restore whatsapp init-retry; relax medium pagingInfo schema
+
+**What changed:**
+- `src/sites/whatsapp/adapters/whatsapp-modules.ts`: `ensureReady()` now retries the WAWebChatCollection module-readiness probe once after `page.reload({ waitUntil: 'domcontentloaded' })` + 3s wait, before throwing `retriable`.
+- `src/sites/medium/openapi.yaml`: relaxed `getRecommendedFeed` response — `pagingInfo` now nullable, `pagingInfo.next.to` nullable, dropped `required: [next]` and `required: [to]`.
+- `doc/todo/normalize-adapter/verify-final-report.md`: appended outcome section with fixed/skipped table.
+
+**Why:**
+- whatsapp: REGRESSION-SHIM. The CustomRunner refactor (a61232b) dropped the runtime-level init retry that lived in `main:src/runtime/adapter-executor.ts:127-133` (try `adapter.init()` → `page.reload` → `waitForTimeout` → retry). With WhatsApp Web's lazy Metro modules, branch failed once where main reloaded and succeeded. Cleanest fix: keep the runtime simple, restore equivalent retry in the adapter's own `ensureReady()`.
+- medium: PRE-EXISTING upstream GraphQL drift; verify reported `type_change:pagingInfo, required_missing:pagingInfo.next, required_missing:pagingInfo.next.to`. Mechanical schema relaxation, no code change.
+- Other 19 verify failures (auth_expired, schema=false without field-level diff, HTTP 404 endpoint changes, transients, anti-bot, env preconditions) explicitly out of scope per task brief — documented in the report.
+
+**Key files:** `src/sites/whatsapp/adapters/whatsapp-modules.ts`, `src/sites/medium/openapi.yaml`, `doc/todo/normalize-adapter/verify-final-report.md`
+**Verification:** `pnpm build` clean (93 sites packaged); `pnpm dev verify whatsapp` 3/3 PASS; `pnpm dev verify medium` 9/9 PASS.
+**Commit:** 0fd219d, 523cadd, 4a75964
+**Next:** Out-of-scope buckets remain (auth refresh sweep, schema recapture sweep, upstream endpoint discovery for x/substack/uber); track as separate workstreams if pursued.
+**Blockers:** None.
+
+---
+
 ## 2026-04-17: na-customrunner-shim — finish Phase 5C: bulk-migrate 33 adapters to CustomRunner
 
 **What changed:**
