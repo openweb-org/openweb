@@ -121,7 +121,12 @@ parameters:
     template: story,author_{id}   # caller `id=pg` → wire `tags=story,author_pg`
 ```
 
--> See: `src/lib/param-validator.ts` (templating pass)
+Template-source params (like `id` above — referenced by a sibling's
+`template` and not present in the API path) are automatically excluded from
+the outbound URL by `url-builder.ts`. They're derivation inputs, not wire
+params.
+
+-> See: `src/lib/param-validator.ts` (templating pass), `src/lib/url-builder.ts` (template-source exclusion)
 
 ---
 

@@ -194,7 +194,7 @@ both the GraphQL query field and a user param are named `query`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `template` | string | No | Template literal with `{paramName}` placeholders. At request-build time, placeholders are substituted from resolved caller input. Templated params are derived — callers **cannot override**, and a referenced parameter missing from the resolved set raises `INVALID_PARAMS`. Example: `tags` with `template: "story,author_{id}"` → caller `{id: "pg"}` produces `tags=story,author_pg`. |
+| `template` | string | No | Template literal with `{paramName}` placeholders. At request-build time, placeholders are substituted from resolved caller input. Templated params are derived — callers **cannot override**, and a referenced parameter missing from the resolved set raises `INVALID_PARAMS`. Example: `tags` with `template: "story,author_{id}"` → caller `{id: "pg"}` produces `tags=story,author_pg`. **Template-source params** (referenced as `{name}` by any sibling's `template` and not present in the API path) are automatically excluded from the outbound URL — they're derivation inputs, not wire params. |
 
 ## WebSocket Extensions (AsyncAPI)
 

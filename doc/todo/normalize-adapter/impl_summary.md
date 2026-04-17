@@ -12,9 +12,9 @@ Baselines: `main` at `7cfdf7d` (before this branch). Measurements verified by ru
 
 | Metric | Main (before) | Branch HEAD (after) | Δ |
 |---|---|---|---|
-| Adapter-backed operations | **380** | 323 | −57 (−15.0%) |
-| Sites with adapter dirs | 60 | 49 | −11 |
-| Adapter `.ts` files | 63 | 53 | −10 (deleted: zhihu, substack, fidelity, weibo, ebay, douban, yelp, etsy, boss, goodrx) |
+| Adapter-backed operations | **380** | 309 | −71 (−18.7%) |
+| Sites with adapter dirs | 60 | 48 | −12 |
+| Adapter `.ts` files | 63 | 52 | −11 (deleted: zhihu, substack, fidelity, weibo, ebay, douban, yelp, etsy, boss, goodrx, grubhub) |
 | Adapter TS total lines | 20 888 | 17 065 | **−3 823 (−18.3%)** |
 | Sites passing `pnpm dev verify` | 93 | 93 | maintained |
 | Adapter interfaces | `CodeAdapter` + (new) `CustomRunner` dual | single `CustomRunner` | CodeAdapter + init/isAuth gone |

@@ -1,3 +1,36 @@
+## 2026-04-17: na-finishing-ops — finish partially-migrated sites + template-source URL fix
+
+**What changed:**
+- `src/lib/url-builder.ts`: auto-detect template-source params. Any query param referenced as `{name}` by a sibling's `x-openweb.template` and not present in the API path is a derivation input, not a wire param — skip emitting it to the URL. Unblocks the 3 hackernews reads that 599a227 migrated but which failed at runtime (Algolia returned 400 on a stray `id=...`).
+- `src/sites/grubhub/openapi.yaml`: migrated `searchRestaurants`, `getMenu`, `getDeliveryEstimate` to declarative spec via `browser_fetch` (page transport against `www.grubhub.com`, API at `api-gtm.grubhub.com`, `page_plan.warm_origin=page`). Response schemas switched to raw wire shape. Adapter deleted.
+- `src/sites/grubhub/SKILL.md`: raw→pretty field mappings (rating at `ratings.rating_bayesian10_point`; money in cents under `.price.amount` / `.delivery_fee.price`; delivery times under `delivery_estimate_range{_v2}.{start,end}_time_minutes`).
+- `src/sites/booking/openapi.yaml`: migrated `getHotelDetail` to `script_json` with `type_filter: Hotel` (LD+JSON multi-block filter from b44999f). Response is raw schema.org/Hotel. Other 4 booking ops stay CustomRunner.
+- `src/sites/booking/SKILL.md`: added pretty-name mappings for Hotel LD+JSON (aggregateRating.ratingValue, address.streetAddress, …).
+- `src/sites/hackernews/SKILL.md`: documented raw Algolia wire shape — `{hits, nbHits, hitsPerPage, page, nbPages, …}`, hit fields (`objectID`, `author`, `points`, `_tags`, `parent_id`, …), templated-read semantics, HTML-in-text caveat.
+- `src/sites/airbnb/PROGRESS.md`: noted pre-existing run-export blocker on the 3 non-migrated ops (searchListings, getListingDetail, getHostProfile) for future debug.
+- `src/runtime/primitives/script-json.ts`: replaced `forEach` with `for...of` (pre-existing noForEach lint from b44999f).
+- `scripts/adapter-pattern-baseline.json`: refreshed (grubhub entry removed after adapter deletion).
+- `skill/openweb/references/x-openweb.md`, `doc/main/meta-spec.md`: documented template-source URL exclusion rule.
+
+**Why:**
+- All 5 primary runtime gaps landed earlier this week. The sites scoped into this ticket were partially migrated and needed the final spec-level changes. Grubhub unblocked by 9cce6d1 (TypeError retry); booking unblocked by b44999f (script_json type_filter); hackernews reads were spec-migrated in 599a227 but the URL-builder still emitted the template-source `id` as a query arg — Algolia responded 400 on the unknown key.
+- The 6 remaining thin-adapter ops (producthunt/getPost, tripadvisor/searchLocation, zillow/searchProperties, starbucks/getStoreDetail, seeking-alpha/getStockAnalysis + getEarnings) each fail at least one of the three hard rules (no chain, no reshape, no unsafe-mode flags). They legitimately stay CustomRunner — PROGRESS.md in each site already documents the rationale.
+
+**Key files:** `src/lib/url-builder.ts`, `src/sites/grubhub/*`, `src/sites/booking/*`, `src/sites/hackernews/SKILL.md`, `src/sites/airbnb/PROGRESS.md`
+**Verification:** `pnpm test` 1020/1020; `pnpm lint` clean; `pnpm dev verify hackernews` 14/14; `pnpm dev verify grubhub` 3/3; `pnpm dev verify booking` getHotelDetail PASS (other 4 fail pre-existing run-export); `pnpm dev verify apple-podcasts` 4/4; `pnpm dev verify airbnb` 2/5 (the 2 migrated ops PASS; 3 others hit pre-existing run-export blocker).
+**Commit:** abac09a, 3a4ebfa, 9dfc51f, fa2c724, a1b30c7
+**Next:** airbnb run-export blocker on the 3 remaining ops (CustomRunner `.js` bundling issue — tracked separately, not a runtime gap).
+**Blockers:** None. Adapter-backed op count landed at 309 (baseline 313; target <300 not reached because the remaining 6 triage ops legitimately hit hard rules).
+
+**Hard-rule assertion (for the 6 un-migrated ops):**
+- producthunt/getPost: Apollo heterogeneous `__ref` walk + reshape (Rule 2)
+- tripadvisor/searchLocation: in-page fetch to TypeAheadJson + dedup + reshape (Rule 2)
+- zillow/searchProperties: regionId→slug lookup-table URL synthesis (needs conditional-template, not in runtime)
+- starbucks/getStoreDetail: array-filter by storeNumber + reshape (Rule 2; no array-filter primitive)
+- seeking-alpha/getStockAnalysis + getEarnings: multi-call composition + reshape (Rules 1+2)
+
+---
+
 ## 2026-04-17: na-rt-query-templating — param-level `x-openweb.template` for query values
 
 **What changed:**
