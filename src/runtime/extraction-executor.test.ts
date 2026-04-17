@@ -236,4 +236,78 @@ describe('executeExtraction', () => {
     expect(result.status).toBe(200)
     expect(result.body).toEqual({ title: 'Widget' })
   })
+
+  it('response_capture: acquires a fresh page, registers listener before goto, returns unwrapped body', async () => {
+    // Track ordering: listener must be registered before page.goto is called.
+    let listenerAt: number | null = null
+    let gotoAt: number | null = null
+    const handlers: Array<(resp: unknown) => Promise<void>> = []
+
+    const fakePage = {
+      url: () => 'about:blank',
+      addInitScript: vi.fn(async () => {}),
+      content: vi.fn(async () => '<html></html>'),
+      evaluate: vi.fn(async () => undefined), // bot-detect no-op
+      close: vi.fn(async () => {}),
+      on: vi.fn((event: string, h: (resp: unknown) => Promise<void>) => {
+        if (event === 'response') {
+          handlers.push(h)
+          if (listenerAt === null) listenerAt = Date.now()
+        }
+        return fakePage
+      }),
+      off: vi.fn(() => fakePage),
+      goto: vi.fn(async () => {
+        gotoAt = Date.now()
+        const resp = {
+          url: () => 'https://api.example.com/v1/search?q=foo',
+          json: async () => ({ data: { results: [{ id: 1 }, { id: 2 }] } }),
+        }
+        // Fast response fires during navigation.
+        await Promise.all(handlers.map((h) => h(resp)))
+        return null
+      }),
+    }
+
+    const browser = {
+      contexts: () => [
+        {
+          cookies: vi.fn(async () => []),
+          pages: () => [],
+          newPage: vi.fn(async () => fakePage),
+        },
+      ],
+      close: vi.fn(async () => {}),
+    } as unknown as import('patchright').Browser
+
+    const operation: OpenApiOperation = {
+      operationId: 'search',
+      parameters: [{ name: 'q', in: 'query', required: true, schema: { type: 'string' } }],
+      responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+      'x-openweb': {
+        extraction: {
+          type: 'response_capture',
+          page_url: 'https://web.example.com/search?q={q}',
+          match_url: '*/v1/search*',
+          unwrap: 'data.results',
+        },
+      },
+    }
+
+    const result = await executeExtraction(
+      browser,
+      extractionSpec('https://api.example.com'),
+      operation,
+      '/v1/search',
+      { q: 'foo' },
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body).toEqual([{ id: 1 }, { id: 2 }])
+    expect(listenerAt).not.toBeNull()
+    expect(gotoAt).not.toBeNull()
+    expect(listenerAt).toBeLessThanOrEqual(gotoAt as number)
+    // Fresh page — owned, must be closed.
+    expect(fakePage.close).toHaveBeenCalled()
+  })
 })

@@ -175,4 +175,43 @@ describe('resolveResponseCapture', () => {
       payload: { failureClass: 'needs_page' },
     })
   })
+
+  it('first URL match wins under concurrent matches (handler latches before await resp.json)', async () => {
+    // Two responses match the glob simultaneously. The SECOND has a faster
+    // json() — if the handler did not latch synchronously on URL match, the
+    // faster body would overwrite the first. Verify the first wins.
+    const handlers: Array<(resp: PwResponse) => Promise<void>> = []
+    const page = {
+      on: vi.fn((event: string, h: (resp: PwResponse) => Promise<void>) => {
+        if (event === 'response') handlers.push(h)
+        return page
+      }),
+      off: vi.fn(() => page),
+      goto: vi.fn(async () => {
+        const first = {
+          url: () => 'https://a.com/api/target?n=1',
+          json: async () => {
+            // Slow body — the other response's json() will resolve first.
+            await new Promise((r) => setTimeout(r, 30))
+            return { which: 'first' }
+          },
+        } as unknown as PwResponse
+        const second = {
+          url: () => 'https://a.com/api/target?n=2',
+          json: async () => ({ which: 'second' }),
+        } as unknown as PwResponse
+        // Fire both concurrently — do NOT await serially.
+        await Promise.all(handlers.map((h) => h(first)).concat(handlers.map((h) => h(second))))
+        return null
+      }),
+    } as unknown as Page
+
+    const handle: BrowserHandle = { page, context: {} as BrowserHandle['context'] }
+    const result = await resolveResponseCapture(
+      handle,
+      { match_url: '*/api/target*' },
+      { navigateUrl: 'https://a.com/page', navTimeoutMs: 2000 },
+    )
+    expect(result).toEqual({ which: 'first' })
+  })
 })

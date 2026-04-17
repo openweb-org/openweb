@@ -40,6 +40,7 @@ export async function resolveResponseCapture(
   const waitUntil = options.waitUntil ?? 'load'
   const matcher = globToRegExp(config.match_url)
 
+  let latched = false
   let captured: { body: unknown } | null = null
   let resolveWaiter: (() => void) | null = null
   const matchPromise = new Promise<void>((resolve) => {
@@ -47,14 +48,20 @@ export async function resolveResponseCapture(
   })
 
   const handler = async (resp: PwResponse) => {
-    if (captured) return
+    // Set-once semaphore: latch synchronously on URL match BEFORE awaiting
+    // resp.json(). Without this, two concurrent matching responses both pass
+    // the guard and race — the later await overwrites the first.
+    if (latched) return
     if (!matcher.test(resp.url())) return
+    latched = true
     try {
       const body = await resp.json()
       captured = { body }
-      resolveWaiter?.()
     } catch {
-      // Non-JSON or body-unavailable response — ignore and keep waiting.
+      // Parse failed on the latched response — leave captured=null so the
+      // caller throws needs_page. First URL match wins even if unreadable.
+    } finally {
+      resolveWaiter?.()
     }
   }
 
