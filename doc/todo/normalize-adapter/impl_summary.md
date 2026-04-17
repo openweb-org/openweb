@@ -103,7 +103,7 @@ The migration hit 5 primary primitive gaps, each with a dedicated `na-rt-*` task
 |---|---|---|---|
 | Multi-match + `@type` filter on `script_json` | booking `getHotelDetail` + any multi-block LD+JSON site | xs (~30 LoC) | ✅ b44999f |
 | GET-flavor APQ for `graphql_hash` | airbnb 2 ops, Relay-style APIs | s |
-| `browser_fetch` `TypeError: Failed to fetch` normalization | grubhub 3 ops, cross-origin API gateway class | s |
+| `browser_fetch` `TypeError: Failed to fetch` normalization | grubhub 3 ops, cross-origin API gateway class | s | ✅ 9cce6d1 |
 | `warmSession` on page origin (not API server) | apple-podcasts 4 ops | xs |
 | Param-level template into query values (e.g. `tags=story,author_{id}`) | hackernews 3 reads | s |
 

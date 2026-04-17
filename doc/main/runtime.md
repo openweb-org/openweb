@@ -277,6 +277,8 @@ page.evaluate(({ url, method, headers, body }) => {
 
 **When to use:** Sites that check TLS fingerprints, require CORS preflight, or need the browser's network stack (e.g., Discord).
 
+**Cross-origin cold-start retry:** Cross-origin `page.evaluate(fetch)` (e.g. `www.grubhub.com` → `api-gtm.grubhub.com`) can throw `TypeError: Failed to fetch` before bot-detection sensors have finished warming up. The executor catches this specific error, retries up to 2x (3 attempts total), and only then surfaces it as `retriable` `execution_failed`. Non-`TypeError` exceptions surface immediately.
+
 -> See: `src/runtime/browser-fetch-executor.ts`
 
 ---

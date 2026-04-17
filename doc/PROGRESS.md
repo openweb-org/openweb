@@ -1,3 +1,22 @@
+## 2026-04-17: browser_fetch cross-origin TypeError retry
+
+**What changed:**
+- `browser-fetch-executor.ts` now catches `TypeError: Failed to fetch` from `page.evaluate(fetch)` and retries up to 2x (3 attempts total) before surfacing as `retriable` `execution_failed`.
+- Non-`TypeError` exceptions and terminal retry-exhaustion both classify as `failureClass: 'retriable'` (unchanged).
+- Added 2 unit tests: retry-then-succeed, and retry-exhaustion → retriable classification.
+- Documented the behavior in `doc/main/runtime.md` § Page Transport.
+
+**Why:**
+- Cross-origin `page.evaluate(fetch)` (e.g. `www.grubhub.com` → `api-gtm.grubhub.com`) throws `TypeError: Failed to fetch` on cold state before bot-detection sensors have warmed. Adapter `pageFetch` helper previously masked this by returning `{ status: 0 }` so adapters could retry. Porting the retry into the executor closes the gap that forced grubhub's migration to adapter mode to be reverted.
+
+**Key files:** `src/runtime/browser-fetch-executor.ts`, `src/runtime/browser-fetch-executor.test.ts`, `doc/main/runtime.md`
+**Verification:** `pnpm vitest run src/runtime/browser-fetch-executor.test.ts` — both new tests pass. End-to-end grubhub verify blocked by a separate adapter-loader issue (installed adapter has no `run` export); not in the scope of this fix.
+**Commit:** 9cce6d1
+**Next:** warm-page origin, query templating, GET APQ from `next-session.md` queue.
+**Blockers:** None for this task. Grubhub `verify` end-to-end still needs the adapter→browser_fetch migration re-applied and the adapter-loader issue resolved.
+
+---
+
 ## 2026-04-17: adapter inventory classifier — signing-aware buckets
 
 **What changed:**

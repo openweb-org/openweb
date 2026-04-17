@@ -27,7 +27,7 @@ Read `doc/todo/tasks.json`, filter `parent: normalize-adapter`, `state: ready`. 
 
 **Second wave (primary runtime gaps — parallel, unblocks finishing-ops):**
 - `na-rt-script-json-multimatch` — ✅ done (b44999f). `type_filter` + `multi` on `script_json`; hotel/travel adapter migrations queued under `na-finishing-ops`.
-- `na-rt-browser-fetch-errors` — `TypeError: Failed to fetch` retry normalization (unblocks grubhub)
+- `na-rt-browser-fetch-errors` — ✅ done (`9cce6d1`). `TypeError: Failed to fetch` now retries 2x in the executor before surfacing as `retriable`. Grubhub end-to-end still blocked by a separate adapter-loader issue (installed adapter missing `run` export); migration back to `browser_fetch` is the follow-up.
 - `na-rt-warm-page-origin` — `warmSession` on page origin not server URL (unblocks apple-podcasts)
 - `na-rt-query-templating` — param-level template like `tags=story,author_{id}` (unblocks hackernews 3 reads)
 - `na-rt-get-apq` — GET-flavor APQ for `graphql_hash` (unblocks airbnb 2 ops)
