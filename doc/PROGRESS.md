@@ -1,3 +1,24 @@
+## 2026-04-17: na-customrunner-shim — finish Phase 5C: bulk-migrate 33 adapters to CustomRunner
+
+**What changed:**
+- Migrated 33 site adapters from the legacy `{ execute(page, op, params, helpers), init, isAuthenticated }` shape to the `CustomRunner` shape (`run(ctx: PreparedContext)`). Sites touched: airbnb, amazon, booking (x2), costco, craigslist (x2), expedia, goodreads, google-flights, google-search, hackernews, homedepot, imdb, indeed, instacart, jd, kayak, leetcode, medium, producthunt, quora, redfin, reuters, rotten-tomatoes, seeking-alpha, starbucks, todoist, uber, ubereats, walmart, xiaohongshu, zillow.
+- `init()` and `isAuthenticated()` deleted on all 33 — runtime now handles both via PagePlan + auth primitives. Non-trivial init logic folded into `run()` before dispatch on 3 sites: google-flights (page navigation + 3s settle), reuters-api (DataDome pre-check + CAPTCHA messaging), zillow-detail (PX cookie-clear on access-denied page).
+- All OPERATIONS handler bodies preserved verbatim.
+- `scripts/adapter-pattern-baseline.json`: leetcode entry dropped (its `init()` navigation logic was removed).
+- `doc/main/runtime.md`: stale reference `adapter.execute()` → `runner.run(ctx)`.
+
+**Why:**
+- Phase 5C claimed "CodeAdapter deleted, executeAdapter collapsed to single CustomRunner branch" but only the 15 permanent-custom-bucket adapters had actually been converted. 33 adapters still exported the legacy shape, so `executeAdapter` threw `'module has no valid adapter export (expected run)'` on every site it touched. `verify --all` failed on airbnb, amazon, booking, and ~30 others purely because of the shape mismatch.
+- Mechanical, per-file conversion via 3 parallel sub-agents (11 files each). No operation behavior changes.
+
+**Key files:** `src/sites/{airbnb,amazon,booking,…}/adapters/*.ts` (33 files), `scripts/adapter-pattern-baseline.json`, `doc/main/runtime.md`
+**Verification:** `pnpm build` clean; `pnpm test` 1020/1020 passing; `pnpm tsc --noEmit` error count unchanged pre/post (5 pre-existing youtube errors); `grep 'async execute(' src/sites/**/adapters/` returns 0 matches; `pnpm dev verify` passes for instagram (5/5), yelp (2/2), airbnb (5/5), amazon (5/5), booking (5/5).
+**Commit:** a61232b
+**Next:** None in scope — Phase 5C claim now matches code reality.
+**Blockers:** None.
+
+---
+
 ## 2026-04-17: na-finishing-ops — finish partially-migrated sites + template-source URL fix
 
 **What changed:**

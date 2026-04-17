@@ -184,7 +184,7 @@ warmSession(page, url, opts?)
              └── Fixed 3s delay (sensor scripts typically complete in 1-2s)
 ```
 
-Warm state is cached per `Page` — calling twice on the same page is a no-op. `warmSession()` is called centrally by `adapter-executor.ts` before every `adapter.execute()` call and by `browser-fetch-executor.ts` before every browser-fetch request. Adapters do not call `warmSession()` themselves.
+Warm state is cached per `Page` — calling twice on the same page is a no-op. `warmSession()` is called centrally by `adapter-executor.ts` before every `runner.run(ctx)` call and by `browser-fetch-executor.ts` before every browser-fetch request. Adapters do not call `warmSession()` themselves.
 
 -> See: `src/runtime/warm-session.ts`
 

@@ -56,6 +56,8 @@ Baselines: `main` at `7cfdf7d` (before this branch). Measurements verified by ru
 
 **Phase 5C (full CustomRunner migration):** 15 sites migrated (the original 12-site permanent bucket + glassdoor, trello, tripadvisor surfaced via duck-typed local CodeAdapter shims). `CodeAdapter` interface deleted from `src/types/adapter.ts`; `executeAdapter` collapsed to single CustomRunner branch. 108/112 ops verify PASS.
 
+**Phase 5C shim cleanup (a61232b):** 33 remaining adapters still exported the legacy `{ execute, init, isAuthenticated }` duck shape (airbnb, amazon, booking, …) and failed `executeAdapter`'s `expected run` check. Bulk-migrated mechanically: `init`/`isAuthenticated` deleted (runtime owns both now), `execute(page, op, params, helpers)` → `run(ctx)`, OPERATIONS bodies untouched. Non-trivial init logic folded into `run()` on google-flights, reuters-api, zillow-detail. After this cleanup, **every** `src/sites/*/adapters/*.ts` exports `CustomRunner` — `grep 'async execute(' src/sites/**/adapters/` returns 0 matches.
+
 ## Architecture Changes — Key Contracts
 
 ### Before
