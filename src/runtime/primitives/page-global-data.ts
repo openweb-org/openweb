@@ -1,4 +1,5 @@
 import { OpenWebError } from '../../lib/errors.js'
+import { resolveApolloRefs } from '../apollo-refs.js'
 import { getValueAtPath } from '../value-path.js'
 import { evaluatePageExpression } from './page-expression.js'
 import type { BrowserHandle } from './types.js'
@@ -6,6 +7,8 @@ import type { BrowserHandle } from './types.js'
 export interface PageGlobalDataConfig {
   readonly expression: string
   readonly path?: string
+  readonly resolve_apollo_refs?: boolean
+  readonly apollo_cache_path?: string
 }
 
 export async function resolvePageGlobalData(
@@ -29,7 +32,7 @@ export async function resolvePageGlobalData(
   }
 
   if (!config.path) {
-    return globalData
+    return maybeResolveRefs(globalData, globalData, config)
   }
 
   const value = getValueAtPath(globalData, config.path)
@@ -44,5 +47,27 @@ export async function resolvePageGlobalData(
     })
   }
 
-  return value
+  return maybeResolveRefs(value, globalData, config)
+}
+
+function maybeResolveRefs(
+  value: unknown,
+  root: unknown,
+  config: PageGlobalDataConfig,
+): unknown {
+  if (!config.resolve_apollo_refs) return value
+  const cacheBase = config.apollo_cache_path
+    ? getValueAtPath(root, config.apollo_cache_path)
+    : value
+  if (!cacheBase || typeof cacheBase !== 'object') {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: 'Apollo cache object was not found at the configured path.',
+      action: 'Verify apollo_cache_path points to the Apollo state object.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+  return resolveApolloRefs(value, cacheBase as Record<string, unknown>)
 }

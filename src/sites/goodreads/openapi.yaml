@@ -86,7 +86,7 @@ paths:
   /book/show/{bookId}:
     get:
       operationId: getBook
-      summary: Get book details — title, author, rating, description, genres, page count, ISBN, awards
+      summary: Get book details — raw Apollo SSR cache (apolloState with __ref pointers resolved) keyed by TypeName:id
       x-openweb:
         permission: read
         build:
@@ -95,10 +95,11 @@ paths:
           signature_id: gr0002s
           tool_version: 2
           signals:
-            - adapter-verified
-        adapter:
-          name: goodreads
-          operation: getBook
+            - ssr-extraction
+        extraction:
+          type: ssr_next_data
+          path: props.pageProps.apolloState
+          resolve_apollo_refs: true
       parameters:
         - name: bookId
           in: path
@@ -109,62 +110,13 @@ paths:
           example: 44767458-dune
       responses:
         '200':
-          description: Success.
+          description: Raw Apollo cache. Entries are keyed by TypeName:id (e.g. `Book:44767458`, `Contributor:123`, `Work:456`). `__ref` pointers are resolved in place, so nested entity references appear inlined.
           content:
             application/json:
               schema:
                 type: object
-                required: [title, author]
-                properties:
-                  title:
-                    type: string
-                    description: Book title.
-                  series:
-                    type: [string, 'null']
-                    description: 'Series name and position (e.g. "Dune #1").'
-                  author:
-                    type: string
-                    description: Primary author name.
-                  authorId:
-                    type: string
-                    description: Numeric author ID for use with getAuthor.
-                  ratingValue:
-                    type: [number, 'null']
-                    description: Average rating (0-5 scale).
-                  ratingsCount:
-                    type: [integer, 'null']
-                    description: Total number of ratings.
-                  reviewsCount:
-                    type: [integer, 'null']
-                    description: Total number of reviews.
-                  description:
-                    type: [string, 'null']
-                    description: Book description or blurb.
-                  genres:
-                    type: array
-                    items:
-                      type: string
-                  pageCount:
-                    type: [integer, 'null']
-                    description: Number of pages.
-                  format:
-                    type: [string, 'null']
-                    description: 'Book format (e.g. Hardcover, Paperback, Kindle Edition).'
-                  publishDate:
-                    type: [string, 'null']
-                    description: 'Publication date string (e.g. "First published 1965-06-01").'
-                  isbn:
-                    type: [string, 'null']
-                    description: ISBN-13 identifier.
-                  language:
-                    type: [string, 'null']
-                    description: 'Book language (e.g. "English").'
-                  awards:
-                    type: [string, 'null']
-                    description: Comma-separated list of awards.
-                  coverImageUrl:
-                    type: [string, 'null']
-                    description: URL to the book cover image.
+                additionalProperties: true
+                description: Apollo cache object. Look up the primary book via the `Book:<numericId>` key.
   /book/show/{bookId}/reviews:
     get:
       operationId: getReviews

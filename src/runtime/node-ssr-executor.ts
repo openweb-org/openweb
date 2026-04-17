@@ -10,6 +10,7 @@ import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
 import type { ExecutorResult } from './executor-result.js'
+import { resolveApolloRefs } from './apollo-refs.js'
 import { parseScriptJson } from './primitives/script-json-parse.js'
 import { fetchWithRedirects } from './redirect.js'
 import { getValueAtPath } from './value-path.js'
@@ -73,6 +74,22 @@ function extractBody(html: string, extraction: NodeExtraction): unknown {
         retriable: false,
         failureClass: 'fatal',
       })
+    }
+    if (extraction.resolve_apollo_refs) {
+      const cacheBase = extraction.apollo_cache_path
+        ? getValueAtPath(nextData, extraction.apollo_cache_path)
+        : body
+      if (!cacheBase || typeof cacheBase !== 'object') {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: 'Apollo cache object was not found at the configured path.',
+          action: 'Verify apollo_cache_path points to the Apollo state object.',
+          retriable: false,
+          failureClass: 'fatal',
+        })
+      }
+      return resolveApolloRefs(body, cacheBase as Record<string, unknown>)
     }
     return body
   }

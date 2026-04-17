@@ -46,6 +46,34 @@ describe('resolveSsrNextData', () => {
       payload: { code: 'EXECUTION_FAILED', failureClass: 'fatal' },
     })
   })
+
+  it('resolves Apollo __ref pointers when resolve_apollo_refs is set', async () => {
+    const handle = mockHandle({
+      props: {
+        pageProps: {
+          apolloState: {
+            'Book:123': {
+              __typename: 'Book',
+              title: 'Dune',
+              primaryContributorEdge: { node: { __ref: 'Contributor:456' } },
+            },
+            'Contributor:456': { __typename: 'Contributor', name: 'Frank Herbert' },
+          },
+        },
+      },
+    })
+
+    const result = await resolveSsrNextData(handle, {
+      path: 'props.pageProps.apolloState.Book:123',
+      resolve_apollo_refs: true,
+      apollo_cache_path: 'props.pageProps.apolloState',
+    }) as Record<string, unknown>
+    const edge = result.primaryContributorEdge as Record<string, unknown>
+    const node = edge.node as Record<string, unknown>
+
+    expect(result.title).toBe('Dune')
+    expect(node.name).toBe('Frank Herbert')
+  })
 })
 
 describe('resolveHtmlSelector', () => {

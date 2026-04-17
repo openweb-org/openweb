@@ -1,9 +1,12 @@
 import { OpenWebError } from '../../lib/errors.js'
+import { resolveApolloRefs } from '../apollo-refs.js'
 import { getValueAtPath } from '../value-path.js'
 import type { BrowserHandle } from './types.js'
 
 export interface SsrNextDataConfig {
   readonly path: string
+  readonly resolve_apollo_refs?: boolean
+  readonly apollo_cache_path?: string
 }
 
 export async function resolveSsrNextData(
@@ -51,6 +54,23 @@ export async function resolveSsrNextData(
       retriable: false,
       failureClass: 'fatal',
     })
+  }
+
+  if (config.resolve_apollo_refs) {
+    const cacheBase = config.apollo_cache_path
+      ? getValueAtPath(nextData, config.apollo_cache_path)
+      : value
+    if (!cacheBase || typeof cacheBase !== 'object') {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: 'Apollo cache object was not found at the configured path.',
+        action: 'Verify apollo_cache_path points to the Apollo state object.',
+        retriable: false,
+        failureClass: 'fatal',
+      })
+    }
+    return resolveApolloRefs(value, cacheBase as Record<string, unknown>)
   }
 
   return value

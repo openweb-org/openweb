@@ -85,7 +85,13 @@ export type PaginationPrimitive =
 
 // ── Extraction ──────────────────────────────────────
 export type ExtractionPrimitive =
-  | { readonly type: 'ssr_next_data'; readonly page_url?: string; readonly path: string }
+  | {
+      readonly type: 'ssr_next_data'
+      readonly page_url?: string
+      readonly path: string
+      readonly resolve_apollo_refs?: boolean
+      readonly apollo_cache_path?: string
+    }
   | {
       readonly type: 'html_selector'
       readonly page_url?: string
@@ -102,7 +108,7 @@ export type ExtractionPrimitive =
       readonly type_filter?: string
       readonly multi?: boolean
     }
-  | { readonly type: 'page_global_data'; readonly page_url?: string; readonly expression?: string; readonly path?: string; readonly adapter?: string; readonly method?: string }
+  | { readonly type: 'page_global_data'; readonly page_url?: string; readonly expression?: string; readonly path?: string; readonly adapter?: string; readonly method?: string; readonly resolve_apollo_refs?: boolean; readonly apollo_cache_path?: string }
   | {
       readonly type: 'response_capture'
       readonly page_url?: string
