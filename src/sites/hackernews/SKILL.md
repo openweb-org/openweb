@@ -53,6 +53,48 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 | upvoteStory | upvote item | id <- feeds/getStoryDetail | ok, id | adapter (page) |
 | addComment | post comment | parent <- getStoryDetail, text | ok, parent | adapter (page) |
 
+## Raw Algolia wire shape
+
+Read operations hit `https://hn.algolia.com/api/v1/search` over the node transport. The raw Algolia response is:
+
+```json
+{
+  "hits": [ /* ... */ ],
+  "nbHits": 1234,
+  "hitsPerPage": 20,
+  "page": 0,
+  "nbPages": 50,
+  "processingTimeMS": 3,
+  "query": "",
+  "params": "tags=story"
+}
+```
+
+The spec declares `unwrap: hits`, so adapters/agents receive just the `hits` array — the envelope (`nbHits`, `page`, etc.) is stripped by the runtime.
+
+Each hit carries Algolia-indexed fields:
+
+- `objectID` — story/comment id as a **string** (cast if you need a number)
+- `title`, `url`, `author`, `points`, `num_comments`
+- `story_text`, `comment_text` — HTML strings (see note below)
+- `created_at` (ISO), `created_at_i` (unix seconds)
+- `_tags` — e.g. `["story", "author_pg", "story_12345"]`
+- `story_id`, `parent_id` — for comments
+
+### Templated reads
+
+Some reads template the `id` param into an Algolia filter/tag expression:
+
+- `getStoryComments` → `numericFilters=story_id={id}`
+- `getUserSubmissions` → `tags=story,author_{id}`
+- `getUserComments` → `tags=comment,author_{id}`
+
+Because `id` is used as a template source, the runtime does **not** emit it as a bare query key — only the interpolated filter/tag appears on the wire.
+
+### HTML in text fields
+
+`comment_text` and `story_text` are HTML fragments (typically wrapped in `<p>` or `<pre>`). When rendering, strip those tags (and decode entities) rather than displaying raw markup.
+
 ## Quick Start
 
 ```bash
