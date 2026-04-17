@@ -1,4 +1,7 @@
 import type { Page } from 'patchright'
+
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
 /**
  * Google Maps L3 adapter — network interception + internal preview API.
  *
@@ -18,10 +21,7 @@ import type { Page } from 'patchright'
  * Place details, reviews, photos, hours, and about work via fetch inside page context.
  */
 
-type Errors = {
-  missingParam(name: string): Error
-  apiError(label: string, message: string): Error
-}
+type Errors = AdapterHelpers['errors']
 
 const MAPS_BASE = 'https://www.google.com/maps'
 
@@ -110,7 +110,7 @@ async function navigateAndExtractPlaces(page: Page, searchUrl: string): Promise<
 
 /* ---------- searchPlaces ---------- */
 
-async function searchPlaces(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function searchPlaces(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
   if (!query) throw errors.missingParam('query')
 
@@ -144,7 +144,7 @@ async function fetchPlaceInfo(page: Page, placeId: string, query: string, errors
 
 /* ---------- getPlaceDetails ---------- */
 
-async function getPlaceDetails(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getPlaceDetails(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
   if (!placeId) throw errors.missingParam('placeId')
@@ -197,7 +197,7 @@ async function getPlaceDetails(page: Page, params: Record<string, unknown>, erro
 
 /* ---------- getPlaceReviews ---------- */
 
-async function getPlaceReviews(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getPlaceReviews(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
   if (!placeId) throw errors.missingParam('placeId')
@@ -241,7 +241,7 @@ async function getPlaceReviews(page: Page, params: Record<string, unknown>, erro
 
 /* ---------- getPlacePhotos ---------- */
 
-async function getPlacePhotos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getPlacePhotos(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
   if (!placeId) throw errors.missingParam('placeId')
@@ -273,7 +273,7 @@ async function getPlacePhotos(page: Page, params: Record<string, unknown>, error
 
 /* ---------- nearbySearch ---------- */
 
-async function nearbySearch(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function nearbySearch(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const category = String(params.category ?? params.type ?? '')
   const location = String(params.location ?? params.near ?? '')
   if (!category) throw errors.missingParam('category')
@@ -316,7 +316,7 @@ function parseSuggestResponse(raw: string): Array<{ text: string | null; placeId
   return results
 }
 
-async function getAutocompleteSuggestions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getAutocompleteSuggestions(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const input = String(params.input ?? params.query ?? '')
   if (!input) throw errors.missingParam('input')
 
@@ -382,7 +382,7 @@ function parseDirectionsResponse(raw: string, requestedMode: number): Array<Reco
 }
 
 /** Travel modes: 0=driving, 1=bicycling, 2=walking, 3=transit */
-async function getDirectionsForMode(page: Page, params: Record<string, unknown>, mode: number, errors: Errors): Promise<unknown> {
+async function getDirectionsForMode(page: Page, params: Readonly<Record<string, unknown>>, mode: number, errors: Errors): Promise<unknown> {
   const origin = String(params.origin ?? '')
   const destination = String(params.destination ?? '')
   if (!origin || !destination) throw errors.missingParam('origin and destination')
@@ -408,14 +408,14 @@ async function getDirectionsForMode(page: Page, params: Record<string, unknown>,
   return { origin, destination, routes }
 }
 
-const getDirections = (p: Page, params: Record<string, unknown>, errors: Errors) => getDirectionsForMode(p, params, 0, errors)
-const getTransitDirections = (p: Page, params: Record<string, unknown>, errors: Errors) => getDirectionsForMode(p, params, 3, errors)
-const getWalkingDirections = (p: Page, params: Record<string, unknown>, errors: Errors) => getDirectionsForMode(p, params, 2, errors)
-const getBicyclingDirections = (p: Page, params: Record<string, unknown>, errors: Errors) => getDirectionsForMode(p, params, 1, errors)
+const getDirections = (p: Page, params: Readonly<Record<string, unknown>>, errors: Errors) => getDirectionsForMode(p, params, 0, errors)
+const getTransitDirections = (p: Page, params: Readonly<Record<string, unknown>>, errors: Errors) => getDirectionsForMode(p, params, 3, errors)
+const getWalkingDirections = (p: Page, params: Readonly<Record<string, unknown>>, errors: Errors) => getDirectionsForMode(p, params, 2, errors)
+const getBicyclingDirections = (p: Page, params: Readonly<Record<string, unknown>>, errors: Errors) => getDirectionsForMode(p, params, 1, errors)
 
 /* ---------- getPlaceHours ---------- */
 
-async function getPlaceHours(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getPlaceHours(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
   if (!placeId) throw errors.missingParam('placeId')
@@ -441,7 +441,7 @@ async function getPlaceHours(page: Page, params: Record<string, unknown>, errors
 
 /* ---------- geocode ---------- */
 
-async function geocode(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function geocode(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const address = String(params.address ?? '')
   if (!address) throw errors.missingParam('address')
   const places = await navigateAndExtractPlaces(page, `${MAPS_BASE}/search/${encodeURIComponent(address)}/`)
@@ -452,7 +452,7 @@ async function geocode(page: Page, params: Record<string, unknown>, errors: Erro
 
 /* ---------- reverseGeocode ---------- */
 
-async function reverseGeocode(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function reverseGeocode(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const lat = Number(params.lat)
   const lng = Number(params.lng)
   if (Number.isNaN(lat) || Number.isNaN(lng)) throw errors.missingParam('lat and lng')
@@ -474,7 +474,7 @@ async function reverseGeocode(page: Page, params: Record<string, unknown>, error
 
 /* ---------- getPlaceAbout ---------- */
 
-async function getPlaceAbout(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getPlaceAbout(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
   if (!placeId) throw errors.missingParam('placeId')
@@ -494,9 +494,11 @@ async function getPlaceAbout(page: Page, params: Record<string, unknown>, errors
   }
 }
 
-/* ---------- adapter export ---------- */
+/* ---------- runner export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) => Promise<unknown>
+
+const OPERATIONS: Record<string, Handler> = {
   searchPlaces,
   getPlaceDetails,
   getPlaceReviews,
@@ -513,28 +515,17 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   getPlaceAbout,
 }
 
-const adapter = {
+const runner: CustomRunner = {
   name: 'google-maps-api',
   description: 'Google Maps — search, details, reviews, photos, directions (driving/transit/walking/cycling), nearby, autocomplete, hours, geocode via SPA + internal APIs',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('google.com')
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors & { unknownOp(op: string): Error; wrap(error: unknown): Error } }): Promise<unknown> {
-    const { errors } = helpers
-    try {
-      const handler = OPERATIONS[operation]
-      if (!handler) throw errors.unknownOp(operation)
-      return handler(page, { ...params }, errors)
-    } catch (error) {
-      throw errors.wrap(error)
-    }
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('google-maps-api requires a page (transport: page)')
+    const handler = OPERATIONS[operation]
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, params, helpers.errors)
   },
 }
 
-export default adapter
+export default runner
