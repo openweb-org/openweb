@@ -1,3 +1,17 @@
+## 2026-04-17: Run-export blocker on 3 adapter-based ops
+
+**Status:** `getListingReviews` and `getListingAvailability` migrated to graphql_hash GET
+(no adapter) and verify PASS. The remaining 3 ops — `searchListings`, `getListingDetail`,
+`getHostProfile` — still rely on the `airbnb` CustomRunner adapter and currently fail
+verify with:
+
+> Adapter "airbnb" failed to load: …/airbnb.js: module has no valid adapter export (expected `run`)
+
+This is a pre-existing adapter export/loader issue, not caused by the migration.
+Tracked separately; out of scope for the normalize-adapter milestone.
+
+---
+
 ## 2026-04-09: Expand to 5 operations — reviews, availability, host profile
 
 **What changed:**
