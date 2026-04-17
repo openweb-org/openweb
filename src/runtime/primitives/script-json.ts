@@ -25,10 +25,10 @@ export async function resolveScriptJson(
     const raws = await handle.page.evaluate((sel: string) => {
       const els = document.querySelectorAll(sel)
       const out: string[] = []
-      els.forEach((el) => {
+      for (const el of Array.from(els)) {
         const t = el.textContent
         if (t) out.push(t)
-      })
+      }
       return out
     }, selector)
 
