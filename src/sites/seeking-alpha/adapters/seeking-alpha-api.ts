@@ -53,53 +53,6 @@ async function resolveTickerId(
   return match.id
 }
 
-async function searchArticles(
-  page: Page, params: Record<string, unknown>, helpers: AdapterHelpers,
-): Promise<unknown> {
-  const query = String(params.query ?? '')
-  if (!query) throw helpers.errors.missingParam('query')
-  const size = Math.min(Number(params.size ?? 10), 20)
-  const pageNum = Number(params.page ?? 1)
-  const period = String(params.period ?? 'quarter')
-
-  const body = await saFetch(page, helpers,
-    `/searches/all?filter[query]=${encodeURIComponent(query)}&filter[list]=all&filter[period]=${period}&page[size]=${size}&page[number]=${pageNum}`,
-  ) as { data?: unknown[]; meta?: unknown }
-  return body
-}
-
-async function getArticle(
-  page: Page, params: Record<string, unknown>, helpers: AdapterHelpers,
-): Promise<unknown> {
-  const articleId = String(params.articleId ?? '')
-  if (!articleId) throw helpers.errors.missingParam('articleId')
-
-  const body = await saFetch(page, helpers,
-    `/articles/${articleId}?include=author,primaryTickers,secondaryTickers`,
-  ) as { data?: { attributes?: Record<string, unknown>; relationships?: unknown }; included?: unknown[] }
-
-  const attrs = body.data?.attributes ?? {}
-  const included = (body.included ?? []) as Array<{ id: string; type: string; attributes?: Record<string, unknown> }>
-  const author = included.find(i => i.type === 'author')
-  const tickers = included.filter(i => i.type === 'tag' || i.type === 'ticker')
-    .map(t => t.attributes?.slug || t.attributes?.name || t.id)
-
-  return {
-    id: articleId,
-    title: attrs.title ?? null,
-    summary: attrs.summary ?? null,
-    content: attrs.content ?? null,
-    publishedAt: attrs.publishOn ?? null,
-    lastModified: attrs.lastModified ?? null,
-    isPaywalled: attrs.isPaywalled ?? false,
-    isTranscript: attrs.isTranscript ?? false,
-    commentCount: attrs.commentCount ?? 0,
-    likesCount: attrs.likesCount ?? 0,
-    author: author ? { id: author.id, name: author.attributes?.nick ?? null } : null,
-    tickers,
-  }
-}
-
 async function getStockAnalysis(
   page: Page, params: Record<string, unknown>, helpers: AdapterHelpers,
 ): Promise<unknown> {
@@ -218,8 +171,6 @@ async function getEarnings(
 }
 
 const operations: Record<string, (page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) => Promise<unknown>> = {
-  searchArticles,
-  getArticle,
   getStockAnalysis,
   getEarnings,
 }

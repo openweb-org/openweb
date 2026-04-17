@@ -11,30 +11,28 @@ servers:
     x-openweb:
       transport: page
 paths:
-  /search/articles:
+  /api/v3/searches/all:
     get:
       operationId: searchArticles
       summary: Search for articles, analysis, and tickers by keyword — title, url, company, quant rating
       x-openweb:
         permission: read
+        adapter: false
         build:
           stable_id: sa0001
-          tool_version: 2
+          tool_version: 3
           verified: true
           signals:
             - adapter-verified
-        adapter:
-          name: seeking-alpha-api
-          operation: searchArticles
       parameters:
-        - name: query
+        - name: filter[query]
           in: query
           required: true
           description: Search keyword, ticker symbol, or company name.
           schema:
             type: string
           example: AAPL
-        - name: size
+        - name: page[size]
           in: query
           required: false
           description: Number of results (default 10, max 20).
@@ -42,7 +40,7 @@ paths:
             type: integer
             default: 10
           example: 5
-        - name: page
+        - name: page[number]
           in: query
           required: false
           description: Page number (default 1).
@@ -50,7 +48,7 @@ paths:
             type: integer
             default: 1
           example: 1
-        - name: period
+        - name: filter[period]
           in: query
           required: false
           description: Time period filter (all, year, quarter, month, week).
@@ -58,83 +56,36 @@ paths:
             type: string
             default: quarter
           example: quarter
+        - name: filter[list]
+          in: query
+          required: false
+          description: Result list type.
+          schema:
+            type: string
+            default: all
+          example: all
       responses:
         '200':
-          description: Search results matching the query.
+          description: Raw Seeking Alpha search response. Contains data[] entries (symbol/article/news) plus meta/links/included.
           content:
             application/json:
               schema:
                 type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      required: [id, type]
-                      properties:
-                        id:
-                          type: [integer, string]
-                          description: Result ID (ticker ID for symbols, article ID for articles).
-                        type:
-                          type: string
-                          description: Result type (symbol, article, news, etc.).
-                        score:
-                          type: number
-                          description: Search relevance score.
-                        url:
-                          type: string
-                          description: Relative URL path on Seeking Alpha.
-                        name:
-                          type: string
-                          description: Display name (may contain HTML bold tags).
-                        company_name:
-                          type: [string, 'null']
-                          description: Company name for symbol results.
-                        exchange:
-                          type: [string, 'null']
-                          description: Stock exchange (e.g. NASDAQ, NYSE).
-                        sector:
-                          type: [string, 'null']
-                          description: GICS sector classification.
-                        industry:
-                          type: [string, 'null']
-                          description: GICS industry classification.
-                        quant_rating:
-                          type: [number, 'null']
-                          description: Seeking Alpha quant rating (1-5 scale).
-                        slug:
-                          type: [string, 'null']
-                          description: URL-safe ticker slug.
-                        content:
-                          type: [string, 'null']
-                          description: Snippet or description.
-                  meta:
-                    type: object
-                    properties:
-                      page:
-                        type: object
-                        required: [total]
-                        properties:
-                          total:
-                            type: integer
-                            description: Total number of results.
+                additionalProperties: true
 
-  /articles/{articleId}:
+  /api/v3/articles/{articleId}:
     get:
       operationId: getArticle
-      summary: Get article content — title, summary, full HTML content, author, tickers
+      summary: Get article JSON:API document — data.attributes (title, content, publishOn, isPaywalled) and included[] (author, tickers)
       x-openweb:
         permission: read
+        adapter: false
         build:
           stable_id: sa0002
-          tool_version: 2
+          tool_version: 3
           verified: true
           signals:
             - adapter-verified
-        adapter:
-          name: seeking-alpha-api
-          operation: getArticle
       parameters:
         - name: articleId
           in: path
@@ -143,60 +94,22 @@ paths:
           schema:
             type: string
           example: '4864181'
+        - name: include
+          in: query
+          required: false
+          description: Related resources to embed (JSON:API include parameter).
+          schema:
+            type: string
+            default: author,primaryTickers,secondaryTickers
+          example: author,primaryTickers,secondaryTickers
       responses:
         '200':
-          description: Full article with content, author, and related tickers.
+          description: Raw Seeking Alpha JSON:API article document with data.attributes and included[].
           content:
             application/json:
               schema:
                 type: object
-                required: [id, isPaywalled, isTranscript]
-                properties:
-                  id:
-                    type: string
-                    description: Article ID.
-                  title:
-                    type: [string, 'null']
-                    description: Article title.
-                  summary:
-                    type: [array, string, 'null']
-                    description: Article summary or abstract. May be a string or array.
-                  content:
-                    type: [string, 'null']
-                    description: Full article HTML content. Null if paywalled.
-                  publishedAt:
-                    type: [string, 'null']
-                    description: ISO 8601 publish date.
-                  lastModified:
-                    type: [string, 'null']
-                    description: ISO 8601 last modification date.
-                  isPaywalled:
-                    type: boolean
-                    description: True if full content requires premium subscription.
-                  isTranscript:
-                    type: boolean
-                    description: True if this article is an earnings call transcript.
-                  commentCount:
-                    type: integer
-                    description: Number of comments on the article.
-                  likesCount:
-                    type: integer
-                    description: Number of likes on the article.
-                  author:
-                    type: [object, 'null']
-                    description: Article author.
-                    properties:
-                      id:
-                        type: string
-                        description: Author ID.
-                      name:
-                        type: [string, 'null']
-                        description: Author display name.
-                  tickers:
-                    type: array
-                    items:
-                      type: string
-                    description: Related ticker symbols.
+                additionalProperties: true
 
   /symbols/{ticker}/analysis:
     get:
