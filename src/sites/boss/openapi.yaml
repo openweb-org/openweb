@@ -24,9 +24,38 @@ paths:
           verified: true
           signals:
           - status-match
-        adapter:
-          name: boss-web
-          operation: searchJobs
+        extraction:
+          type: page_global_data
+          page_url: /web/geek/job
+          expression: |
+            (() => {
+              const result = {};
+              const jobs = [];
+              const cards = document.querySelectorAll('.job-card-wrap, .job-card-wrapper');
+              for (const card of cards) {
+                const job = {};
+                job.jobName = card.querySelector('.job-name')?.textContent?.trim();
+                job.salaryDesc = card.querySelector('.job-salary, .salary')?.textContent?.trim() || '';
+                const companyLink = card.querySelector('.boss-info[href*="gongsi"], a[href*="gongsi"]');
+                job.company = card.querySelector('.boss-name')?.textContent?.trim() || '';
+                job.companyLink = companyLink?.getAttribute('href') || '';
+                job.area = card.querySelector('.company-location, .job-area')?.textContent?.trim() || '';
+                const tagItems = card.querySelectorAll('.tag-list li');
+                const tags = [];
+                for (const t of tagItems) { const text = t.textContent?.trim(); if (text) tags.push(text); }
+                if (tags.length > 0) { job.experience = tags[0]; job.degree = tags[1]; }
+                const link = card.querySelector('a.job-name, a[href*="job_detail"]');
+                job.jobLink = link?.getAttribute('href') || '';
+                if (job.jobName) jobs.push(job);
+              }
+              result.jobs = jobs;
+              const countEl = document.querySelector('[class*="result-num"], .search-job-result .job-tab');
+              if (countEl) {
+                const match = countEl.textContent?.match(/(\d+)/);
+                if (match) result.totalCount = Number.parseInt(match[1], 10);
+              }
+              return result;
+            })()
       parameters:
       - name: query
         in: query
@@ -112,16 +141,54 @@ paths:
           verified: true
           signals:
           - status-match
-        adapter:
-          name: boss-web
-          operation: getJobDetail
+        extraction:
+          type: page_global_data
+          page_url: /job_detail/{jobId}
+          expression: |
+            (() => {
+              const result = {};
+              result.jobName = document.querySelector('.info-primary .name h1, .name h1')?.textContent?.trim() || '';
+              result.salaryDesc = document.querySelector('.info-primary .name .salary, .salary')?.textContent?.trim() || '';
+              result.city = document.querySelector('.text-city')?.textContent?.trim() || '';
+              result.experience = document.querySelector('.text-experiece, .text-experience')?.textContent?.trim() || '';
+              result.degree = document.querySelector('.text-degree')?.textContent?.trim() || '';
+              result.jobDescription = document.querySelector('.job-sec-text')?.innerHTML?.trim() || '';
+              const skillEls = document.querySelectorAll('.job-keyword-list li');
+              const skills = [];
+              for (const el of skillEls) { const text = el.textContent?.trim(); if (text) skills.push(text); }
+              if (skills.length > 0) result.tags = skills;
+              const company = {};
+              const companyLink = document.querySelector('.sider-company a[href*="gongsi"]');
+              company.name = companyLink?.getAttribute('title') || companyLink?.textContent?.trim() || '';
+              company.link = companyLink?.getAttribute('href') || '';
+              const stageEl = document.querySelector('.sider-company .icon-stage');
+              if (stageEl?.parentElement) company.stage = stageEl.parentElement.textContent?.trim() || '';
+              const scaleEl = document.querySelector('.sider-company .icon-scale');
+              if (scaleEl?.parentElement) company.size = scaleEl.parentElement.textContent?.trim() || '';
+              const industryEl = document.querySelector('.sider-company .icon-industry');
+              if (industryEl?.parentElement) company.industry = industryEl.parentElement.textContent?.trim() || '';
+              result.company = company;
+              const boss = {};
+              const bossNameEl = document.querySelector('.job-boss-info .name');
+              if (bossNameEl) {
+                let nameText = '';
+                for (const node of bossNameEl.childNodes) {
+                  if (node.nodeType === 3) nameText += node.textContent;
+                }
+                boss.name = nameText.trim();
+              }
+              boss.title = document.querySelector('.job-boss-info .boss-info-attr')?.textContent?.trim() || '';
+              result.boss = boss;
+              result.address = document.querySelector('.location-address')?.textContent?.trim() || '';
+              return result;
+            })()
       parameters:
       - name: jobId
         in: path
         required: true
         schema:
           type: string
-        description: Job ID or path from searchJobs jobLink (e.g. "/job_detail/xxx.html" or the path segment).
+        description: Job detail filename from searchJobs jobLink (e.g. "c87fbe4ceb69849d0nZz29W1EFRR.html").
       responses:
         '200':
           description: Full job posting details.
@@ -186,16 +253,61 @@ paths:
           verified: true
           signals:
           - status-match
-        adapter:
-          name: boss-web
-          operation: getCompanyProfile
+        extraction:
+          type: page_global_data
+          page_url: /gongsi/{companyId}
+          expression: |
+            (() => {
+              const result = {};
+              const nameEl = document.querySelector('.company-banner .info h1.name, .company-banner h1.name');
+              if (nameEl) {
+                let nameText = '';
+                for (const node of nameEl.childNodes) {
+                  if (node.nodeType === 3) nameText += node.textContent;
+                }
+                result.name = nameText.trim();
+              } else {
+                result.name = '';
+              }
+              const infoP = document.querySelector('.company-banner .info p');
+              if (infoP) {
+                const parts = [];
+                for (const node of infoP.childNodes) {
+                  if (node.nodeType === 3) {
+                    const t = node.textContent?.trim();
+                    if (t) parts.push(t);
+                  } else if (node.nodeType === 1) {
+                    const el = node;
+                    if (el.classList?.contains('dolt')) continue;
+                    const t = el.textContent?.trim();
+                    if (t) parts.push(t);
+                  }
+                }
+                result.stage = parts[0] || ''; result.size = parts[1] || ''; result.industry = parts[2] || '';
+              }
+              result.description = document.querySelector('.fold-text, .company-description .text, .detail-content')?.textContent?.trim() || '';
+              result.address = document.querySelector('.location-address, .company-address')?.textContent?.trim() || '';
+              const jobEls = document.querySelectorAll('.job-list li');
+              const jobs = [];
+              for (const el of jobEls) {
+                const job = {};
+                const titleLink = el.querySelector('.job-title, a[href*="job_detail"]');
+                job.jobName = titleLink?.textContent?.trim();
+                job.salaryDesc = el.querySelector('.salary')?.textContent?.trim() || '';
+                job.area = el.querySelector('.job-area')?.textContent?.trim() || '';
+                job.link = titleLink?.getAttribute('href') || '';
+                if (job.jobName) jobs.push(job);
+              }
+              result.jobs = jobs;
+              return result;
+            })()
       parameters:
       - name: companyId
         in: path
         required: true
         schema:
           type: string
-        description: Company ID from getJobDetail company.link (e.g. "v-_eCFU5ERlU~.html").
+        description: Company page filename from getJobDetail company.link (e.g. "a67b361452e384e71XV82N4~.html").
       responses:
         '200':
           description: Company profile data.
@@ -246,9 +358,50 @@ paths:
           verified: true
           signals:
           - status-match
-        adapter:
-          name: boss-web
-          operation: getSalary
+        extraction:
+          type: page_global_data
+          page_url: /web/geek/job
+          expression: |
+            (() => {
+              const salaries = [];
+              const cards = document.querySelectorAll('.job-card-wrap, .job-card-wrapper');
+              for (const card of cards) {
+                const salaryText = card.querySelector('.job-salary, .salary')?.textContent?.trim();
+                if (!salaryText) continue;
+                const match = salaryText.match(/(\d+)-(\d+)(K|k|元\/天|元\/月)/);
+                if (match) {
+                  const multiplier = match[3].toLowerCase() === 'k' ? 1000 : 1;
+                  salaries.push({
+                    min: Number(match[1]) * multiplier,
+                    max: Number(match[2]) * multiplier,
+                    unit: match[3].toLowerCase() === 'k' ? 'CNY/month' : 'CNY/day',
+                    name: card.querySelector('.job-name')?.textContent?.trim() || '',
+                  });
+                }
+              }
+              if (salaries.length === 0) return { salaryCount: 0, samples: [] };
+              const monthlySalaries = salaries.filter(s => s.unit === 'CNY/month');
+              if (monthlySalaries.length === 0) return { salaryCount: 0, samples: [] };
+              const mins = monthlySalaries.map(s => s.min).sort((a, b) => a - b);
+              const maxs = monthlySalaries.map(s => s.max).sort((a, b) => a - b);
+              const median = (arr) => {
+                const mid = Math.floor(arr.length / 2);
+                return arr.length % 2 ? arr[mid] : Math.round((arr[mid - 1] + arr[mid]) / 2);
+              };
+              const avg = (arr) => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+              return {
+                salaryCount: monthlySalaries.length,
+                minRange: { lowest: mins[0], median: median(mins), highest: mins[mins.length - 1] },
+                maxRange: { lowest: maxs[0], median: median(maxs), highest: maxs[maxs.length - 1] },
+                averageMin: avg(mins),
+                averageMax: avg(maxs),
+                unit: 'CNY/month',
+                samples: monthlySalaries.slice(0, 5).map(s => ({
+                  jobName: s.name,
+                  salary: (s.min / 1000) + '-' + (s.max / 1000) + 'K',
+                })),
+              };
+            })()
       parameters:
       - name: query
         in: query
