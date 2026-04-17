@@ -1,13 +1,15 @@
 import type { Page } from 'patchright'
 
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
 /**
- * LinkedIn L3 adapter — GraphQL API via browser fetch.
+ * LinkedIn L3 runner — GraphQL API via browser fetch.
  *
  * Solves the problem of rotating queryId hashes: LinkedIn deploys new
  * JS bundles frequently, changing the hash portion of queryIds like
  * `voyagerIdentityDashProfiles.34ead06db82a2cc9a778fac97f69ad6a`.
  *
- * On first use, the adapter scans all `<script src>` bundles on the page
+ * On first use, the runner scans all `<script src>` bundles on the page
  * for GraphQL query/mutation registrations and builds a name→queryId map.
  * The map is cached for the session lifetime.
  *
@@ -27,6 +29,8 @@ const QUERY_NAME: Record<string, string> = {
   // searchJobs uses REST API (voyagerJobsDashJobCards) — no GraphQL query name needed
   getJobDetail: 'full-job-posting-detail-section',
 }
+
+type Errors = AdapterHelpers['errors']
 
 // ── QueryId extraction ────────────────────────────
 
@@ -79,7 +83,7 @@ let cachedQueryIds: Record<string, string> | null = null
 async function getQueryId(
   page: Page,
   linkedinQueryName: string,
-  errors: { fatal(msg: string): Error },
+  errors: Errors,
 ): Promise<string> {
   if (!cachedQueryIds) {
     cachedQueryIds = await loadQueryIds(page)
@@ -164,42 +168,59 @@ async function restGet(
   )
 }
 
+async function doGraphqlGet(
+  page: Page,
+  queryId: string,
+  variables: string,
+  includeWebMetadata: boolean,
+  errors: Errors,
+): Promise<unknown> {
+  const result = await graphqlGet(page, queryId, variables, includeWebMetadata) as { status: number; text: string }
+
+  if (result.status >= 400) {
+    throw errors.httpError(result.status)
+  }
+
+  return JSON.parse(result.text)
+}
+
 // ── Per-operation dispatch ────────────────────────
 
-type Errors = { unknownOp(op: string): Error; missingParam(name: string): Error; httpError(status: number): Error; fatal(msg: string): Error }
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
-  getProfile: async (page, params, errors) => {
+const OPERATIONS: Record<string, Handler> = {
+  getProfile: async (page, params, helpers) => {
+    const { errors } = helpers
     const variables = String(params.variables ?? '')
     if (!variables) throw errors.missingParam('variables')
-    const queryName = QUERY_NAME.getProfile
-    const queryId = await getQueryId(page, queryName, errors)
+    const queryId = await getQueryId(page, QUERY_NAME.getProfile, errors)
     return doGraphqlGet(page, queryId, variables, params.includeWebMetadata !== 'false', errors)
   },
 
-  getFeed: async (page, params, errors) => {
+  getFeed: async (page, params, helpers) => {
+    const { errors } = helpers
     const variables = String(params.variables ?? '(count:10,sortOrder:RELEVANCE)')
-    const queryName = QUERY_NAME.getFeed
-    const queryId = await getQueryId(page, queryName, errors)
+    const queryId = await getQueryId(page, QUERY_NAME.getFeed, errors)
     return doGraphqlGet(page, queryId, variables, params.includeWebMetadata !== 'false', errors)
   },
 
-  getCompany: async (page, params, errors) => {
+  getCompany: async (page, params, helpers) => {
+    const { errors } = helpers
     const variables = String(params.variables ?? '')
     if (!variables) throw errors.missingParam('variables')
-    const queryName = QUERY_NAME.getCompany
-    const queryId = await getQueryId(page, queryName, errors)
+    const queryId = await getQueryId(page, QUERY_NAME.getCompany, errors)
     return doGraphqlGet(page, queryId, variables, params.includeWebMetadata !== 'false', errors)
   },
 
-  getNewsStorylines: async (page, params, errors) => {
+  getNewsStorylines: async (page, params, helpers) => {
+    const { errors } = helpers
     const variables = String(params.variables ?? '()')
-    const queryName = QUERY_NAME.getNewsStorylines
-    const queryId = await getQueryId(page, queryName, errors)
+    const queryId = await getQueryId(page, QUERY_NAME.getNewsStorylines, errors)
     return doGraphqlGet(page, queryId, variables, params.includeWebMetadata !== 'false', errors)
   },
 
-  searchJobs: async (page, params, errors) => {
+  searchJobs: async (page, params, helpers) => {
+    const { errors } = helpers
     const keywords = String(params.keywords ?? '')
     if (!keywords) throw errors.missingParam('keywords')
     const count = Number(params.count ?? 25)
@@ -231,7 +252,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     return JSON.parse(result.text)
   },
 
-  getJobDetail: async (page, params, errors) => {
+  getJobDetail: async (page, params, helpers) => {
+    const { errors } = helpers
     const jobId = String(params.jobId ?? '')
     if (!jobId) throw errors.missingParam('jobId')
     const variables = `(cardSectionTypes:List(TOP_CARD,HOW_YOU_FIT_CARD),jobPostingUrn:urn%3Ali%3Afsd_jobPosting%3A${jobId},includeSecondaryActionsV2:true,jobDetailsContext:(isJobSearch:true))`
@@ -240,43 +262,19 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   },
 }
 
-async function doGraphqlGet(
-  page: Page,
-  queryId: string,
-  variables: string,
-  includeWebMetadata: boolean,
-  errors: { httpError(status: number): Error },
-): Promise<unknown> {
-  const result = await graphqlGet(page, queryId, variables, includeWebMetadata) as { status: number; text: string }
+// ── Runner export ─────────────────────────────────
 
-  if (result.status >= 400) {
-    throw errors.httpError(result.status)
-  }
-
-  return JSON.parse(result.text)
-}
-
-// ── Adapter export ────────────────────────────────
-
-const adapter = {
+const runner: CustomRunner = {
   name: 'linkedin-graphql',
   description: 'LinkedIn GraphQL adapter with dynamic queryId resolution from JS bundles',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('linkedin.com')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://www.linkedin.com')
-    return cookies.some(c => c.name === 'li_at')
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('linkedin-graphql requires a page (transport: page)')
     const handler = OPERATIONS[operation]
-    if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, errors)
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, params, helpers)
   },
 }
 
-export default adapter
+export default runner
