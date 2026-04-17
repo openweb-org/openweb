@@ -1,6 +1,6 @@
 ---
 name: openweb
-description: "Access web services through the openweb CLI. Run `openweb sites` to see available sites. Use this skill whenever the user wants to fetch data from, interact with, or query websites. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly."
+description: "Get structured data from real websites — search, shopping, travel, finance, social, news, dev tools, and more. 90+ sites including Google, Amazon, Reddit, YouTube, GitHub, Instagram, Bloomberg, Zillow, and others return typed JSON through the openweb CLI. Use this skill whenever the user wants to look up, compare, or pull data from a website — whether that's checking prices, searching for products, reading articles, getting stock quotes, finding flights, or any task involving a real website. This is the ONLY way to access these sites — do not use curl, fetch, or browser automation. Run `openweb sites` to see all available sites."
 ---
 
 # OpenWeb
@@ -33,8 +33,10 @@ openweb <site>                       # transport, auth, operations list
 
 ### 3. Read site notes
 
-If `src/sites/<site>/DOC.md` exists, read it BEFORE executing operations.
-DOC.md contains: workflows, cross-operation data flow, intent mapping, known issues.
+Read `src/sites/<site>/SKILL.md` BEFORE executing operations.
+SKILL.md contains: overview, workflows, cross-operation data flow, intent mapping, known limitations.
+
+For internal details (auth, transport, adapter patterns), see `src/sites/<site>/DOC.md`.
 
 ### 4. Inspect the operation
 
@@ -55,12 +57,12 @@ Check the operation's permission tier before executing:
 ### 5. Execute
 
 ```bash
-openweb <site> exec <op> '{"key":"value"}'    # stdout=JSON, stderr=JSON error
+openweb <site> <op> '{"key":"value"}'    # stdout=JSON, stderr=JSON error
 ```
 
 Auto-spill: responses over 4096 bytes write to a temp file.
 
-**Shorthand:** `openweb <site> <op> '{"..."}'` auto-executes when the third positional argument is a JSON object/array and no show-mode flags are present. `exec` remains the explicit form.
+`openweb <site> exec <op> '{...}'` is equivalent — `exec` can be omitted when the third arg is JSON.
 
 ### 6. On failure
 
@@ -71,9 +73,10 @@ Errors on stderr include `failureClass`:
 | `needs_browser` | Browser auto-starts; if it fails, check Chrome installation. Fallback: `openweb browser start` |
 | `needs_login` | `openweb login <site>` then `openweb browser restart` |
 | `needs_page` | Open a tab to the site URL |
+| `bot_blocked` | `openweb browser restart --no-headless`, user solves CAPTCHA in visible browser, then retry. For persistent sites, set `"browser": {"headless": false}` in config |
 | `permission_denied` | Update `permissions` in `$OPENWEB_HOME/config.json` |
 | `permission_required` | Ask user for confirmation, then retry |
-| `retriable` | Wait a few seconds, retry (max 2). If 403 + CAPTCHA: `openweb browser restart --no-headless`, user solves CAPTCHA in visible browser, then retry. For persistent CAPTCHA sites, set `"browser": {"headless": false}` in config (auto-started browsers launch off-screen to avoid stealing focus) |
+| `retriable` | Wait a few seconds, retry (max 2) |
 | `fatal` | Don't retry — fix params or check site name |
 
 If the table above doesn't resolve it, read references/troubleshooting.md.
@@ -106,7 +109,7 @@ All paths relative to `skill/openweb/`.
 | `add-site/curate-runtime.md` | Curate: auth, transport, extraction |
 | `add-site/curate-schemas.md` | Curate: response schemas, examples, PII |
 | `add-site/verify.md` | Verify: runtime + spec + doc loop |
-| `add-site/document.md` | Document: DOC.md template, knowledge updates |
+| `add-site/document.md` | Document: per-site SKILL.md + DOC.md + PROGRESS.md, knowledge updates |
 
 ### references/ (lookup — load independently)
 
@@ -127,3 +130,5 @@ All paths relative to `skill/openweb/`.
 | `knowledge/extraction.md` | Extraction signals — SSR/DOM patterns |
 | `knowledge/graphql.md` | GraphQL — persisted queries, batching |
 | `knowledge/ws.md` | WebSocket — message/connection patterns |
+| `knowledge/adapter-recipes.md` | Adapter patterns, code templates, pitfalls |
+| `knowledge/transport-upgrade.md` | Transport tier decisions, node feasibility, API discovery |

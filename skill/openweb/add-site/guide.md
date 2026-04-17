@@ -33,38 +33,36 @@ flowchart TD
 Your scope determines which steps to skip:
 
 - **New site:** Run all steps.
-- **Adding ops to existing site:** Skip Capture/Compile for families that already have working ops. Read existing DOC.md first.
+- **Adding ops to existing site:** Skip Capture/Compile for families that already have working ops. Read existing SKILL.md and DOC.md first.
 - **Upgrading transport/stability:** Skip Framing (intents already exist). Focus on Probe with fresh eyes — see knowledge/transport-upgrade.md.
 
 When in doubt, don't skip — run the step. Skipping a probe is more expensive than running an unnecessary one.
 
 ### Incremental Mode (Existing Site)
 
-Read `DOC.md` + `openapi.yaml` from `src/sites/<site>/` or
-`$OPENWEB_HOME/sites/<site>/`. Focus on auth, write endpoints, adapter needs.
-Identify gaps, then scope work to the families that actually need it — only
-those families must re-enter Frame and Probe. Use DOC.md **Workflows** for
-chain dependencies. Do not hardcode IDs — execute a list op for fresh ones.
+Read `SKILL.md` + `DOC.md` + `openapi.yaml` from `src/sites/<site>/` or
+`$OPENWEB_HOME/sites/<site>/`. Identify gaps against the target intents.
+Only the intent families with gaps re-enter Frame and Probe; everything
+else stays as-is.
 
 ### Net-New Mode
 
-Read these knowledge files in order. Each produces a concrete decision.
+Read these knowledge files in order. Each produces a decision or a
+hypothesis to confirm during Probe.
 
 1. **`knowledge/archetypes.md`** — identify archetype, read expected operations.
    **Decision:** Target operations for discovery.
 
 2. **`knowledge/bot-detection.md`** — check for site or vertical.
-   **Decision:** Real Chrome profile needed? Short sessions?
+   **Hypothesis:** Expected bot-detection level (none / soft / hard). Confirm
+   in Probe; runtime knobs (real Chrome profile, short sessions) are decided
+   from Probe evidence, not pre-flight.
 
 3. **`knowledge/auth-routing.md`** — scan routing table.
-   **Decision:** Log in before capture? (Chinese web: `cookie_session` +
-   signing; Google: `sapisidhash`; Reddit-like SPAs: `exchange_chain`;
-   public APIs: no auth). Log in first if auth expected — unauthenticated
-   capture misses auth-required endpoints entirely.
-
-   **Cannot be auto-detected** (preserve during merge):
-   `page_global` (JS-embedded API keys), `webpack_module_walk` (webpack
-   closure tokens).
+   **Hypothesis:** Likely auth family for the archetype. Probe confirms
+   whether target endpoints actually require auth. Default: if any target
+   intent plausibly needs auth, log in before Capture — unauthenticated
+   capture silently misses auth-required endpoints.
 
 ### Pre-flight Exit Criteria
 
@@ -107,15 +105,16 @@ For each family:
 - identify one representative page or flow
 - note whether safe writes must be exercised during later capture
 
-Create or update `src/sites/<site>/DOC.md` with initial overview and
-target-intent checklist. Read `add-site/document.md` for the template.
+Create or update `src/sites/<site>/SKILL.md` with initial overview and
+target-intent checklist, and `DOC.md` with internal notes.
+Read `add-site/document.md` for templates.
 
 **Write intents** — add writes for core interactions (social: like/follow/
 bookmark/repost; commerce: add-to-cart/wishlist). Perform ALL safe writes
 during capture — missing one means missing that operation.
 
 **Exit criteria:** Every target intent belongs to a family. Each family has
-one representative page or flow. Draft DOC.md exists or is updated.
+one representative page or flow. Draft SKILL.md and DOC.md exist or are updated.
 
 ---
 
