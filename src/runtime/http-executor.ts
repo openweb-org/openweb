@@ -152,7 +152,22 @@ export async function executeOperation(
           }
         }
       : undefined
-    const adapterOptions = { requiresAuth, resolveAuth: resolveAuthFallback }
+    const resolveAuthResult = authPrimitive
+      ? async (page: import('patchright').Page | null) => {
+          if (!page) return undefined
+          try {
+            return await resolveAuth(
+              { page, context: page.context() },
+              authPrimitive,
+              serverUrlForAuth,
+              { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator ?? validateSSRF },
+            )
+          } catch {
+            return undefined
+          }
+        }
+      : undefined
+    const adapterOptions = { requiresAuth, resolveAuth: resolveAuthFallback, resolveAuthResult }
 
     /** Single adapter attempt: acquire browser → find/create page → execute */
     const adapterAttempt = async (): Promise<unknown> => {
