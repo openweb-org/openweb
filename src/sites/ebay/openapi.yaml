@@ -24,9 +24,6 @@ paths:
           tool_version: 1
           signals:
             - dom
-        adapter:
-          name: ebay
-          operation: searchItems
         extraction:
           type: page_global_data
           page_url: /sch/i.html
@@ -124,9 +121,6 @@ paths:
           signals:
             - ld_json
             - dom
-        adapter:
-          name: ebay
-          operation: getItemDetail
         extraction:
           type: page_global_data
           page_url: /itm/{itemId}
@@ -260,9 +254,6 @@ paths:
           tool_version: 1
           signals:
             - dom
-        adapter:
-          name: ebay
-          operation: getSellerProfile
         extraction:
           type: page_global_data
           page_url: /str/{username}
