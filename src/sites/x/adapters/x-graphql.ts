@@ -1,7 +1,9 @@
 import type { Page } from 'patchright'
 
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
 /**
- * X (Twitter) L3 adapter — GraphQL API via browser fetch.
+ * X (Twitter) L3 runner — GraphQL API via browser fetch.
  *
  * Solves two problems that make browser_fetch insufficient:
  * 1. GraphQL query hashes rotate on every Twitter deploy → extracted at
@@ -12,6 +14,8 @@ import type { Page } from 'patchright'
  *
  * Bearer token and CSRF are handled inline — no constant_headers needed.
  */
+
+type Errors = AdapterHelpers['errors']
 
 // ── Operation name mapping ────────────────────────
 // Maps our operationId → Twitter's internal GraphQL operation name.
@@ -214,19 +218,11 @@ async function executeRest(
   }
 }
 
-type Errors = {
-  unknownOp(op: string): Error
-  missingParam(name: string): Error
-  httpError(status: number): Error
-  apiError(label: string, msg: string): Error
-  fatal(msg: string): Error
-}
-
 // ── Query-Id cache ────────────────────────────────
 
 let cachedQueryIds: Record<string, string> | null = null
 
-async function getQueryId(page: Page, twitterOpName: string, errors: { fatal(msg: string): Error }): Promise<string> {
+async function getQueryId(page: Page, twitterOpName: string, errors: Errors): Promise<string> {
   if (!cachedQueryIds) {
     cachedQueryIds = await loadQueryIds(page)
   }
@@ -320,8 +316,11 @@ const DEFAULT_FEATURES: Record<string, boolean> = {
 
 // ── Per-operation dispatch ────────────────────────
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
-  getHomeTimeline: async (page, params, errors) => {
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
+
+const OPERATIONS: Record<string, Handler> = {
+  getHomeTimeline: async (page, params, helpers) => {
+    const { errors } = helpers
     // Twitter removed the `HomeTimeline` GraphQL op from their main bundle.
     // Discover the actual timeline op by navigating to /home and capturing
     // the first GraphQL request that's not a known non-timeline operation.
@@ -368,7 +367,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getTweetDetail: async (page, params, errors) => {
+  getTweetDetail: async (page, params, helpers) => {
+    const { errors } = helpers
     const focalTweetId = String(params.focalTweetId ?? '')
     if (!focalTweetId) throw errors.missingParam('focalTweetId')
     return executeGraphqlGet(page, 'TweetDetail', {
@@ -391,7 +391,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, errors)
   },
 
-  getUserByScreenName: async (page, params, errors) => {
+  getUserByScreenName: async (page, params, helpers) => {
+    const { errors } = helpers
     const screen_name = String(params.screen_name ?? '')
     if (!screen_name) throw errors.missingParam('screen_name')
     return executeGraphqlGet(page, 'UserByScreenName', {
@@ -417,7 +418,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, errors)
   },
 
-  searchTweets: async (page, params, errors) => {
+  searchTweets: async (page, params, helpers) => {
+    const { errors } = helpers
     const rawQuery = String(params.rawQuery ?? '')
     if (!rawQuery) throw errors.missingParam('rawQuery')
     return executeGraphqlGet(page, 'SearchTimeline', {
@@ -429,7 +431,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getUserFollowers: async (page, params, errors) => {
+  getUserFollowers: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeGraphqlGet(page, 'Followers', {
@@ -440,7 +443,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getUserFollowing: async (page, params, errors) => {
+  getUserFollowing: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeGraphqlGet(page, 'Following', {
@@ -451,7 +455,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getUserTweets: async (page, params, errors) => {
+  getUserTweets: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeGraphqlGet(page, 'UserTweets', {
@@ -463,48 +468,55 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getExplorePage: async (page, params, errors) =>
+  getExplorePage: async (page, params, helpers) =>
     executeGraphqlGet(page, 'ExplorePage', {
       cursor: String(params.cursor ?? ''),
-    }, DEFAULT_FEATURES, undefined, errors),
+    }, DEFAULT_FEATURES, undefined, helpers.errors),
 
-  likeTweet: async (page, params, errors) => {
+  likeTweet: async (page, params, helpers) => {
+    const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
     return executeGraphqlPost(page, 'FavoriteTweet', { tweet_id }, {}, errors)
   },
 
-  unlikeTweet: async (page, params, errors) => {
+  unlikeTweet: async (page, params, helpers) => {
+    const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
     return executeGraphqlPost(page, 'UnfavoriteTweet', { tweet_id }, {}, errors)
   },
 
-  createBookmark: async (page, params, errors) => {
+  createBookmark: async (page, params, helpers) => {
+    const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
     return executeGraphqlPost(page, 'CreateBookmark', { tweet_id }, {}, errors)
   },
 
-  deleteBookmark: async (page, params, errors) => {
+  deleteBookmark: async (page, params, helpers) => {
+    const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
     return executeGraphqlPost(page, 'DeleteBookmark', { tweet_id }, {}, errors)
   },
 
-  createRetweet: async (page, params, errors) => {
+  createRetweet: async (page, params, helpers) => {
+    const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
     return executeGraphqlPost(page, 'CreateRetweet', { tweet_id }, {}, errors)
   },
 
-  deleteRetweet: async (page, params, errors) => {
+  deleteRetweet: async (page, params, helpers) => {
+    const { errors } = helpers
     const source_tweet_id = String(params.source_tweet_id ?? '')
     if (!source_tweet_id) throw errors.missingParam('source_tweet_id')
     return executeGraphqlPost(page, 'DeleteRetweet', { source_tweet_id }, {}, errors)
   },
 
-  createTweet: async (page, params, errors) => {
+  createTweet: async (page, params, helpers) => {
+    const { errors } = helpers
     const text = String(params.text ?? '')
     if (!text) throw errors.missingParam('text')
     return executeGraphqlPost(page, 'CreateTweet', {
@@ -515,13 +527,15 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, DEFAULT_FEATURES, errors)
   },
 
-  deleteTweet: async (page, params, errors) => {
+  deleteTweet: async (page, params, helpers) => {
+    const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
     return executeGraphqlPost(page, 'DeleteTweet', { tweet_id, dark_request: false }, {}, errors)
   },
 
-  reply: async (page, params, errors) => {
+  reply: async (page, params, helpers) => {
+    const { errors } = helpers
     const text = String(params.text ?? '')
     const tweet_id = String(params.tweet_id ?? '')
     if (!text) throw errors.missingParam('text')
@@ -535,63 +549,72 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, DEFAULT_FEATURES, errors)
   },
 
-  followUser: async (page, params, errors) => {
+  followUser: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeRest(page, 'POST', '/i/api/1.1/friendships/create.json',
       'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
   },
 
-  unfollowUser: async (page, params, errors) => {
+  unfollowUser: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeRest(page, 'POST', '/i/api/1.1/friendships/destroy.json',
       'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
   },
 
-  blockUser: async (page, params, errors) => {
+  blockUser: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeRest(page, 'POST', '/i/api/1.1/blocks/create.json',
       'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
   },
 
-  unblockUser: async (page, params, errors) => {
+  unblockUser: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeRest(page, 'POST', '/i/api/1.1/blocks/destroy.json',
       'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
   },
 
-  muteUser: async (page, params, errors) => {
+  muteUser: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeRest(page, 'POST', '/i/api/1.1/mutes/users/create.json',
       'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
   },
 
-  unmuteUser: async (page, params, errors) => {
+  unmuteUser: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeRest(page, 'POST', '/i/api/1.1/mutes/users/destroy.json',
       'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
   },
 
-  hideReply: async (page, params, errors) => {
+  hideReply: async (page, params, helpers) => {
+    const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
     return executeRest(page, 'PUT', `/i/api/2/tweets/${tweet_id}/hidden`,
       'application/json', JSON.stringify({ hidden: true }), errors)
   },
 
-  unhideReply: async (page, params, errors) => {
+  unhideReply: async (page, params, helpers) => {
+    const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
     return executeRest(page, 'PUT', `/i/api/2/tweets/${tweet_id}/hidden`,
       'application/json', JSON.stringify({ hidden: false }), errors)
   },
 
-  sendDM: async (page, params, errors) => {
+  sendDM: async (page, params, helpers) => {
+    const { errors } = helpers
     const recipientId = String(params.recipientId ?? '')
     const text = String(params.text ?? '')
     if (!recipientId) throw errors.missingParam('recipientId')
@@ -608,7 +631,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
       'application/json', body, errors)
   },
 
-  deleteDM: async (page, params, errors) => {
+  deleteDM: async (page, params, helpers) => {
+    const { errors } = helpers
     const messageId = String(params.messageId ?? '')
     if (!messageId) throw errors.missingParam('messageId')
     return executeGraphqlPost(page, 'DMMessageDeleteMutation', {
@@ -617,14 +641,15 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, {}, errors)
   },
 
-  getNotifications: async (page, params, errors) => {
+  getNotifications: async (page, params, helpers) => {
     const count = Number(params.count) || 20
     return executeRest(page, 'GET',
       `/i/api/2/notifications/all.json?count=${count}&include_profile_interstitial_type=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&tweet_mode=extended&include_entities=true&include_user_entities=true`,
-      '', '', errors)
+      '', '', helpers.errors)
   },
 
-  getUserLikes: async (page, params, errors) => {
+  getUserLikes: async (page, params, helpers) => {
+    const { errors } = helpers
     const userId = String(params.userId ?? '')
     if (!userId) throw errors.missingParam('userId')
     return executeGraphqlGet(page, 'Likes', {
@@ -634,7 +659,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getBookmarks: async (page, params, errors) => {
+  getBookmarks: async (page, params, helpers) => {
+    const { errors } = helpers
     // Bookmarks queryId is in a lazy-loaded webpack chunk not available in main.js.
     // Extract it by navigating to the bookmarks page and capturing the API request URL.
     if (!cachedQueryIds) cachedQueryIds = await loadQueryIds(page)
@@ -671,27 +697,19 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   },
 }
 
-// ── Adapter export ────────────────────────────────
+// ── Runner export ─────────────────────────────────
 
-const adapter = {
+const runner: CustomRunner = {
   name: 'x-graphql',
   description: 'X (Twitter) GraphQL adapter with dynamic hash resolution and request signing',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('x.com')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://x.com')
-    return cookies.some(c => c.name === 'auth_token' || c.name === 'twid')
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('x-graphql requires a page (transport: page)')
     const handler = OPERATIONS[operation]
-    if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, errors)
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, params, helpers)
   },
 }
 
-export default adapter
+export default runner
