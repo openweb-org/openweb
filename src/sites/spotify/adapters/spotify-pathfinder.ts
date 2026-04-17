@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
 /**
  * Spotify adapter — GraphQL pathfinder API via browser fetch.
  *
@@ -11,7 +13,7 @@ import type { Page } from 'patchright'
 
 const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
 
-type ErrorHelpers = { httpError(status: number): Error; apiError(label: string, msg: string): Error; unknownOp(op: string): Error }
+type ErrorHelpers = AdapterHelpers['errors']
 
 interface OperationConfig {
   operationName: string
@@ -19,7 +21,7 @@ interface OperationConfig {
   defaultVariables?: Record<string, unknown>
 }
 
-const OPERATIONS: Record<string, OperationConfig> = {
+const GRAPHQL_OPERATIONS: Record<string, OperationConfig> = {
   searchMusic: {
     operationName: 'searchDesktop',
     hash: '21b3fe49546912ba782db5c47e9ef5a7dbd20329520ba0c7d0fcfadee671d24e',
@@ -65,9 +67,6 @@ const OPERATIONS: Record<string, OperationConfig> = {
     defaultVariables: { limit: 10 },
   },
 }
-
-/** Write operations that use Spotify's internal REST endpoints */
-const WRITE_OPERATIONS = new Set(['likeTrack', 'unlikeTrack', 'addToPlaylist', 'removeFromPlaylist', 'createPlaylist'])
 
 async function extractToken(page: Page, errors: ErrorHelpers): Promise<{ accessToken: string; clientToken: string }> {
   // Use Playwright request interception — more reliable than monkey-patching fetch
@@ -217,133 +216,109 @@ async function spotifyApiFetch(
   )
 }
 
-async function writeOperationFetch(
+type WriteHandler = (
   page: Page,
-  operation: string,
   params: Readonly<Record<string, unknown>>,
   accessToken: string,
   errors: ErrorHelpers,
-): Promise<unknown> {
-  let result: { status: number; text: string }
+) => Promise<unknown>
 
-  switch (operation) {
-    case 'likeTrack': {
-      const trackId = params.trackId as string
-      const url = 'https://api.spotify.com/v1/me/tracks'
-      result = await spotifyApiFetch(page, 'PUT', url, accessToken, JSON.stringify({ ids: [trackId] }))
-      if (result.status >= 400) throw errors.httpError(result.status)
-      return { success: true }
-    }
-    case 'unlikeTrack': {
-      const trackId = params.trackId as string
-      const url = 'https://api.spotify.com/v1/me/tracks'
-      result = await spotifyApiFetch(page, 'DELETE', url, accessToken, JSON.stringify({ ids: [trackId] }))
-      if (result.status >= 400) throw errors.httpError(result.status)
-      return { success: true }
-    }
-    case 'addToPlaylist': {
-      const playlistId = params.playlistId as string
-      const trackUris = params.trackUris as string[]
-      const body: Record<string, unknown> = { uris: trackUris }
-      if (params.position !== undefined) body.position = params.position
-      const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
-      result = await spotifyApiFetch(page, 'POST', url, accessToken, JSON.stringify(body))
-      if (result.status >= 400) throw errors.httpError(result.status)
-      return JSON.parse(result.text)
-    }
-    case 'removeFromPlaylist': {
-      const playlistId = params.playlistId as string
-      const trackUris = params.trackUris as string[]
-      const body = { tracks: trackUris.map((uri) => ({ uri })) }
-      const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
-      result = await spotifyApiFetch(page, 'DELETE', url, accessToken, JSON.stringify(body))
-      if (result.status >= 400) throw errors.httpError(result.status)
-      return JSON.parse(result.text)
-    }
-    case 'createPlaylist': {
-      // Need user ID — get from /v1/me
-      const meResult = await spotifyApiFetch(page, 'GET', 'https://api.spotify.com/v1/me', accessToken)
-      if (meResult.status >= 400) throw errors.httpError(meResult.status)
-      const userId = (JSON.parse(meResult.text) as { id: string }).id
-      const body: Record<string, unknown> = { name: params.name as string }
-      if (params.description !== undefined) body.description = params.description
-      if (params.public !== undefined) body.public = params.public
-      const url = `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`
-      result = await spotifyApiFetch(page, 'POST', url, accessToken, JSON.stringify(body))
-      if (result.status >= 400) throw errors.httpError(result.status)
-      return JSON.parse(result.text)
-    }
-    default:
-      throw errors.unknownOp(operation)
-  }
+const WRITE_OPERATIONS: Record<string, WriteHandler> = {
+  async likeTrack(page, params, accessToken, errors) {
+    const trackId = params.trackId as string
+    const result = await spotifyApiFetch(page, 'PUT', 'https://api.spotify.com/v1/me/tracks', accessToken, JSON.stringify({ ids: [trackId] }))
+    if (result.status >= 400) throw errors.httpError(result.status)
+    return { success: true }
+  },
+  async unlikeTrack(page, params, accessToken, errors) {
+    const trackId = params.trackId as string
+    const result = await spotifyApiFetch(page, 'DELETE', 'https://api.spotify.com/v1/me/tracks', accessToken, JSON.stringify({ ids: [trackId] }))
+    if (result.status >= 400) throw errors.httpError(result.status)
+    return { success: true }
+  },
+  async addToPlaylist(page, params, accessToken, errors) {
+    const playlistId = params.playlistId as string
+    const trackUris = params.trackUris as string[]
+    const body: Record<string, unknown> = { uris: trackUris }
+    if (params.position !== undefined) body.position = params.position
+    const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
+    const result = await spotifyApiFetch(page, 'POST', url, accessToken, JSON.stringify(body))
+    if (result.status >= 400) throw errors.httpError(result.status)
+    return JSON.parse(result.text)
+  },
+  async removeFromPlaylist(page, params, accessToken, errors) {
+    const playlistId = params.playlistId as string
+    const trackUris = params.trackUris as string[]
+    const body = { tracks: trackUris.map((uri) => ({ uri })) }
+    const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
+    const result = await spotifyApiFetch(page, 'DELETE', url, accessToken, JSON.stringify(body))
+    if (result.status >= 400) throw errors.httpError(result.status)
+    return JSON.parse(result.text)
+  },
+  async createPlaylist(page, params, accessToken, errors) {
+    const meResult = await spotifyApiFetch(page, 'GET', 'https://api.spotify.com/v1/me', accessToken)
+    if (meResult.status >= 400) throw errors.httpError(meResult.status)
+    const userId = (JSON.parse(meResult.text) as { id: string }).id
+    const body: Record<string, unknown> = { name: params.name as string }
+    if (params.description !== undefined) body.description = params.description
+    if (params.public !== undefined) body.public = params.public
+    const url = `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`
+    const result = await spotifyApiFetch(page, 'POST', url, accessToken, JSON.stringify(body))
+    if (result.status >= 400) throw errors.httpError(result.status)
+    return JSON.parse(result.text)
+  },
 }
 
-// Cached tokens per page
+// Cached tokens per module
 let cachedTokens: { accessToken: string; clientToken: string } | null = null
 
-const adapter = {
+function isNeedsLogin(err: unknown): boolean {
+  return (err as { payload?: { failureClass?: string } }).payload?.failureClass === 'needs_login'
+}
+
+const runner: CustomRunner = {
   name: 'spotify-pathfinder',
   description: 'Spotify GraphQL pathfinder API — search, artist, discography, album tracks, playlists, recommendations',
 
-  async init(page: Page): Promise<boolean> {
-    // Check if we're on open.spotify.com
-    const url = page.url()
-    return url.includes('open.spotify.com')
-  },
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('spotify-pathfinder requires a page (transport: page)')
+    const { errors } = helpers
 
-  async isAuthenticated(page: Page): Promise<boolean> {
-    // Spotify works for both anonymous and logged-in users
-    // Anonymous gets limited results but search still works
-    const url = page.url()
-    return url.includes('open.spotify.com')
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
-    const { errors } = helpers as { errors: ErrorHelpers }
-    const config = OPERATIONS[operation]
-    if (!config && operation !== 'getUserPlaylists' && !WRITE_OPERATIONS.has(operation)) {
+    const graphqlConfig = GRAPHQL_OPERATIONS[operation]
+    const writeHandler = WRITE_OPERATIONS[operation]
+    if (!graphqlConfig && !writeHandler && operation !== 'getUserPlaylists') {
       throw errors.unknownOp(operation)
     }
 
-    // Extract tokens if not cached
     if (!cachedTokens) {
       cachedTokens = await extractToken(page, errors)
     }
 
-    // Write operations use Spotify's REST API
-    if (WRITE_OPERATIONS.has(operation)) {
+    if (writeHandler) {
       try {
-        return await writeOperationFetch(page, operation, params, cachedTokens.accessToken, errors)
+        return await writeHandler(page, params, cachedTokens.accessToken, errors)
       } catch (err) {
-        const failureClass = (err as { payload?: { failureClass?: string } }).payload?.failureClass
-        if (failureClass === 'needs_login') {
+        if (isNeedsLogin(err)) {
           cachedTokens = await extractToken(page, errors)
-          return writeOperationFetch(page, operation, params, cachedTokens.accessToken, errors)
+          return writeHandler(page, params, cachedTokens.accessToken, errors)
         }
         throw err
       }
     }
 
-    // getUserPlaylists uses a REST endpoint, not pathfinder
     if (operation === 'getUserPlaylists') {
       return userProfileFetch(page, params, cachedTokens.accessToken, cachedTokens.clientToken, errors)
     }
 
-    // Merge default variables with user params
-    if (!config) throw errors.unknownOp(operation)
+    // GraphQL pathfinder operation
+    const config = graphqlConfig!
     const variables = { ...config.defaultVariables, ...params }
 
     try {
       return await pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
     } catch (err) {
-      // If auth expired (401/403), retry with fresh token
-      const failureClass = (err as { payload?: { failureClass?: string } }).payload?.failureClass
-      if (failureClass === 'needs_login') {
+      if (isNeedsLogin(err)) {
         cachedTokens = await extractToken(page, errors)
         return pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
       }
@@ -352,4 +327,4 @@ const adapter = {
   },
 }
 
-export default adapter
+export default runner
