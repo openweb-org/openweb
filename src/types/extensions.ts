@@ -21,6 +21,22 @@ export interface PagePlanConfig {
   readonly settle_ms?: number
   readonly warm?: boolean
   readonly nav_timeout_ms?: number
+  /** Target origin for warmSession. 'page' warms on entry_url (keep current
+   *  page — required when adapter auth reads page globals on a different
+   *  origin than the API server). 'server' warms on serverUrl. Explicit URL
+   *  warms on that URL. Default: entry_url when its origin differs from
+   *  serverUrl, otherwise serverUrl. */
+  readonly warm_origin?: 'page' | 'server' | string
+}
+
+// Parameter-level x-openweb (on operation parameters[])
+export interface XOpenWebParameter {
+  /** Template literal for this parameter's wire value. `{name}` placeholders
+   *  are substituted from caller input (or other parameter defaults) at
+   *  request-build time. Callers cannot override a templated parameter.
+   *  Example: `tags` with template `story,author_{id}` → when caller passes
+   *  `{id: "pg"}`, the emitted value becomes `story,author_pg`. */
+  readonly template?: string
 }
 
 export interface AdapterRef {

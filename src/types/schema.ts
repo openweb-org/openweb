@@ -34,6 +34,7 @@ export const pagePlanSchema = {
     settle_ms: { type: 'integer', minimum: 0 },
     warm: { type: 'boolean' },
     nav_timeout_ms: { type: 'integer', minimum: 0 },
+    warm_origin: { type: 'string' },
   },
   additionalProperties: false,
 } as const

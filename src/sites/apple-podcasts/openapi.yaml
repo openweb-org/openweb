@@ -7,9 +7,19 @@ info:
     compiled_at: 2026-04-01T23:02:37.299000Z
     requires_auth: true
 servers:
-- url: https://podcasts.apple.com
+- url: https://amp-api.podcasts.apple.com
   x-openweb:
     transport: page
+    page_plan:
+      entry_url: https://podcasts.apple.com/us/charts
+      warm: true
+      warm_origin: page
+    auth:
+      type: page_global
+      expression: window.MusicKit?.getInstance()?.developerToken
+      inject:
+        header: Authorization
+        prefix: "Bearer "
 paths:
   /v1/catalog/us/search/groups:
     get:
@@ -20,9 +30,6 @@ paths:
         build:
           stable_id: ap0001
           tool_version: 2
-        adapter:
-          name: apple-podcasts-api
-          operation: searchPodcasts
       parameters:
       - name: term
         in: query
@@ -37,7 +44,36 @@ paths:
         description: Locale code
         schema:
           type: string
+          default: en-US
         example: en-US
+      - name: platform
+        in: query
+        required: false
+        description: Client platform (AMP API constant)
+        schema:
+          type: string
+          default: web
+      - name: types
+        in: query
+        required: false
+        description: Result entity types
+        schema:
+          type: string
+          default: "podcasts,podcast-channels,podcast-episodes,categories,editorial-items"
+      - name: groups
+        in: query
+        required: false
+        description: Result groupings
+        schema:
+          type: string
+          default: "category,channel,episode,show,top"
+      - name: limit
+        in: query
+        required: false
+        description: Max items per group
+        schema:
+          type: string
+          default: "25"
       - name: extend
         in: query
         required: false
@@ -91,9 +127,6 @@ paths:
         build:
           stable_id: ap0002
           tool_version: 2
-        adapter:
-          name: apple-podcasts-api
-          operation: getPodcast
       parameters:
       - name: id
         in: path
@@ -130,6 +163,7 @@ paths:
         description: Locale code
         schema:
           type: string
+          default: en-US
         example: en-US
       - name: limit[episodes]
         in: query
@@ -205,9 +239,6 @@ paths:
         build:
           stable_id: ap0003
           tool_version: 2
-        adapter:
-          name: apple-podcasts-api
-          operation: getSearchSuggestions
       parameters:
       - name: term
         in: query
@@ -222,7 +253,29 @@ paths:
         description: Locale code
         schema:
           type: string
+          default: en-US
         example: en-US
+      - name: platform
+        in: query
+        required: false
+        description: Client platform (AMP API constant)
+        schema:
+          type: string
+          default: web
+      - name: kinds
+        in: query
+        required: false
+        description: Suggestion kinds
+        schema:
+          type: string
+          default: "terms,topResults"
+      - name: types
+        in: query
+        required: false
+        description: Entity types for topResults
+        schema:
+          type: string
+          default: "podcasts,podcast-channels,podcast-episodes,categories,editorial-items"
       responses:
         "200":
           description: Search suggestions.
@@ -256,9 +309,6 @@ paths:
         build:
           stable_id: ap0004
           tool_version: 2
-        adapter:
-          name: apple-podcasts-api
-          operation: getTopCharts
       parameters:
       - name: name
         in: query
@@ -266,6 +316,7 @@ paths:
         description: "Grouping name (search-landing for main charts)"
         schema:
           type: string
+          default: search-landing
         example: search-landing
       - name: l
         in: query
@@ -273,7 +324,15 @@ paths:
         description: Locale code
         schema:
           type: string
+          default: en-US
         example: en-US
+      - name: platform
+        in: query
+        required: false
+        description: Client platform (AMP API constant)
+        schema:
+          type: string
+          default: web
       responses:
         "200":
           description: Editorial groupings with curated podcast lists.

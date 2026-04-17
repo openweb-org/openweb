@@ -86,6 +86,7 @@ const PAGE_PLAN_FIELDS = [
   'settle_ms',
   'warm',
   'nav_timeout_ms',
+  'warm_origin',
 ] as const
 
 /**

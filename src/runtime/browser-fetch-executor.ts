@@ -38,6 +38,34 @@ function isBotDetectionBlock(responseText: string): boolean {
   return BOT_DETECTION_MARKERS.some(marker => responseText.includes(marker))
 }
 
+/**
+ * Pick the URL warmSession should navigate against.
+ *
+ * Without explicit config: if entry_url origin differs from serverUrl origin,
+ * warm on entry_url — otherwise warmSession would navigate away from the page
+ * that hosts adapter auth (e.g. window.MusicKit on podcasts.apple.com when the
+ * API is amp-api.podcasts.apple.com).
+ *
+ * Explicit `warm_origin`: 'page' → entry_url, 'server' → serverUrl, any other
+ * string starting with 'http' → used verbatim.
+ */
+function resolveWarmUrl(
+  warmOrigin: string | undefined,
+  entryUrl: string,
+  serverUrl: string,
+): string {
+  if (warmOrigin === 'page') return entryUrl
+  if (warmOrigin === 'server') return serverUrl
+  if (warmOrigin && /^https?:\/\//.test(warmOrigin)) return warmOrigin
+  try {
+    const entryOrigin = new URL(entryUrl).origin
+    const serverOrigin = new URL(serverUrl).origin
+    return entryOrigin === serverOrigin ? serverUrl : entryUrl
+  } catch {
+    return serverUrl
+  }
+}
+
 export type { ExecutorResult }
 
 /**
@@ -82,8 +110,9 @@ export async function executeBrowserFetch(
   }
 
   const planConfig = resolvePagePlan(spec, operation) ?? {}
+  const entryUrl = interpolateEntryUrl(planConfig.entry_url, params) ?? serverUrl
   const { page, owned: ownedPage } = await acquirePage(context, serverUrl, {
-    entry_url: interpolateEntryUrl(planConfig.entry_url, params) ?? serverUrl,
+    entry_url: entryUrl,
     ready: planConfig.ready,
     wait_until: planConfig.wait_until,
     settle_ms: planConfig.settle_ms,
@@ -96,7 +125,9 @@ export async function executeBrowserFetch(
 
     // Warm session: let bot-detection sensors (PerimeterX, Akamai, DataDome)
     // generate valid cookies before issuing the API request.
-    await warmSession(page, serverUrl)
+    // When entry_url origin differs from serverUrl origin (API subdomain), warm on
+    // entry_url so adapter auth (e.g. window.MusicKit) can read page globals.
+    await warmSession(page, resolveWarmUrl(planConfig.warm_origin, entryUrl, serverUrl))
 
     const ssrfValidator = deps.ssrfValidator ?? validateSSRF
     const handle: BrowserHandle = { page, context }
