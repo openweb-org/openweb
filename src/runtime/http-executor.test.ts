@@ -91,6 +91,7 @@ const mockGetServerXOpenWeb = vi.fn<() => unknown>()
 vi.mock('./operation-context.js', () => ({
   resolveTransport: (...a: unknown[]) => mockResolveTransport(...a),
   getServerXOpenWeb: (...a: unknown[]) => mockGetServerXOpenWeb(...a),
+  resolvePagePlan: () => undefined,
 }))
 
 // Mock browser-lifecycle
@@ -135,9 +136,11 @@ vi.mock('./session-executor.js', () => ({
 // Mock adapter-executor
 const mockExecuteAdapter = vi.fn<() => Promise<unknown>>()
 const mockLoadAdapter = vi.fn<() => Promise<unknown>>()
+const mockExecuteAdapterWithAcquire = vi.fn<() => Promise<unknown>>()
 vi.mock('./adapter-executor.js', () => ({
   executeAdapter: (...a: unknown[]) => mockExecuteAdapter(...a),
   loadAdapter: (...a: unknown[]) => mockLoadAdapter(...a),
+  executeAdapterWithAcquire: (...a: unknown[]) => mockExecuteAdapterWithAcquire(...a),
 }))
 
 // Mock cache-manager
@@ -421,13 +424,14 @@ describe('executeOperation — transport selection', () => {
     mockFindPageForOrigin.mockResolvedValue(null)
     mockAutoNavigate.mockResolvedValue(null)
     mockExecuteAdapter.mockResolvedValue({ result: 'adapted' })
+    mockExecuteAdapterWithAcquire.mockResolvedValue({ result: 'adapted' })
 
     const result = await executeOperation('test-site', 'testOp', {})
 
     expect(result.status).toBe(200)
     expect(result.body).toEqual({ result: 'adapted' })
     expect(mockLoadAdapter).toHaveBeenCalledTimes(1)
-    expect(mockExecuteAdapter).toHaveBeenCalledTimes(1)
+    expect(mockExecuteAdapterWithAcquire).toHaveBeenCalledTimes(1)
   })
 
   it('uses injected browser from deps instead of calling ensureBrowser', async () => {

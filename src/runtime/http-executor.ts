@@ -21,7 +21,7 @@ import { checkPermission, loadPermissions } from '../lib/permissions.js'
 import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
-import { executeAdapter, loadAdapter } from './adapter-executor.js'
+import { executeAdapter, executeAdapterWithAcquire, loadAdapter } from './adapter-executor.js'
 import { type BrowserHandle, ensureBrowser, handleLoginRequired, refreshProfile } from './browser-lifecycle.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { clearTokenCache, executeCachedFetch, readTokenCache, writeBrowserCookiesToCache } from './cache-manager.js'
@@ -29,7 +29,7 @@ import { executeExtraction } from './extraction-executor.js'
 import type { ExecutorResult } from './executor-result.js'
 import { withHttpRetry } from './http-retry.js'
 import { executeNodeSsr } from './node-ssr-executor.js'
-import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
+import { getServerXOpenWeb, resolvePagePlan, resolveTransport } from './operation-context.js'
 import { fetchWithRedirects } from './redirect.js'
 import { buildHeaderParams, buildJsonRequestBody, buildFormRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
@@ -178,21 +178,23 @@ export async function executeOperation(
           })
         }
         const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
-        let page = await findPageForOrigin(context, serverUrl)
-        let ownedPage = false
-        if (!page) {
-          const nav = await autoNavigate(context, serverUrl)
-          if (nav) { page = nav.page; ownedPage = nav.owned }
-        }
-        if (!page) {
-          page = await context.newPage()
-          ownedPage = true
-        }
-        try {
-          return await executeAdapter(page, adapter, adapterRef.operation, adapterParams, { requiresAuth })
-        } finally {
-          if (ownedPage) await page.close().catch(() => {})
-        }
+        const planConfig = resolvePagePlan(spec, operationRef.operation) ?? {}
+        return await executeAdapterWithAcquire(
+          context,
+          serverUrl,
+          {
+            entry_url: planConfig.entry_url ?? serverUrl,
+            ready: planConfig.ready,
+            wait_until: planConfig.wait_until,
+            settle_ms: planConfig.settle_ms,
+            warm: planConfig.warm,
+            nav_timeout_ms: planConfig.nav_timeout_ms,
+          },
+          adapter,
+          adapterRef.operation,
+          adapterParams,
+          { requiresAuth },
+        )
       } finally {
         if (handle) await handle.release()
       }

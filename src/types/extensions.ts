@@ -10,6 +10,19 @@ export type PermissionCategory = 'read' | 'write' | 'delete' | 'transact'
 
 export type Transport = 'node' | 'page'
 
+export type PageWaitUntil = 'load' | 'domcontentloaded' | 'networkidle' | 'commit'
+
+/** Declarative page-acquisition plan. Fields are independently mergeable from
+ *  server → operation (see resolvePagePlan in operation-context). */
+export interface PagePlanConfig {
+  readonly entry_url?: string
+  readonly ready?: string
+  readonly wait_until?: PageWaitUntil
+  readonly settle_ms?: number
+  readonly warm?: boolean
+  readonly nav_timeout_ms?: number
+}
+
 export interface AdapterRef {
   readonly name: string
   readonly operation: string
@@ -25,6 +38,8 @@ export interface XOpenWebServer {
   /** Constant headers merged into every node-transport request to this server.
    *  Useful for per-site User-Agent overrides, API keys, etc. */
   readonly headers?: Readonly<Record<string, string>>
+  /** Default page-acquisition plan for page-transport operations. */
+  readonly page_plan?: PagePlanConfig
 }
 
 export interface XOpenWebBuildMeta {
@@ -57,4 +72,7 @@ export interface XOpenWebOperation {
   /** GraphQL query string injected at body root when wrap is active and the schema
    *  property name would conflict with a user-facing param (e.g. both named 'query') */
   readonly graphql_query?: string
+  /** Per-operation overrides for the page-acquisition plan. Each field here wins
+   *  over the server-level page_plan, even when the value is falsy. */
+  readonly page_plan?: PagePlanConfig
 }

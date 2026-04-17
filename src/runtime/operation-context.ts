@@ -1,6 +1,6 @@
 import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiSpec } from '../lib/spec-loader.js'
-import type { XOpenWebServer } from '../types/extensions.js'
+import type { PagePlanConfig, XOpenWebServer } from '../types/extensions.js'
 import type { Transport } from '../types/extensions.js'
 
 const VALID_TRANSPORTS = new Set<string>(['node', 'page'])
@@ -76,4 +76,38 @@ export function resolveTransport(spec: OpenApiSpec, operation: OpenApiOperation)
     })
   }
   return serverTransport as Transport
+}
+
+const PAGE_PLAN_FIELDS = [
+  'entry_url',
+  'ready',
+  'wait_until',
+  'settle_ms',
+  'warm',
+  'nav_timeout_ms',
+] as const
+
+/**
+ * Merge server-level and operation-level page_plan configs.
+ *
+ * Each field is merged independently: operation fields override server fields,
+ * and an explicitly-set falsy value on the operation (e.g. `warm: false`) still
+ * wins over a server-level truthy value.
+ */
+export function resolvePagePlan(spec: OpenApiSpec, operation: OpenApiOperation): PagePlanConfig | undefined {
+  const serverExt = getServerXOpenWeb(spec, operation)
+  const serverPlan = serverExt?.page_plan
+  const opExt = operation['x-openweb'] as { page_plan?: PagePlanConfig } | undefined
+  const opPlan = opExt?.page_plan
+
+  if (!serverPlan && !opPlan) return undefined
+
+  const merged: Record<string, unknown> = { ...(serverPlan ?? {}) }
+  if (opPlan) {
+    const src = opPlan as Record<string, unknown>
+    for (const field of PAGE_PLAN_FIELDS) {
+      if (field in src) merged[field] = src[field]
+    }
+  }
+  return merged as PagePlanConfig
 }

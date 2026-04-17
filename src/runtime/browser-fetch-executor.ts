@@ -8,19 +8,14 @@ import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters } fro
 import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { ExecutorResult } from './executor-result.js'
-import { getServerXOpenWeb } from './operation-context.js'
+import { getServerXOpenWeb, resolvePagePlan } from './operation-context.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
+import { acquirePage } from './page-plan.js'
 import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { buildHeaderParams, buildJsonRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
-import {
-  type AutoNavigateResult,
-  type SessionHttpDependencies,
-  autoNavigate,
-  createNeedsPageError,
-  findPageForOrigin,
-} from './session-executor.js'
+import type { SessionHttpDependencies } from './session-executor.js'
 import { warmSession } from './warm-session.js'
 
 // ── Bot-detection block detection ───────────────
@@ -85,15 +80,15 @@ export async function executeBrowserFetch(
     })
   }
 
-  let page = await findPageForOrigin(context, serverUrl)
-  let ownedPage = false
-  if (!page) {
-    const nav = await autoNavigate(context, serverUrl)
-    if (nav) { page = nav.page; ownedPage = nav.owned }
-  }
-  if (!page) {
-    throw createNeedsPageError(serverUrl)
-  }
+  const planConfig = resolvePagePlan(spec, operation) ?? {}
+  const { page, owned: ownedPage } = await acquirePage(context, serverUrl, {
+    entry_url: planConfig.entry_url ?? serverUrl,
+    ready: planConfig.ready,
+    wait_until: planConfig.wait_until,
+    settle_ms: planConfig.settle_ms,
+    warm: planConfig.warm,
+    nav_timeout_ms: planConfig.nav_timeout_ms,
+  })
 
   try {
     await ensurePagePolyfills(page)

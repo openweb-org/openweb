@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import type { Page } from 'patchright'
+import type { BrowserContext, Page } from 'patchright'
 
 import { TIMEOUT } from '../lib/config.js'
 import { OpenWebError, toOpenWebError } from '../lib/errors.js'
@@ -10,6 +10,7 @@ import { pageFetch, graphqlFetch } from '../lib/adapter-helpers.js'
 import type { AdapterErrorHelpers, CodeAdapter } from '../types/adapter.js'
 import { detectPageBotBlock } from './bot-detect.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
+import { type PagePlan, acquirePage } from './page-plan.js'
 import { warmSession } from './warm-session.js'
 
 const adapterCache = new Map<string, CodeAdapter>()
@@ -215,4 +216,28 @@ const adapterErrors: AdapterErrorHelpers = {
 /** Clear the adapter cache (useful for tests) */
 export function clearAdapterCache(): void {
   adapterCache.clear()
+}
+
+/**
+ * Acquire a page via acquirePage() and run executeAdapter on it.
+ *
+ * Centralizes the nav logic that previously lived in http-executor's adapter
+ * branch. Caller is still responsible for transport:node shortcuts (page=null)
+ * and for browser-context recovery — acquirePage expects a live context.
+ */
+export async function executeAdapterWithAcquire(
+  context: BrowserContext,
+  serverUrl: string,
+  plan: PagePlan,
+  adapter: CodeAdapter,
+  operation: string,
+  params: Readonly<Record<string, unknown>>,
+  options?: AdapterExecOptions,
+): Promise<unknown> {
+  const { page, owned } = await acquirePage(context, serverUrl, plan)
+  try {
+    return await executeAdapter(page, adapter, operation, params, options)
+  } finally {
+    if (owned) await page.close().catch(() => {})
+  }
 }

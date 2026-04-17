@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page } from 'patchright'
+import type { Browser, Page } from 'patchright'
 
 import { CDP_PORT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
@@ -6,7 +6,8 @@ import type { OpenApiOperation, OpenApiSpec } from '../lib/spec-loader.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
 import type { ExecutorResult } from './executor-result.js'
 import { detectPageBotBlock } from './bot-detect.js'
-import { listCandidatePages } from './page-candidates.js'
+import { resolvePagePlan } from './operation-context.js'
+import { acquirePage } from './page-plan.js'
 import { resolveHtmlSelector } from './primitives/html-selector.js'
 import { resolvePageGlobalData } from './primitives/page-global-data.js'
 import { resolveScriptJson } from './primitives/script-json.js'
@@ -14,7 +15,6 @@ import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
 import { buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
-import { type AutoNavigateResult, autoNavigate, findPageForOrigin } from './session-executor.js'
 
 export type { ExecutorResult }
 
@@ -27,36 +27,6 @@ function createExtractionNeedsPageError(targetPageUrl: string): OpenWebError {
     retriable: true,
     failureClass: 'needs_page',
   })
-}
-
-async function findPageForTarget(
-  context: BrowserContext,
-  targetUrl: string,
-  requireExactPath: boolean,
-): Promise<Page | undefined> {
-  const pages = await listCandidatePages(context)
-  try {
-    const target = new URL(targetUrl)
-    for (const page of pages) {
-      try {
-        const current = new URL(page.url())
-        if (current.origin === target.origin
-          && decodeURIComponent(current.pathname) === decodeURIComponent(target.pathname)) {
-          return page
-        }
-      } catch {
-        // intentional: detached pages and about:blank URLs fail URL parse
-      }
-    }
-
-    if (requireExactPath) {
-      return undefined
-    }
-  } catch {
-    // intentional: malformed targetUrl — fall through to origin-level matching
-  }
-
-  return findPageForOrigin(context, targetUrl)
 }
 
 function resolvePageUrl(
@@ -131,26 +101,25 @@ export async function executeExtraction(
 
   const extraction = getExtraction(operation)
   const targetPageUrl = resolvePageUrl(serverUrl, extraction, pathTemplate, spec, operation, params)
-  let page = await findPageForTarget(context, targetPageUrl, 'page_url' in extraction && !!extraction.page_url)
-  let ownedPage = false
-  if (!page) {
-    // Navigate directly to the target URL (includes path + query params)
-    let directPage: Page | undefined
-    try {
-      directPage = await context.newPage()
-      await directPage.goto(targetPageUrl, { waitUntil: 'load', timeout: 30_000 })
-      page = directPage
-      ownedPage = true
-    } catch {
-      // Close the failed page to prevent leak
-      if (directPage) await directPage.close().catch(() => {})
-      // Fallback: auto-navigate to server homepage
-      const nav = await autoNavigate(context, serverUrl)
-      if (nav) { page = nav.page; ownedPage = nav.owned }
+  const planConfig = resolvePagePlan(spec, operation) ?? {}
+  let page: Page
+  let ownedPage: boolean
+  try {
+    const acquired = await acquirePage(context, serverUrl, {
+      entry_url: planConfig.entry_url ?? targetPageUrl,
+      ready: planConfig.ready,
+      wait_until: planConfig.wait_until,
+      settle_ms: planConfig.settle_ms,
+      warm: planConfig.warm,
+      nav_timeout_ms: planConfig.nav_timeout_ms,
+    })
+    page = acquired.page
+    ownedPage = acquired.owned
+  } catch (err) {
+    if (err instanceof OpenWebError && err.payload.failureClass === 'needs_page') {
+      throw createExtractionNeedsPageError(targetPageUrl)
     }
-  }
-  if (!page) {
-    throw createExtractionNeedsPageError(targetPageUrl)
+    throw err
   }
 
   try {
