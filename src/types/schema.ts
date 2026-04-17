@@ -25,6 +25,19 @@ export const adapterRefSchema = {
   additionalProperties: false,
 } as const
 
+export const pagePlanSchema = {
+  type: 'object',
+  properties: {
+    entry_url: { type: 'string' },
+    ready: { type: 'string' },
+    wait_until: { enum: ['load', 'domcontentloaded', 'networkidle', 'commit'] },
+    settle_ms: { type: 'integer', minimum: 0 },
+    warm: { type: 'boolean' },
+    nav_timeout_ms: { type: 'integer', minimum: 0 },
+  },
+  additionalProperties: false,
+} as const
+
 export const transportSchema = {
   enum: ['node', 'page'],
 } as const
@@ -44,6 +57,8 @@ export const xOpenWebServerSchema = {
     csrf: csrfWithScopeSchema,
     signing: signingPrimitiveSchema,
     headers: { type: 'object', additionalProperties: { type: 'string' } },
+    page_plan: pagePlanSchema,
+    adapter: adapterRefSchema,
   },
   additionalProperties: false,
 } as const
@@ -79,11 +94,13 @@ export const xOpenWebOperationSchema = {
     signing: { oneOf: [signingPrimitiveSchema, { const: false }] },
     pagination: paginationPrimitiveSchema,
     extraction: extractionPrimitiveSchema,
-    adapter: adapterRefSchema,
+    adapter: { oneOf: [adapterRefSchema, { const: false }] },
     actual_path: { type: 'string' },
     unwrap: { type: 'string' },
     wrap: { type: 'string' },
     graphql_query: { type: 'string' },
+    graphql_hash: { type: 'string' },
+    page_plan: pagePlanSchema,
   },
   additionalProperties: false,
 } as const

@@ -278,6 +278,70 @@ describe('validateXOpenWebSpec', () => {
     const result = validateXOpenWebSpec(spec)
     expect(result.valid).toBe(true)
   })
+
+  it('validates server-level page_plan and adapter', () => {
+    const spec = {
+      servers: [
+        {
+          url: 'https://example.com',
+          'x-openweb': {
+            transport: 'page',
+            page_plan: { entry_url: '/', wait_until: 'load', settle_ms: 200, warm: true, nav_timeout_ms: 15000 },
+            adapter: { name: 'example-web', operation: 'getFeed' },
+          },
+        },
+      ],
+      paths: {},
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(true)
+  })
+
+  it('validates operation-level page_plan override', () => {
+    const spec = {
+      paths: {
+        '/feed': {
+          get: {
+            operationId: 'getFeed',
+            'x-openweb': { page_plan: { ready: '#root', warm: false } },
+          },
+        },
+      },
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(true)
+  })
+
+  it('accepts adapter:false at op-level (explicit opt-out)', () => {
+    const spec = {
+      paths: {
+        '/feed': {
+          get: {
+            operationId: 'getFeed',
+            'x-openweb': { adapter: false },
+          },
+        },
+      },
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('rejects invalid wait_until value in page_plan', () => {
+    const spec = {
+      paths: {
+        '/feed': {
+          get: {
+            operationId: 'getFeed',
+            'x-openweb': { page_plan: { wait_until: 'bogus' } },
+          },
+        },
+      },
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(false)
+  })
 })
 
 describe('validateManifest', () => {
