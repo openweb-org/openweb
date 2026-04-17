@@ -7,26 +7,35 @@ info:
     compiled_at: '2026-04-09T00:00:00Z'
     requires_auth: false
 servers:
-  - url: https://www.grubhub.com
+  - url: https://api-gtm.grubhub.com
     x-openweb:
       transport: page
+      page_plan:
+        entry_url: https://www.grubhub.com/
 paths:
-  /restaurants/search:
+  /restaurants/search/search_listing:
     get:
       operationId: searchRestaurants
-      summary: Search restaurants by location and cuisine — name, rating, delivery fee, delivery time, cuisines, address
+      summary: Search restaurants by location and cuisine — raw Grubhub search feed (results[], stats)
       x-openweb:
         permission: read
+        adapter: false
         build:
           stable_id: grub0001
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: grubhub
-          operation: searchRestaurants
+          tool_version: 3
       parameters:
+        - name: orderMethod
+          in: query
+          required: false
+          schema:
+            type: string
+            default: delivery
+        - name: locationMode
+          in: query
+          required: false
+          schema:
+            type: string
+            default: DELIVERY
         - name: latitude
           in: query
           required: true
@@ -66,219 +75,161 @@ paths:
           example: 1
       responses:
         '200':
-          description: List of restaurants matching the search criteria.
+          description: Raw Grubhub search_listing response.
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - totalResults
-                  - restaurants
-                properties:
-                  totalResults:
-                    type: integer
-                    description: Total number of matching restaurants.
-                  restaurants:
-                    type: array
-                    items:
-                      type: object
-                      required:
-                        - restaurantId
-                        - name
-                      properties:
-                        restaurantId:
-                          type: string
-                          description: Unique restaurant ID (use with getMenu and getDeliveryEstimate).
-                        name:
-                          type: string
-                          description: Restaurant name.
-                        logo:
-                          type:
-                            - string
-                            - 'null'
-                          description: Restaurant logo URL.
-                        cuisines:
-                          type: array
-                          items:
-                            type: string
-                          description: Cuisine types (e.g. "Pizza", "Italian").
-                        rating:
-                          type:
-                            - number
-                            - 'null'
-                          description: Average rating (0-5 scale).
-                        ratingCount:
-                          type: integer
-                          description: Number of ratings.
-                        priceRating:
-                          type: integer
-                          description: Price level (1-4, dollar signs).
-                        deliveryFee:
-                          type: number
-                          description: Delivery fee in dollars (0 = free delivery).
-                        deliveryEstimateMin:
-                          type:
-                            - integer
-                            - 'null'
-                          description: Minimum delivery time in minutes.
-                        deliveryEstimateMax:
-                          type:
-                            - integer
-                            - 'null'
-                          description: Maximum delivery time in minutes.
-                        address:
-                          type: string
-                          description: Restaurant street address.
-                        distance:
-                          type:
-                            - number
-                            - 'null'
-                          description: Distance from delivery location in miles.
+                additionalProperties: true
 
-  /restaurants/menu:
+  /restaurants/{restaurantId}~getMenu:
     get:
       operationId: getMenu
-      summary: Get restaurant menu with categories, items, prices, and descriptions
+      summary: Get full restaurant document including menu_category_list — raw Grubhub restaurant feed
       x-openweb:
         permission: read
+        adapter: false
+        actual_path: /restaurants/{restaurantId}
         build:
           stable_id: grub0002
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: grubhub
-          operation: getMenu
+          tool_version: 3
       parameters:
         - name: restaurantId
-          in: query
+          in: path
           required: true
           schema:
             type: string
           description: 'Restaurant ID from searchRestaurants (e.g. "64436").'
           example: '64436'
+        - name: hideChoiceCategories
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: orderType
+          in: query
+          required: false
+          schema:
+            type: string
+            default: standard
+        - name: version
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 4
+        - name: variationId
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+        - name: hideUnavailableMenuItems
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: hideMenuItems
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: showMenuItemCoupons
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: includeOffers
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: locationMode
+          in: query
+          required: false
+          schema:
+            type: string
+            default: DELIVERY
       responses:
         '200':
-          description: Full restaurant menu organized by categories.
+          description: Raw Grubhub restaurant document (restaurant{} with menu_category_list[]).
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - restaurantName
-                  - categories
-                properties:
-                  restaurantName:
-                    type: string
-                    description: Restaurant name.
-                  categories:
-                    type: array
-                    items:
-                      type: object
-                      required:
-                        - name
-                        - items
-                      properties:
-                        name:
-                          type: string
-                          description: Menu category name (e.g. "Appetizers", "Pizza").
-                        items:
-                          type: array
-                          items:
-                            type: object
-                            required:
-                              - itemId
-                              - name
-                              - price
-                            properties:
-                              itemId:
-                                type: string
-                                description: Menu item ID.
-                              name:
-                                type: string
-                                description: Menu item name.
-                              description:
-                                type:
-                                  - string
-                                  - 'null'
-                                description: Menu item description.
-                              price:
-                                type: number
-                                description: Price in dollars.
-                              popular:
-                                type: boolean
-                                description: Whether this item is marked as popular.
+                additionalProperties: true
 
-  /restaurants/delivery-estimate:
+  /restaurants/{restaurantId}~getDeliveryEstimate:
     get:
       operationId: getDeliveryEstimate
-      summary: Get delivery time and fee estimate for a restaurant
+      summary: Get restaurant availability and delivery estimates — raw restaurant_availability section
       x-openweb:
         permission: read
+        adapter: false
+        actual_path: /restaurants/{restaurantId}
         build:
           stable_id: grub0003
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: grubhub
-          operation: getDeliveryEstimate
+          tool_version: 3
       parameters:
         - name: restaurantId
-          in: query
+          in: path
           required: true
           schema:
             type: string
           description: 'Restaurant ID from searchRestaurants (e.g. "64436").'
           example: '64436'
+        - name: hideChoiceCategories
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: orderType
+          in: query
+          required: false
+          schema:
+            type: string
+            default: standard
+        - name: version
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 4
+        - name: variationId
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+        - name: hideUnavailableMenuItems
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: hideMenuItems
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: locationMode
+          in: query
+          required: false
+          schema:
+            type: string
+            default: DELIVERY
       responses:
         '200':
-          description: Delivery time and fee estimate.
+          description: Raw Grubhub restaurant document (restaurant_availability{}).
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - restaurantId
-                  - deliveryEstimateMin
-                  - deliveryEstimateMax
-                properties:
-                  restaurantId:
-                    type: string
-                    description: Restaurant ID.
-                  open:
-                    type: boolean
-                    description: Whether the restaurant is currently open.
-                  openDelivery:
-                    type: boolean
-                    description: Whether delivery is currently available.
-                  openPickup:
-                    type: boolean
-                    description: Whether pickup is currently available.
-                  deliveryEstimateMin:
-                    type: integer
-                    description: Minimum delivery time in minutes.
-                  deliveryEstimateMax:
-                    type: integer
-                    description: Maximum delivery time in minutes.
-                  pickupEstimateMin:
-                    type:
-                      - integer
-                      - 'null'
-                    description: Minimum pickup time in minutes.
-                  pickupEstimateMax:
-                    type:
-                      - integer
-                      - 'null'
-                    description: Maximum pickup time in minutes.
-                  deliveryFee:
-                    type: number
-                    description: Delivery fee in dollars.
-                  orderMinimum:
-                    type: number
-                    description: Minimum order amount in dollars.
-                  salesTax:
-                    type: number
-                    description: Sales tax percentage.
+                additionalProperties: true
