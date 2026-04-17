@@ -20,9 +20,40 @@ paths:
         build:
           stable_id: indeed_searchJobs_v2
           tool_version: 2
-        adapter:
-          name: indeed-web
-          operation: searchJobs
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const result = {};
+              const init = window._initialData;
+              if (init) {
+                result.totalJobCount = init.totalJobCount;
+                result.uniqueJobsCount = init.uniqueJobsCount;
+                result.pageNum = init.pageNum;
+              }
+              const pd = window.mosaic && window.mosaic.providerData && window.mosaic.providerData['mosaic-provider-jobcards'];
+              const model = pd && pd.metaData && pd.metaData.mosaicProviderJobCardsModel;
+              if (model && model.results) {
+                result.jobs = model.results.map(r => ({
+                  jobkey: r.jobkey,
+                  title: r.displayTitle || r.title,
+                  company: r.company || r.truncatedCompany,
+                  companyRating: r.companyRating,
+                  companyReviewCount: r.companyReviewCount,
+                  location: r.formattedLocation,
+                  remoteLocation: r.remoteLocation,
+                  salary: r.extractedSalary || r.salarySnippet,
+                  snippet: r.snippet,
+                  formattedRelativeTime: r.formattedRelativeTime,
+                  jobTypes: r.jobTypes,
+                  link: r.link,
+                  indeedApplyEnabled: r.indeedApplyEnabled,
+                  urgentlyHiring: r.urgentlyHiring,
+                  newJob: r.newJob,
+                }));
+              }
+              return result;
+            })()
       parameters:
       - name: q
         in: query
@@ -112,9 +143,39 @@ paths:
         build:
           stable_id: indeed_getJobDetail_v2
           tool_version: 2
-        adapter:
-          name: indeed-web
-          operation: getJobDetail
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const result = {};
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (const s of scripts) {
+                try {
+                  const data = JSON.parse(s.textContent || '');
+                  if (data['@type'] === 'JobPosting') {
+                    result.title = data.title;
+                    result.description = data.description;
+                    result.datePosted = data.datePosted;
+                    result.baseSalary = data.baseSalary;
+                    result.employmentType = data.employmentType;
+                    result.hiringOrganization = data.hiringOrganization;
+                    result.jobLocation = data.jobLocation;
+                    result.directApply = data.directApply;
+                  }
+                } catch (e) {}
+              }
+              const init = window._initialData;
+              if (init) {
+                result.jobKey = init.jobKey;
+                if (!result.title) result.title = init.jobTitle;
+                result.jobLocation = result.jobLocation || init.jobLocation;
+                result.salaryInfoModel = init.salaryInfoModel;
+                result.benefitsModel = init.benefitsModel;
+                result.hiringInsightsModel = init.hiringInsightsModel;
+                result.companyInfo = init.companyTabModel;
+              }
+              return result;
+            })()
       parameters:
       - name: jk
         in: query
@@ -266,9 +327,33 @@ paths:
         build:
           stable_id: indeed_getCompanyOverview_v2
           tool_version: 2
-        adapter:
-          name: indeed-web
-          operation: getCompanyOverview
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const result = {};
+              const init = window._initialData;
+              if (init) {
+                result.companyName = init.companyName;
+                if (init.aboutSectionViewModel) result.about = init.aboutSectionViewModel;
+                if (init.reviewRatingOverallSectionViewModel) result.ratings = init.reviewRatingOverallSectionViewModel;
+                if (init.salarySectionViewModel) result.salaries = init.salarySectionViewModel;
+                if (init.jobsSectionViewModel) result.jobs = init.jobsSectionViewModel;
+                if (init.locationsSectionViewModel) result.locations = init.locationsSectionViewModel;
+                if (init.interviewsSectionViewModel) result.interviews = init.interviewsSectionViewModel;
+                if (init.faqSectionViewModel) result.faq = init.faqSectionViewModel;
+                if (init.similarCompaniesSectionViewModel) result.similarCompanies = init.similarCompaniesSectionViewModel;
+                if (init.companyPageHeader) result.header = init.companyPageHeader;
+              }
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (const s of scripts) {
+                try {
+                  const data = JSON.parse(s.textContent || '');
+                  if (data['@type'] === 'LocalBusiness') result.ldJson = data;
+                } catch (e) {}
+              }
+              return result;
+            })()
       parameters:
       - name: company
         in: path
@@ -328,9 +413,50 @@ paths:
         build:
           stable_id: indeed_getCompanyReviews_v2
           tool_version: 2
-        adapter:
-          name: indeed-web
-          operation: getCompanyReviews
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const result = {};
+              const init = window._initialData;
+              if (init) {
+                if (init.reviewsFilters) {
+                  const rc = init.reviewsFilters.reviewsCount;
+                  result.reviewCount = (rc && (rc.totalReviewCount != null ? rc.totalReviewCount : rc.foundReviewCount)) || rc;
+                  result.topics = (init.reviewsFilters.topics || []).map(t => ({
+                    name: t.name, rating: t.rating, count: t.count,
+                  }));
+                }
+                const list = init.reviewsList;
+                if (list) {
+                  result.companyName = list.companyName;
+                  result.reviews = (list.items || []).map(r => ({
+                    title: typeof r.title === 'object' ? (r.title && r.title.text) : r.title,
+                    rating: r.overallRating,
+                    jobTitle: r.jobTitle || null,
+                    location: r.location || null,
+                    date: r.submissionDate,
+                    currentEmployee: r.currentEmployee,
+                    text: typeof r.text === 'object' ? (r.text && r.text.text) : r.text,
+                    compensationRating: r.compensationAndBenefitsRating ? r.compensationAndBenefitsRating.rating : null,
+                    cultureRating: r.cultureAndValuesRating ? r.cultureAndValuesRating.rating : null,
+                    workLifeRating: r.workAndLifeBalanceRating ? r.workAndLifeBalanceRating.rating : null,
+                    managementRating: r.managementRating ? r.managementRating.rating : null,
+                    jobSecurityRating: r.jobSecurityAndAdvancementRating ? r.jobSecurityAndAdvancementRating.rating : null,
+                  }));
+                }
+              }
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (const s of scripts) {
+                try {
+                  const data = JSON.parse(s.textContent || '');
+                  if (data['@type'] === 'EmployerAggregateRating' || data.aggregateRating) {
+                    result.aggregateRating = data.aggregateRating || data;
+                  }
+                } catch (e) {}
+              }
+              return result;
+            })()
       parameters:
       - name: company
         in: path
@@ -415,9 +541,47 @@ paths:
         build:
           stable_id: indeed_getCompanySalaries_v2
           tool_version: 2
-        adapter:
-          name: indeed-web
-          operation: getCompanySalaries
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const result = {};
+              const init = window._initialData;
+              if (init) {
+                result.companyName = init.companyName;
+                if (init.salaryHeader) {
+                  result.totalSalaryCount = init.salaryHeader.totalSalaryCount;
+                  result.lastUpdated = init.salaryHeader.formattedLastUpdateDate;
+                }
+                const cats = init.categorySalarySection;
+                if (cats && cats.categories) {
+                  result.categories = cats.categories.map(c => ({
+                    categoryTitle: c.categoryTitle,
+                    salaries: (c.salaries || []).map(s => ({
+                      jobTitle: s.title,
+                      salary: s.salary,
+                      salaryType: s.salaryType,
+                      reportedCount: s.reportedSalaryCount,
+                    })),
+                  }));
+                }
+                const popular = init.salaryPopularJobsSection;
+                if (popular && popular.popularJobTitles) {
+                  result.popularJobs = popular.popularJobTitles.map(j => ({
+                    jobTitle: j.jobTitle,
+                    salary: j.formattedMedian,
+                    salaryPeriod: j.salaryPeriod,
+                  }));
+                }
+                if (init.salarySatisfactionSidebarWidget) {
+                  result.satisfaction = {
+                    totalCount: init.salarySatisfactionSidebarWidget.totalCount,
+                    yesRatio: init.salarySatisfactionSidebarWidget.yesRatio,
+                  };
+                }
+              }
+              return result;
+            })()
       parameters:
       - name: company
         in: path

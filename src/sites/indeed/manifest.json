@@ -4,26 +4,26 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.indeed.com",
-  "description": "Job search, job details, salary data, company profiles, reviews, and autocomplete via page extraction",
+  "description": "Job search, job details, salary data, company profiles, reviews, and autocomplete via spec-based page extraction (5 ops) plus thin adapter (3 ops: salary slug, autocomplete fetch)",
   "requires_auth": false,
   "dependencies": {
-    "searchJobs \u2192 getJobDetail": "searchJobs returns jobkey used by getJobDetail",
-    "getCompanyOverview \u2192 getCompanyReviews": "company slug used across company operations",
-    "getCompanyOverview \u2192 getCompanySalaries": "company slug used across company operations",
-    "autocompleteJobTitle \u2192 getSalary": "autocompleteJobTitle returns normalized titles for getSalary",
-    "autocompleteLocation \u2192 searchJobs": "autocompleteLocation returns location strings for searchJobs"
+    "searchJobs → getJobDetail": "searchJobs returns jobkey used by getJobDetail",
+    "getCompanyOverview → getCompanyReviews": "company slug used across company operations",
+    "getCompanyOverview → getCompanySalaries": "company slug used across company operations",
+    "autocompleteJobTitle → getSalary": "autocompleteJobTitle returns normalized titles for getSalary",
+    "autocompleteLocation → searchJobs": "autocompleteLocation returns location strings for searchJobs"
   },
   "stats": {
     "operation_count": 8,
     "l1_count": 0,
-    "l2_count": 0,
-    "l3_count": 8,
+    "l2_count": 5,
+    "l3_count": 3,
     "ws_count": 0
   },
-  "last_verified": "2026-04-01T18:05:38.217Z",
+  "last_verified": "2026-04-17T16:36:52.647Z",
   "fingerprint": {
     "response_shape_hash": "",
-    "last_validated": "2026-04-01T18:05:38.217Z"
+    "last_validated": "2026-04-17T16:36:52.647Z"
   },
   "quarantined": false
 }
