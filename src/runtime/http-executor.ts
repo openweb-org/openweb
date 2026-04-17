@@ -28,10 +28,11 @@ import { clearTokenCache, executeCachedFetch, readTokenCache, writeBrowserCookie
 import { executeExtraction } from './extraction-executor.js'
 import type { ExecutorResult } from './executor-result.js'
 import { withHttpRetry } from './http-retry.js'
-import { executeNodeSsr } from './node-ssr-executor.js'
-import { getServerXOpenWeb, resolvePagePlan, resolveTransport } from './operation-context.js'
+import { executeNodeExtraction } from './node-ssr-executor.js'
+import { getServerXOpenWeb, resolveAdapterRef, resolvePagePlan, resolveTransport } from './operation-context.js'
+import { resolveAuth } from './primitives/index.js'
 import { fetchWithRedirects } from './redirect.js'
-import { buildHeaderParams, buildJsonRequestBody, buildFormRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
+import { buildHeaderParams, buildRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
 import {
   type AutoNavigateResult,
@@ -116,7 +117,7 @@ export async function executeOperation(
   let responseHeaders: Record<string, string> = {}
 
   // Check for L3 adapter — if present, adapter handles the entire operation
-  const adapterRef = opExt?.adapter as AdapterRef | undefined
+  const adapterRef = resolveAdapterRef(spec, operationRef.operation)
   if (adapterRef) {
     const siteRoot = await resolveSiteRoot(site)
 
@@ -129,6 +130,27 @@ export async function executeOperation(
     )
     const serverExt = getServerXOpenWeb(spec, operationRef.operation)
     const requiresAuth = !!(serverExt?.auth) || !!manifest?.requires_auth
+    const serverUrlForAuth = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
+    const authPrimitive = serverExt?.auth
+    // Runtime default for isAuthenticated: "auth primitive resolves" = configured.
+    // Real validity is only confirmed by the first real call below — that's the
+    // design contract; adapters that probe for validity must override.
+    const resolveAuthFallback = authPrimitive
+      ? async (page: import('patchright').Page) => {
+          try {
+            await resolveAuth(
+              { page, context: page.context() },
+              authPrimitive,
+              serverUrlForAuth,
+              { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator ?? validateSSRF },
+            )
+            return true
+          } catch {
+            return false
+          }
+        }
+      : undefined
+    const adapterOptions = { requiresAuth, resolveAuth: resolveAuthFallback }
 
     /** Single adapter attempt: acquire browser → find/create page → execute */
     const adapterAttempt = async (): Promise<unknown> => {
@@ -138,7 +160,7 @@ export async function executeOperation(
       const opTransport = (opExt as Record<string, unknown> | undefined)?.transport
       if (opTransport === 'node') {
         const adapter = await loadAdapter(siteRoot, adapterRef.name)
-        return await executeAdapter(null, adapter, adapterRef.operation, adapterParams, { requiresAuth })
+        return await executeAdapter(null, adapter, adapterRef.operation, adapterParams, adapterOptions)
       }
 
       const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
@@ -169,7 +191,7 @@ export async function executeOperation(
               context = retryBrowser.contexts()[0]
               if (!context) throw new Error('No browser context after restart')
               return await executeAdapterWithAcquire(
-                context, serverUrl, plan, adapter, adapterRef.operation, adapterParams, { requiresAuth },
+                context, serverUrl, plan, adapter, adapterRef.operation, adapterParams, adapterOptions,
               )
             } finally {
               await retryHandle.release()
@@ -185,7 +207,7 @@ export async function executeOperation(
           })
         }
         return await executeAdapterWithAcquire(
-          context, serverUrl, plan, adapter, adapterRef.operation, adapterParams, { requiresAuth },
+          context, serverUrl, plan, adapter, adapterRef.operation, adapterParams, adapterOptions,
         )
       } finally {
         if (handle) await handle.release()
@@ -242,8 +264,8 @@ export async function executeOperation(
     const serverExt = getServerXOpenWeb(spec, operationRef.operation)
     const needsBrowser = !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
 
-    if (!needsBrowser && transport === 'node' && extraction.type === 'ssr_next_data') {
-      // Node-based SSR: fetch HTML page and parse __NEXT_DATA__ — no browser needed
+    if (!needsBrowser && transport === 'node' && (extraction.type === 'ssr_next_data' || extraction.type === 'script_json')) {
+      // Node-based extraction: fetch HTML page and parse embedded data — no browser needed
       const serverUrl = getServerUrl(spec, operationRef.operation)
       const allParams = resolveAllParameters(spec, operationRef.operation)
       const inputParams = validateParams(
@@ -252,7 +274,7 @@ export async function executeOperation(
       )
       const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
       const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
-      const result = await executeNodeSsr(url, extraction, {
+      const result = await executeNodeExtraction(url, extraction, {
         fetchImpl: deps.fetchImpl,
         ssrfValidator: deps.ssrfValidator,
       })
@@ -420,13 +442,10 @@ export async function executeOperation(
       const upperMethod = operationRef.method.toUpperCase()
       let requestBody: string | undefined
       if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
-        const formBody = buildFormRequestBody(operationRef.operation, inputParams)
-        if (formBody) {
-          requestBody = formBody
-          if (!requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded'
-        } else {
-          requestBody = buildJsonRequestBody(operationRef.operation, inputParams)
-          if (requestBody && !requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/json'
+        const built = buildRequestBody(operationRef.operation, inputParams)
+        if (built) {
+          requestBody = built.body
+          if (!requestHeaders['Content-Type']) requestHeaders['Content-Type'] = built.contentType
         }
       }
       // Merge server-level x-openweb.headers (e.g., per-site User-Agent overrides)

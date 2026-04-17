@@ -1,14 +1,16 @@
 import { DEFAULT_USER_AGENT } from '../lib/config.js'
 /**
- * Node-based SSR extraction: fetches pages via HTTP and parses embedded data.
+ * Node-based extraction: fetches pages via HTTP and parses embedded data —
+ * no browser required.
  *
- * Used when an operation has `extraction.type: ssr_next_data` with
- * `transport: node` and no auth/csrf — avoids needing a browser.
+ * Used when an operation has `extraction.type: ssr_next_data | script_json`
+ * with `transport: node` and no auth/csrf.
  */
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
 import type { ExecutorResult } from './executor-result.js'
+import { parseScriptJson } from './primitives/script-json-parse.js'
 import { fetchWithRedirects } from './redirect.js'
 import { getValueAtPath } from './value-path.js'
 
@@ -16,7 +18,7 @@ export type { ExecutorResult }
 
 const NEXT_DATA_START = '<script id="__NEXT_DATA__" type="application/json"'
 
-function parseNextData(html: string): unknown {
+export function parseNextData(html: string): unknown {
   const tagStart = html.indexOf(NEXT_DATA_START)
   if (tagStart < 0) {
     throw new OpenWebError({
@@ -56,9 +58,34 @@ function parseNextData(html: string): unknown {
   }
 }
 
-export async function executeNodeSsr(
+type NodeExtraction = Extract<ExtractionPrimitive, { type: 'ssr_next_data' | 'script_json' }>
+
+function extractBody(html: string, extraction: NodeExtraction): unknown {
+  if (extraction.type === 'ssr_next_data') {
+    const nextData = parseNextData(html)
+    const body = getValueAtPath(nextData, extraction.path)
+    if (body === undefined) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Path "${extraction.path}" not found in __NEXT_DATA__.`,
+        action: 'Update the site package extraction path to match the current page payload.',
+        retriable: false,
+        failureClass: 'fatal',
+      })
+    }
+    return body
+  }
+  // script_json
+  return parseScriptJson(html, extraction.selector, {
+    path: extraction.path,
+    stripComments: extraction.strip_comments,
+  })
+}
+
+export async function executeNodeExtraction(
   url: string,
-  extraction: Extract<ExtractionPrimitive, { type: 'ssr_next_data' }>,
+  extraction: NodeExtraction,
   deps: { fetchImpl?: typeof fetch; ssrfValidator?: (url: string) => Promise<void> } = {},
 ): Promise<ExecutorResult> {
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
@@ -92,19 +119,6 @@ export async function executeNodeSsr(
   const responseHeaders: Record<string, string> = {}
   response.headers.forEach((value, key) => { responseHeaders[key] = value })
 
-  const nextData = parseNextData(html)
-  const body = getValueAtPath(nextData, extraction.path)
-
-  if (body === undefined) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Path "${extraction.path}" not found in __NEXT_DATA__.`,
-      action: 'Update the site package extraction path to match the current page payload.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-
+  const body = extractBody(html, extraction)
   return { status: 200, body, responseHeaders }
 }

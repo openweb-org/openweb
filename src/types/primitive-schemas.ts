@@ -249,6 +249,7 @@ export const extractionPrimitiveSchema = {
         page_url: { type: 'string' },
         selector: { type: 'string' },
         path: { type: 'string' },
+        strip_comments: { type: 'boolean' },
       },
       additionalProperties: false,
     },

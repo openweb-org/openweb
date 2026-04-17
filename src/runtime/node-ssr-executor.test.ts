@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { OpenWebError } from '../lib/errors.js'
-import { executeNodeSsr } from './node-ssr-executor.js'
+import { executeNodeExtraction } from './node-ssr-executor.js'
 
 // ── Helpers ─────────────────────────────────────────
 
@@ -32,7 +32,7 @@ function extraction(path: string): { type: 'ssr_next_data'; path: string } {
 
 // ── Tests ───────────────────────────────────────────
 
-describe('executeNodeSsr', () => {
+describe('executeNodeExtraction', () => {
   it('extracts data at a given path from __NEXT_DATA__', async () => {
     const payload = {
       props: {
@@ -43,7 +43,7 @@ describe('executeNodeSsr', () => {
     }
     const fetchImpl = vi.fn(async () => okResponse(htmlWithNextData(payload)))
 
-    const result = await executeNodeSsr(
+    const result = await executeNodeExtraction(
       'https://example.com/products',
       extraction('props.pageProps.items'),
       { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -58,7 +58,7 @@ describe('executeNodeSsr', () => {
     const payload = { props: { pageProps: { title: 'Hello World' } } }
     const fetchImpl = vi.fn(async () => okResponse(htmlWithNextData(payload)))
 
-    const result = await executeNodeSsr(
+    const result = await executeNodeExtraction(
       'https://example.com/page',
       extraction('props.pageProps.title'),
       { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -71,7 +71,7 @@ describe('executeNodeSsr', () => {
     const payload = { props: { pageProps: { data: 42 } } }
     const fetchImpl = vi.fn(async () => okResponse(htmlWithNextData(payload)))
 
-    const result = await executeNodeSsr(
+    const result = await executeNodeExtraction(
       'https://example.com/page',
       extraction(''),
       { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -85,7 +85,7 @@ describe('executeNodeSsr', () => {
       okResponse(htmlWithNextData({ props: { pageProps: {} } })),
     )
 
-    await executeNodeSsr(
+    await executeNodeExtraction(
       'https://example.com/page',
       extraction('props'),
       { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -104,7 +104,7 @@ describe('executeNodeSsr', () => {
       okResponse(htmlWithNextData({ props: {} })),
     )
 
-    await executeNodeSsr(
+    await executeNodeExtraction(
       'https://example.com/page',
       extraction('props'),
       { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator },
@@ -114,12 +114,12 @@ describe('executeNodeSsr', () => {
   })
 })
 
-describe('executeNodeSsr — error handling', () => {
+describe('executeNodeExtraction — error handling', () => {
   it('throws on non-OK HTTP response', async () => {
     const fetchImpl = vi.fn(async () => errorResponse(403))
 
     await expect(
-      executeNodeSsr(
+      executeNodeExtraction(
         'https://example.com/page',
         extraction('props'),
         { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -137,7 +137,7 @@ describe('executeNodeSsr — error handling', () => {
     const fetchImpl = vi.fn(async () => errorResponse(500))
 
     try {
-      await executeNodeSsr(
+      await executeNodeExtraction(
         'https://example.com/page',
         extraction('props'),
         { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -155,7 +155,7 @@ describe('executeNodeSsr — error handling', () => {
     const fetchImpl = vi.fn(async () => errorResponse(404))
 
     try {
-      await executeNodeSsr(
+      await executeNodeExtraction(
         'https://example.com/page',
         extraction('props'),
         { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -175,7 +175,7 @@ describe('executeNodeSsr — error handling', () => {
     )
 
     await expect(
-      executeNodeSsr(
+      executeNodeExtraction(
         'https://example.com/page',
         extraction('props'),
         { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -196,7 +196,7 @@ describe('executeNodeSsr — error handling', () => {
     )
 
     await expect(
-      executeNodeSsr(
+      executeNodeExtraction(
         'https://example.com/page',
         extraction('props'),
         { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -217,7 +217,7 @@ describe('executeNodeSsr — error handling', () => {
     )
 
     await expect(
-      executeNodeSsr(
+      executeNodeExtraction(
         'https://example.com/page',
         extraction('props'),
         { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -235,7 +235,7 @@ describe('executeNodeSsr — error handling', () => {
     const fetchImpl = vi.fn(async () => okResponse(htmlWithNextData(payload)))
 
     await expect(
-      executeNodeSsr(
+      executeNodeExtraction(
         'https://example.com/page',
         extraction('props.nonexistent.deep'),
         { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
@@ -255,7 +255,7 @@ describe('executeNodeSsr — error handling', () => {
     const fetchImpl = vi.fn()
 
     await expect(
-      executeNodeSsr(
+      executeNodeExtraction(
         'http://169.254.169.254/metadata',
         extraction('props'),
         { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator },
@@ -263,5 +263,197 @@ describe('executeNodeSsr — error handling', () => {
     ).rejects.toThrow('SSRF blocked')
 
     expect(fetchImpl).not.toHaveBeenCalled()
+  })
+})
+
+// ── script_json path ────────────────────────────────
+
+describe('executeNodeExtraction — script_json', () => {
+  it('extracts JSON from script#id via node path (no browser)', async () => {
+    const html = `<html><body><script id="repo-data" type="application/json">{"owner":"openweb","stars":42}</script></body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    const result = await executeNodeExtraction(
+      'https://example.com/repo',
+      { type: 'script_json', selector: 'script#repo-data' },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body).toEqual({ owner: 'openweb', stars: 42 })
+  })
+
+  it('extracts JSON-LD from script[type="application/ld+json"]', async () => {
+    const html = `<html><body><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Widget"}</script></body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    const result = await executeNodeExtraction(
+      'https://example.com/item',
+      { type: 'script_json', selector: 'script[type="application/ld+json"]' },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    expect(result.body).toMatchObject({ '@type': 'Product', name: 'Widget' })
+  })
+
+  it('strip_comments=true unwraps <!-- ... --> JSON (Yelp-style)', async () => {
+    const html = `<html><body><script id="wrapped" type="application/json">
+<!--
+{"k":1,"nested":{"v":2}}
+-->
+</script></body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    const result = await executeNodeExtraction(
+      'https://example.com/page',
+      { type: 'script_json', selector: 'script#wrapped', strip_comments: true },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    expect(result.body).toEqual({ k: 1, nested: { v: 2 } })
+  })
+
+  it('fails to parse HTML-commented JSON when strip_comments is not set', async () => {
+    const html = `<html><body><script id="wrapped" type="application/json"><!--{"k":1}--></script></body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    await expect(
+      executeNodeExtraction(
+        'https://example.com/page',
+        { type: 'script_json', selector: 'script#wrapped' },
+        { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+      ),
+    ).rejects.toMatchObject({
+      payload: { message: expect.stringContaining('not valid JSON'), failureClass: 'fatal' },
+    })
+  })
+
+  it('extracts at a sub-path when path is provided', async () => {
+    const html = `<html><body><script id="data" type="application/json">{"products":{"list":[{"id":1}]}}</script></body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    const result = await executeNodeExtraction(
+      'https://example.com/page',
+      { type: 'script_json', selector: 'script#data', path: 'products.list' },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    expect(result.body).toEqual([{ id: 1 }])
+  })
+
+  it('throws retriable error when selector does not match any script tag', async () => {
+    const html = '<html><body><script>var x=1</script></body></html>'
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    await expect(
+      executeNodeExtraction(
+        'https://example.com/page',
+        { type: 'script_json', selector: 'script#missing' },
+        { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+      ),
+    ).rejects.toMatchObject({
+      payload: { message: expect.stringContaining('not found'), retriable: true },
+    })
+  })
+})
+
+// ── script_json path ────────────────────────────────
+
+describe('executeNodeExtraction — script_json', () => {
+  it('extracts JSON from a <script id="..."> via node path (no browser)', async () => {
+    const html = `<html><body>
+<script id="repo-data" type="application/json">{"owner":"openweb","stars":42}</script>
+</body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    const result = await executeNodeExtraction(
+      'https://example.com/repo',
+      { type: 'script_json', selector: 'script#repo-data' },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body).toEqual({ owner: 'openweb', stars: 42 })
+  })
+
+  it('extracts JSON-LD from script[type="application/ld+json"]', async () => {
+    const html = `<html><body>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Widget"}</script>
+</body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    const result = await executeNodeExtraction(
+      'https://example.com/item',
+      { type: 'script_json', selector: 'script[type="application/ld+json"]' },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    expect(result.body).toMatchObject({ '@type': 'Product', name: 'Widget' })
+  })
+
+  it('strip_comments=true unwraps <!-- ... --> JSON (Yelp-style)', async () => {
+    const html = `<html><body>
+<script id="wrapped" type="application/json">
+<!--
+{"k":1,"nested":{"v":2}}
+-->
+</script>
+</body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    const result = await executeNodeExtraction(
+      'https://example.com/page',
+      { type: 'script_json', selector: 'script#wrapped', strip_comments: true },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    expect(result.body).toEqual({ k: 1, nested: { v: 2 } })
+  })
+
+  it('fails to parse HTML-commented JSON when strip_comments is not set', async () => {
+    const html = `<html><body>
+<script id="wrapped" type="application/json"><!--{"k":1}--></script>
+</body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    await expect(
+      executeNodeExtraction(
+        'https://example.com/page',
+        { type: 'script_json', selector: 'script#wrapped' },
+        { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+      ),
+    ).rejects.toMatchObject({
+      payload: { message: expect.stringContaining('not valid JSON'), failureClass: 'fatal' },
+    })
+  })
+
+  it('extracts at a sub-path when path is provided', async () => {
+    const html = `<html><body>
+<script id="data" type="application/json">{"products":{"list":[{"id":1}]}}</script>
+</body></html>`
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    const result = await executeNodeExtraction(
+      'https://example.com/page',
+      { type: 'script_json', selector: 'script#data', path: 'products.list' },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+    )
+
+    expect(result.body).toEqual([{ id: 1 }])
+  })
+
+  it('throws retriable error when selector does not match any script tag', async () => {
+    const html = '<html><body><script>var x=1</script></body></html>'
+    const fetchImpl = vi.fn(async () => okResponse(html))
+
+    await expect(
+      executeNodeExtraction(
+        'https://example.com/page',
+        { type: 'script_json', selector: 'script#missing' },
+        { fetchImpl: fetchImpl as unknown as typeof fetch, ssrfValidator: noopSsrf },
+      ),
+    ).rejects.toMatchObject({
+      payload: { message: expect.stringContaining('not found'), retriable: true },
+    })
   })
 })

@@ -113,7 +113,7 @@ vi.mock('./browser-fetch-executor.js', () => ({
 // Mock node-ssr-executor
 const mockExecuteNodeSsr = vi.fn<() => Promise<ExecutorResult>>()
 vi.mock('./node-ssr-executor.js', () => ({
-  executeNodeSsr: (...a: unknown[]) => mockExecuteNodeSsr(...a),
+  executeNodeExtraction: (...a: unknown[]) => mockExecuteNodeSsr(...a),
 }))
 
 // Mock extraction-executor
@@ -165,14 +165,12 @@ vi.mock('./redirect.js', () => ({
 const mockResolveAllParameters = vi.fn<() => unknown[]>()
 const mockSubstitutePath = vi.fn<() => string>()
 const mockBuildHeaderParams = vi.fn<() => Record<string, string>>()
-const mockBuildJsonRequestBody = vi.fn<() => string | undefined>()
-const mockBuildFormRequestBody = vi.fn<() => string | undefined>()
+const mockBuildRequestBody = vi.fn<() => { body: string; contentType: string } | undefined>()
 vi.mock('./request-builder.js', () => ({
   resolveAllParameters: (...a: unknown[]) => mockResolveAllParameters(...a),
   substitutePath: (...a: unknown[]) => mockSubstitutePath(...a),
   buildHeaderParams: (...a: unknown[]) => mockBuildHeaderParams(...a),
-  buildJsonRequestBody: (...a: unknown[]) => mockBuildJsonRequestBody(...a),
-  buildFormRequestBody: (...a: unknown[]) => mockBuildFormRequestBody(...a),
+  buildRequestBody: (...a: unknown[]) => mockBuildRequestBody(...a),
 }))
 
 // Mock response-unwrap
@@ -267,7 +265,7 @@ function setupNodeNoAuth(spec?: OpenApiSpec, opRef?: OperationRef) {
   mockSubstitutePath.mockReturnValue('/test')
   mockBuildQueryUrl.mockReturnValue('https://api.example.com/test')
   mockBuildHeaderParams.mockReturnValue({})
-  mockBuildJsonRequestBody.mockReturnValue(undefined)
+  mockBuildRequestBody.mockReturnValue(undefined)
   mockGetServerUrl.mockReturnValue('https://api.example.com')
 }
 
@@ -892,7 +890,7 @@ describe('executeOperation — node transport request building', () => {
     setupNodeNoAuth()
     const opRef = makeOperationRef({}, 'post' as const, '/items')
     mockFindOperation.mockReturnValue(opRef)
-    mockBuildJsonRequestBody.mockReturnValue('{"name":"test"}')
+    mockBuildRequestBody.mockReturnValue({ body: '{"name":"test"}', contentType: 'application/json' })
     mockFetchWithRedirects.mockResolvedValue(
       new Response(JSON.stringify({ created: true }), { status: 201, headers: { 'content-type': 'application/json' } }),
     )
