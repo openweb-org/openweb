@@ -266,6 +266,17 @@ export const extractionPrimitiveSchema = {
       },
       additionalProperties: false,
     },
+    {
+      type: 'object',
+      required: ['type', 'match_url'],
+      properties: {
+        type: { const: 'response_capture' },
+        page_url: { type: 'string' },
+        match_url: { type: 'string' },
+        unwrap: { type: 'string' },
+      },
+      additionalProperties: false,
+    },
   ],
 } as const
 

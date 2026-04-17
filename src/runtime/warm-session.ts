@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 
 import { logger } from '../lib/logger.js'
+import { detectPageBotBlock } from './bot-detect.js'
 
 // ── Types ────────────────────────────────────────
 
@@ -9,6 +10,10 @@ export interface WarmSessionOptions {
   timeoutMs?: number
   /** Cookie name to wait for stabilization (e.g. '_abck' for Akamai) */
   waitForCookie?: string
+  /** Max PerimeterX retries. When the landing page is a PX block after the
+   *  warm delay, clear cookies and re-navigate up to this many times. 0
+   *  disables. Default 3. */
+  botRetries?: number
 }
 
 // ── Warm-state cache ─────────────────────────────
@@ -21,6 +26,8 @@ let warmedPages = new WeakSet<Page>()
 const DEFAULT_TIMEOUT_MS = 5_000
 const COOKIE_POLL_INTERVAL_MS = 500
 const FIXED_DELAY_MS = 3_000
+const DEFAULT_BOT_RETRIES = 3
+const BOT_RETRY_BASE_DELAY_MS = 1_000
 
 // ── Implementation ───────────────────────────────
 
@@ -31,6 +38,10 @@ const FIXED_DELAY_MS = 3_000
  * sensor scripts (Akamai sensor.js, DataDome JS, etc.) to generate valid
  * session cookies. After warmSession() returns, the page is ready for
  * `page.evaluate(fetch(...))`.
+ *
+ * If a PerimeterX block / CAPTCHA is detected after the warm delay, clears
+ * cookies and re-navigates up to `botRetries` times with backoff. Mirrors
+ * the per-site retry loops previously hand-coded in adapters (goodrx).
  *
  * Warm state is cached per Page instance — calling twice on the same page
  * is a no-op.
@@ -47,8 +58,30 @@ export async function warmSession(
 
   const timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const cookie = opts?.waitForCookie
+  const botRetries = opts?.botRetries ?? DEFAULT_BOT_RETRIES
 
-  // Navigate only if not already on the target origin
+  await navigateAndSettle(page, url, timeoutMs, cookie)
+
+  for (let attempt = 0; attempt < botRetries; attempt++) {
+    const signal = await detectPageBotBlock(page).catch(() => undefined)
+    if (!signal) break
+    logger.debug(`warm-session: bot block detected (${signal}); clearing cookies + retry ${attempt + 1}/${botRetries}`)
+    await page.goto('about:blank').catch(() => {})
+    await page.context().clearCookies().catch(() => {})
+    await new Promise((r) => setTimeout(r, BOT_RETRY_BASE_DELAY_MS * (attempt + 1)))
+    await navigateAndSettle(page, url, timeoutMs, cookie)
+  }
+
+  warmedPages.add(page)
+  logger.debug('warm-session: page warmed')
+}
+
+async function navigateAndSettle(
+  page: Page,
+  url: string,
+  timeoutMs: number,
+  cookie: string | undefined,
+): Promise<void> {
   const targetOrigin = new URL(url).origin
   let currentOrigin: string | undefined
   try {
@@ -59,12 +92,11 @@ export async function warmSession(
 
   if (currentOrigin !== targetOrigin) {
     logger.debug(`warm-session: navigating to ${url}`)
-    await page.goto(url, { waitUntil: 'load', timeout: timeoutMs + 10_000 })
+    await page.goto(url, { waitUntil: 'load', timeout: timeoutMs + 10_000 }).catch(() => {})
   } else {
     logger.debug(`warm-session: already on ${targetOrigin}, skipping navigation`)
   }
 
-  // Wait for sensor scripts to complete
   if (cookie) {
     await pollCookieStabilization(page, url, cookie, timeoutMs)
   } else {
@@ -72,9 +104,6 @@ export async function warmSession(
     logger.debug(`warm-session: fixed delay ${delay}ms (no cookie specified)`)
     await new Promise((r) => setTimeout(r, delay))
   }
-
-  warmedPages.add(page)
-  logger.debug('warm-session: page warmed')
 }
 
 // ── Cookie polling ───────────────────────────────
