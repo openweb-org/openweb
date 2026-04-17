@@ -1,3 +1,22 @@
+## 2026-04-17: verify regressions triage — Phase 5C 4 misses classified
+
+**What changed:**
+- Reproduced all 4 verify misses from Phase 5C (`pnpm dev verify bilibili x`) and classified each. None are CustomRunner migration regressions.
+- `bilibili.searchVideos`: spec declares `adapter: false` + `extraction: response_capture` — the bilibili adapter never runs for this op. Failure is `response_capture` timeout (cold tab, Wbi signing / bot-detect), surfaced by verify as the generic "no browser tab open" string (verify maps any `needs_page` to that message).
+- `x.getBookmarks`: flaky, PASS on rerun. Cold-start path navigates `/i/bookmarks` to discover the lazy-webpack Bookmarks queryId (15s + 10s navback); can exceed verify's op budget on a cold network.
+- `x.getUserFollowers`, `x.searchTweets`: reproducible HTTP 404. `git show e944c0b` confirms zero endpoint/header change in Phase 5C (only `(page, params, errors)` → `(page, params, helpers)` signature). Per `src/sites/x/PROGRESS.md` 2026-04-02, both ops require `x-client-transaction-id` signing from webpack module `938838`; the adapter's best-effort `try { … } catch { /* signing is best-effort */ }` silently drops the header when the module ID rotates, so the server 404s.
+
+**Why:**
+- Close Phase 5C's "108/112" caveat by verifying the claims rather than trusting the handoff label. All 4 misses land in one of: environmental (`bilibili searchVideos` extraction timeout), pre-existing upstream drift (`x` signer rotation), or rerun-flaky (`getBookmarks`). No adapter code needs changing under this task.
+
+**Key files:** `doc/todo/normalize-adapter/verify-regressions-investigation.md` (full per-op table + follow-ups)
+**Verification:** `pnpm dev verify bilibili` → 7/8 (searchVideos fail). `pnpm dev verify x --ops getUserFollowers,searchTweets,getBookmarks` → 1/3 (Bookmarks PASS, other two 404). Adapter `.ts` on disk matches `~/.openweb/sites/<site>/adapters/*.ts` (diff empty).
+**Commit:** investigation doc landed in `9cce6d1` (bundled by a concurrent agent's commit); this PROGRESS entry is a standalone follow-up.
+**Next:** dynamic signer-module scan for x (replace hardcoded `SIGNER_MODULE_ID`); migrate `bilibili.searchVideos` from `response_capture` to the adapter path (`fetchApiViaPage`, consistent with other bilibili ops); widen verify's `needs_page` detail string to distinguish no-tab / nav-failed / extraction-timeout.
+**Blockers:** None.
+
+---
+
 ## 2026-04-17: browser_fetch cross-origin TypeError retry
 
 **What changed:**
