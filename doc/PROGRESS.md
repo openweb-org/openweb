@@ -1,4 +1,24 @@
-## 2026-04-17: runtime — Apollo __ref resolution for SSR extraction
+## 2026-04-17: test debt — puppeteer page mocks + validator TS errors
+
+**What changed:**
+- Added `addInitScript: vi.fn(async () => {})` to fake page objects in `session-executor.test.ts`, `extraction-executor.test.ts`, `browser-fetch-executor.test.ts`. `ensurePagePolyfills` calls `page.addInitScript(POLYFILL_SCRIPT)` and the prior mocks only stubbed `url`/`content`/`evaluate`.
+- `browser-fetch-executor.test.ts`: `vi.mock('./warm-session.js')` to no-op `warmSession`, bypassing the 3s fixed delay + bot-detect retry loop that fired on every test. Also aligned mock page URLs with server paths (`https://example.com/api`, `https://discord.com/api/v9/...`) so `matchesEntryUrl` reuse matches — required by the new PagePlan-based `acquirePage` flow.
+- `navigator.test.ts`: relaxed the hackernews `Returns: array<{...}>` assertion to match current schema (now includes `objectID, title, url, author, points`).
+- `types/validator.ts`: re-widened `spec` via `AsyncApiLike` cast after `validateAsyncApiStructure(spec)` — Ajv's `ValidateFunction<T>` guard narrowed the type to `{ asyncapi; info }`, stripping `servers`/`operations` access.
+- `lib/param-validator.ts`: TS2352 fix — cast `param` via `unknown as Record<string, unknown>` for the `x-openweb-json-schema` check.
+
+**Why:**
+- The 34-test baseline failure (reported by every worker in the normalize-adapter milestone) obscured real regressions in every `pnpm test` run. Root cause wasn't "puppeteer mocks" per se — it was that `ensurePagePolyfills`, `warmSession`, and the new `acquirePage`/`matchesEntryUrl` reuse logic each added assumptions the old mocks didn't satisfy. All three had to be addressed together.
+
+**Key files:** `src/runtime/{session-executor,extraction-executor,browser-fetch-executor,navigator}.test.ts`, `src/types/validator.ts`, `src/lib/param-validator.ts`
+**Verification:** `pnpm test` → 1014/1014 passed (was 34 failing). No test patches `page.addInitScript` at module scope. 9 TS errors resolved in validator scope; 648 pre-existing errors remain elsewhere in `src/` (cluster.ts, analyze.ts, schema.ts, adapters) — out of task scope.
+**Commit:** 33e0677
+**Next:** None — test baseline now clean for the normalize-adapter backlog.
+**Blockers:** None.
+
+---
+
+
 
 **What changed:**
 - Added `src/runtime/apollo-refs.ts` (`resolveApolloRefs(value, cache)`): deep-walks a value, substitutes every `{ __ref: "TypeName:id" }` pointer with its target from the Apollo cache. Recursive, depth-capped at 32, cycles break by leaving the `__ref` sentinel in place.

@@ -21,7 +21,7 @@ Revisit trigger for any of these: 10+ sites showing the same pattern, OR measura
 Read `doc/todo/tasks.json`, filter `parent: normalize-adapter`, `state: ready`. Dispatch order by leverage:
 
 **First wave (parallel — no scope conflicts):**
-- `na-test-debt` — fix 44 pre-existing puppeteer mock failures + validator.ts TS errors (establishes trustworthy baseline)
+- `na-test-debt` — ✅ done (`33e0677`). Page mocks gained `addInitScript`, `warmSession` stubbed in browser-fetch tests, page URLs aligned with server paths for PagePlan reuse, `types/validator.ts` + `param-validator.ts` TS errors fixed. `pnpm test` 1014/1014 passing.
 - `na-verify-regressions` — reproduce + classify the 4 Phase 5C verify misses (bilibili searchVideos, x getBookmarks/getUserFollowers/searchTweets)
 - `na-guardrails` — pattern-report script + biome lint rules + skill/openweb doc sweep
 
