@@ -119,6 +119,9 @@ No auth required for read operations on public.api.bsky.app. All write ops and `
 ## Transport
 `node` for public read ops — direct HTTP, no bot detection. Write ops use `page` transport — browser required for localStorage access and PDS resolution.
 
+## Adapter Patterns
+`adapters/bluesky-pds.ts` is a `CustomRunner` (`run(ctx)` shape, no `init`/`isAuthenticated`/`execute` lifecycle). Operations dispatch via an `OPERATIONS` table keyed by op name. The shared `requireSession(ctx)` helper reads the bsky.app localStorage session and throws `errors.needsLogin()` when absent — this is now the sole `needs_login` signal, replacing the old `isAuthenticated()` localStorage probe (which was redundant: pure client-side reads can't validate server state, and token errors from `pdsGet`/`pdsPost` cover expiry). No `init()` step — PagePlan handles navigation; the prior `init()` only navigated to bsky.app.
+
 ## Known Issues
 - Compiler path normalization merges all XRPC methods into `/xrpc/{param}` — manual curation required for AT Protocol sites
 - `searchPosts` verify DRIFT — search results contain heterogeneous embed types, causing structural fingerprint to vary across runs

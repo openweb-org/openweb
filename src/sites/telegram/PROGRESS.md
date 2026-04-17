@@ -1,3 +1,15 @@
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Phase 5C normalize-adapter sweep — migrate site adapters off the legacy `CodeAdapter` interface (`init` / `isAuthenticated` / `execute`) onto the simpler `CustomRunner` shape (`run(ctx)`).
+**Changes:**
+- `adapters/telegram-protocol.ts`: `CodeAdapter` → `CustomRunner`; 459 → 425 lines.
+- Dropped trivial `init()` webpack-ready check; preserved the "Many logins" conflict detection inline in `run()` preamble — throws `helpers.errors.fatal(...)` with an explicit message instead of failing silently downstream.
+- Dropped `isAuthenticated()` (only inspected `getGlobal()?.currentUserId` from local state with no server probe; ops needing `currentUserId` already throw "Not authenticated" inline).
+- Migrated param-validation throws from `makeError('...', 'fatal')` to `helpers.errors.missingParam(name)` for uniform classification.
+**Verification:** 5/5 ops PASS.
+**Key files:** `src/sites/telegram/adapters/telegram-protocol.ts`
+**Commit:** 32a698a
+
 ## 2026-04-10: v3.0 — callApi writes + 6 new operations (13 total)
 
 **What changed:**

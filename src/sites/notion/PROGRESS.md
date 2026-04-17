@@ -33,3 +33,14 @@
 **Context:** `recordMap.block` and `highlight.text` may be absent depending on page content and query context.
 **Changes:** openapi.yaml — removed `required` on `recordMap.block` and `highlight.text` properties.
 **Verification:** Verify pass — schema accepts responses with omitted block/highlight fields.
+
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Normalize Notion adapter to the new `CustomRunner` shape (Phase 5C) and drop wrapper methods that didn't pull weight.
+**Changes:**
+- Migrated `adapters/notion-api.ts` from `CodeAdapter` (init / isAuthenticated / execute) to `CustomRunner` (`run(ctx)`); 234 → 185 lines.
+- Dropped `init()` (trivial URL check) and `isAuthenticated()` (local cookie check, not a server probe).
+- Folded auth signal inline: `buildHeaders` throws `errors.needsLogin()` when the `notion_user_id` cookie is missing — fires on every transactional op instead of silently sending an empty `x-notion-active-user-header`.
+- Extracted `submitTransaction` helper to dedupe the POST/error-handling block across createPage / updatePage / deletePage.
+**Verification:** `pnpm dev verify notion` — 4/4 ops PASS.
+**Key files:** `src/sites/notion/adapters/notion-api.ts`

@@ -141,6 +141,10 @@ Not needed for basic site usage.
 - Module IDs are per-deploy mangled — not stable across deployments
 - HTTP client singleton: module with `csrfToken` + `runFetch` + `fetchData` source signature
 
+### Adapter Patterns
+- `adapters/tiktok-web.ts` is a `CustomRunner` exposing a single `run(ctx)` entry point — no `init()` or `isAuthenticated()` hooks (the former only checked the page URL, redundant with PagePlan; the latter hardcoded `true`).
+- `run(ctx)` dispatches the 21 operations through an `OPERATIONS` table that preserves byte-for-byte semantics (signing infra, `interceptApi`, `internalApiCall`, `ensureTikTokPage`, CSRF token extraction).
+
 ### Runtime Lanes
 - **searchVideos**: replay lane — direct API call via page transport
 - **getVideoDetail, getUserProfile**: adapter lane — API intercept (`/api/item/detail/`, `/api/user/detail/`) with SSR fallback

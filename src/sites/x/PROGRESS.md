@@ -1,3 +1,14 @@
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Site-adapter normalization (Phase 5C, commit e944c0b). The `x-graphql` adapter was the last `CodeAdapter`-shaped adapter in the repo and needed to align with the new `CustomRunner` contract used across other sites.
+**Changes:**
+- Migrated `src/sites/x/adapters/x-graphql.ts` from `CodeAdapter` (with `init` / `isAuthenticated` / `execute`) to `CustomRunner` exposing a single `run(ctx)` entrypoint (697 → 715 lines; the increase is per-op `const { errors } = helpers` unpacks).
+- Dropped `init()` — was a trivial URL check.
+- Dropped `isAuthenticated()` — was a cookie probe (`auth_token` / `twid`) that never hit the server. Runtime auth-primitive resolution already covers credential-configured semantics.
+- Per-op semantics preserved byte-for-byte: OP_NAME mutation, `cachedQueryIds`, `DEFAULT_FEATURES`, signing / `x-client-transaction-id` logic, HomeTimeline + Bookmarks queryId discovery, REST paths and bodies.
+**Verification:** 9/11 ops PASS. The 2 failures (`getUserFollowers` HTTP 404, `searchTweets` HTTP 404) pre-exist this refactor — both are upstream Twitter API drift, not migration regressions.
+**Key files:** `src/sites/x/adapters/x-graphql.ts`
+
 ## 2026-04-02: L3 adapter — dynamic hashes + request signing
 
 **What changed:**

@@ -88,6 +88,13 @@ QR code scan in headed browser. Session persists in browser profile. No standard
 ## Transport
 `page` transport only. All operations execute via `page.evaluate()` against internal modules. Node transport is impossible — no HTTP API exists.
 
+## Adapter Patterns
+- **Shape:** `CustomRunner` with `run(ctx)` (migrated from `CodeAdapter` Phase 5C). File: `adapters/whatsapp-modules.ts`.
+- **Inline `ensureReady` preamble:** unusual for this site — both `init()` and `isAuthenticated()` were folded into a single per-call preamble:
+  - **Metro module-ready probe:** `page.evaluate(() => typeof require === 'function' && !!require('WAWebChatCollection'))` — waits for the WAWeb Metro module system to load. This is dynamic JS state beyond what PagePlan's CSS-selector ready check can express. Throws `errors.retriable` if not yet loaded.
+  - **Chat collection probe:** checks `ChatCollection.getModelsArray().length > 0` — server-derived auth validity, not just credential presence. Throws `errors.needsLogin()` on empty collection.
+- **Trade-off:** `ensureReady` runs on every `run()` call (vs once at init). Cost is two short `page.evaluate` calls — cheap, and eliminates the race where ops dispatched before modules were ready.
+
 ## Known Issues
 - **QR scan required**: User must scan QR code in managed browser before operations work.
 - **Binary WS**: Standard capture produces 0 usable API samples — adapter-only site.

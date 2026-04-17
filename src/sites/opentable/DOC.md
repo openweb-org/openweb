@@ -63,6 +63,10 @@ No auth required. All operations are public read. CSRF token (`window.__CSRF_TOK
 - Search/detail: page navigation + SSR extraction from `__INITIAL_STATE__`
 - Availability/reviews: browser-context `fetch()` to GraphQL endpoint with CSRF token
 
+### Adapter Patterns
+- `adapters/opentable.ts` is a `CustomRunner` exposing a single `run(ctx)` entry point — no `init()` or `isAuthenticated()` (public read-only site, hostname check redundant with PagePlan).
+- The 4 ops dispatch via an `OPERATIONS` table; SSR ops read `__INITIAL_STATE__`, GraphQL ops post persisted queries with extracted `__CSRF_TOKEN__` plus `ot-page-group` / `ot-page-type` headers.
+
 ### Extraction
 - Search/detail: SSR state from `window.__INITIAL_STATE__` (multiSearch.restaurants, restaurantProfile.restaurant)
 - Availability/reviews: JSON from GraphQL persisted query responses

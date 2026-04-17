@@ -93,6 +93,10 @@ LinkedIn uses a hybrid Voyager REST + GraphQL API:
 - **Default**: `page` — LinkedIn uses PerimeterX bot detection (`_px3` cookie); page transport needed for reliable access
 - All operations use page transport (browser-fetch with cookie session)
 
+### Adapter Patterns
+- `adapters/linkedin-graphql.ts` is a `CustomRunner` exposing a single `run(ctx)` entry point — no `init()` or `isAuthenticated()` hooks (PagePlan handles navigation; auth-primitive resolution covers cookie semantics).
+- Inside `run(ctx)`, op handlers branch on `ctx.opName`, share a queryId cache, derive the CSRF header from JSESSIONID, and emit Rest.li tuple-formatted variables for GraphQL/REST calls.
+
 ### Known Issues
 - **GraphQL queryIds are versioned**: queryIds rotate with LinkedIn deploys. The adapter resolves them dynamically by scanning JS bundles, but if operations start returning HTTP 400, the bundle regex may need updating.
 - **Rest.li tuple encoding**: Variables must use LinkedIn's tuple format `(key:value)`, not JSON. Nested tuples and List() are supported.

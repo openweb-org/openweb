@@ -127,6 +127,14 @@ openweb spotify exec removeFromPlaylist '{"playlistId":"37i9dQZF1DXcBWIGoYBM5M",
   4. getUserPlaylists uses a separate REST API (spclient.wg.spotify.com)
   5. Write ops (like/unlike, playlist CRUD) use Spotify Web API (api.spotify.com/v1)
 
+### Adapter Patterns
+- **Shape:** `CustomRunner` with `run(ctx)` entry (migrated from legacy `CodeAdapter` in Phase 5C). No `init()` / `isAuthenticated()` — Spotify works anonymously, and URL-match probes are redundant with PagePlan.
+- **Dispatch:** Two parallel handler tables keyed by `operation`:
+  - `GRAPHQL_OPERATIONS` — pathfinder persisted-query ops (search, getArtist, getTrack, etc.)
+  - `WRITE_OPERATIONS` — Web API mutations (likeTrack, createPlaylist, addToPlaylist, …) plus the REST `getUserPlaylists`
+  `run()` looks up the handler and invokes it; no imperative switch.
+- **Token cascade:** Bearer + client-token cached at module scope, refreshed on demand. `isNeedsLogin(err)` helper centralizes the 401/403 retry decision shared by every handler.
+
 ### Extraction
 - Direct JSON responses from GraphQL API
 - User profile REST endpoint returns JSON with `Accept: application/json` header

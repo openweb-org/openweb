@@ -103,6 +103,11 @@ openweb notion exec deletePage '{"x-notion-space-id":"<spaceId>","pageId":"<page
 - Requests must include `x-notion-active-user-header` and `x-notion-space-id` headers
 - Write operations (createPage, updatePage, deletePage) use an adapter that calls `submitTransaction` via `pageFetch`
 
+### Adapter Patterns
+- `adapters/notion-api.ts` exports a `CustomRunner` (`run(ctx)` dispatching by `operation` name) — no `init` / `isAuthenticated` wrappers.
+- The `needs_login` signal is raised inline by `buildHeaders`: it reads the `notion_user_id` cookie and throws `helpers.errors.needsLogin()` when missing, replacing the old standalone `isAuthenticated` probe and ensuring no transaction is sent without `x-notion-active-user-header`.
+- A shared `submitTransaction` helper wraps the `requestId` / `transactions[]` envelope and POSTs to `/api/v3/submitTransaction` for all three write ops.
+
 ### Known Issues
 - Cloudflare protection (light — browser handles it)
 - Compiler cannot handle RPC-style API — all `/api/v3/*` endpoints collapse into one parameterized cluster. Spec was written manually.

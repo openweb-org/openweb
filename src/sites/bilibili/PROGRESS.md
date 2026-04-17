@@ -44,3 +44,10 @@ Three reverse write operations to complement existing write ops:
 **Context:** searchVideos returns mixed-type items where some fields are absent depending on result type.
 **Changes:** openapi.yaml — relaxed required on mixed-type search items (searchVideos response schema).
 **Verification:** Verify pass; schema now aligns with observed API responses.
+
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Phase 5C (commit be8567f) — migrate site adapters off the legacy `CodeAdapter` interface; the shared `CodeAdapter` type was removed from `src/types/adapter.ts`.
+**Changes:** `adapters/bilibili-web.ts` migrated from `CodeAdapter` (init / isAuthenticated / execute) to `CustomRunner` (single `run(ctx: PreparedContext)`); 485 → 451 lines. Dropped `init()` (only checked `page.url().includes('bilibili.com')` — trivial; PagePlan covers it) and `isAuthenticated()` (only probed local SESSDATA cookie — not a real server probe). The needs_login signal now surfaces per-op via `getCSRFToken` throwing `errors.needsLogin()` when `bili_jct` is missing on write ops. All 7 op semantics preserved byte-for-byte (URLs, headers, body, returns).
+**Verification:** `pnpm dev verify bilibili` — 7/8 ops PASS; 1 env failure (searchVideos: "no browser tab open").
+**Key files:** `src/sites/bilibili/adapters/bilibili-web.ts`, `src/sites/bilibili/DOC.md` (Adapter Patterns section added).

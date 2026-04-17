@@ -109,6 +109,13 @@ openweb telegram exec markAsRead '{"chatId": "8259810574"}'
 - Supports both Web A (teact, `webpackChunktelegram_t`) and Web K (`webpackChunkwebk`)
 - Cannot use `node` transport — all data comes from in-memory SPA state + GramJS Worker
 
+## Adapter Patterns
+- `adapters/telegram-protocol.ts` exports a **`CustomRunner`** (`{ run(ctx) }`), not a `CodeAdapter`. The runner dispatches by `ctx.operation` to per-op handlers and is invoked directly by the runtime — no separate `init()` / `isAuthenticated()` lifecycle.
+- **Inline "Many logins" check** in `run()` preamble: before dispatch, the runner does `page.evaluate(() => document.body?.innerText?.includes('Many logins'))` and throws `helpers.errors.fatal(...)` if Telegram is showing the conflict screen. This replaces the old `init()` precheck and gives an explicit error instead of silent webpack-not-ready failures downstream.
+- Param validation uses `helpers.errors.missingParam(name)` for required-field checks (uniform classification with the rest of the codebase).
+- Webpack discovery (`findGetGlobal`, `findCallApi`) is serialized into `page.evaluate` via `.toString()` — module IDs are mangled per deploy, so finders test return shape (`{chats, users}`) and source-string heuristics (`callMethod` + `cancelApiProgress`) instead of fixed IDs.
+- Shared `resolveCtx(globalSrc, apiSrc, chatId)` helper bootstraps both functions inside the page and resolves chatId aliases (`me`, `+phone`, raw ID) for every write op.
+
 ## Known Issues
 - **searchMessages only searches loaded messages** — TG Web A caches recently-viewed messages. For comprehensive search, the user must have scrolled through target chats.
 - **getContacts reads cached contacts** — only returns contacts that TG Web A has loaded into state.

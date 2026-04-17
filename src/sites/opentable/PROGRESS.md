@@ -1,3 +1,15 @@
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Phase 5C normalization — migrate adapter from `CodeAdapter` (multi-method) to `CustomRunner` (single `run(ctx)`).
+**Changes:**
+- `adapters/opentable.ts`: 322 → 290 lines
+- Dropped `init()` (trivial hostname check, redundant with PagePlan)
+- Dropped `isAuthenticated()` (returned `true` — public read-only site, no server probe needed)
+- 4 ops dispatched via OPERATIONS table; semantics byte-for-byte preserved (URLs, GraphQL persisted-query hashes, `ot-page-group`/`ot-page-type` headers, CSRF flow)
+
+**Verification:** 4/4 ops PASS
+**Key files:** `src/sites/opentable/adapters/opentable.ts` (commit 8aaf5d3)
+
 ## 2026-04-14: Fix getAvailability HTTP 409
 
 **Context:** `pnpm dev verify opentable` failed on getAvailability with HTTP 409 "Conflict"

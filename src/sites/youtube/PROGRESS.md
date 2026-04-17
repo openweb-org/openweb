@@ -1,5 +1,19 @@
 # YouTube — Progress
 
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Phase 5C normalization — migrate `youtube-innertube` adapter from the legacy `CodeAdapter` shape to the unified `CustomRunner` interface so all site adapters share one entry point.
+**Changes:**
+- `src/sites/youtube/adapters/youtube-innertube.ts` converted from `CodeAdapter` to `CustomRunner` with a single `run(ctx)` dispatch (575 → 525 lines, commit 10db539).
+- Dropped `init()` (URL check was redundant with PagePlan) and `isAuthenticated()` (returned `true` — no real probe).
+- Refactored `innertubePost` / `innertubeAuthPost` to receive `helpers` directly; replaced local `Errors` / `PageFetchFn` types with shared `AdapterHelpers`.
+- 7 ops preserved byte-for-byte: `getComments`, `getPlaylist`, `addComment`, `deleteComment`, `getTranscript`, `likeVideo`, `unlikeVideo`.
+
+**Verification:** 12/12 ops PASS.
+**Key files:** `src/sites/youtube/adapters/youtube-innertube.ts`, `src/sites/youtube/DOC.md`.
+
+---
+
 ## 2026-04-13: Verify fix — auth + getTranscript
 
 **What changed:**

@@ -1,5 +1,18 @@
 # Spotify — Progress
 
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Phase 5C normalization — migrate `spotify-pathfinder` from the legacy `CodeAdapter` interface to the leaner `CustomRunner` shape, and unify per-op dispatch.
+**Changes:**
+- `src/sites/spotify/adapters/spotify-pathfinder.ts`: 356 → 300 lines.
+- Replaced `CodeAdapter` (with `init` / `isAuthenticated` / `execute`) with `CustomRunner.run(ctx)`.
+- Dropped `init()` (returned `url.includes('open.spotify.com')` — redundant with PagePlan) and `isAuthenticated()` (same trivial URL check; Spotify works anonymously).
+- Added `WRITE_OPERATIONS` handler table parallel to existing `GRAPHQL_OPERATIONS`; `run()` body is now table lookup + dispatch instead of an imperative switch.
+- Extracted `isNeedsLogin(err)` helper to dedupe the 401/403 token-refresh retry pattern across handlers.
+- Per-op semantics preserved byte-for-byte: URLs, headers, request bodies, token-refresh retry, module-scope token cache.
+**Verification:** 8/8 ops PASS via runtime exec.
+**Key files:** `src/sites/spotify/adapters/spotify-pathfinder.ts`
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**

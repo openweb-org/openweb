@@ -1,3 +1,10 @@
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Phase 5C migration from legacy `CodeAdapter` interface to `CustomRunner` shape (commit b7fa461), aligning google-maps with the simplified adapter contract.
+**Changes:** `src/sites/google-maps/adapters/google-maps-api.ts` collapsed from 541 → 511 lines. Dropped trivial `init()` (URL check; PagePlan handles navigation) and `isAuthenticated()` (returned `true`). Removed the `execute()` try/wrap — runtime now wraps errors. `unknownOp` fallback retained inside `run(ctx)`. Per-op handler signatures tightened to `Readonly<Record<string, unknown>>`; semantics (dig paths, URLs, timeouts, modes, DOM extraction) byte-for-byte preserved.
+**Verification:** 10/10 ops PASS.
+**Key files:** `src/sites/google-maps/adapters/google-maps-api.ts`
+
 ## 2026-03-31: Curate to 14 ops — directions, hours, geocoding, about
 
 **What changed:**

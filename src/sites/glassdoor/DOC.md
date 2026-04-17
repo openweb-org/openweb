@@ -63,13 +63,19 @@ openweb glassdoor exec getInterviews '{"employerId":9079}'
 - Cloudflare Turnstile challenge blocks direct HTTP — all operations require browser context
 - Challenge typically resolves in 2-4 seconds via managed browser
 
+### Adapter Patterns
+- `adapters/glassdoor.ts` exports a `CustomRunner` (`run(ctx)`) using shared types (`CustomRunner`, `PreparedContext`, `AdapterHelpers`) — the local `CodeAdapter` shim was removed
+- **Cloudflare wait loop in `run()` preamble**: `isCloudflareBlocked` + `waitForCloudflare` execute as a pre-dispatch CF gate before every op; on timeout it raises `errors.botBlocked(...)` (replacing the prior ad-hoc `failureClass:'bot_blocked'` assignment)
+- Missing params surface via `errors.missingParam(...)` instead of bare `throw new Error('X is required')`
+- No `init()` or `isAuthenticated()` — both were trivial/no-op and dropped during the CustomRunner migration
+
 ### Bot Detection
 - **Cloudflare Turnstile** — "Just a moment..." challenge page
 - No persistent session cookies required — challenge passes per-request
 - Headed browser recommended for reliability
 
 ### Known Issues
-- Cloudflare Turnstile may require manual CAPTCHA solve under aggressive blocking — restart browser with `--no-headless` if stuck
+- Cloudflare Turnstile may require manual CAPTCHA solve under aggressive blocking — restart browser with `--no-headless` if stuck (the CF wait loop in the adapter `run()` preamble polls until the challenge clears or raises `errors.botBlocked` on timeout)
 - GraphQL introspection disabled — only pre-defined query shapes work; custom field additions fail with "Server error"
 - Interview DOM metadata (date, location, difficulty, experience, offerStatus) extraction is unreliable due to page structure changes — GraphQL provides clean description and jobTitle
 - Salary `payRange` format varies (hourly vs annual) and may return null if the page layout changes

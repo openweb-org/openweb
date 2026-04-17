@@ -1,4 +1,29 @@
-## 2026-04-14: Fix kayak searchHotels — proper error handling + Akamai warm-up
+## 2026-04-17: Phase 5C — adapter contract collapsed to CustomRunner
+
+**What changed:**
+- Migrated all 16 remaining `CodeAdapter` sites to `CustomRunner`: bilibili, notion, opentable, telegram, tiktok, whatsapp, x, bluesky, youtube, linkedin, spotify, google-maps, glassdoor, trello, tripadvisor (instagram already done in Phase 5B / commit 0d1bffd).
+- Removed the `CodeAdapter` interface, `LoadedAdapter` union, and `isCustomRunner` discriminator from `src/types/adapter.ts`. The adapter contract is now a single `run(ctx: PreparedContext)` entry.
+- Simplified `src/runtime/adapter-executor.ts`: `loadAdapter` returns `CustomRunner`; `executeAdapter` is the former `executeCustomRunner` inlined; `AdapterExecOptions` drops the `resolveAuth` fallback (the legacy `isAuthenticated` shim).
+- Dropped `resolveAuthFallback` from `src/runtime/http-executor.ts`.
+- Deleted the 11 legacy `executeAdapter` pipeline tests in `adapter-executor.test.ts`; the 3 `CustomRunner` tests remain.
+
+**Why:**
+- The legacy triad `init() / isAuthenticated() / execute()` duplicated work that runtime PagePlan + auth-primitive resolution already do. Most `init()` impls were trivial URL checks; most `isAuthenticated()` impls were local cookie/state probes that didn't actually validate against the server. Folding everything into `run(ctx)` removes that duplication and gives adapters a single, ready-prepared context.
+
+**Per-site decisions (recorded for posterity):**
+- `init()` was preserved inline only where it did real bootstrapping: telegram (multi-login conflict detection), whatsapp (Metro module-ready wait + chat collection probe), glassdoor (Cloudflare wait loop), tripadvisor (DataDome captcha wait). All others dropped — PagePlan covers them.
+- `isAuthenticated()` was inlined as `throw helpers.errors.needsLogin()` only where there was a real validity probe. Tautological / cookie-only probes were dropped (runtime auth-primitive resolution covers credential-configured semantics).
+- whatsapp added a runtime cost: per-`run()` page.evaluate probes for module-ready and chat-collection state. Cheap and eliminates an init race.
+
+**Key files:** `src/types/adapter.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/http-executor.ts`, `src/runtime/adapter-executor.test.ts`, 16 `src/sites/*/adapters/*.ts`
+**Verification:** `pnpm dev verify` across all 15 migrated sites — 108/112 ops PASS (96.4%). Failures: 1 env (no browser tab), 1 env (timeout), 2 upstream HTTP 404 (x.getUserFollowers / x.searchTweets — pre-existing API drift). No regressions traceable to the migration. `pnpm test` failure count unchanged from baseline (34 pre-existing). `pnpm lint` clean.
+**Commits:** be8567f..41850f2 (16 commits)
+**Next:** Per-site DOC.md / PROGRESS.md entries dispatched to subagents to record the adapter-shape change site-by-site. Skill rebuild + reinstall (`pnpm build`, refresh `~/.openweb/sites/<site>/adapters/`) needed for production.
+**Blockers:** None
+
+---
+
+
 
 **What changed:**
 - Fixed searchHotels silent failure: removed `.catch(() => {})` on `waitForSelector` so bot detection / DOM timeout errors propagate instead of returning empty results

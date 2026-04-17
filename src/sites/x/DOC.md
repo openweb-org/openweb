@@ -137,6 +137,7 @@ openweb x exec getUserLikes '{"userId": "4398626122", "count": 20}'
 
 ### Adapter Architecture
 - **L3 adapter** (`x-graphql`) handles all operations — both GraphQL and REST
+- **Adapter shape:** `CustomRunner` — single `run(ctx)` entrypoint. No `init()` (the URL check was trivial) and no `isAuthenticated()` (the prior cookie-probe for `auth_token`/`twid` was dropped because it never validated against the server; runtime auth-primitive resolution covers credential-configured semantics)
 - **Dynamic hash resolution**: query hashes extracted at runtime from the main.js webpack bundle (not hardcoded), survives Twitter deploys
 - **Request signing**: `x-client-transaction-id` generated via Twitter's own signing function (webpack module 938838, export `jJ`). Required for Followers and SearchTimeline endpoints; applied to all GraphQL requests for consistency
 - **REST helper**: `restRequest` + `executeRest` for v1.1/v2 calls — no signing needed, just Bearer + CSRF

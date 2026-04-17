@@ -1,5 +1,20 @@
 # Glassdoor — Progress
 
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Phase 5C normalization — migrate `CodeAdapter` shim to shared `CustomRunner` contract (commit 72c0479).
+**Changes:**
+- `src/sites/glassdoor/adapters/glassdoor.ts`: 409 → 392 lines; now imports `CustomRunner`, `PreparedContext`, `AdapterHelpers` from shared types and exports `run(ctx)`
+- Removed local `interface CodeAdapter` shim
+- Dropped trivial `init()` (URL check) and `isAuthenticated()` (always-true, no server probe)
+- Cloudflare wait loop (`isCloudflareBlocked` + `waitForCloudflare` + pre-dispatch CF gate) preserved byte-for-byte by moving from `execute` into the `run(ctx)` preamble — runs before every op
+- CF timeout error switched from ad-hoc `Object.assign({failureClass:'bot_blocked'})` to `errors.botBlocked(...)`
+- Inline `throw new Error('X is required')` replaced with `errors.missingParam(...)`
+
+**Verification:** 4/4 ops PASS
+
+**Key files:** `src/sites/glassdoor/adapters/glassdoor.ts`
+
 ## 2026-04-14: Transport upgrade — GraphQL API for reviews + interviews
 
 **What changed:**

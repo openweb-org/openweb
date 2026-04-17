@@ -105,6 +105,10 @@ openweb bilibili exec unfollowUploader '{"fid": 1695320}'
 - **page adapter** (`bilibili-web`): searchVideos, getDanmaku, and all write ops — handles Wbi signing, CSRF, API interception
 - Wbi-signed endpoints via node transport return -352/-403; these need the adapter or browser context
 
+## Adapter Patterns
+- `adapters/bilibili-web.ts` is a `CustomRunner` — single `run(ctx: PreparedContext)` entry; no `init` / `isAuthenticated` (PagePlan covers domain readiness; SESSDATA presence is not a real server probe).
+- Auth-validity is surfaced per-op: write ops call `getCSRFToken` which throws `errors.needsLogin()` when the `bili_jct` cookie is missing (likeVideo, addToFavorites, followUploader, and their reverses).
+
 ## Known Issues
 - **Wbi endpoints fail via node transport**: getUserProfile, getVideoDetail, getVideoComments, searchUserVideos return -352 (风控校验失败) or -403 when called directly via node. These endpoints require Wbi signing that only the page adapter provides. Currently only getDanmaku and searchVideos have adapter overrides.
 - Rate limiting on search and user profile endpoints

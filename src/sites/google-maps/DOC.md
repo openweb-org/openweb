@@ -112,6 +112,11 @@ No auth required — public pages. Transport uses `cookie_session` for session c
 - **Suggest API** (getAutocompleteSuggestions): types input into the search box, intercepts the `/s?suggest=p&tbm=map` network response, parses protobuf-like nested arrays for suggestion text, placeId, and description
 - Shared `fetchPlaceInfo()` helper reused across all preview API operations
 
+## Adapter Patterns
+
+- `adapters/google-maps-api.ts` is a `CustomRunner` with a single `run(ctx)` entry point — no `init()` (PagePlan handles navigation) and no `isAuthenticated()` (public site, always-true was a no-op).
+- Per-op handlers take `Readonly<Record<string, unknown>>` and throw plainly; the runtime handles error wrapping, and an `unknownOp` fallback in `run(ctx)` covers unmapped operations.
+
 ## Known Issues
 
 - **Bot detection**: Google aggressively blocks automated browsers. "Sorry..." page means the IP is flagged. Requires clean browser session with organic browsing history.

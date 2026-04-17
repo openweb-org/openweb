@@ -65,6 +65,11 @@ openweb trello exec deleteCard '{"cardId": "CARD_ID"}'
 - **Transport:** `page` — browser context required for cookie-authenticated API calls. All operations use an adapter that calls the API via `pageFetch`.
 - **Adapter:** `trello-api` — translates operation params to Trello REST API calls. Uses `helpers.pageFetch()` for browser-context requests with cookie auth.
 
+## Adapter Patterns
+
+- **Shape:** `CustomRunner` with a single `run(ctx)` entrypoint (`ctx.op`, `ctx.params`, `ctx.prepared`, `ctx.helpers`). The local `CodeAdapter` shim was removed in favor of importing `CustomRunner`, `PreparedContext`, and `AdapterHelpers` from shared types.
+- `init()` and `isAuthenticated()` were dropped: the URL check was trivial and the cookie substring check was not a real server probe — the runtime's auth cascade handles both.
+
 ## Known Issues
 
 - All operations require authentication. Run `openweb login trello` first.

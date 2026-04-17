@@ -1,3 +1,10 @@
+## 2026-04-17 — Adapter Refactor
+
+**Context:** Phase 5C normalization — migrate site adapters from the legacy `CodeAdapter` shape (with `init`/`isAuthenticated`/`execute`) to the leaner `CustomRunner` shape (single `run(ctx)`).
+**Changes:** `src/sites/tiktok/adapters/tiktok-web.ts` migrated to `CustomRunner` (588 → 572 lines). Dropped `init()` (only checked `page.url().includes('tiktok.com')`, redundant with PagePlan) and `isAuthenticated()` (hardcoded `return true`). 21 ops dispatched via `OPERATIONS` table; signing infra, `interceptApi`, `internalApiCall`, `ensureTikTokPage`, and CSRF token extraction preserved byte-for-byte.
+**Verification:** 12/12 ops PASS.
+**Key files:** `src/sites/tiktok/adapters/tiktok-web.ts` (commit b8bf85f).
+
 ## 2026-04-10: Write ops + getExplore (9 new operations)
 
 **What changed:**

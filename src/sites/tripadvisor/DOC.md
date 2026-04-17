@@ -103,10 +103,12 @@ Page transport (real Chrome via CDP). DataDome blocks node transport entirely.
 - `searchLocation` → adapter: `page.evaluate(fetch)` to TypeAheadJson, parse geoId/slug from result URLs
 
 ### Adapter Patterns
+- Adapter exports a `CustomRunner` (`run(ctx)`) from shared `types/adapter` — the local `CodeAdapter` shim has been removed, along with stub `init()`/`isAuthenticated()` methods.
 - `searchLocation` — uses browser-side `fetch('/TypeAheadJson?...')` with `credentials: 'same-origin'` to inherit DataDome cookies; the response isn't surfaced as a window global so spec extraction can't reach it.
-- The adapter runner also wraps every op with a DataDome CAPTCHA gate (poll up to 30s for resolution) before delegating.
+- The DataDome CAPTCHA gate (`isDataDomeBlocked` + `waitForCaptchaResolution`, polling up to 30s) lives in the `run()` preamble: every op checks the page for a DataDome block and awaits manual resolution before handler dispatch.
+- Param/op errors use `helpers.errors.missingParam(...)` and `helpers.errors.unknownOp(...)` instead of bespoke `throw new Error(...)`.
 
 ### Known Issues
-- **DataDome:** Aggressive bot detection on all endpoints. Must use page transport with real Chrome profile. If captcha appears, solve it manually in the headed browser, then retry.
+- **DataDome:** Aggressive bot detection on all endpoints. Must use page transport with real Chrome profile. If captcha appears, solve it manually in the headed browser, then retry. The adapter's `run()` preamble polls for DataDome block markers and waits up to 30s for human captcha resolution before dispatching any op.
 - **Review ratings:** Bubble ratings extracted from CSS class `ui_bubble_rating bubble_N` when available.
 - **Selector fragility:** TripAdvisor frequently changes DOM structure. Adapter uses tiered fallbacks (LD+JSON → specific data attributes → generic DOM) to reduce breakage.

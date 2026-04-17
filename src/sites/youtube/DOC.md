@@ -114,6 +114,10 @@ Not needed for basic site usage.
 - `node` — InnerTube API accepts direct HTTP with API key. No browser needed for public operations.
 - `page` — Adapter operations (`getComments`, `getPlaylist`, `addComment`, `deleteComment`) use browser context via `pageFetch` to compose multi-step InnerTube calls and extract `ytcfg` (API key + clientVersion) from the page.
 
+### Adapter Patterns
+- `adapters/youtube-innertube.ts` is a `CustomRunner` — exposes a single `run(ctx)` entry point that dispatches by `ctx.operationId`. There is no `init()` (URL check is redundant with PagePlan) and no `isAuthenticated()` probe; auth is enforced per-op via the `sapisidhash` primitive when needed.
+- Internal helpers (`innertubePost`, `innertubeAuthPost`) take `helpers: AdapterHelpers` directly so the runtime injects `pageFetch` per call — no adapter-local typing of the helper surface.
+
 ### Known Issues
 - `getTranscript` has an example file but no openapi.yaml entry — cannot be executed via `openweb exec`. The params token is session-bound and the endpoint returns FAILED_PRECONDITION without valid session context.
 - `clientVersion` changes frequently — may need updating when YouTube deploys
