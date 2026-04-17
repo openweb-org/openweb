@@ -29,8 +29,8 @@ executeOperation(site, operationId, params, deps)
        ├── Permission gate (read/write/delete/transact → allow/prompt/deny)
        ├── Resolve transport (operation → server → node)
        │
-       ├── L3 adapter?
-       │     └── loadAdapter() → init() → isAuthenticated() → execute()
+       ├── L3 custom runner?
+       │     └── loadAdapter() → acquirePage() [PagePlan] → resolveAuth → runner.run(ctx)
        │
        ├── extraction?
        │     └── executeExtraction()

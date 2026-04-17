@@ -1,3 +1,29 @@
+## 2026-04-17: normalize-adapter v2 milestone — rollup
+
+**What changed (rollup of 67 commits on `task/normalize-adapter`):**
+- **Runtime infrastructure:** PagePlan + `acquirePage()` shared across all browser-backed executors (`src/runtime/page-plan.ts`); OpenAPI server-variable interpolation in `getServerUrl()` threaded through every caller; `buildRequestBody` consolidator with JSON+form parity across `browser_fetch` / `session_http` / cache tier; schema validation for `page_plan` + op-level `adapter: false`; `warmSession` generalized with PerimeterX retry loop.
+- **New spec primitives:** `script_json.strip_comments` + node-execution path (shared parser); `response_capture` extraction type (listener-before-nav invariant, first-match latch with race fix); `graphql_hash` for Apollo APQ; `ssrExtract` / `jsonLdExtract` / `domExtract` adapter helpers that delegate to the same resolvers extraction-executor uses.
+- **Adapter contract collapsed:** `CodeAdapter` → `CustomRunner`. Single `run(ctx: PreparedContext)` entry. `init()` / `isAuthenticated()` removed from the contract — runtime handles PagePlan + auth-primitive resolution upfront. 15 permanent-custom sites migrated; interface deleted in 41850f2.
+- **Migrations:** Phase 3 pure-spec deleted 10 adapter files (substack, fidelity, weibo, ebay, douban, yelp, etsy, boss, goodrx, zhihu); Phase 3 extraction trimmed/helper-refactored 8 more; Phase 4 migrated goodrx end-to-end.
+- **Docs:** `doc/todo/normalize-adapter/impl_summary.md` + 5 phase handoff docs + refreshed inventory. `doc/main/adapters.md` rewritten for CustomRunner; `doc/main/primitives/page-plan.md` added; stale `CodeAdapter` / `init()` / `isAuthenticated()` references swept from `doc/main/{README,runtime,architecture,meta-spec}.md`, `doc/dev/adding-sites.md`, `skill/openweb/add-site/curate-runtime.md`, and `skill/openweb/knowledge/adapter-recipes.md`.
+
+**Why:**
+- Every adapter was a mini-runtime: hand-rolled `page.goto` / `waitForSelector` / cookie warmup / auth probing, duplicated 60 times. Moving lifecycle into the runtime (PagePlan + auth-primitive resolution) removes the duplication and makes every remaining adapter thin.
+- Adapter-backed operation count dropped 380 → 323 (-15%). Adapter TS total: 20 888 → 17 065 lines (-18.3%). ~10 adapter files deleted; ~8 more trimmed.
+- The milestone also surfaced the raw-API principle explicitly: OpenWeb exposes typed wire access; agents compose / reshape in SKILL.md. Runtime does not chain calls, does not reshape response shape for aesthetics, does not add unsafe-mode flags to shared primitives to accommodate permanent-custom-bucket sites. These three hard rules are now written into `impl_summary.md`.
+
+**Key files:** `src/runtime/page-plan.ts`, `src/runtime/primitives/{response-capture,script-json-parse}.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/http-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/session-executor.ts`, `src/runtime/extraction-executor.ts`, `src/runtime/cache-manager.ts`, `src/runtime/warm-session.ts`, `src/types/{adapter,extensions,schema,primitives}.ts`, `src/lib/{adapter-helpers,spec-loader}.ts`, `scripts/adapter-inventory.ts`, 25 `src/sites/<site>/` spec + adapter changes
+
+**Verification:** `pnpm test` and `pnpm lint` clean at each merge gate. `pnpm dev verify` PASS on all 93 sites; Phase 5C CustomRunner migration 108/112 ops PASS (4 misses documented as environmental, tracked under `na-verify-regressions`). Codex reviews at Phase 1, Phase 2, and milestone end caught 3 real blockers (server-variable wiring not threaded through callers, schema validation missing new fields, first-match race in response_capture) — all fixed before sign-off.
+
+**Commit range:** 263a030..f4d1f31 (67 commits on `task/normalize-adapter`)
+
+**Next:** See `doc/todo/tasks.json` — 14 ready follow-ups organized by lever: production deployment, test debt, 5 primary runtime gaps (`na-rt-*`), batched site finishing, verify-regressions investigation, final codex review, `/update-doc` sync task. Dispatch order per codex recommendation: test-debt + verify-regressions first → small runtime fixes → finishing-ops → final-review → prod-deploy.
+
+**Blockers:** None — PR-readiness risk (67 commits) noted; squash-for-review preferred when opening PR. See impl_summary.md Lessons Learned.
+
+---
+
 ## 2026-04-17: Phase 5C — adapter contract collapsed to CustomRunner
 
 **What changed:**

@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-04-12 (infrastructure improvements: adapter helpers, knowledge docs, archetypes merge)
+> Last updated: 2026-04-17 (normalize-adapter v2 — PagePlan, CustomRunner, script_json/response_capture/graphql_hash primitives)
 
 ## Quick Start
 
@@ -25,11 +25,12 @@ doc/main/
 ├── architecture.md        # System overview, 3-layer model, execution modes
 │
 ├── runtime.md             # Execution pipeline: mode dispatch, parameter binding, redirects
-├── primitives/            # L2 primitive resolvers: auth, CSRF, signing, pagination, extraction
+├── primitives/            # L2 primitive resolvers: auth, CSRF, signing, pagination, extraction, page-plan
 │   ├── README.md          #   Overview, taxonomy, resolution pipeline
 │   ├── auth.md            #   Auth primitives (cookie_session, localStorage_jwt, etc.)
-│   └── signing.md         #   CSRF and signing primitives
-├── adapters.md            # L3 adapter framework: CodeAdapter interface, loading, lifecycle
+│   ├── signing.md         #   CSRF and signing primitives
+│   └── page-plan.md       #   PagePlan: runtime-owned navigation/readiness/warm
+├── adapters.md            # L3 custom runners: CustomRunner interface, loading, lifecycle
 │
 ├── meta-spec.md           # Type system: L2 types, x-openweb extensions, JSON Schema, validation
 │
@@ -86,7 +87,7 @@ src/
 │   ├── primitives.ts           #   L2 primitive discriminated unions
 │   ├── primitive-schemas.ts    #   JSON Schema for L2 primitives (AJV)
 │   ├── extensions.ts           #   XOpenWebServer, XOpenWebOperation
-│   ├── adapter.ts              #   CodeAdapter interface
+│   ├── adapter.ts              #   CustomRunner + PreparedContext (single adapter contract)
 │   └── index.ts                #   Re-exports
 │
 ├── compiler/                   # Site compilation (pipeline v2)
@@ -182,7 +183,8 @@ src/
 | **x-openweb** | OpenAPI extension carrying auth/CSRF/signing/pagination config | [meta-spec.md](meta-spec.md) |
 | **Execution Mode** | `direct_http`, `session_http`, `browser_fetch` — how requests reach the server | [runtime.md](runtime.md) |
 | **Primitive** | Declarative config unit for auth, CSRF, signing, pagination, extraction | [primitives/](primitives/README.md) |
-| **CodeAdapter** | L3 escape hatch — arbitrary JS running in browser context | [adapters.md](adapters.md) |
+| **CustomRunner** | L3 escape hatch — single `run(ctx)` entry for sites with signing/module-system/protocol needs | [adapters.md](adapters.md) |
+| **PagePlan** | Runtime-owned page acquisition (entry_url / ready / warm / nav_timeout) — replaces adapter-owned init | [primitives/page-plan.md](primitives/page-plan.md) |
 | **Skill Package** | Per-site artifact: openapi.yaml + manifest.json + adapters/ + examples/ | [compiler.md](compiler.md) |
 | **AsyncAPI Package** | Per-site WS artifact: asyncapi.yaml for real-time event channels | [compiler.md](compiler.md) |
 | **Capture Bundle** | Raw recording: traffic.har + websocket_frames.jsonl + state + DOM | [browser-capture.md](browser-capture.md) |

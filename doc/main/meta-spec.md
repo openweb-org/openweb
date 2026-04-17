@@ -254,7 +254,7 @@ src/types/
 ├── primitives.ts          # 16 L2 primitive discriminated unions
 ├── primitive-schemas.ts   # JSON Schema mirrors for AJV
 ├── extensions.ts          # XOpenWebServer, XOpenWebOperation, Transport, RequestEncoding, XOpenWebBuildMeta, RiskTier
-├── adapter.ts             # CodeAdapter interface
+├── adapter.ts             # CustomRunner + PreparedContext (single adapter contract)
 ├── manifest.ts            # Manifest type
 ├── schema.ts              # Composite JSON Schema (server + operation + manifest)
 ├── validator.ts           # AJV validation (validateXOpenWebSpec, validateManifest)
@@ -267,6 +267,6 @@ src/types/
 
 - [architecture.md](architecture.md) — Where meta-spec fits
 - [primitives/](primitives/README.md) — How primitives are resolved at runtime
-- [adapters.md](adapters.md) — L3 CodeAdapter interface
+- [adapters.md](adapters.md) — L3 CustomRunner interface
 - [compiler.md](compiler.md) — How specs are generated
 - `src/types/primitives.ts` — Full L2 type definitions

@@ -26,7 +26,7 @@ Does standard cookie/token/header auth work?
              └── Multi-step exchange → exchange_chain
 
 None of the above work? Proprietary module system? Custom protocol?
-  └── L3 adapter — write CodeAdapter
+  └── L3 custom runner — write CustomRunner
 ```
 
 ## Step 1: Create Site Directory
@@ -179,29 +179,36 @@ paths:
 }
 ```
 
-## Step 5: Write Adapter (L3 Only)
+## Step 5: Write Custom Runner (L3 Only)
 
 Create `adapters/<name>.ts`:
 
 ```typescript
-import type { CodeAdapter } from '../../../types/adapter.js';
+import type { CustomRunner, PreparedContext } from '../../../types/adapter.js';
 
-const adapter: CodeAdapter = {
+const runner: CustomRunner = {
   name: '<name>',
   description: '<what it does>',
-  async init(page) { return true; },
-  async isAuthenticated(page) { return true; },
-  async execute(page, operation, params) {
-    switch (operation) {
+  async run(ctx: PreparedContext) {
+    // ctx.page: Page | null (null for transport: node)
+    // ctx.operation: operationId from the spec
+    // ctx.params: validated caller input
+    // ctx.helpers: pageFetch, nodeFetch, graphqlFetch, ssr/jsonLd/domExtract, errors
+    // ctx.auth: pre-resolved from the spec auth primitive
+    // ctx.serverUrl: already interpolated with server variables
+
+    switch (ctx.operation) {
       case 'getChats':
-        return page.evaluate(() => { /* ... */ });
+        return ctx.page!.evaluate(() => { /* ... */ });
       default:
-        throw new Error(`Unknown operation: ${operation}`);
+        throw ctx.helpers.errors.unknownOp(ctx.operation);
     }
   },
 };
-export default adapter;
+export default runner;
 ```
+
+PagePlan (nav + readiness + warm) runs BEFORE `run()` — do not hand-roll `page.goto` / `waitForSelector` / cookie warmup in the runner. Declare `x-openweb.page_plan` on the operation or server instead.
 
 ## Step 6: Write Examples
 
@@ -281,6 +288,6 @@ Plus ~35 L1 public API sites (no auth needed). Run `pnpm dev sites` for the full
 ## Related Docs
 
 - [doc/main/primitives/](../main/primitives/README.md) — Available L2 primitives
-- [doc/main/adapters.md](../main/adapters.md) — L3 CodeAdapter interface
+- [doc/main/adapters.md](../main/adapters.md) — L3 CustomRunner interface
 - [doc/main/meta-spec.md](../main/meta-spec.md) — x-openweb extension schema
 - [doc/main/browser-capture.md](../main/browser-capture.md) — Capture module

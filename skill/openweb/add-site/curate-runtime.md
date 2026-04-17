@@ -263,22 +263,48 @@ must use `params` to navigate.
 2. Use `params` to build URLs — never write `_params` (unused)
 3. Path naming is free — choose names clear to API consumers
 
-#### Adapter init() / execute() Patterns
+#### CustomRunner Patterns
 
-**init() should be permissive** — only check hostname. Do NOT navigate:
+**No more `init()` / `isAuthenticated()`.** PagePlan handles navigation and
+readiness at the runtime layer; auth is pre-resolved from the declared
+primitive into `ctx.auth`. The runner only owns site-specific acquisition.
+
+Declare the page lifecycle in the spec, not the runner:
+```yaml
+servers:
+  - url: https://www.example.com
+    x-openweb:
+      transport: page
+      page_plan:
+        entry_url: /app
+        ready: '.content'
+        warm: true
+```
+
+The runner becomes a single `run(ctx)` entry with a switch on `ctx.operation`:
 ```typescript
-async init(page) {
-  return new URL(page.url()).hostname.includes('example.com')
+import type { CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
+const runner: CustomRunner = {
+  name: 'example-web',
+  description: 'Example site runner',
+  async run(ctx: PreparedContext) {
+    const page = ctx.page!   // null only when transport: node
+    switch (ctx.operation) {
+      case 'getItems':
+        return ctx.helpers.pageFetch(page, { url: `/api/items?q=${ctx.params.q}` })
+      default:
+        throw ctx.helpers.errors.unknownOp(ctx.operation)
+    }
+  },
 }
+export default runner
 ```
 
-**execute() must navigate.** Catch `ERR_ABORTED` — SPA routers intercept
-navigation and abort the initial load, but the page still renders correctly.
-Use `waitForSelector` over fixed delays (`.catch(() => {})` to tolerate slow loads):
-```typescript
-await page.goto(url, { waitUntil: 'load', timeout: 15000 }).catch(() => {})
-await page.waitForSelector('.content', { timeout: 10000 }).catch(() => {})
-```
+**Do not** hand-roll `page.goto` / `waitForSelector` / cookie warmup in the
+runner — PagePlan already did that. **Do not** add a runner just to chain
+two calls or to rename wire fields — expose ops separately and document in
+SKILL.md.
 
 ---
 
@@ -290,8 +316,10 @@ await page.waitForSelector('.content', { timeout: 10000 }).catch(() => {})
 2. **"Needs browser for each request" in DOC.md.** With `node` + `cookie_session`,
    cookies are extracted once and cached. Say "cookies extracted automatically."
 
-3. **Adapter not navigating.** Runtime opens server origin only. Adapter must
-   use params to build URL and `page.goto()`.
+3. **Hand-rolling navigation in a runner.** PagePlan's `entry_url` + `ready`
+   handle navigation + readiness before `run(ctx)` is invoked. Don't write
+   `page.goto` / `waitForSelector` inside the runner — declare them in
+   `x-openweb.page_plan` on the operation or server.
 
 4. **Editing `build` fields.** Compiler-managed — never change manually.
 

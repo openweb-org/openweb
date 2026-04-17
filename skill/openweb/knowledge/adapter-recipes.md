@@ -1,6 +1,13 @@
 # Adapter Recipes
 
-5 canonical adapter patterns with decision boundaries, code templates, and pitfalls.
+5 canonical patterns with decision boundaries, code templates, and pitfalls.
+
+> **Important (as of 2026-04-17 normalize-adapter v2):** Prefer spec primitives over adapter code when they cover your case. In particular:
+> - "Response interception" below is now the `response_capture` extraction type — use the spec primitive, not an adapter.
+> - "Navigate + DOM extract" is now `page_global_data` / `html_selector` / `script_json` with PagePlan — use extraction, not an adapter.
+> - Only keep an adapter (now called `CustomRunner`) when the site genuinely needs signing, module-system access, binary protocols, or other site-specific logic that spec cannot express.
+>
+> When you do write a runner, the contract is `run(ctx: PreparedContext)` — a single function, no `init()` / `isAuthenticated()`. See `doc/main/adapters.md` for the current CustomRunner interface. The recipes below still show the legacy `execute()` signature; the body of each recipe is the pattern you want, but migrate the outer wrapper to `run(ctx)` when applying.
 
 ## 1. Response Interception
 

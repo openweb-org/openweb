@@ -74,10 +74,10 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
                                  │ ± auth    │
                                  └───────────┘
 
-        ┌──────────┐
-        │   L3     │  adapter.init() → isAuthenticated() → execute()
-        │ adapter  │  Full Patchright access, arbitrary JS
-        └──────────┘
+        ┌───────────────┐
+        │      L3       │  CustomRunner.run(ctx)
+        │ custom runner │  PagePlan handles nav/ready/warm; auth pre-resolved
+        └───────────────┘  Full Patchright access, arbitrary JS
 ```
 
 -> See: [runtime.md](runtime.md) — full execution pipeline details
