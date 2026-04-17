@@ -18,8 +18,37 @@ type Bucket =
   | 'needs-phase-2'
   | 'graphql-persisted'
   | 'capture-simple'
+  | 'capture-signed'
   | 'custom-permanent'
   | 'uncertain'
+
+/**
+ * Full-source signing / anti-bot evidence.
+ *
+ * Presence of any of these strings anywhere in the adapter file indicates
+ * the site relies on site-specific request signing (X-Bogus/msToken for
+ * TikTok, anti-bot X-s / X-s-common for Xiaohongshu, x-client-transaction-id
+ * for X/Twitter, generic hmac / sha signing, etc.).
+ */
+const SIGNING_EVIDENCE_RE = /X-Bogus|X-Gnarly|msToken|ztca-dpop|tt-ticket-guard|tt-csrf-token|x-client-transaction-id|webmssdk|signerModuleId|anti-bot signature|X-s-common|\bX-s,|\bX-t,|hmacSign|signRequest|createHmac|patched fetch|patchWindowFetch/
+
+/**
+ * Per-op signing helpers. When a handler body calls one of these, the op
+ * goes through the adapter's centralised signing path and cannot be served
+ * by the generic response_capture or browser_fetch runtime primitives.
+ */
+/**
+ * Per-op signing helpers whose name alone is a strong signal (these helpers
+ * only exist in adapter files that wrap centralised signing).
+ */
+const PER_OP_SIGNING_CALL_RE = /\b(graphqlGet|graphqlPost|executeGraphqlGet|executeGraphqlPost|internalApiCall|signedFetch|signedRequest|signAndFetch)\s*\(/
+
+/**
+ * Generic in-file helper names — ambiguous on their own. A handler that calls
+ * one of these is only custom-permanent when the surrounding adapter file
+ * also carries signing / anti-bot evidence.
+ */
+const IN_FILE_REST_HELPER_RE = /\b(executeRest|apiCall|apiFetch|siteFetch)\s*\(/
 
 interface OpEntry {
   site: string
@@ -144,6 +173,15 @@ function findBlockEnd(source: string, from: number, cap: number): number {
 
 function classify(entry: Omit<OpEntry, 'bucket' | 'classificationReason'>, handler: string, fullSource: string): { bucket: Bucket; reason: string } {
   const h = handler || fullSource
+  const siteHasSigningEvidence = SIGNING_EVIDENCE_RE.test(fullSource)
+
+  // custom-permanent: per-op signing helper call (centralised signing in adapter)
+  if (PER_OP_SIGNING_CALL_RE.test(h)) {
+    return { bucket: 'custom-permanent', reason: 'per-op signing helper (graphqlGet/Post, internalApiCall, …)' }
+  }
+  if (siteHasSigningEvidence && IN_FILE_REST_HELPER_RE.test(h)) {
+    return { bucket: 'custom-permanent', reason: 'in-file REST helper in signed adapter (executeRest, …)' }
+  }
 
   // custom-permanent: signing / hmac present in handler vicinity
   if (/\b(signRequest|hmacSign|createHmac|createHash\(\s*['\"]sha(1|256|512)['\"])/.test(h) || /\bsignature\s*[:=]/.test(h)) {
@@ -155,8 +193,14 @@ function classify(entry: Omit<OpEntry, 'bucket' | 'classificationReason'>, handl
     return { bucket: 'graphql-persisted', reason: 'graphql persisted query / hash' }
   }
 
-  // capture-simple: navigate + intercept first-match response pattern
+  // capture-signed vs capture-simple: navigate + intercept response pattern,
+  // split by whether the adapter file exhibits signing / anti-bot evidence.
+  // Signed captures cannot be served by a blank-page response_capture run —
+  // the interesting request only fires after the site's own JS signs it.
   if (/interceptApi|page\.on\(\s*['\"]response['\"]|page\.waitForResponse/.test(h)) {
+    if (siteHasSigningEvidence) {
+      return { bucket: 'capture-signed', reason: 'navigate + intercept with signing / anti-bot evidence' }
+    }
     return { bucket: 'capture-simple', reason: 'navigate + intercept response' }
   }
 
@@ -293,6 +337,7 @@ function renderMarkdown(entries: OpEntry[]): string {
   const bucketOrder: Bucket[] = [
     'canonical-ready',
     'capture-simple',
+    'capture-signed',
     'graphql-persisted',
     'needs-phase-1',
     'needs-phase-2',
@@ -321,14 +366,16 @@ function renderMarkdown(entries: OpEntry[]): string {
   md += "\n## Bucket definitions\n\n"
   md += "- **canonical-ready**: spec can represent the operation directly; adapter removable with minor spec tweak.\n"
   md += "- **capture-simple**: navigate + intercept first matching response (fits \`response_capture\`).\n"
+  md += "- **capture-signed**: navigate + intercept where the site requires request signing / anti-bot tokens (X-Bogus, X-s-common, x-client-transaction-id). A blank-page \`response_capture\` run cannot serve these — the signed request only fires after the site's own JS executes.\n"
   md += "- **graphql-persisted**: static GraphQL query or persisted hash (fits \`graphql_hash\`).\n"
   md += "- **needs-phase-1**: requires PagePlan, server variables, or request parity work.\n"
   md += "- **needs-phase-2**: requires \`script_json\` extensions, \`response_capture\`, adapter helpers, or \`graphql_hash\` infrastructure beyond current support.\n"
-  md += "- **custom-permanent**: permanent custom bucket (signing / complex auth) per OQ 11.\n"
+  md += "- **custom-permanent**: permanent custom bucket — per-op signing helpers (graphqlGet/Post, internalApiCall) or hmac/sha signing logic in the handler body.\n"
   md += "- **uncertain**: needs manual review.\n"
   md += "\n## Notes & caveats\n\n"
-  md += "- Classification is heuristic; it reads per-operation handler bodies from the adapter \`.ts\` files and looks for strong signals (\`interceptApi\`, \`persistedQuery\`, \`__NEXT_DATA__\`, \`fetch\`, \`page.goto\`, signing primitives).\n"
-  md += "- \`custom-permanent\` captures only operations whose handler body directly contains signing / hmac calls. Sites where signing is centralised in adapter helpers (e.g. x-graphql, tiktok-web, xiaohongshu-web) may currently classify as \`needs-phase-2\` or \`needs-phase-1\`; they reclassify to \`custom-permanent\` only if signing infrastructure is declared out-of-scope for the runtime.\n"
+  md += "- Classification is heuristic; it reads per-operation handler bodies from the adapter \`.ts\` files and looks for strong signals (\`interceptApi\`, \`persistedQuery\`, \`__NEXT_DATA__\`, \`fetch\`, \`page.goto\`, signing primitives, centralised signing helpers).\n"
+  md += "- \`custom-permanent\` fires when the handler body calls a per-op signing helper (\`graphqlGet\`, \`graphqlPost\`, \`executeGraphqlGet\`, \`executeGraphqlPost\`, \`internalApiCall\`, \`signedFetch\`) or contains direct hmac/sha signing logic.\n"
+  md += "- \`capture-signed\` fires when a navigate+intercept handler lives in an adapter file that also contains signing / anti-bot evidence (e.g. \`X-Bogus\`, \`msToken\`, \`X-s-common\`, \`x-client-transaction-id\`, \`patched fetch\`). Such ops need the site's own runtime to fire the signed request — generic \`response_capture\` on a blank page cannot reproduce them.\n"
   md += "- \`needs-phase-1\` is the fallback for page-transport operations without capture / graphql / SSR signals; expect manual triage during wave planning.\n"
   md += "- Run \`pnpm tsx scripts/adapter-inventory.ts --json inventory.json\` for the full per-op listing (JSON), or pipe the stdout table.\n"
   return md

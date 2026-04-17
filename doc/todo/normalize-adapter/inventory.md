@@ -9,61 +9,64 @@ Total adapter-backed operations: **323**
 | Bucket | Count | % |
 |---|---:|---:|
 | canonical-ready | 47 | 14.6% |
-| capture-simple | 23 | 7.1% |
+| capture-simple | 4 | 1.2% |
+| capture-signed | 16 | 5.0% |
 | graphql-persisted | 3 | 0.9% |
-| needs-phase-1 | 241 | 74.6% |
+| needs-phase-1 | 198 | 61.3% |
 | needs-phase-2 | 6 | 1.9% |
-| custom-permanent | 0 | 0.0% |
+| custom-permanent | 46 | 14.2% |
 | uncertain | 3 | 0.9% |
 
 ## Top 30 sites by adapter op count
 
-| Site | Total | canonical-ready | capture-simple | graphql-persisted | needs-phase-1 | needs-phase-2 | custom-permanent | uncertain |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| x | 30 | 0 | 0 | 0 | 30 | 0 | 0 | 0 |
-| tiktok | 21 | 0 | 8 | 0 | 13 | 0 | 0 | 0 |
-| bluesky | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 |
-| costco | 14 | 0 | 0 | 0 | 14 | 0 | 0 | 0 |
-| google-maps | 14 | 0 | 1 | 0 | 13 | 0 | 0 | 0 |
-| medium | 14 | 0 | 0 | 0 | 14 | 0 | 0 | 0 |
-| xiaohongshu | 14 | 0 | 8 | 0 | 6 | 0 | 0 | 0 |
-| spotify | 13 | 0 | 0 | 1 | 12 | 0 | 0 | 0 |
-| telegram | 13 | 0 | 0 | 0 | 13 | 0 | 0 | 0 |
-| leetcode | 12 | 0 | 0 | 0 | 12 | 0 | 0 | 0 |
-| google-search | 9 | 0 | 0 | 0 | 9 | 0 | 0 | 0 |
-| amazon | 8 | 0 | 0 | 0 | 8 | 0 | 0 | 0 |
-| whatsapp | 8 | 0 | 0 | 0 | 8 | 0 | 0 | 0 |
-| bilibili | 7 | 6 | 0 | 0 | 1 | 0 | 0 | 0 |
-| trello | 7 | 0 | 0 | 0 | 7 | 0 | 0 | 0 |
-| youtube | 7 | 6 | 0 | 0 | 1 | 0 | 0 | 0 |
-| expedia | 6 | 0 | 2 | 0 | 4 | 0 | 0 | 0 |
-| linkedin | 6 | 0 | 0 | 0 | 6 | 0 | 0 | 0 |
-| todoist | 6 | 0 | 0 | 0 | 6 | 0 | 0 | 0 |
-| airbnb | 5 | 2 | 0 | 2 | 0 | 1 | 0 | 0 |
-| booking | 5 | 0 | 0 | 0 | 5 | 0 | 0 | 0 |
-| google-flights | 5 | 2 | 0 | 0 | 0 | 0 | 0 | 3 |
-| hackernews | 5 | 3 | 0 | 0 | 2 | 0 | 0 | 0 |
-| homedepot | 5 | 0 | 0 | 0 | 5 | 0 | 0 | 0 |
-| instagram | 5 | 0 | 0 | 0 | 5 | 0 | 0 | 0 |
-| apple-podcasts | 4 | 0 | 0 | 0 | 4 | 0 | 0 | 0 |
-| glassdoor | 4 | 0 | 1 | 0 | 2 | 1 | 0 | 0 |
-| goodreads | 4 | 2 | 0 | 0 | 0 | 2 | 0 | 0 |
-| imdb | 4 | 3 | 0 | 0 | 0 | 1 | 0 | 0 |
-| jd | 4 | 0 | 0 | 0 | 4 | 0 | 0 | 0 |
+| Site | Total | canonical-ready | capture-simple | capture-signed | graphql-persisted | needs-phase-1 | needs-phase-2 | custom-permanent | uncertain |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| x | 30 | 0 | 0 | 0 | 0 | 0 | 0 | 30 | 0 |
+| tiktok | 21 | 0 | 0 | 8 | 0 | 0 | 0 | 13 | 0 |
+| bluesky | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| costco | 14 | 0 | 0 | 0 | 0 | 14 | 0 | 0 | 0 |
+| google-maps | 14 | 0 | 1 | 0 | 0 | 13 | 0 | 0 | 0 |
+| medium | 14 | 0 | 0 | 0 | 0 | 14 | 0 | 0 | 0 |
+| xiaohongshu | 14 | 0 | 0 | 8 | 0 | 6 | 0 | 0 | 0 |
+| spotify | 13 | 0 | 0 | 0 | 1 | 12 | 0 | 0 | 0 |
+| telegram | 13 | 0 | 0 | 0 | 0 | 13 | 0 | 0 | 0 |
+| leetcode | 12 | 0 | 0 | 0 | 0 | 12 | 0 | 0 | 0 |
+| google-search | 9 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 0 |
+| amazon | 8 | 0 | 0 | 0 | 0 | 8 | 0 | 0 | 0 |
+| whatsapp | 8 | 0 | 0 | 0 | 0 | 8 | 0 | 0 | 0 |
+| bilibili | 7 | 6 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
+| trello | 7 | 0 | 0 | 0 | 0 | 7 | 0 | 0 | 0 |
+| youtube | 7 | 6 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
+| expedia | 6 | 0 | 2 | 0 | 0 | 4 | 0 | 0 | 0 |
+| linkedin | 6 | 0 | 0 | 0 | 0 | 6 | 0 | 0 | 0 |
+| todoist | 6 | 0 | 0 | 0 | 0 | 6 | 0 | 0 | 0 |
+| airbnb | 5 | 2 | 0 | 0 | 2 | 0 | 1 | 0 | 0 |
+| booking | 5 | 0 | 0 | 0 | 0 | 5 | 0 | 0 | 0 |
+| google-flights | 5 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 3 |
+| hackernews | 5 | 3 | 0 | 0 | 0 | 2 | 0 | 0 | 0 |
+| homedepot | 5 | 0 | 0 | 0 | 0 | 5 | 0 | 0 | 0 |
+| instagram | 5 | 0 | 0 | 0 | 0 | 5 | 0 | 0 | 0 |
+| apple-podcasts | 4 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 |
+| glassdoor | 4 | 0 | 1 | 0 | 0 | 2 | 1 | 0 | 0 |
+| goodreads | 4 | 2 | 0 | 0 | 0 | 0 | 2 | 0 | 0 |
+| imdb | 4 | 3 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
+| jd | 4 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 |
 
 ## Bucket definitions
 
 - **canonical-ready**: spec can represent the operation directly; adapter removable with minor spec tweak.
 - **capture-simple**: navigate + intercept first matching response (fits `response_capture`).
+- **capture-signed**: navigate + intercept where the site requires request signing / anti-bot tokens (X-Bogus, X-s-common, x-client-transaction-id). A blank-page `response_capture` run cannot serve these — the signed request only fires after the site's own JS executes.
 - **graphql-persisted**: static GraphQL query or persisted hash (fits `graphql_hash`).
 - **needs-phase-1**: requires PagePlan, server variables, or request parity work.
 - **needs-phase-2**: requires `script_json` extensions, `response_capture`, adapter helpers, or `graphql_hash` infrastructure beyond current support.
-- **custom-permanent**: permanent custom bucket (signing / complex auth) per OQ 11.
+- **custom-permanent**: permanent custom bucket — per-op signing helpers (graphqlGet/Post, internalApiCall) or hmac/sha signing logic in the handler body.
 - **uncertain**: needs manual review.
 
 ## Notes & caveats
 
-- Classification is heuristic; it reads per-operation handler bodies from the adapter `.ts` files and looks for strong signals (`interceptApi`, `persistedQuery`, `__NEXT_DATA__`, `fetch`, `page.goto`, signing primitives).
-- `custom-permanent` captures only operations whose handler body directly contains signing / hmac calls. Sites where signing is centralised in adapter helpers (e.g. x-graphql, tiktok-web, xiaohongshu-web) may currently classify as `needs-phase-2` or `needs-phase-1`; they reclassify to `custom-permanent` only if signing infrastructure is declared out-of-scope for the runtime.
+- Classification is heuristic; it reads per-operation handler bodies from the adapter `.ts` files and looks for strong signals (`interceptApi`, `persistedQuery`, `__NEXT_DATA__`, `fetch`, `page.goto`, signing primitives, centralised signing helpers).
+- `custom-permanent` fires when the handler body calls a per-op signing helper (`graphqlGet`, `graphqlPost`, `executeGraphqlGet`, `executeGraphqlPost`, `internalApiCall`, `signedFetch`) or contains direct hmac/sha signing logic.
+- `capture-signed` fires when a navigate+intercept handler lives in an adapter file that also contains signing / anti-bot evidence (e.g. `X-Bogus`, `msToken`, `X-s-common`, `x-client-transaction-id`, `patched fetch`). Such ops need the site's own runtime to fire the signed request — generic `response_capture` on a blank page cannot reproduce them.
 - `needs-phase-1` is the fallback for page-transport operations without capture / graphql / SSR signals; expect manual triage during wave planning.
 - Run `pnpm tsx scripts/adapter-inventory.ts --json inventory.json` for the full per-op listing (JSON), or pipe the stdout table.
