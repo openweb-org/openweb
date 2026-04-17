@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 
-const APP_URL = 'https://bsky.app'
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
 const STORAGE_KEY = 'BSKY_STORAGE'
 
 interface BskySession {
@@ -14,11 +15,7 @@ interface BskySession {
   }
 }
 
-interface Errors {
-  needsLogin(): Error
-  httpError(status: number): Error
-  unknownOp(op: string): Error
-}
+type Errors = AdapterHelpers['errors']
 
 async function readSession(page: Page): Promise<BskySession | undefined> {
   const raw = await page.evaluate((key: string) => window.localStorage.getItem(key), STORAGE_KEY)
@@ -144,153 +141,136 @@ async function deleteRecord(page: Page, collection: string, rkey: string, errors
 
 type OpHandler = (page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) => Promise<unknown>
 
-const searchPosts: OpHandler = async (page, params, errors) => {
-  const { pds, jwt } = await requireSession(page, errors)
-  return pdsGet(page, `${pds}/xrpc/app.bsky.feed.searchPosts?${toQueryString(params)}`, jwt, errors)
-}
-
-const createPost: OpHandler = async (page, params, errors) => {
-  const text = params.text as string | undefined
-  if (!text) throw new Error('text is required')
-  const record: Record<string, unknown> = {
-    $type: 'app.bsky.feed.post',
-    text,
-    createdAt: new Date().toISOString(),
-  }
-  if (params.langs) record.langs = params.langs
-  if (params.replyTo) {
-    const rt = params.replyTo as { uri: string; cid: string; rootUri?: string; rootCid?: string }
-    record.reply = {
-      parent: { uri: rt.uri, cid: rt.cid },
-      root: { uri: rt.rootUri || rt.uri, cid: rt.rootCid || rt.cid },
-    }
-  }
-  return createRecord(page, 'app.bsky.feed.post', record, errors)
-}
-
-const deletePost: OpHandler = async (page, params, errors) => {
-  const uri = params.uri as string | undefined
-  if (!uri) throw new Error('uri is required')
-  return deleteRecord(page, 'app.bsky.feed.post', extractRkey(uri), errors)
-}
-
-const likePost: OpHandler = async (page, params, errors) => {
-  const uri = params.uri as string | undefined
-  const cid = params.cid as string | undefined
-  if (!uri || !cid) throw new Error('uri and cid are required')
-  return createRecord(page, 'app.bsky.feed.like', {
-    $type: 'app.bsky.feed.like',
-    subject: { uri, cid },
-    createdAt: new Date().toISOString(),
-  }, errors)
-}
-
-const unlikePost: OpHandler = async (page, params, errors) => {
-  const uri = params.uri as string | undefined
-  if (!uri) throw new Error('uri is required')
-  return deleteRecord(page, 'app.bsky.feed.like', extractRkey(uri), errors)
-}
-
-const repost: OpHandler = async (page, params, errors) => {
-  const uri = params.uri as string | undefined
-  const cid = params.cid as string | undefined
-  if (!uri || !cid) throw new Error('uri and cid are required')
-  return createRecord(page, 'app.bsky.feed.repost', {
-    $type: 'app.bsky.feed.repost',
-    subject: { uri, cid },
-    createdAt: new Date().toISOString(),
-  }, errors)
-}
-
-const unrepost: OpHandler = async (page, params, errors) => {
-  const uri = params.uri as string | undefined
-  if (!uri) throw new Error('uri is required')
-  return deleteRecord(page, 'app.bsky.feed.repost', extractRkey(uri), errors)
-}
-
-const follow: OpHandler = async (page, params, errors) => {
-  const subject = params.subject as string | undefined
-  if (!subject) throw new Error('subject (DID) is required')
-  return createRecord(page, 'app.bsky.graph.follow', {
-    $type: 'app.bsky.graph.follow',
-    subject,
-    createdAt: new Date().toISOString(),
-  }, errors)
-}
-
-const unfollow: OpHandler = async (page, params, errors) => {
-  const uri = params.uri as string | undefined
-  if (!uri) throw new Error('uri is required')
-  return deleteRecord(page, 'app.bsky.graph.follow', extractRkey(uri), errors)
-}
-
-const blockUser: OpHandler = async (page, params, errors) => {
-  const subject = params.subject as string | undefined
-  if (!subject) throw new Error('subject (DID) is required')
-  return createRecord(page, 'app.bsky.graph.block', {
-    $type: 'app.bsky.graph.block',
-    subject,
-    createdAt: new Date().toISOString(),
-  }, errors)
-}
-
-const unblockUser: OpHandler = async (page, params, errors) => {
-  const uri = params.uri as string | undefined
-  if (!uri) throw new Error('uri is required')
-  return deleteRecord(page, 'app.bsky.graph.block', extractRkey(uri), errors)
-}
-
-const muteUser: OpHandler = async (page, params, errors) => {
-  const actor = params.actor as string | undefined
-  if (!actor) throw new Error('actor is required')
-  const { pds, jwt } = await requireSession(page, errors)
-  await pdsPost(page, `${pds}/xrpc/app.bsky.graph.muteActor`, { actor }, jwt, errors)
-  return { success: true }
-}
-
-const unmuteUser: OpHandler = async (page, params, errors) => {
-  const actor = params.actor as string | undefined
-  if (!actor) throw new Error('actor is required')
-  const { pds, jwt } = await requireSession(page, errors)
-  await pdsPost(page, `${pds}/xrpc/app.bsky.graph.unmuteActor`, { actor }, jwt, errors)
-  return { success: true }
-}
-
-const getNotifications: OpHandler = async (page, params, errors) => {
-  const { pds, jwt } = await requireSession(page, errors)
-  return pdsGet(page, `${pds}/xrpc/app.bsky.notification.listNotifications?${toQueryString(params)}`, jwt, errors)
-}
-
 const OPERATIONS: Record<string, OpHandler> = {
-  searchPosts, createPost, deletePost,
-  likePost, unlikePost, repost, unrepost,
-  follow, unfollow, blockUser, unblockUser,
-  muteUser, unmuteUser, getNotifications,
+  async searchPosts(page, params, errors) {
+    const { pds, jwt } = await requireSession(page, errors)
+    return pdsGet(page, `${pds}/xrpc/app.bsky.feed.searchPosts?${toQueryString(params)}`, jwt, errors)
+  },
+
+  async createPost(page, params, errors) {
+    const text = params.text as string | undefined
+    if (!text) throw new Error('text is required')
+    const record: Record<string, unknown> = {
+      $type: 'app.bsky.feed.post',
+      text,
+      createdAt: new Date().toISOString(),
+    }
+    if (params.langs) record.langs = params.langs
+    if (params.replyTo) {
+      const rt = params.replyTo as { uri: string; cid: string; rootUri?: string; rootCid?: string }
+      record.reply = {
+        parent: { uri: rt.uri, cid: rt.cid },
+        root: { uri: rt.rootUri || rt.uri, cid: rt.rootCid || rt.cid },
+      }
+    }
+    return createRecord(page, 'app.bsky.feed.post', record, errors)
+  },
+
+  async deletePost(page, params, errors) {
+    const uri = params.uri as string | undefined
+    if (!uri) throw new Error('uri is required')
+    return deleteRecord(page, 'app.bsky.feed.post', extractRkey(uri), errors)
+  },
+
+  async likePost(page, params, errors) {
+    const uri = params.uri as string | undefined
+    const cid = params.cid as string | undefined
+    if (!uri || !cid) throw new Error('uri and cid are required')
+    return createRecord(page, 'app.bsky.feed.like', {
+      $type: 'app.bsky.feed.like',
+      subject: { uri, cid },
+      createdAt: new Date().toISOString(),
+    }, errors)
+  },
+
+  async unlikePost(page, params, errors) {
+    const uri = params.uri as string | undefined
+    if (!uri) throw new Error('uri is required')
+    return deleteRecord(page, 'app.bsky.feed.like', extractRkey(uri), errors)
+  },
+
+  async repost(page, params, errors) {
+    const uri = params.uri as string | undefined
+    const cid = params.cid as string | undefined
+    if (!uri || !cid) throw new Error('uri and cid are required')
+    return createRecord(page, 'app.bsky.feed.repost', {
+      $type: 'app.bsky.feed.repost',
+      subject: { uri, cid },
+      createdAt: new Date().toISOString(),
+    }, errors)
+  },
+
+  async unrepost(page, params, errors) {
+    const uri = params.uri as string | undefined
+    if (!uri) throw new Error('uri is required')
+    return deleteRecord(page, 'app.bsky.feed.repost', extractRkey(uri), errors)
+  },
+
+  async follow(page, params, errors) {
+    const subject = params.subject as string | undefined
+    if (!subject) throw new Error('subject (DID) is required')
+    return createRecord(page, 'app.bsky.graph.follow', {
+      $type: 'app.bsky.graph.follow',
+      subject,
+      createdAt: new Date().toISOString(),
+    }, errors)
+  },
+
+  async unfollow(page, params, errors) {
+    const uri = params.uri as string | undefined
+    if (!uri) throw new Error('uri is required')
+    return deleteRecord(page, 'app.bsky.graph.follow', extractRkey(uri), errors)
+  },
+
+  async blockUser(page, params, errors) {
+    const subject = params.subject as string | undefined
+    if (!subject) throw new Error('subject (DID) is required')
+    return createRecord(page, 'app.bsky.graph.block', {
+      $type: 'app.bsky.graph.block',
+      subject,
+      createdAt: new Date().toISOString(),
+    }, errors)
+  },
+
+  async unblockUser(page, params, errors) {
+    const uri = params.uri as string | undefined
+    if (!uri) throw new Error('uri is required')
+    return deleteRecord(page, 'app.bsky.graph.block', extractRkey(uri), errors)
+  },
+
+  async muteUser(page, params, errors) {
+    const actor = params.actor as string | undefined
+    if (!actor) throw new Error('actor is required')
+    const { pds, jwt } = await requireSession(page, errors)
+    await pdsPost(page, `${pds}/xrpc/app.bsky.graph.muteActor`, { actor }, jwt, errors)
+    return { success: true }
+  },
+
+  async unmuteUser(page, params, errors) {
+    const actor = params.actor as string | undefined
+    if (!actor) throw new Error('actor is required')
+    const { pds, jwt } = await requireSession(page, errors)
+    await pdsPost(page, `${pds}/xrpc/app.bsky.graph.unmuteActor`, { actor }, jwt, errors)
+    return { success: true }
+  },
+
+  async getNotifications(page, params, errors) {
+    const { pds, jwt } = await requireSession(page, errors)
+    return pdsGet(page, `${pds}/xrpc/app.bsky.notification.listNotifications?${toQueryString(params)}`, jwt, errors)
+  },
 }
 
-const adapter = {
+const runner: CustomRunner = {
   name: 'bluesky-pds',
   description: 'Bluesky operations via user PDS (dynamic server URL from localStorage)',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    if (url.includes('bsky.app')) return true
-    await page.goto(APP_URL, { waitUntil: 'load', timeout: 15_000 })
-    await new Promise(r => setTimeout(r, 3_000))
-    return page.url().includes('bsky.app')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const session = await readSession(page)
-    return !!session?.session?.currentAccount?.accessJwt
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: { unknownOp(op: string): Error; needsLogin(): Error; httpError(status: number): Error } }): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('bluesky-pds requires a page (transport: page)')
     const handler = OPERATIONS[operation]
-    if (!handler) throw errors.unknownOp(operation)
-    return handler(page, params, errors)
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, params, helpers.errors)
   },
 }
 
-export default adapter
+export default runner
