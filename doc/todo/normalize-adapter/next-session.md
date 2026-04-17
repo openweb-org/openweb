@@ -34,7 +34,7 @@ Read `doc/todo/tasks.json`, filter `parent: normalize-adapter`, `state: ready`. 
 
 **Borderline / lower priority:**
 - `na-rt-apollo-ref` — `__ref` resolution for Apollo SSR (goodreads, booking SSR)
-- `na-classifier-refinement` — inventory classifier demote `capture-simple` when signing evidence present
+- `na-classifier-refinement` — **DONE** (`ece57cb`): `capture-signed` bucket added; centralised-signing sites moved to `custom-permanent`. `capture-simple` dropped 23 → 4.
 
 **Third wave:**
 - `na-finishing-ops` — batched migration of deferred ops (depends on the 5 primary runtime gaps)

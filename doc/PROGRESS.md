@@ -1,3 +1,25 @@
+## 2026-04-17: adapter inventory classifier — signing-aware buckets
+
+**What changed:**
+- Added `capture-signed` bucket to `scripts/adapter-inventory.ts` for navigate+intercept handlers in adapter files that carry signing / anti-bot evidence (X-Bogus, msToken, X-s-common, x-client-transaction-id, webmssdk, patched fetch).
+- Added per-op signing-helper detection (`graphqlGet`/`graphqlPost`/`executeGraphqlGet`/`executeGraphqlPost`/`internalApiCall`) and in-file REST helpers (`executeRest`) when the adapter file has signing evidence — these route to `custom-permanent`.
+- Updated bucket ordering + definitions in the markdown output; regenerated `doc/todo/normalize-adapter/inventory.md`.
+
+**Why:**
+- Phase 4 handoff flagged that the old classifier over-counted `capture-simple`: TikTok/Xiaohongshu/X intercept handlers rely on the site's own runtime to fire signed fetches, which `response_capture`'s blank-page forceFresh can't reproduce. The bucket is supposed to identify ops that trivially fit `response_capture`; signed sites don't.
+
+**Bucket deltas (323 ops total):**
+- capture-simple: 23 → 4 (expedia ×2, glassdoor, google-maps — genuine navigate+intercept)
+- capture-signed: 0 → 16 (tiktok ×8, xiaohongshu ×8)
+- custom-permanent: 0 → 46 (x ×20, tiktok ×13, …)
+- needs-phase-1: 241 → 198
+
+**Key files:** `scripts/adapter-inventory.ts`, `doc/todo/normalize-adapter/inventory.md`
+**Verification:** `pnpm tsx scripts/adapter-inventory.ts` — 323 ops classified; manually spot-checked tiktok (8 reads capture-signed, 13 writes custom-permanent), x (20 custom-permanent via graphqlGet/Post + executeRest, 10 needs-phase-1 stub handlers), xiaohongshu (8 capture-signed).
+**Commit:** ece57cb
+**Next:** `na-classifier-refinement` closed; resume ready-task queue in `next-session.md` (primary runtime gaps: script_json multimatch DONE, browser-fetch errors, warm-page origin, query templating, GET APQ).
+**Blockers:** None
+
 ## 2026-04-17: script_json multi-match + @type filter
 
 **What changed:**
