@@ -77,6 +77,10 @@ export interface XOpenWebOperation {
   /** GraphQL query string injected at body root when wrap is active and the schema
    *  property name would conflict with a user-facing param (e.g. both named 'query') */
   readonly graphql_query?: string
+  /** Apollo Automatic Persisted Query hash. Accepts raw hex or 'sha256:<hex>'.
+   *  When set, request body includes extensions.persistedQuery.sha256Hash; if
+   *  graphql_query is also set, the query is included as APQ cache-miss fallback. */
+  readonly graphql_hash?: string
   /** Per-operation overrides for the page-acquisition plan. Each field here wins
    *  over the server-level page_plan, even when the value is falsy. */
   readonly page_plan?: PagePlanConfig

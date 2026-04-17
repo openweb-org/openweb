@@ -89,3 +89,62 @@ describe('buildRequestBody', () => {
     expect(result?.body).toBe('user_id=a+b%26c&action=x%3Dy')
   })
 })
+
+function graphqlOperation(xOpenWeb: Record<string, unknown>): OpenApiOperation {
+  return {
+    operationId: 'gqlOp',
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              userId: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    'x-openweb': xOpenWeb,
+  } as unknown as OpenApiOperation
+}
+
+describe('buildJsonRequestBody — graphql_hash (Apollo APQ)', () => {
+  it('hash-only: emits extensions.persistedQuery with variables wrapped', () => {
+    const op = graphqlOperation({ wrap: 'variables', graphql_hash: 'abc123' })
+    const body = JSON.parse(buildJsonRequestBody(op, { userId: 'u1' }) ?? '')
+    expect(body).toEqual({
+      variables: { userId: 'u1' },
+      extensions: { persistedQuery: { version: 1, sha256Hash: 'abc123' } },
+    })
+    expect(body.query).toBeUndefined()
+  })
+
+  it('hash + query fallback: both included for APQ cache-miss recovery', () => {
+    const op = graphqlOperation({
+      wrap: 'variables',
+      graphql_hash: 'abc123',
+      graphql_query: 'query Q($userId: ID!) { user(id: $userId) { name } }',
+    })
+    const body = JSON.parse(buildJsonRequestBody(op, { userId: 'u1' }) ?? '')
+    expect(body.query).toBe('query Q($userId: ID!) { user(id: $userId) { name } }')
+    expect(body.extensions).toEqual({ persistedQuery: { version: 1, sha256Hash: 'abc123' } })
+    expect(body.variables).toEqual({ userId: 'u1' })
+  })
+
+  it("strips 'sha256:' prefix from hash", () => {
+    const op = graphqlOperation({ wrap: 'variables', graphql_hash: 'sha256:deadbeef' })
+    const body = JSON.parse(buildJsonRequestBody(op, { userId: 'u1' }) ?? '')
+    expect(body.extensions.persistedQuery.sha256Hash).toBe('deadbeef')
+  })
+
+  it('works without wrap: extensions emitted, params at root', () => {
+    const op = graphqlOperation({ graphql_hash: 'abc123' })
+    const body = JSON.parse(buildJsonRequestBody(op, { userId: 'u1' }) ?? '')
+    expect(body).toEqual({
+      userId: 'u1',
+      extensions: { persistedQuery: { version: 1, sha256Hash: 'abc123' } },
+    })
+  })
+})

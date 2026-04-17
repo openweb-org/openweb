@@ -150,6 +150,16 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
     body.query = opExt.graphql_query
   }
 
+  // Apollo Automatic Persisted Query: emit extensions.persistedQuery.sha256Hash.
+  // Accepts raw hex or 'sha256:<hex>' form. If graphql_query is also set, both
+  // are included so the server can fall back on APQ cache miss.
+  if (opExt?.graphql_hash) {
+    const hash = opExt.graphql_hash.startsWith('sha256:')
+      ? opExt.graphql_hash.slice('sha256:'.length)
+      : opExt.graphql_hash
+    body.extensions = { persistedQuery: { version: 1, sha256Hash: hash } }
+  }
+
   if (Object.keys(body).length === 0 && !operation.requestBody?.required) {
     return undefined
   }
