@@ -27,11 +27,23 @@ export interface OpenApiRequestBody {
   readonly content?: Record<string, { readonly schema?: JsonSchema }>
 }
 
+export interface OpenApiServerVariable {
+  readonly default: string
+  readonly enum?: string[]
+  readonly description?: string
+}
+
+export interface OpenApiServer {
+  readonly url: string
+  readonly description?: string
+  readonly variables?: Record<string, OpenApiServerVariable>
+}
+
 export interface OpenApiOperation {
   readonly operationId: string
   readonly summary?: string
   readonly description?: string
-  readonly servers?: Array<{ readonly url: string }>
+  readonly servers?: OpenApiServer[]
   readonly parameters?: OpenApiParameter[]
   readonly requestBody?: OpenApiRequestBody
   readonly responses?: Record<
@@ -50,7 +62,7 @@ export interface OpenApiSpec {
     readonly version: string
     readonly [key: string]: unknown
   }
-  readonly servers?: Array<{ readonly url: string }>
+  readonly servers?: OpenApiServer[]
   readonly paths?: Record<string, Partial<Record<HttpMethod, OpenApiOperation>>>
 }
 
@@ -149,15 +161,19 @@ export function findOperation(spec: OpenApiSpec, operationId: string): Operation
   return operation
 }
 
-export function getServerUrl(spec: OpenApiSpec, operation: OpenApiOperation): string {
-  const operationServer = operation.servers?.[0]?.url
+export function getServerUrl(
+  spec: OpenApiSpec,
+  operation: OpenApiOperation,
+  params?: Record<string, unknown>,
+): string {
+  const operationServer = operation.servers?.[0]
   if (operationServer) {
-    return operationServer
+    return substituteServerVariables(operationServer, params)
   }
 
-  const globalServer = spec.servers?.[0]?.url
+  const globalServer = spec.servers?.[0]
   if (globalServer) {
-    return globalServer
+    return substituteServerVariables(globalServer, params)
   }
 
   throw new OpenWebError({
@@ -167,6 +183,24 @@ export function getServerUrl(spec: OpenApiSpec, operation: OpenApiOperation): st
     action: 'Add `servers` to the spec and retry.',
     retriable: false,
     failureClass: 'fatal',
+  })
+}
+
+/**
+ * Resolves OpenAPI server variable placeholders: caller-provided param wins,
+ * then the variable's `default`. Unknown placeholders are left unchanged.
+ */
+function substituteServerVariables(
+  server: OpenApiServer,
+  params: Record<string, unknown> | undefined,
+): string {
+  return server.url.replace(/\{([^}]+)\}/g, (match, name: string) => {
+    const fromParam = params?.[name]
+    if (fromParam !== undefined && fromParam !== null) {
+      return String(fromParam)
+    }
+    const fallback = server.variables?.[name]?.default
+    return fallback ?? match
   })
 }
 
