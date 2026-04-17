@@ -454,6 +454,7 @@ paths:
                         - mediumUrl
                   pagingInfo:
                     type: object
+                    nullable: true
                     properties:
                       next:
                         type: object
@@ -463,10 +464,7 @@ paths:
                             type: integer
                           to:
                             type: string
-                        required:
-                          - to
-                    required:
-                      - next
+                            nullable: true
                 required:
                   - posts
   /tags/recommended:
