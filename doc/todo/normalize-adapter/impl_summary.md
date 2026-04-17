@@ -119,9 +119,12 @@ The migration honestly hit 7 primary primitive gaps plus several smaller composi
 - **Slug/path transform** (e.g. zillow regionId→slug lookup table) — site-specific but a general "lookup table" primitive might compose.
 - **Inventory classifier refinement** (phase4 handoff:57) — `capture-simple` bucket misclassifies signed-fetch sites (`na-classifier-refinement`).
 
-**Explicitly NOT a runtime gap — belongs in SKILL.md:**
+**Explicitly NOT a runtime gap in current design — but reopenable later:**
 
-- **Multi-call composition** (e.g. instagram `getUserPosts` taking `username`, internally calling `getUserProfile` → extracting `userId` → then `getUserFeed`). OpenWeb's contract is raw typed API access; agents compose ops via SKILL.md workflow guidance, not runtime. Adding a spec-level chain primitive would violate the "no workflow DSL" design principle and duplicate what agents already do. Sites that need chaining should either expose the two ops separately (and document the workflow in SKILL.md) or keep a thin convenience `CustomRunner` — never promote chain to the runtime.
+- **Multi-call composition** (e.g. a single op taking `username`, internally calling `getUserProfile` → extracting `userId` → then `getUserFeed`). OpenWeb's current contract is raw typed API access; agents compose ops via SKILL.md workflow guidance, not runtime. A spec-level chain primitive would violate design principle 1 ("no workflow DSL").
+  - **Hard rule going forward:** do **not** add a `CustomRunner` just to chain two calls. `CustomRunner` is for site-specific logic (signing, module systems, protocol) only. Sites that need chaining should expose the two ops separately and document the workflow in SKILL.md.
+  - **Existing chain CustomRunners** (e.g. if instagram `getUserPosts` wraps profile→feed internally today) are accepted technical debt from before this rule; handled at the next op-level review — either split into separate ops or keep as thin convenience wrapper, but don't use them as precedent.
+  - **Revisit criteria** — trigger a fresh `/design` pass only when at least one of: (a) 10+ sites show the same chain pattern, (b) measurable agent-side chain-composition failure rate, (c) runtime-level batching/caching makes chain-in-runtime materially cheaper than client-side. Until then, this is a design question on file, not a backlog task.
 
 Tasks for array reducers (`na-rt-array-reducers`), Apollo `__ref` (`na-rt-apollo-ref`), classifier refinement (`na-classifier-refinement`) are in the backlog. HTML regex and slug/path-transform are deferred until a specific site demands them.
 
