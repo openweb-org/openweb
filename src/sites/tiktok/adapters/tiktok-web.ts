@@ -246,17 +246,6 @@ async function getHomeFeed(page: Page, _params: Record<string, unknown>, _errors
   }
 }
 
-async function getExplore(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
-  const data = await interceptApi(page, `${BASE}/explore`, ['/api/explore/item_list/', '/api/recommend/item_list/'])
-  if (!data) return { items: [], hasMore: false }
-
-  const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
-  return {
-    items: items.map(normalizeVideoItem),
-    hasMore: data.hasMore === true || data.has_more === 1,
-  }
-}
-
 async function getUserVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const username = String(params.username || '')
   if (!username) throw errors.missingParam('username')
@@ -556,7 +545,6 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   unlikeComment,
   blockUser,
   unblockUser,
-  getExplore,
 }
 
 const adapter = {

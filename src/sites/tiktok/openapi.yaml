@@ -1086,39 +1086,38 @@ paths:
   /internal/getExplore:
     get:
       operationId: getExplore
-      summary: "Get explore/discover page — trending videos by category"
+      summary: "Get explore/discover page — trending videos by category. Returns raw TikTok /api/recommend/item_list/ response (itemList, hasMore, cursor)."
       x-openweb:
         permission: read
-        adapter:
-          name: tiktok-web
-          operation: getExplore
+        adapter: false
         build:
-          stable_id: tk_getExplore_v1
+          stable_id: tk_getExplore_v2
           tool_version: 2
+          signals:
+            - response_capture
+        extraction:
+          type: response_capture
+          page_url: https://www.tiktok.com/explore
+          match_url: '*/api/recommend/item_list/*'
       parameters: []
       responses:
         "200":
-          description: Explore page videos.
+          description: Raw explore item_list response intercepted on the explore page.
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - items
                 properties:
-                  items:
+                  itemList:
                     type: array
-                    description: Trending/explore videos
+                    description: Trending/explore videos (raw TikTok item shape).
                     items:
                       type: object
-                      required:
-                        - id
-                        - author
                       properties:
                         id:
                           type: string
                           description: Video ID
-                        description:
+                        desc:
                           type: string
                           description: Video caption
                         createTime:
@@ -1126,59 +1125,45 @@ paths:
                           description: Unix timestamp of creation
                         video:
                           type: object
-                          required:
-                            - id
-                            - cover
                           properties:
                             id:
                               type: string
-                              description: Video asset ID
                             cover:
                               type: string
-                              format: uri
                               description: Thumbnail URL
                             playAddr:
                               type: string
-                              format: uri
                               description: Video playback URL
+                            duration:
+                              type: integer
                         author:
                           type: object
-                          required:
-                            - uniqueId
                           properties:
                             id:
                               type: string
-                              description: Author user ID
                             uniqueId:
                               type: string
-                              description: Author username
                             nickname:
                               type: string
-                              description: Author display name
                             verified:
                               type: boolean
-                              description: Whether the author is verified
                         stats:
                           type: object
-                          required:
-                            - diggCount
-                            - playCount
                           properties:
                             diggCount:
                               type: integer
-                              description: Number of likes
                             shareCount:
                               type: integer
-                              description: Number of shares
                             commentCount:
                               type: integer
-                              description: Number of comments
                             playCount:
                               type: integer
-                              description: Number of plays
                   hasMore:
                     type: boolean
-                    description: Whether more videos are available
+                  cursor:
+                    type: string
+                  statusCode:
+                    type: integer
 
   /api/search/user/full/:
     get:
