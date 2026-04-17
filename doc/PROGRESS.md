@@ -1,3 +1,22 @@
+## 2026-04-17: na-rt-warm-page-origin — warmSession on page origin for cross-subdomain APIs
+
+**What changed:**
+- `src/runtime/browser-fetch-executor.ts`: new `resolveWarmUrl(warmOrigin, entryUrl, serverUrl)` helper. Previously `warmSession(page, serverUrl)` was called unconditionally; now defaults to entry_url when its origin differs from serverUrl, otherwise serverUrl. `page_plan.warm_origin` ('page' | 'server' | explicit URL) overrides.
+- `src/types/extensions.ts`, `src/types/schema.ts`, `src/runtime/operation-context.ts`: `warm_origin` added to `PagePlanConfig`, validator schema, and server→op merge allowlist.
+- `src/sites/apple-podcasts/openapi.yaml`: migrated to spec-only. Server flipped to `amp-api.podcasts.apple.com`; `page_plan` sets `entry_url: podcasts.apple.com/us/charts`, `warm: true`, `warm_origin: page`; `auth: page_global` reads `window.MusicKit.getInstance().developerToken` → `Authorization: Bearer …`. Added default query params (platform/types/groups/limit/kinds) previously hard-coded in the adapter. `src/sites/apple-podcasts/adapters/apple-podcasts-api.ts` deleted.
+
+**Why:**
+- apple-podcasts API (amp-api.*) requires a bearer token that only exists on the podcasts.apple.com page (window.MusicKit JS context). The unconditional warm against serverUrl navigated the page away to amp-api, destroying the MusicKit instance and making the token unreachable. Routing warm to entry_url preserves the page context — unblocks any site whose API lives on a different subdomain than its entry page.
+- Migrating apple-podcasts to spec-only is the proof-of-unblock: removes a hand-written adapter that existed only because the runtime couldn't warm correctly.
+
+**Key files:** `src/runtime/browser-fetch-executor.ts`, `src/runtime/operation-context.ts`, `src/types/{extensions.ts,schema.ts}`, `src/sites/apple-podcasts/openapi.yaml`
+**Verification:** `pnpm dev verify apple-podcasts` → 4/4 ops PASS (searchPodcasts, getPodcast, getSearchSuggestions, getTopCharts).
+**Commit:** fc24940
+**Next:** None — apple-podcasts adapter eliminated; runtime gap closed.
+**Blockers:** None.
+
+---
+
 ## 2026-04-17: na-rt-get-apq — Relay-style GET APQ for graphql_hash
 
 **What changed:**

@@ -121,6 +121,7 @@ Runtime-owned page acquisition for browser-backed operations. Merges server-leve
 | `wait_until` | string | `load` | Playwright `waitUntil` (`domcontentloaded` / `load` / `networkidle` / `commit`) |
 | `settle_ms` | number | `0` | Extra delay after `ready` (escape hatch — prefer a tighter selector) |
 | `warm` | boolean | `false` | Run `warmSession()` after readiness (PX / DataDome / Akamai) |
+| `warm_origin` | `'page' \| 'server' \| URL` | auto | Override warm target. Default: entry_url origin when it differs from serverUrl, otherwise serverUrl. Use `'page'` when API is on a different subdomain from entry (e.g. apple-podcasts) |
 | `nav_timeout_ms` | number | `30000` | Navigation + readiness timeout |
 
 ```yaml
