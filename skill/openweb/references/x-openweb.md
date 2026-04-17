@@ -190,6 +190,12 @@ both the GraphQL query field and a user param are named `query`.
 `stable_id`, `signature_id`, `tool_version`, `verified`, `signals`.
 **Compiler-managed — do not edit.**
 
+## Parameter-Level (per-`parameter` `x-openweb`)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `template` | string | No | Template literal with `{paramName}` placeholders. At request-build time, placeholders are substituted from resolved caller input. Templated params are derived — callers **cannot override**, and a referenced parameter missing from the resolved set raises `INVALID_PARAMS`. Example: `tags` with `template: "story,author_{id}"` → caller `{id: "pg"}` produces `tags=story,author_pg`. |
+
 ## WebSocket Extensions (AsyncAPI)
 
 WS sites use AsyncAPI 3.0 with `x-openweb` on server and operation objects.

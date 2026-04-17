@@ -28,8 +28,8 @@ Read `doc/todo/tasks.json`, filter `parent: normalize-adapter`, `state: ready`. 
 **Second wave (primary runtime gaps — parallel, unblocks finishing-ops):**
 - `na-rt-script-json-multimatch` — ✅ done (b44999f). `type_filter` + `multi` on `script_json`; hotel/travel adapter migrations queued under `na-finishing-ops`.
 - `na-rt-browser-fetch-errors` — ✅ done (`9cce6d1`). `TypeError: Failed to fetch` now retries 2x in the executor before surfacing as `retriable`. Grubhub end-to-end still blocked by a separate adapter-loader issue (installed adapter missing `run` export); migration back to `browser_fetch` is the follow-up.
-- `na-rt-warm-page-origin` — `warmSession` on page origin not server URL (unblocks apple-podcasts)
-- `na-rt-query-templating` — param-level template like `tags=story,author_{id}` (unblocks hackernews 3 reads)
+- `na-rt-warm-page-origin` — ✅ done (`fc24940`). `warmSession` routes to page origin when `entry_url` and server differ; `page_plan.warm_origin` override. apple-podcasts migrated to spec (4/4 PASS, adapter deleted).
+- `na-rt-query-templating` — ✅ done (`599a227`). `x-openweb.template` at parameter level substitutes `{paramName}` placeholders from caller input at request-build time. hackernews `getStoryComments` / `getUserSubmissions` / `getUserComments` migrated to spec (returns raw Algolia hits via `unwrap: hits`; reshape belongs in SKILL.md per Rule 2).
 - `na-rt-get-apq` — ✅ done (`44eed82`). `buildGraphqlGetApqQuery()` packs `variables` + `extensions` into URL per Relay GET APQ; POST Apollo path unchanged; auto-selects by HTTP method. Airbnb `getListingReviews` + `getListingAvailability` converted to spec (verify 2/2 PASS). Other 3 airbnb ops still blocked by a pre-existing CustomRunner `run` export mismatch.
 
 **Borderline / lower priority:**

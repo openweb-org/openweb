@@ -105,7 +105,7 @@ The migration hit 5 primary primitive gaps, each with a dedicated `na-rt-*` task
 | GET-flavor APQ for `graphql_hash` | airbnb 2 ops, Relay-style APIs | s | ✅ 44eed82 |
 | `browser_fetch` `TypeError: Failed to fetch` normalization | grubhub 3 ops, cross-origin API gateway class | s | ✅ 9cce6d1 |
 | `warmSession` on page origin (not API server) | apple-podcasts 4 ops | xs | ✅ fc24940 |
-| Param-level template into query values (e.g. `tags=story,author_{id}`) | hackernews 3 reads | s |
+| Param-level template into query values (e.g. `tags=story,author_{id}`) | hackernews 3 reads | s | ✅ 599a227 |
 
 **Borderline, lower priority:**
 

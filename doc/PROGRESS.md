@@ -1,3 +1,23 @@
+## 2026-04-17: na-rt-query-templating — param-level `x-openweb.template` for query values
+
+**What changed:**
+- `src/lib/param-validator.ts`: new templating pass applied after defaults + const resolution. Each parameter carrying `x-openweb.template` is rendered by substituting `{paramName}` placeholders from the resolved param set. Templated params are derived — callers cannot override; a referenced param missing from the resolved set raises fatal `INVALID_PARAMS`.
+- `src/lib/param-validator.test.ts`: six new unit tests (substitution, default backfill, numeric coercion, missing-param error, override rejection, no-placeholder passthrough).
+- `src/sites/hackernews/openapi.yaml`: `getStoryComments`, `getUserSubmissions`, `getUserComments` converted from CustomRunner ops to spec HTTP ops on `/search_by_date` with `actual_path: /api/v1/search_by_date`, `unwrap: hits`, and `tags` / `numericFilters` params built via `x-openweb.template`.
+- `src/sites/hackernews/adapters/hackernews.ts`: three adapter functions removed; rebuilt via `scripts/build-adapters.js`.
+
+**Why:**
+- Algolia-style search endpoints (hackernews, many others) encode the query shape inside a single string param — e.g. `tags=story,author_{id}` or `numericFilters=story_id={id}` — that the runtime has no way to synthesize from caller input. Previously this forced hand-written adapter functions whose only job was string concatenation. `x-openweb.template` makes that a declarative spec concern and removes the adapter hop.
+- Response schemas describe the raw Algolia wire (`hits/nbHits/…`). The original wrapper shape (`{storyId, commentCount, comments}`) belongs in SKILL.md per Hard Rule 2 (no response reshape in runtime) — scheduled under finishing-ops.
+
+**Key files:** `src/lib/param-validator.ts`, `src/sites/hackernews/openapi.yaml`
+**Verification:** `pnpm test` 1020/1020 pass; `pnpm dev hackernews exec getUserSubmissions '{"id":"pg"}'` returns Algolia hits array.
+**Commit:** 599a227
+**Next:** SKILL.md wrapper-shape semantics for hackernews (agent-side composition, under `na-finishing-ops`).
+**Blockers:** None.
+
+---
+
 ## 2026-04-17: na-rt-warm-page-origin — warmSession on page origin for cross-subdomain APIs
 
 **What changed:**

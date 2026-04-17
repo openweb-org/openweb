@@ -94,6 +94,35 @@ paths:
 
 -> See: `src/types/extensions.ts`
 
+### Parameter-Level (XOpenWebParameter)
+
+```typescript
+interface XOpenWebParameter {
+  template?: string   // Template literal with {name} placeholders
+}
+```
+
+Applied to an operation `parameters[]` entry. The `{name}` placeholders are
+substituted from resolved caller input at validation time (after defaults,
+before request build). Templated parameters are derived — callers cannot
+override them, and a missing referenced parameter raises a fatal
+`INVALID_PARAMS` error.
+
+```yaml
+parameters:
+- name: id
+  in: query
+  required: true
+  schema: { type: string }
+- name: tags
+  in: query
+  schema: { type: string }
+  x-openweb:
+    template: story,author_{id}   # caller `id=pg` → wire `tags=story,author_pg`
+```
+
+-> See: `src/lib/param-validator.ts` (templating pass)
+
 ---
 
 ## L2 Primitive Type Catalog
