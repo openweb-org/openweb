@@ -1,15 +1,17 @@
 openapi: "3.1.0"
 info:
   title: GoodRx
-  version: "1.0.0"
+  version: "1.1.0"
   x-openweb:
     spec_version: "2.0"
-    compiled_at: "2026-04-01T00:00:00Z"
+    compiled_at: "2026-04-17T00:00:00Z"
     requires_auth: false
 servers:
   - url: https://www.goodrx.com
     x-openweb:
       transport: page
+      page_plan:
+        warm: true
 paths:
   /search:
     get:
@@ -18,13 +20,34 @@ paths:
       x-openweb:
         permission: read
         build:
-          stable_id: grx_searchDrugs_v1
+          stable_id: grx_searchDrugs_v2
           tool_version: 2
           signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: searchDrugs
+            - page_global_data
+        adapter: false
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const q = (new URL(location.href).searchParams.get('query') || '').toLowerCase();
+              const links = Array.from(document.querySelectorAll('a[href]'));
+              const seen = new Set();
+              const skip = new Set(['search','gold','care','brand','drugs','health','about','pets','conditions','classes','mobile','discount-card','pharmacy-near-me','how-goodrx-works','healthcare-professionals','out-of-pocket-costs']);
+              const results = [];
+              for (const a of links) {
+                const href = a.getAttribute('href') || '';
+                const m = href.match(/^\/([a-z][a-z0-9-]+)$/);
+                if (!m) continue;
+                const slug = m[1];
+                if (seen.has(slug) || skip.has(slug)) continue;
+                seen.add(slug);
+                const name = (a.textContent || '').trim();
+                if (name.length < 2 || name.length > 50) continue;
+                if (q && !name.toLowerCase().includes(q) && !slug.includes(q)) continue;
+                results.push({ name, url: 'https://www.goodrx.com/' + slug });
+              }
+              return { count: results.length, results };
+            })()
       parameters:
         - name: query
           in: query
@@ -64,13 +87,37 @@ paths:
       x-openweb:
         permission: read
         build:
-          stable_id: grx_getDrugPrices_v1
+          stable_id: grx_getDrugPrices_v2
           tool_version: 2
           signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getDrugPrices
+            - page_global_data
+        adapter: false
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              let drugName = null;
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (const s of scripts) {
+                try {
+                  const d = JSON.parse(s.textContent || '');
+                  if (d['@type'] === 'Drug') { drugName = d.name; break; }
+                } catch (e) { /* skip */ }
+              }
+              const lis = Array.from(document.querySelectorAll('li'));
+              const prices = [];
+              for (const li of lis) {
+                const text = (li.textContent || '').trim();
+                if (!text.includes('$') || text.length > 200) continue;
+                const priceMatch = text.match(/\$(\d+\.\d{2})/);
+                if (!priceMatch) continue;
+                const parts = text.split('$');
+                const pharmacy = parts[0].replace(/Pay online$/i, '').trim();
+                if (pharmacy.length < 2 || pharmacy.length > 60) continue;
+                prices.push({ pharmacy, price: parseFloat(priceMatch[1]) });
+              }
+              return { drugName: drugName || document.title.split(' ')[0], count: prices.length, prices };
+            })()
       parameters:
         - name: slug
           in: path
@@ -112,13 +159,31 @@ paths:
       x-openweb:
         permission: read
         build:
-          stable_id: grx_getPharmacies_v1
+          stable_id: grx_getPharmacies_v2
           tool_version: 2
           signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getPharmacies
+            - page_global_data
+        adapter: false
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const links = Array.from(document.querySelectorAll('a[href*="/pharmacy/"]'));
+              const seen = new Set();
+              const pharmacies = [];
+              for (const a of links) {
+                const href = a.getAttribute('href') || '';
+                const m = href.match(/\/pharmacy\/([a-z0-9-]+)/);
+                if (!m) continue;
+                const slug = m[1];
+                if (seen.has(slug) || slug === 'near-me' || slug === 'pharmacy-near-me') continue;
+                seen.add(slug);
+                const name = ((a.textContent || '').trim()).split('\n')[0].trim();
+                if (name.length < 2 || name.length > 80) continue;
+                pharmacies.push({ name, slug, url: 'https://www.goodrx.com/pharmacy/' + slug });
+              }
+              return { count: pharmacies.length, pharmacies };
+            })()
       parameters:
         - name: zipCode
           in: query
