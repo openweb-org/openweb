@@ -1,29 +1,18 @@
 /**
- * Telegram Web L3 adapter.
+ * Telegram Web L3 runner.
  *
  * Reads via getGlobal() (webpack state), writes via callApi() (GramJS Worker).
  * Zero DOM manipulation — all ops go through the webpack module cache.
  *
  * Supports Web A (/a/ — teact, webpackChunktelegram_t) and
  * Web K (/k/ — webpackChunkwebk). Module IDs are mangled per deploy;
- * the adapter finds getGlobal/callApi dynamically by testing return shapes
+ * the runner finds getGlobal/callApi dynamically by testing return shapes
  * and scanning module source for known string constants.
  */
 
-// Inline CodeAdapter interface — avoid external imports so adapter works from compile cache
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: import('patchright').Page): Promise<boolean>
-  isAuthenticated(page: import('patchright').Page): Promise<boolean>
-  execute(
-    page: import('patchright').Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-  ): Promise<unknown>
-}
+import type { Page } from 'patchright'
 
-type Page = import('patchright').Page
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
 
 // ── Webpack finders (serialized into page.evaluate) ───────────────
 
@@ -85,10 +74,6 @@ function findCallApi(): ((...args: unknown[]) => Promise<unknown>) | null {
 const FIND_GET_GLOBAL_SRC = findGetGlobal.toString()
 const FIND_CALL_API_SRC = findCallApi.toString()
 
-function makeError(message: string, failureClass: string, retriable = false): Error {
-  return Object.assign(new Error(message), { failureClass, retriable })
-}
-
 // ── Shared helpers for page.evaluate ──────────────────────────────
 
 /** Bootstraps getGlobal + callApi inside page.evaluate and resolves chatId */
@@ -125,6 +110,8 @@ const RESOLVE_CTX_SRC = resolveCtx.toString()
 
 // ── Read operations (getGlobal) ───────────────────────────────────
 
+type Errors = AdapterHelpers['errors']
+
 async function getChats(page: Page, params: Readonly<Record<string, unknown>>) {
   const limit = Number(params.limit) || 50
   return page.evaluate((args: { fnSrc: string; limit: number }) => {
@@ -152,9 +139,9 @@ async function getChats(page: Page, params: Readonly<Record<string, unknown>>) {
   }, { fnSrc: FIND_GET_GLOBAL_SRC, limit })
 }
 
-async function getMessages(page: Page, params: Readonly<Record<string, unknown>>) {
+async function getMessages(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
-  if (!chatId) throw makeError('chatId is required', 'fatal')
+  if (!chatId) throw errors.missingParam('chatId')
   return page.evaluate((args: { fnSrc: string; chatId: string; limit: number; offsetId?: number }) => {
     const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
     if (!getGlobal) throw new Error('getGlobal not found')
@@ -187,9 +174,9 @@ async function getMessages(page: Page, params: Readonly<Record<string, unknown>>
   }, { fnSrc: FIND_GET_GLOBAL_SRC, chatId, limit: Number(params.limit) || 50, offsetId: params.offsetId as number | undefined })
 }
 
-async function searchMessages(page: Page, params: Readonly<Record<string, unknown>>) {
+async function searchMessages(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const query = String(params.query ?? '')
-  if (!query) throw makeError('query is required', 'fatal')
+  if (!query) throw errors.missingParam('query')
   return page.evaluate((args: { fnSrc: string; query: string; chatId?: string; limit: number }) => {
     const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
     if (!getGlobal) throw new Error('getGlobal not found')
@@ -223,9 +210,9 @@ async function searchMessages(page: Page, params: Readonly<Record<string, unknow
   }, { fnSrc: FIND_GET_GLOBAL_SRC, query, chatId: params.chatId as string | undefined, limit: Number(params.limit) || 20 })
 }
 
-async function getUserInfo(page: Page, params: Readonly<Record<string, unknown>>) {
+async function getUserInfo(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const userId = String(params.userId)
-  if (!userId) throw makeError('userId is required', 'fatal')
+  if (!userId) throw errors.missingParam('userId')
   return page.evaluate((args: { fnSrc: string; userId: string }) => {
     const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
     if (!getGlobal) throw new Error('getGlobal not found')
@@ -292,11 +279,11 @@ async function getContacts(page: Page) {
 
 // ── Write operations (callApi → GramJS Worker) ───────────────────
 
-async function sendMessage(page: Page, params: Readonly<Record<string, unknown>>) {
+async function sendMessage(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
   const text = String(params.text ?? '')
-  if (!chatId) throw makeError('chatId is required', 'fatal')
-  if (!text) throw makeError('text is required', 'fatal')
+  if (!chatId) throw errors.missingParam('chatId')
+  if (!text) throw errors.missingParam('text')
   return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; text: string }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const { callApi, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
@@ -305,11 +292,11 @@ async function sendMessage(page: Page, params: Readonly<Record<string, unknown>>
   }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, text })
 }
 
-async function deleteMessage(page: Page, params: Readonly<Record<string, unknown>>) {
+async function deleteMessage(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
   const rawMessageId = params.messageId
-  if (!chatId) throw makeError('chatId is required', 'fatal')
-  if (rawMessageId == null) throw makeError('messageId is required', 'fatal')
+  if (!chatId) throw errors.missingParam('chatId')
+  if (rawMessageId == null) throw errors.missingParam('messageId')
   return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: string }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const { callApi, global, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
@@ -328,13 +315,13 @@ async function deleteMessage(page: Page, params: Readonly<Record<string, unknown
   }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId: String(rawMessageId) })
 }
 
-async function editMessage(page: Page, params: Readonly<Record<string, unknown>>) {
+async function editMessage(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
   const messageId = Number(params.messageId)
   const text = String(params.text ?? '')
-  if (!chatId) throw makeError('chatId is required', 'fatal')
-  if (!messageId) throw makeError('messageId is required', 'fatal')
-  if (!text) throw makeError('text is required', 'fatal')
+  if (!chatId) throw errors.missingParam('chatId')
+  if (!messageId) throw errors.missingParam('messageId')
+  if (!text) throw errors.missingParam('text')
   return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: number; text: string }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const { callApi, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
@@ -343,13 +330,13 @@ async function editMessage(page: Page, params: Readonly<Record<string, unknown>>
   }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId, text })
 }
 
-async function forwardMessages(page: Page, params: Readonly<Record<string, unknown>>) {
+async function forwardMessages(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const fromChatId = String(params.fromChatId)
   const toChatId = String(params.toChatId)
   const messageIds = (params.messageIds as number[]) ?? []
-  if (!fromChatId) throw makeError('fromChatId is required', 'fatal')
-  if (!toChatId) throw makeError('toChatId is required', 'fatal')
-  if (!messageIds.length) throw makeError('messageIds is required', 'fatal')
+  if (!fromChatId) throw errors.missingParam('fromChatId')
+  if (!toChatId) throw errors.missingParam('toChatId')
+  if (!messageIds.length) throw errors.missingParam('messageIds')
   return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; fromChatId: string; toChatId: string; messageIds: number[] }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const from = resolveCtx(args.globalSrc, args.apiSrc, args.fromChatId)
@@ -359,11 +346,11 @@ async function forwardMessages(page: Page, params: Readonly<Record<string, unkno
   }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, fromChatId, toChatId, messageIds })
 }
 
-async function pinMessage(page: Page, params: Readonly<Record<string, unknown>>) {
+async function pinMessage(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
   const messageId = Number(params.messageId)
-  if (!chatId) throw makeError('chatId is required', 'fatal')
-  if (!messageId) throw makeError('messageId is required', 'fatal')
+  if (!chatId) throw errors.missingParam('chatId')
+  if (!messageId) throw errors.missingParam('messageId')
   return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: number; silent: boolean }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const { callApi, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
@@ -372,11 +359,11 @@ async function pinMessage(page: Page, params: Readonly<Record<string, unknown>>)
   }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId, silent: !!params.silent })
 }
 
-async function unpinMessage(page: Page, params: Readonly<Record<string, unknown>>) {
+async function unpinMessage(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
   const messageId = Number(params.messageId)
-  if (!chatId) throw makeError('chatId is required', 'fatal')
-  if (!messageId) throw makeError('messageId is required', 'fatal')
+  if (!chatId) throw errors.missingParam('chatId')
+  if (!messageId) throw errors.missingParam('messageId')
   return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: number }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const { callApi, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
@@ -385,9 +372,9 @@ async function unpinMessage(page: Page, params: Readonly<Record<string, unknown>
   }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId })
 }
 
-async function markAsRead(page: Page, params: Readonly<Record<string, unknown>>) {
+async function markAsRead(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
-  if (!chatId) throw makeError('chatId is required', 'fatal')
+  if (!chatId) throw errors.missingParam('chatId')
   return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const { callApi, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
@@ -396,64 +383,43 @@ async function markAsRead(page: Page, params: Readonly<Record<string, unknown>>)
   }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId })
 }
 
-// ── Adapter export ────────────────────────────────────────────────
+// ── Runner export ────────────────────────────────────────────────
 
-const adapter: CodeAdapter = {
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
+
+const OPERATIONS: Record<string, Handler> = {
+  getChats: (page, params) => getChats(page, params),
+  getMessages: (page, params, h) => getMessages(page, params, h.errors),
+  searchMessages: (page, params, h) => searchMessages(page, params, h.errors),
+  getUserInfo: (page, params, h) => getUserInfo(page, params, h.errors),
+  getMe: (page) => getMe(page),
+  getContacts: (page) => getContacts(page),
+  sendMessage: (page, params, h) => sendMessage(page, params, h.errors),
+  deleteMessage: (page, params, h) => deleteMessage(page, params, h.errors),
+  editMessage: (page, params, h) => editMessage(page, params, h.errors),
+  forwardMessages: (page, params, h) => forwardMessages(page, params, h.errors),
+  pinMessage: (page, params, h) => pinMessage(page, params, h.errors),
+  unpinMessage: (page, params, h) => unpinMessage(page, params, h.errors),
+  markAsRead: (page, params, h) => markAsRead(page, params, h.errors),
+}
+
+const runner: CustomRunner = {
   name: 'telegram-protocol',
   description: 'Telegram Web — reads via webpack state, writes via GramJS callApi',
 
-  async init(page: Page): Promise<boolean> {
-    if (!page.url().includes('web.telegram.org')) return false
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('telegram-protocol requires a page (transport: page)')
+
+    // "Many logins" conflict check — Telegram shows this when the same
+    // session is open in multiple tabs; webpack state is unavailable.
     const conflict = await page.evaluate(() => document.body?.innerText?.includes('Many logins') ?? false)
-    if (conflict) return false
-    const ready = await page.evaluate(() => {
-      const w = window as Record<string, unknown>
-      return Array.isArray(w.webpackChunktelegram_t) || Array.isArray(w.webpackChunkwebk)
-    })
-    if (!ready) return false
-    try {
-      return await page.evaluate((fnSrc: string) => {
-        try { return new Function(`return (${fnSrc})()`)() !== null } catch { return false }
-      }, FIND_GET_GLOBAL_SRC)
-    } catch { return false }
-  },
+    if (conflict) throw helpers.errors.fatal('Telegram "Many logins" conflict — close other tabs')
 
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const state = await page.evaluate((fnSrc: string) => {
-      const findFn = new Function(`return (${fnSrc})()`) as () => (() => Record<string, unknown>) | null
-      const getGlobal = findFn()
-      if (!getGlobal) return 'missing'
-      return getGlobal()?.currentUserId ? 'authenticated' : 'unauthenticated'
-    }, FIND_GET_GLOBAL_SRC)
-    if (state === 'missing') throw makeError('getGlobal not found', 'needs_page')
-    return state === 'authenticated'
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    try {
-      switch (operation) {
-        case 'getChats': return await getChats(page, params)
-        case 'getMessages': return await getMessages(page, params)
-        case 'searchMessages': return await searchMessages(page, params)
-        case 'getUserInfo': return await getUserInfo(page, params)
-        case 'getMe': return await getMe(page)
-        case 'getContacts': return await getContacts(page)
-        case 'sendMessage': return await sendMessage(page, params)
-        case 'deleteMessage': return await deleteMessage(page, params)
-        case 'editMessage': return await editMessage(page, params)
-        case 'forwardMessages': return await forwardMessages(page, params)
-        case 'pinMessage': return await pinMessage(page, params)
-        case 'unpinMessage': return await unpinMessage(page, params)
-        case 'markAsRead': return await markAsRead(page, params)
-        default: throw makeError(`Unknown operation: ${operation}`, 'fatal')
-      }
-    } catch (error) {
-      if (error && typeof error === 'object' && 'failureClass' in error) throw error
-      const message = error instanceof Error ? error.message : String(error)
-      if (message.includes('getGlobal not found')) throw makeError(message, 'needs_page')
-      throw makeError(message, 'retriable', true)
-    }
+    const handler = OPERATIONS[operation]
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, params, helpers)
   },
 }
 
-export default adapter
+export default runner
