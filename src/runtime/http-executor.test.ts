@@ -434,6 +434,39 @@ describe('executeOperation — transport selection', () => {
     expect(mockExecuteAdapterWithAcquire).toHaveBeenCalledTimes(1)
   })
 
+  it('skips acquirePage and calls executeAdapter(null) when operation transport is node', async () => {
+    const opRef = makeOperationRef({
+      'x-openweb': {
+        adapter: { name: 'node-adapter', operation: 'doThing', params: {} },
+        transport: 'node',
+      },
+    } as Record<string, unknown>)
+    mockLoadOpenApi.mockResolvedValue(makeSpec())
+    mockFindOperation.mockReturnValue(opRef)
+    mockResolveTransport.mockReturnValue('node')
+    mockCheckPermission.mockReturnValue('allow')
+    mockLoadPermissions.mockReturnValue({ defaults: { read: 'allow', write: 'allow', delete: 'allow', transact: 'allow' } })
+    mockResolveSiteRoot.mockResolvedValue('/tmp/sites/test')
+    mockLoadManifest.mockResolvedValue(undefined)
+    mockGetResponseSchema.mockReturnValue(undefined)
+    mockResolveAllParameters.mockReturnValue([])
+    mockValidateParams.mockImplementation((_p, input) => input as Record<string, unknown>)
+    mockGetRequestBodyParameters.mockReturnValue([])
+    mockGetServerXOpenWeb.mockReturnValue(undefined)
+
+    mockLoadAdapter.mockResolvedValue({ execute: vi.fn() })
+    mockExecuteAdapter.mockResolvedValue({ result: 'node-adapted' })
+    mockExecuteAdapterWithAcquire.mockResolvedValue({ result: 'unexpected' })
+
+    const result = await executeOperation('test-site', 'testOp', {})
+
+    expect(result.body).toEqual({ result: 'node-adapted' })
+    expect(mockExecuteAdapter).toHaveBeenCalledTimes(1)
+    expect(mockExecuteAdapter.mock.calls[0]?.[0]).toBeNull()
+    expect(mockExecuteAdapterWithAcquire).not.toHaveBeenCalled()
+    expect(mockEnsureBrowser).not.toHaveBeenCalled()
+  })
+
   it('uses injected browser from deps instead of calling ensureBrowser', async () => {
     const spec = makeSpec()
     const opRef = makeOperationRef()

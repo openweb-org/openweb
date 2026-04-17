@@ -48,6 +48,17 @@ describe('matchesEntryUrl', () => {
   it('returns false on malformed URL', () => {
     expect(matchesEntryUrl('not-a-url', 'https://a.com/')).toBe(false)
   })
+
+  it('requires matching query params when entry_url carries them', () => {
+    expect(matchesEntryUrl('https://a.com/search?q=bar', 'https://a.com/search?q=foo')).toBe(false)
+    expect(matchesEntryUrl('https://a.com/search?q=foo', 'https://a.com/search?q=foo')).toBe(true)
+    // page may carry extra params — reuse still ok
+    expect(matchesEntryUrl('https://a.com/search?q=foo&ref=x', 'https://a.com/search?q=foo')).toBe(true)
+  })
+
+  it('ignores hash on both sides', () => {
+    expect(matchesEntryUrl('https://a.com/x#top', 'https://a.com/x#bottom')).toBe(true)
+  })
 })
 
 describe('acquirePage', () => {

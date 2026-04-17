@@ -32,7 +32,10 @@ export interface AcquiredPage {
   readonly owned: boolean
 }
 
-/** True when pageUrl is same-origin with entry_url and its pathname is at/under entry's. */
+/** True when pageUrl is same-origin with entry_url, its pathname is at/under
+ *  entry's, and — when entry_url carries query params — every entry param
+ *  appears verbatim on the page URL (page may carry extra params). Hash is
+ *  ignored on both sides. */
 export function matchesEntryUrl(pageUrl: string, entryUrl: string): boolean {
   try {
     const p = new URL(pageUrl)
@@ -40,10 +43,18 @@ export function matchesEntryUrl(pageUrl: string, entryUrl: string): boolean {
     if (p.origin !== e.origin) return false
     const pPath = decodeURIComponent(p.pathname)
     const ePath = decodeURIComponent(e.pathname)
-    if (ePath === '' || ePath === '/') return true
-    if (pPath === ePath) return true
-    const base = ePath.endsWith('/') ? ePath : `${ePath}/`
-    return pPath.startsWith(base)
+    if (ePath !== '' && ePath !== '/') {
+      if (pPath !== ePath) {
+        const base = ePath.endsWith('/') ? ePath : `${ePath}/`
+        if (!pPath.startsWith(base)) return false
+      }
+    }
+    // Query must be a superset: every param/value in entry must appear on page.
+    for (const [key, value] of e.searchParams) {
+      const pageValues = p.searchParams.getAll(key)
+      if (!pageValues.includes(value)) return false
+    }
+    return true
   } catch {
     return false
   }

@@ -146,6 +146,16 @@ export async function executeOperation(
       if (!browser) throw new Error('No browser available — ensureBrowser returned an invalid handle')
       try {
         const adapter = await loadAdapter(siteRoot, adapterRef.name)
+        const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
+        const planConfig = resolvePagePlan(spec, operationRef.operation) ?? {}
+        const plan = {
+          entry_url: planConfig.entry_url ?? serverUrl,
+          ready: planConfig.ready,
+          wait_until: planConfig.wait_until,
+          settle_ms: planConfig.settle_ms,
+          warm: planConfig.warm,
+          nav_timeout_ms: planConfig.nav_timeout_ms,
+        }
         let context = browser.contexts()[0]
         if (!context) {
           // Context was killed (e.g. by PerimeterX closing CDP tabs).
@@ -158,12 +168,9 @@ export async function executeOperation(
             try {
               context = retryBrowser.contexts()[0]
               if (!context) throw new Error('No browser context after restart')
-              const page = await context.newPage()
-              try {
-                return await executeAdapter(page, adapter, adapterRef.operation, adapterParams, { requiresAuth })
-              } finally {
-                await page.close().catch(() => {})
-              }
+              return await executeAdapterWithAcquire(
+                context, serverUrl, plan, adapter, adapterRef.operation, adapterParams, { requiresAuth },
+              )
             } finally {
               await retryHandle.release()
             }
@@ -177,23 +184,8 @@ export async function executeOperation(
             failureClass: 'needs_browser',
           })
         }
-        const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
-        const planConfig = resolvePagePlan(spec, operationRef.operation) ?? {}
         return await executeAdapterWithAcquire(
-          context,
-          serverUrl,
-          {
-            entry_url: planConfig.entry_url ?? serverUrl,
-            ready: planConfig.ready,
-            wait_until: planConfig.wait_until,
-            settle_ms: planConfig.settle_ms,
-            warm: planConfig.warm,
-            nav_timeout_ms: planConfig.nav_timeout_ms,
-          },
-          adapter,
-          adapterRef.operation,
-          adapterParams,
-          { requiresAuth },
+          context, serverUrl, plan, adapter, adapterRef.operation, adapterParams, { requiresAuth },
         )
       } finally {
         if (handle) await handle.release()
