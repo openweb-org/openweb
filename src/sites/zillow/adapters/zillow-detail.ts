@@ -1,15 +1,14 @@
 import type { Page } from 'patchright'
 
 /**
- * Zillow property detail adapter — extracts property data from __NEXT_DATA__
- * via page navigation.
+ * Zillow search adapter — navigates to a region landing page and extracts
+ * __NEXT_DATA__.searchPageState.cat1. The async-create-search-page-state
+ * endpoint is blocked by PerimeterX, so we use the region slug heuristic
+ * and drop the full request body.
  *
- * PerimeterX blocks all in-page fetch() and page.request.fetch() calls to
- * the /graphql/ endpoint. Instead, we navigate directly to the property
- * detail page and extract data from the server-rendered __NEXT_DATA__ script.
- *
- * The gdpClientCache in __NEXT_DATA__ contains the same GraphQL response
- * data that the /graphql/ endpoint would return (118+ fields).
+ * Property detail / zestimate / neighborhood operations are handled via
+ * the spec-level x-openweb.extraction (page_global_data) and do not need
+ * this adapter.
  *
  * Bot detection: PerimeterX — navigate to about:blank, clear cookies, retry.
  */
@@ -35,7 +34,6 @@ type AdapterErrors = {
 async function navigateWithPxRetry(page: Page, url: string, maxRetries = 4): Promise<boolean> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     if (attempt > 0) {
-      // Navigate away from CAPTCHA page, clear cookies, wait
       await page.goto('about:blank').catch(() => {})
       await page.context().clearCookies()
       await new Promise((r) => setTimeout(r, 1000))
@@ -44,237 +42,16 @@ async function navigateWithPxRetry(page: Page, url: string, maxRetries = 4): Pro
       await page.goto(url, { waitUntil: 'load', timeout: 15_000 })
     } catch (e) {
       if (isStalePage(e)) {
-        // Page stale from verify warm-up — blank + clear and retry
         await page.goto('about:blank').catch(() => {})
         await page.context().clearCookies().catch(() => {})
         await new Promise((r) => setTimeout(r, 500))
         continue
       }
-      // Other navigation errors (timeout, etc.) — proceed to title check
     }
     const title = await page.title().catch(() => '')
     if (!title.includes('Access to this page has been denied')) return true
   }
   return false
-}
-
-// Cache: zpid → extracted property data (avoids re-navigation for same property)
-const propertyCache = new Map<number, Record<string, unknown>>()
-
-/** Navigate to a Zillow property page with PX retry. */
-async function navigateToProperty(page: Page, zpid: number | string): Promise<void> {
-  // Skip navigation if already on the right property page
-  const currentUrl = page.url()
-  if (currentUrl.includes(`/${zpid}_zpid/`)) {
-    const title = await page.title().catch(() => '')
-    if (!title.includes('Access to this page has been denied')) return
-  }
-
-  const url = `https://www.zillow.com/homedetails/_/${zpid}_zpid/`
-  const ok = await navigateWithPxRetry(page, url)
-  if (!ok) {
-    // Last resort: one more attempt with longer delay
-    await new Promise((r) => setTimeout(r, 3000))
-    await page.goto(url, { waitUntil: 'load', timeout: 15_000 }).catch(() => {})
-  }
-}
-
-/** Extract property data from __NEXT_DATA__ gdpClientCache. */
-async function extractPropertyFromPage(
-  page: Page,
-  errors: AdapterErrors,
-): Promise<Record<string, unknown> | null> {
-  const title = await page.title().catch(() => '')
-  if (title.includes('Access to this page has been denied')) {
-    throw errors.botBlocked('PerimeterX blocked property page (CAPTCHA)')
-  }
-
-  const property = await page.evaluate(() => {
-    const el = document.querySelector('script#__NEXT_DATA__')
-    if (!el?.textContent) return null
-
-    const nextData = JSON.parse(el.textContent)
-    const componentProps = nextData?.props?.pageProps?.componentProps
-    if (!componentProps?.gdpClientCache) return null
-
-    const cache = JSON.parse(componentProps.gdpClientCache)
-    for (const value of Object.values(cache) as Array<Record<string, unknown>>) {
-      if (value?.property) return value.property
-    }
-    return null
-  })
-
-  return property as Record<string, unknown> | null
-}
-
-/** Fetch property data: navigate to detail page + extract __NEXT_DATA__. */
-async function fetchProperty(
-  page: Page,
-  zpid: number,
-  errors: AdapterErrors,
-): Promise<Record<string, unknown> | null> {
-  const cached = propertyCache.get(zpid)
-  if (cached) return cached
-
-  await navigateToProperty(page, zpid)
-  const result = await extractPropertyFromPage(page, errors)
-  if (result) propertyCache.set(zpid, result)
-  return result
-}
-
-/* ---------- getPropertyDetail ---------- */
-
-async function getPropertyDetail(
-  page: Page,
-  params: Record<string, unknown>,
-  errors: AdapterErrors,
-): Promise<unknown> {
-  const zpid = Number(params.zpid)
-  const p = await fetchProperty(page, zpid, errors)
-  if (!p) return null
-
-  const addr = p.address as Record<string, unknown> | undefined
-  const resoFacts = p.resoFacts as Record<string, unknown> | undefined
-  const taxFirst = (p.taxHistory as Array<Record<string, unknown>>)?.[0]
-
-  const photoSource =
-    (Array.isArray(p.responsivePhotos) && p.responsivePhotos.length > 0 && p.responsivePhotos) ||
-    (Array.isArray(p.compsCarouselPropertyPhotos) &&
-      p.compsCarouselPropertyPhotos.length > 0 &&
-      p.compsCarouselPropertyPhotos) ||
-    (Array.isArray(p.thumb) && p.thumb) ||
-    []
-  const photos = (photoSource as Array<Record<string, unknown>>)
-    .slice(0, 10)
-    .map((ph) => ph.mixedSources ?? ph.url ?? null)
-
-  return {
-    zpid: p.zpid ?? null,
-    address: addr
-      ? {
-          streetAddress: addr.streetAddress ?? null,
-          city: addr.city ?? null,
-          state: addr.state ?? null,
-          zipcode: addr.zipcode ?? null,
-        }
-      : null,
-    price: p.price ?? null,
-    bedrooms: p.bedrooms ?? resoFacts?.bedrooms ?? null,
-    bathrooms: p.bathrooms ?? resoFacts?.bathrooms ?? null,
-    livingArea: p.livingAreaValue ?? resoFacts?.livingArea ?? null,
-    livingAreaUnits: p.livingAreaUnitsShort ?? p.livingAreaUnits ?? 'sqft',
-    lotSize: p.lotAreaValue ?? resoFacts?.lotSize ?? null,
-    homeType: p.homeType ?? null,
-    homeStatus: p.homeStatus ?? null,
-    yearBuilt: resoFacts?.yearBuilt ?? null,
-    description: p.description ?? null,
-    zestimate: p.zestimate ?? null,
-    rentZestimate: p.rentZestimate ?? null,
-    taxAssessedValue: (taxFirst?.value as number) ?? null,
-    daysOnZillow: p.daysOnZillow ?? null,
-    pageViewCount: null,
-    favoriteCount: null,
-    photos,
-    url: `https://www.zillow.com${p.hdpUrl || `/homedetails/_/${p.zpid}_zpid/`}`,
-  }
-}
-
-/* ---------- getZestimate ---------- */
-
-async function getZestimate(
-  page: Page,
-  params: Record<string, unknown>,
-  errors: AdapterErrors,
-): Promise<unknown> {
-  const zpid = Number(params.zpid)
-  const p = await fetchProperty(page, zpid, errors)
-  if (!p) return null
-
-  const addr = p.address as Record<string, unknown> | undefined
-  const taxFirst = (p.taxHistory as Array<Record<string, unknown>>)?.[0]
-
-  return {
-    zpid: p.zpid ?? null,
-    address: addr
-      ? {
-          streetAddress: addr.streetAddress ?? null,
-          city: addr.city ?? null,
-          state: addr.state ?? null,
-          zipcode: addr.zipcode ?? null,
-        }
-      : null,
-    zestimate: p.zestimate ?? null,
-    rentZestimate: p.rentZestimate ?? null,
-    zestimateLowPercent: p.zestimateLowPercent != null ? Number(p.zestimateLowPercent) : null,
-    zestimateHighPercent: p.zestimateHighPercent != null ? Number(p.zestimateHighPercent) : null,
-    taxAssessedValue: (taxFirst?.value as number) ?? null,
-    taxAssessedYear: taxFirst?.time
-      ? new Date(taxFirst.time as number).getFullYear()
-      : null,
-    price: p.price ?? null,
-    homeType: p.homeType ?? null,
-    livingArea: p.livingAreaValue ?? null,
-    bedrooms: p.bedrooms ?? null,
-    bathrooms: p.bathrooms ?? null,
-    zestimateHistory: null,
-  }
-}
-
-/* ---------- getNeighborhood ---------- */
-
-async function getNeighborhood(
-  page: Page,
-  params: Record<string, unknown>,
-  errors: AdapterErrors,
-): Promise<unknown> {
-  const zpid = Number(params.zpid)
-  const p = await fetchProperty(page, zpid, errors)
-  if (!p) return null
-
-  const addr = p.address as Record<string, unknown> | undefined
-
-  const schools = Array.isArray(p.schools)
-    ? (p.schools as Array<Record<string, unknown>>).slice(0, 10).map((s) => ({
-        name: (s.name as string) ?? null,
-        rating: (s.rating as number) ?? null,
-        level: (s.level as string) ?? (s.grades as string) ?? null,
-        type: (s.type as string) ?? null,
-        distance: (s.distance as number) ?? null,
-        link: (s.link as string) ?? null,
-      }))
-    : null
-
-  const nearbyHomes = Array.isArray(p.nearbyHomes)
-    ? (p.nearbyHomes as Array<Record<string, unknown>>).slice(0, 10).map((h) => {
-        const a = h.address as Record<string, unknown> | undefined
-        return {
-          zpid: (h.zpid as number) ?? null,
-          address: (a?.streetAddress as string) ?? null,
-          price: (h.price as number) ?? null,
-          bedrooms: (h.bedrooms as number) ?? null,
-          bathrooms: (h.bathrooms as number) ?? null,
-          livingArea: (h.livingAreaValue as number) ?? (h.livingArea as number) ?? null,
-          homeType: (h.homeType as string) ?? null,
-        }
-      })
-    : null
-
-  return {
-    zpid: p.zpid ?? null,
-    address: addr
-      ? {
-          streetAddress: addr.streetAddress ?? null,
-          city: addr.city ?? null,
-          state: addr.state ?? null,
-          zipcode: addr.zipcode ?? null,
-        }
-      : null,
-    walkScore: null,
-    transitScore: null,
-    bikeScore: null,
-    schools,
-    nearbyHomes,
-  }
 }
 
 /* ---------- searchProperties ---------- */
@@ -352,16 +129,13 @@ const OPERATIONS: Record<
   string,
   (page: Page, params: Record<string, unknown>, errors: AdapterErrors) => Promise<unknown>
 > = {
-  getPropertyDetail,
-  getZestimate,
-  getNeighborhood,
   searchProperties,
 }
 
 const adapter = {
   name: 'zillow-detail',
   description:
-    'Zillow property data via __NEXT_DATA__ extraction. Bypasses PerimeterX by using page navigation instead of API calls.',
+    'Zillow search via region landing page __NEXT_DATA__ extraction. Bypasses PerimeterX by navigating to known region slugs.',
 
   async init(page: Page): Promise<boolean> {
     try {
@@ -370,7 +144,6 @@ const adapter = {
         await page.context().clearCookies()
       }
     } catch (e) {
-      // Page may be stale from verify warm-up (PX closed the tab)
       if (isStalePage(e)) {
         await page.goto('about:blank').catch(() => {})
         await page.context().clearCookies().catch(() => {})
@@ -392,11 +165,6 @@ const adapter = {
     const { errors } = helpers as { errors: AdapterErrors }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-
-    if (operation !== 'searchProperties' && !params.zpid) {
-      throw errors.missingParam('zpid')
-    }
-
     return handler(page, { ...params }, errors)
   },
 }

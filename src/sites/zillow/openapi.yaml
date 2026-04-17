@@ -14,6 +14,8 @@ servers:
   - url: https://www.zillow.com
     x-openweb:
       transport: page
+      page_plan:
+        warm: true
       auth:
         type: cookie_session
 paths:
@@ -406,13 +408,63 @@ paths:
         permission: read
         build:
           stable_id: zw_detail_v1
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
-            - adapter-verified
-        adapter:
-          name: zillow-detail
-          operation: getPropertyDetail
+            - page-verified
+        extraction:
+          type: page_global_data
+          page_url: https://www.zillow.com/homedetails/{slug}/{zpid}_zpid/
+          expression: |
+            (() => {
+              const el = document.querySelector('script#__NEXT_DATA__');
+              if (!el || !el.textContent) return null;
+              const nextData = JSON.parse(el.textContent);
+              const cp = nextData?.props?.pageProps?.componentProps;
+              if (!cp?.gdpClientCache) return null;
+              const cache = JSON.parse(cp.gdpClientCache);
+              let p = null;
+              for (const v of Object.values(cache)) {
+                if (v && v.property) { p = v.property; break; }
+              }
+              if (!p) return null;
+              const addr = p.address || null;
+              const resoFacts = p.resoFacts || {};
+              const taxFirst = Array.isArray(p.taxHistory) ? p.taxHistory[0] : null;
+              const photoSource =
+                (Array.isArray(p.responsivePhotos) && p.responsivePhotos.length > 0 && p.responsivePhotos) ||
+                (Array.isArray(p.compsCarouselPropertyPhotos) && p.compsCarouselPropertyPhotos.length > 0 && p.compsCarouselPropertyPhotos) ||
+                (Array.isArray(p.thumb) && p.thumb) ||
+                [];
+              const photos = photoSource.slice(0, 10).map((ph) => ph.mixedSources ?? ph.url ?? null);
+              return {
+                zpid: p.zpid ?? null,
+                address: addr ? {
+                  streetAddress: addr.streetAddress ?? null,
+                  city: addr.city ?? null,
+                  state: addr.state ?? null,
+                  zipcode: addr.zipcode ?? null,
+                } : null,
+                price: p.price ?? null,
+                bedrooms: p.bedrooms ?? resoFacts.bedrooms ?? null,
+                bathrooms: p.bathrooms ?? resoFacts.bathrooms ?? null,
+                livingArea: p.livingAreaValue ?? resoFacts.livingArea ?? null,
+                livingAreaUnits: p.livingAreaUnitsShort ?? p.livingAreaUnits ?? 'sqft',
+                lotSize: p.lotAreaValue ?? resoFacts.lotSize ?? null,
+                homeType: p.homeType ?? null,
+                homeStatus: p.homeStatus ?? null,
+                yearBuilt: resoFacts.yearBuilt ?? null,
+                description: p.description ?? null,
+                zestimate: p.zestimate ?? null,
+                rentZestimate: p.rentZestimate ?? null,
+                taxAssessedValue: (taxFirst && taxFirst.value) ?? null,
+                daysOnZillow: p.daysOnZillow ?? null,
+                pageViewCount: null,
+                favoriteCount: null,
+                photos,
+                url: 'https://www.zillow.com' + (p.hdpUrl || ('/homedetails/_/' + p.zpid + '_zpid/')),
+              };
+            })()
       parameters:
         - name: zpid
           in: path
@@ -524,13 +576,50 @@ paths:
         permission: read
         build:
           stable_id: zw_zestimate_v1
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
-            - adapter-verified
-        adapter:
-          name: zillow-detail
-          operation: getZestimate
+            - page-verified
+        extraction:
+          type: page_global_data
+          page_url: https://www.zillow.com/homedetails/{slug}/{zpid}_zpid/
+          expression: |
+            (() => {
+              const el = document.querySelector('script#__NEXT_DATA__');
+              if (!el || !el.textContent) return null;
+              const nextData = JSON.parse(el.textContent);
+              const cp = nextData?.props?.pageProps?.componentProps;
+              if (!cp?.gdpClientCache) return null;
+              const cache = JSON.parse(cp.gdpClientCache);
+              let p = null;
+              for (const v of Object.values(cache)) {
+                if (v && v.property) { p = v.property; break; }
+              }
+              if (!p) return null;
+              const addr = p.address || null;
+              const taxFirst = Array.isArray(p.taxHistory) ? p.taxHistory[0] : null;
+              return {
+                zpid: p.zpid ?? null,
+                address: addr ? {
+                  streetAddress: addr.streetAddress ?? null,
+                  city: addr.city ?? null,
+                  state: addr.state ?? null,
+                  zipcode: addr.zipcode ?? null,
+                } : null,
+                zestimate: p.zestimate ?? null,
+                rentZestimate: p.rentZestimate ?? null,
+                zestimateLowPercent: p.zestimateLowPercent != null ? Number(p.zestimateLowPercent) : null,
+                zestimateHighPercent: p.zestimateHighPercent != null ? Number(p.zestimateHighPercent) : null,
+                taxAssessedValue: (taxFirst && taxFirst.value) ?? null,
+                taxAssessedYear: (taxFirst && taxFirst.time) ? new Date(taxFirst.time).getFullYear() : null,
+                price: p.price ?? null,
+                homeType: p.homeType ?? null,
+                livingArea: p.livingAreaValue ?? null,
+                bedrooms: p.bedrooms ?? null,
+                bathrooms: p.bathrooms ?? null,
+                zestimateHistory: null,
+              };
+            })()
       parameters:
         - name: zpid
           in: path
@@ -631,13 +720,62 @@ paths:
         permission: read
         build:
           stable_id: zw_neighborhood_v1
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
-            - adapter-verified
-        adapter:
-          name: zillow-detail
-          operation: getNeighborhood
+            - page-verified
+        extraction:
+          type: page_global_data
+          page_url: https://www.zillow.com/homedetails/{slug}/{zpid}_zpid/
+          expression: |
+            (() => {
+              const el = document.querySelector('script#__NEXT_DATA__');
+              if (!el || !el.textContent) return null;
+              const nextData = JSON.parse(el.textContent);
+              const cp = nextData?.props?.pageProps?.componentProps;
+              if (!cp?.gdpClientCache) return null;
+              const cache = JSON.parse(cp.gdpClientCache);
+              let p = null;
+              for (const v of Object.values(cache)) {
+                if (v && v.property) { p = v.property; break; }
+              }
+              if (!p) return null;
+              const addr = p.address || null;
+              const schools = Array.isArray(p.schools) ? p.schools.slice(0, 10).map((s) => ({
+                name: s.name ?? null,
+                rating: s.rating ?? null,
+                level: s.level ?? s.grades ?? null,
+                type: s.type ?? null,
+                distance: s.distance ?? null,
+                link: s.link ?? null,
+              })) : null;
+              const nearbyHomes = Array.isArray(p.nearbyHomes) ? p.nearbyHomes.slice(0, 10).map((h) => {
+                const a = h.address || null;
+                return {
+                  zpid: h.zpid ?? null,
+                  address: (a && a.streetAddress) ?? null,
+                  price: h.price ?? null,
+                  bedrooms: h.bedrooms ?? null,
+                  bathrooms: h.bathrooms ?? null,
+                  livingArea: h.livingAreaValue ?? h.livingArea ?? null,
+                  homeType: h.homeType ?? null,
+                };
+              }) : null;
+              return {
+                zpid: p.zpid ?? null,
+                address: addr ? {
+                  streetAddress: addr.streetAddress ?? null,
+                  city: addr.city ?? null,
+                  state: addr.state ?? null,
+                  zipcode: addr.zipcode ?? null,
+                } : null,
+                walkScore: null,
+                transitScore: null,
+                bikeScore: null,
+                schools,
+                nearbyHomes,
+              };
+            })()
       parameters:
         - name: zpid
           in: path
