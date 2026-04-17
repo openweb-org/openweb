@@ -113,14 +113,17 @@ The migration honestly hit 7 primary primitive gaps plus several smaller composi
 
 **Secondary gaps surfaced in handoffs but larger scope:**
 
-- **Multi-call composition** (phase3 pure-spec handoff:70) — chain ops together e.g. username→userId→feed. Not in any current task. Blocks instagram-class sites from reducing further.
-- **Array filter + aggregation transforms** — costco needs `attributes[].name→value` collapse, service-code lookup, hours formatting, etc. `response_transform` alone (simple JSONPath) handles maybe half. Honest scope for costco: `response_transform` + declarative array reducers.
-- **Apollo `__ref` resolution** for SSR state — mentioned in phase3-extraction handoff; goodreads/booking Apollo SSR needs follow-pointer traversal.
+- **Array filter + aggregation transforms** — costco needs `attributes[].name→value` collapse, service-code lookup, hours formatting, etc. `response_transform` alone (simple JSONPath) handles maybe half. Honest scope for costco: `response_transform` + declarative array reducers (`na-rt-array-reducers`).
+- **Apollo `__ref` resolution** for SSR state — goodreads/booking Apollo SSR needs follow-pointer traversal (`na-rt-apollo-ref`).
 - **HTML regex extraction** — for inline `<script>` JSON embedded with surrounding noise (not a fixed JSON block).
 - **Slug/path transform** (e.g. zillow regionId→slug lookup table) — site-specific but a general "lookup table" primitive might compose.
-- **Inventory classifier refinement** (phase4 handoff:57) — `capture-simple` bucket misclassifies signed-fetch sites. Not a runtime gap, but blocks accurate planning.
+- **Inventory classifier refinement** (phase4 handoff:57) — `capture-simple` bucket misclassifies signed-fetch sites (`na-classifier-refinement`).
 
-Tasks for multi-call composition, array reducers, Apollo `__ref`, classifier refinement are **NOT yet in the backlog** — add if the next milestone needs them.
+**Explicitly NOT a runtime gap — belongs in SKILL.md:**
+
+- **Multi-call composition** (e.g. instagram `getUserPosts` taking `username`, internally calling `getUserProfile` → extracting `userId` → then `getUserFeed`). OpenWeb's contract is raw typed API access; agents compose ops via SKILL.md workflow guidance, not runtime. Adding a spec-level chain primitive would violate the "no workflow DSL" design principle and duplicate what agents already do. Sites that need chaining should either expose the two ops separately (and document the workflow in SKILL.md) or keep a thin convenience `CustomRunner` — never promote chain to the runtime.
+
+Tasks for array reducers (`na-rt-array-reducers`), Apollo `__ref` (`na-rt-apollo-ref`), classifier refinement (`na-classifier-refinement`) are in the backlog. HTML regex and slug/path-transform are deferred until a specific site demands them.
 
 ## Production Deployment — Ship Discipline
 
