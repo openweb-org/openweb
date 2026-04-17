@@ -1,3 +1,27 @@
+## 2026-04-17: normalize-adapter milestone — COMPLETE
+
+**What changed:**
+- Adapter contract collapsed: `CodeAdapter` (init / isAuthenticated / execute) → single `CustomRunner.run(ctx: PreparedContext)`. PagePlan + warmSession + auth-primitive resolution now happen in the runtime before `run()`.
+- Adapter-backed operations: 380 → 309 (−71, −18.7%). Adapter `.ts` files: 63 → 52 (11 deleted: zhihu, substack, fidelity, weibo, ebay, douban, yelp, etsy, boss, goodrx, grubhub). Adapter total LoC: 20 888 → 17 065 (−3 823, −18.3%). All 33 remaining legacy adapters bulk-migrated to `CustomRunner`.
+- New runtime infrastructure: `page-plan.ts` + `acquirePage()`, OpenAPI server-variables, `buildRequestBody` consolidator, `script_json` extensions (`strip_comments`, `type_filter`, `multi`), `response_capture`, `graphql_hash` (POST Apollo + GET Relay APQ), Apollo `__ref` resolution, `warmSession` PX retry + page-origin routing, x-openweb param-level `template`, `browser_fetch` TypeError retry, adapter helpers (`pageFetch`, `nodeFetch`, `graphqlFetch`, `ssrExtract`, `jsonLdExtract`, `domExtract`).
+- Guardrails: `scripts/adapter-pattern-report.ts` + frozen baseline + vitest CI guard prevent re-introducing low-level page primitives.
+- Regression caught + fixed mid-milestone: WhatsApp lost the runtime-level init retry from `main:src/runtime/adapter-executor.ts:127-133` after the CustomRunner refactor — restored equivalent retry inside `whatsapp-modules.ts:ensureReady()`. Medium `getRecommendedFeed` schema relaxed to match upstream pagingInfo drift.
+- `verify --all`: 75/93 sites PASS, **0 adapter-export errors**. Remaining 18 failures are pre-existing (auth_expired, schema_drift, upstream HTTP 404 / endpoint changes, transients, anti-bot, env preconditions) — all classified in `doc/todo/normalize-adapter/verify-final-report.md`.
+
+**Why:**
+- Move common lifecycle, request, and extraction behavior from per-site adapters into shared runtime + spec infrastructure. Track migration per **operation**, not per site. Keep a small permanent custom bucket — but make every adapter that survives a thin "unique behavior only" runner, not a mini runtime.
+- Established the **raw-API principle** + three hard rules (no chain in CustomRunner, no response reshape in runtime, no unsafe-mode flags on shared primitives for permanent-custom-bucket sites). Documented verbatim in `skill/openweb/knowledge/adapter-recipes.md` and `doc/main/adapters.md`. Cancelled four would-be runtime tasks on this principle (`na-rt-multicall-composition`, `na-rt-response-transform`, `na-rt-array-reducers`, `na-rt-tiktok-signed-capture`).
+
+**Key files:** `src/types/adapter.ts`, `src/runtime/page-plan.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/primitives/{response-capture,script-json-parse,...}.ts`, `src/lib/{adapter-helpers,spec-loader,url-builder}.ts`, `scripts/adapter-{inventory,pattern-report,pattern-baseline.json}.{ts,json}`, `src/sites/**/adapters/*.ts` (15 permanent-custom + 33 mechanical migrations + 11 deletions), `doc/todo/normalize-adapter/impl_summary.md`.
+**Verification:** `pnpm build` clean (93 sites packaged); `pnpm test` 1020/1020 PASS; `grep 'async execute(' src/sites/**/adapters/` → 0 matches; `grep -rn CodeAdapter dist/sites --include="*.js"` → 0 matches; `pnpm dev verify --all` → 75/93 PASS, 0 adapter-export errors.
+**Commit:** range `7cfdf7d..d1b540c` (67 commits on `task/normalize-adapter`).
+**Next:** `na-prod-deploy` (rebuild + reinstall `~/.openweb/sites/*/adapters/*.js` so production cache picks up the single-shape loader). Out-of-scope verify follow-ups (auth refresh sweep, schema recapture sweep, upstream endpoint discovery for x/substack/uber) tracked separately.
+**Blockers:** None for milestone completion.
+
+-> Full story: [doc/todo/normalize-adapter/impl_summary.md](todo/normalize-adapter/impl_summary.md)
+
+---
+
 ## 2026-04-17: na-verify-fix-regressions — restore whatsapp init-retry; relax medium pagingInfo schema
 
 **What changed:**

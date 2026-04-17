@@ -185,6 +185,8 @@ src/
 | **Primitive** | Declarative config unit for auth, CSRF, signing, pagination, extraction | [primitives/](primitives/README.md) |
 | **CustomRunner** | L3 escape hatch — single `run(ctx)` entry for sites with signing/module-system/protocol needs | [adapters.md](adapters.md) |
 | **PagePlan** | Runtime-owned page acquisition (entry_url / ready / warm / nav_timeout) — replaces adapter-owned init | [primitives/page-plan.md](primitives/page-plan.md) |
+| **Server variables** | OpenAPI `servers[].variables` — `getServerUrl(spec, op, params)` resolves `{varName}` via caller-param → `variables[].default`. Strict on unresolved | [runtime.md](runtime.md) |
+| **graphql_hash** | Apollo / Relay APQ — emits `extensions.persistedQuery.sha256Hash`; POST (Apollo body) and GET (Relay query-string) flavors auto-selected by HTTP method | [runtime.md](runtime.md) |
 | **response_capture** | Extraction type — installs the response listener before navigation, captures first URL-matched response | [primitives/README.md](primitives/README.md#response_capture) |
 | **script_json (extended)** | Extraction — covers JSON-LD + HTML-comment-wrapped JSON via `strip_comments`, runs under node or page transport | [primitives/README.md](primitives/README.md#script_json) |
 | **Skill Package** | Per-site artifact: openapi.yaml + manifest.json + adapters/ + examples/ | [compiler.md](compiler.md) |

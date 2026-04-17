@@ -9,6 +9,22 @@
 >
 > When you do write a runner, the contract is `run(ctx: PreparedContext)` — a single function, no `init()` / `isAuthenticated()`. See `doc/main/adapters.md` for the current CustomRunner interface. The recipes below still show the legacy `execute()` signature; the body of each recipe is the pattern you want, but migrate the outer wrapper to `run(ctx)` when applying.
 
+## Raw-API Principle (read first)
+
+OpenWeb exposes the **wire shape** the upstream returns. Response schemas describe what the server actually sends — not a prettified projection. Agents compose multi-step workflows themselves using the per-site SKILL.md as the guide; the runtime stays out of orchestration and aesthetics.
+
+This collapses three categories of would-be runtime work into spec + agent-side composition: chaining is an agent concern, reshape is a documentation concern, and force-fitting permanent-custom-bucket sites into shared primitives is an anti-pattern. The result is a smaller runtime surface, fewer parallel semantics for the same job, and adapters that only own their genuinely unique work.
+
+### Three hard rules going forward
+
+1. **Do not add a `CustomRunner` just to chain two calls** (splitting into separate ops + SKILL.md is the answer).
+2. **Do not add a runtime primitive whose only purpose is to rename wire fields or compose nested objects** (describe the wire in the schema).
+3. **Do not add "unsafe mode" flags to shared primitives to accommodate permanent-custom-bucket sites.**
+
+**Revisit criteria** — open a fresh `/design` only when at least one of: (a) 10+ sites show the same pattern, (b) measurable agent-side failure rate, (c) runtime-level batching / caching / validation makes server-side handling materially cheaper than client-side. Until then these sit as design questions, not backlog tasks.
+
+-> See: `doc/todo/normalize-adapter/impl_summary.md` for the full rationale and the cancelled tasks (`na-rt-multicall-composition`, `na-rt-response-transform`, `na-rt-array-reducers`, `na-rt-tiktok-signed-capture`) that this principle resolves.
+
 ## 1. Response Interception
 
 Capture API responses that fire during page navigation — the data arrives as a side effect of loading the page, not from an explicit fetch you control.
