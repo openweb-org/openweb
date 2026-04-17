@@ -1,17 +1,21 @@
 import type { Page } from 'patchright'
 
+import { nodeFetch } from '../../../lib/adapter-helpers.js'
+
 type AdapterErrors = { botBlocked(msg: string): Error; unknownOp(op: string): Error; missingParam(name: string): Error; wrap(error: unknown): Error }
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
-
 async function fetchHtml(url: string, errors: AdapterErrors): Promise<string> {
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' } })
-  if (!res.ok) throw errors.wrap(new Error(`HTTP ${res.status} for ${url}`))
-  const html = await res.text()
-  if (html.includes('challenge-platform') || html.includes('cf-challenge')) {
+  const { status, text } = await nodeFetch({
+    url,
+    method: 'GET',
+    headers: { Accept: 'text/html,application/xhtml+xml' },
+    timeout: 20_000,
+  })
+  if (status < 200 || status >= 300) throw errors.wrap(new Error(`HTTP ${status} for ${url}`))
+  if (text.includes('challenge-platform') || text.includes('cf-challenge')) {
     throw errors.botBlocked('Cloudflare challenge')
   }
-  return html
+  return text
 }
 
 function unescapeHtml(s: string): string {
@@ -251,7 +255,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
 
 const adapter = {
   name: 'goodreads',
-  description: 'Goodreads — node fetch + HTML/SSR parse, zero browser dependency',
+  description: 'Goodreads — thin adapter on nodeFetch: SSR apolloState parse (getBook, getReviews) + HTML regex (searchBooks, getAuthor), zero browser dependency',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('goodreads.com') || page.url() === 'about:blank'
