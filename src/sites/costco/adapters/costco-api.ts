@@ -1,4 +1,6 @@
 import type { Page } from 'patchright'
+
+import type { CustomRunner } from '../../../types/adapter.js'
 /**
  * Costco L3 adapter — POST-based APIs via Playwright request context.
  *
@@ -930,32 +932,19 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   updateCartQuantity,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'costco-api',
   description: 'Costco product search, detail, reviews, warehouses, delivery, and cart — via Playwright request',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('costco.com')
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
-    const { errors } = helpers as { errors: Errors }
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as unknown as { errors: Errors }
     try {
       const handler = OPERATIONS[operation]
       if (!handler) {
         throw errors.unknownOp(operation)
       }
-      return await handler(page, { ...params }, errors)
+      return await handler(page as Page, { ...params }, errors)
     } catch (error) {
       throw errors.wrap(error)
     }

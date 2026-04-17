@@ -1,4 +1,6 @@
 import type { Page } from 'patchright'
+
+import type { CustomRunner } from '../../../types/adapter.js'
 /**
  * LeetCode L3 adapter — GraphQL API via browser fetch.
  *
@@ -399,33 +401,19 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   getContestRanking,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'leetcode-graphql',
   description: 'LeetCode GraphQL API — problems, contests, profiles, solutions',
 
-  async init(page: Page): Promise<boolean> {
-    if (!page.url().includes('leetcode.com')) return false
-    // Navigate to problemset page to ensure csrftoken cookie is set
-    const cookies = await page.context().cookies('https://leetcode.com')
-    if (!cookies.some((c) => c.name === 'csrftoken')) {
-      await page.goto('https://leetcode.com/problemset/', { waitUntil: 'domcontentloaded', timeout: 15_000 })
-    }
-    return true
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://leetcode.com')
-    return cookies.some((c) => c.name === 'LEETCODE_SESSION' || c.name === 'csrftoken')
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as { errors: Errors }
     try {
       const handler = OPERATIONS[operation]
       if (!handler) {
         throw errors.unknownOp(operation)
       }
-      return await handler(page, { ...params }, errors)
+      return await handler(page as Page, { ...params }, errors)
     } catch (error) {
       throw errors.wrap(error)
     }

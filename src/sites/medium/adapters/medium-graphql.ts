@@ -16,6 +16,8 @@ import {
   VIEWER_QUERY,
 } from './queries.js'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Medium L3 adapter — GraphQL API via browser fetch.
  *
@@ -386,26 +388,18 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   unsaveArticle,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'medium-graphql',
   description: 'Medium GraphQL API — articles, tags, publications, profiles',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('medium.com')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://medium.com')
-    return cookies.some((c) => c.name === 'sid' || c.name === 'uid')
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as { errors: Errors }
     const handler = OPERATIONS[operation]
     if (!handler) {
       throw errors.unknownOp(operation)
     }
-    return handler(page, { ...params }, errors)
+    return handler(page as Page, { ...params }, errors)
   },
 }
 

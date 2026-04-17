@@ -1,4 +1,6 @@
 import type { Page } from 'patchright'
+
+import type { CustomRunner } from '../../../types/adapter.js'
 /**
  * Google Search adapter — DOM extraction for search results.
  *
@@ -285,24 +287,17 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   searchLocal,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'google-search',
   description: 'Google Search — web, image, news, video, shopping, local, knowledge panel, PAA, related searches via DOM extraction',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('google.com')
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true // no auth required
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: { unknownOp(op: string): Error; wrap(error: unknown): Error } }): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as unknown as { errors: { unknownOp(op: string): Error; wrap(error: unknown): Error } }
     try {
       const handler = OPERATIONS[operation]
       if (!handler) throw errors.unknownOp(operation)
-      return await handler(page, { ...params })
+      return await handler(page as Page, { ...params })
     } catch (error) {
       throw errors.wrap(error)
     }

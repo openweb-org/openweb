@@ -1,4 +1,6 @@
 import type { Page } from "patchright";
+
+import type { CustomRunner } from "../../../types/adapter.js";
 /**
  * Walmart L3 adapter — addToCart via persisted GraphQL mutations.
  *
@@ -308,33 +310,20 @@ async function removeFromCart(
 	);
 }
 
-const adapter = {
+const adapter: CustomRunner = {
 	name: "walmart-cart",
 	description: "Walmart — cart operations via persisted GraphQL mutations",
 
-	async init(page: Page): Promise<boolean> {
-		const url = page.url();
-		return url.includes("walmart.com");
-	},
-
-	async isAuthenticated(_page: Page): Promise<boolean> {
-		// Cart works for both guest and logged-in users
-		return true;
-	},
-
-	async execute(
-		page: Page,
-		operation: string,
-		params: Readonly<Record<string, unknown>>,
-		helpers: { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } },
-	): Promise<unknown> {
+	async run(ctx) {
+		const { page, operation, params, helpers } = ctx;
+		const errors = (helpers as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }).errors;
 		if (operation === "addToCart") {
-			return addToCart(page, { ...params }, helpers.errors);
+			return addToCart(page as Page, { ...params }, errors);
 		}
 		if (operation === "removeFromCart") {
-			return removeFromCart(page, { ...params }, helpers.errors);
+			return removeFromCart(page as Page, { ...params }, errors);
 		}
-		throw helpers.errors.unknownOp(operation);
+		throw errors.unknownOp(operation);
 	},
 };
 

@@ -85,9 +85,6 @@
       "page_on_response": 1,
       "query_selector": 2
     },
-    "leetcode": {
-      "page_goto": 1
-    },
     "linkedin": {
       "query_selector": 1
     },
@@ -107,7 +104,7 @@
       "query_selector": 9
     },
     "reuters": {
-      "page_goto": 2,
+      "page_goto": 1,
       "query_selector": 8
     },
     "seeking-alpha": {

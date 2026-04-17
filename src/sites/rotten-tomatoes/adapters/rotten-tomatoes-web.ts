@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 
 import { nodeFetch } from '../../../lib/adapter-helpers.js'
+import type { CustomRunner } from '../../../types/adapter.js'
 
 /**
  * Rotten Tomatoes adapter — node-native HTML parsing.
@@ -273,31 +274,23 @@ const OPERATIONS: Record<
   getTomatoMeter,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'rotten-tomatoes-web',
   description:
     'Rotten Tomatoes — node-native SSR HTML parsing (LD+JSON + element attributes)',
 
-  async init(_page: Page | null): Promise<boolean> {
-    return true // No browser init needed — uses native fetch
-  },
-
-  async isAuthenticated(_page: Page | null): Promise<boolean> {
-    return true // All operations are publicly accessible
-  },
-
-  async execute(
-    page: Page | null,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const { errors } = helpers as {
-      errors: { unknownOp(op: string): Error; missingParam(p: string): Error }
+      errors: { unknownOp(op: string): Error; missingParam(p: string): Error; wrap(error: unknown): Error }
     }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params })
+    try {
+      return await handler(page as Page | null, { ...params })
+    } catch (error) {
+      throw errors.wrap(error)
+    }
   },
 }
 

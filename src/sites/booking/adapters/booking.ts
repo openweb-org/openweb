@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Booking.com adapter — Apollo SSR cache + GraphQL intercept.
  *
@@ -517,36 +519,25 @@ const OPERATIONS: Record<string, string> = {
   searchFlights: 'searchFlights',
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'booking',
   description: 'Booking.com — Apollo cache + GraphQL for hotels, DOM for flights',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('booking.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // Public browsing works without auth
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
-    const { graphqlFetch, errors } = helpers as {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { graphqlFetch, errors } = helpers as unknown as {
       graphqlFetch: GraphqlFetch
       errors: AdapterErrors
     }
     if (!OPERATIONS[operation]) throw errors.unknownOp(operation)
 
     const p = { ...params }
+    const pg = page as Page
     switch (operation) {
-      case 'searchHotels': return searchHotels(page, p)
-      case 'getHotelReviews': return getHotelReviews(page, p, graphqlFetch)
-      case 'getHotelPrices': return getHotelPrices(page, p, graphqlFetch)
-      case 'searchFlights': return searchFlights(page, p)
+      case 'searchHotels': return searchHotels(pg, p)
+      case 'getHotelReviews': return getHotelReviews(pg, p, graphqlFetch)
+      case 'getHotelPrices': return getHotelPrices(pg, p, graphqlFetch)
+      case 'searchFlights': return searchFlights(pg, p)
       default: throw errors.unknownOp(operation)
     }
   },

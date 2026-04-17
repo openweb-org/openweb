@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 interface AdapterHelpers {
   pageFetch: (page: Page, opts: {
     url: string; method?: 'GET' | 'POST'; body?: string;
@@ -175,22 +177,25 @@ const operations: Record<string, (page: Page, params: Record<string, unknown>, h
   getEarnings,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'seeking-alpha-api',
   description: 'Seeking Alpha — search articles, read articles, stock analysis, earnings data',
 
-  async execute(
-    page: Page, operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: AdapterHelpers,
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const p = page as Page
+    const h = helpers as unknown as AdapterHelpers
     const handler = operations[operation]
-    if (!handler) throw helpers.errors.unknownOp(operation, Object.keys(operations))
-    const result = await handler(page, { ...params }, helpers)
-    // SA embeds a dormant (0x0) PerimeterX #px-captcha div on every page.
-    // Remove it so the generic bot-detect layer doesn't false-positive.
-    await page.evaluate(() => document.querySelector('#px-captcha')?.remove()).catch(() => {})
-    return result
+    if (!handler) throw h.errors.unknownOp(operation, Object.keys(operations))
+    try {
+      const result = await handler(p, { ...params }, h)
+      // SA embeds a dormant (0x0) PerimeterX #px-captcha div on every page.
+      // Remove it so the generic bot-detect layer doesn't false-positive.
+      await p.evaluate(() => document.querySelector('#px-captcha')?.remove()).catch(() => {})
+      return result
+    } catch (error) {
+      throw (helpers.errors as unknown as { wrap(e: unknown): Error }).wrap(error)
+    }
   },
 }
 

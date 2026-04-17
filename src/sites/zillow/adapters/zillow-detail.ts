@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Zillow search adapter — navigates to a region landing page and extracts
  * __NEXT_DATA__.searchPageState.cat1. The async-create-search-page-state
@@ -132,12 +134,17 @@ const OPERATIONS: Record<
   searchProperties,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'zillow-detail',
   description:
     'Zillow search via region landing page __NEXT_DATA__ extraction. Bypasses PerimeterX by navigating to known region slugs.',
 
-  async init(page: Page): Promise<boolean> {
+  async run(ctx) {
+    const { page: pageRaw, operation, params, helpers } = ctx
+    const page = pageRaw as Page
+    const { errors } = helpers as { errors: AdapterErrors }
+
+    // Fold prior init(): clear PX cookies if page is currently denied
     try {
       const title = await page.title()
       if (title.includes('Access to this page has been denied')) {
@@ -149,23 +156,14 @@ const adapter = {
         await page.context().clearCookies().catch(() => {})
       }
     }
-    return true
-  },
 
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
-    const { errors } = helpers as { errors: AdapterErrors }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, errors)
+    try {
+      return await handler(page, { ...params }, errors)
+    } catch (error) {
+      throw errors.wrap(error)
+    }
   },
 }
 

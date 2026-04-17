@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** Fetch cart items via Amazon's JSON API. Returns [{asin, merchantId, quantity, cartType}]. */
@@ -285,35 +287,23 @@ async function getBestSellers(page: Page, _params: Record<string, unknown>) {
   `)
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'amazon',
   description: 'Amazon — search products, view details, read reviews, browse deals, manage cart',
 
-  async init(page: Page): Promise<boolean> {
-    // Accept any page — each operation navigates to the correct URL
-    return true
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // All ops are public reads
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
-    const { errors } = helpers as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as unknown as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }
+    const p = page as Page
     switch (operation) {
-      case 'searchProducts': return searchProducts(page, { ...params }, errors)
-      case 'getProductDetail': return getProductDetail(page, { ...params }, errors)
-      case 'getProductReviews': return getProductReviews(page, { ...params }, errors)
-      case 'searchDeals': return searchDeals(page, { ...params })
-      case 'getBestSellers': return getBestSellers(page, { ...params })
-      case 'addToCart': return addToCart(page, { ...params }, errors)
-      case 'removeFromCart': return removeFromCart(page, { ...params }, errors)
-      case 'getCart': return getCart(page, { ...params })
+      case 'searchProducts': return searchProducts(p, { ...params }, errors)
+      case 'getProductDetail': return getProductDetail(p, { ...params }, errors)
+      case 'getProductReviews': return getProductReviews(p, { ...params }, errors)
+      case 'searchDeals': return searchDeals(p, { ...params })
+      case 'getBestSellers': return getBestSellers(p, { ...params })
+      case 'addToCart': return addToCart(p, { ...params }, errors)
+      case 'removeFromCart': return removeFromCart(p, { ...params }, errors)
+      case 'getCart': return getCart(p, { ...params })
       default: throw errors.unknownOp(operation)
     }
   },

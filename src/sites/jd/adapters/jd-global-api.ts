@@ -1,5 +1,7 @@
 import type { Page, Response as PwResponse } from "patchright";
 
+import type { CustomRunner } from "../../../types/adapter.js";
+
 /**
  * JD L3 adapter — search via DOM extraction, detail/price/reviews via API intercept.
  *
@@ -271,29 +273,20 @@ const OPERATIONS: Record<
 	getProductPrice,
 };
 
-const adapter = {
+const adapter: CustomRunner = {
 	name: "jd-global-api",
 	description: "JD — search via DOM, detail/price/reviews via API intercept",
 
-	async init(page: Page): Promise<boolean> {
-		const url = page.url();
-		return url.includes("jd.com");
-	},
-
-	async isAuthenticated(): Promise<boolean> {
-		return true;
-	},
-
-	async execute(
-		page: Page,
-		operation: string,
-		params: Readonly<Record<string, unknown>>,
-		helpers: { errors: Errors },
-	): Promise<unknown> {
-		const { errors } = helpers;
+	async run(ctx) {
+		const { page, operation, params, helpers } = ctx;
+		const { errors } = helpers as { errors: Errors };
 		const handler = OPERATIONS[operation];
 		if (!handler) throw errors.unknownOp(operation);
-		return handler(page, { ...params }, errors);
+		try {
+			return await handler(page as Page, { ...params }, errors);
+		} catch (error) {
+			throw errors.wrap(error);
+		}
 	},
 };
 

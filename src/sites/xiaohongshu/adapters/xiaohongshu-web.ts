@@ -1,4 +1,6 @@
 import type { Page } from 'patchright'
+
+import type { CustomRunner } from '../../../types/adapter.js'
 /**
  * Xiaohongshu (小红书) L3 adapter — Vue SSR state extraction + comment API interception.
  *
@@ -531,25 +533,17 @@ const OPERATIONS: Record<string, OpHandler> = {
   getUserLiked, getRelatedNotes, followUser, commentNote,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'xiaohongshu-web',
   description: 'Xiaohongshu (小红书) — search, detail, profile, notes, explore, comments, collections, likes, related notes, follow, like, bookmark, comment via Vue SSR + API interception',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('xiaohongshu.com')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://www.xiaohongshu.com')
-    return cookies.some((c) => c.name === 'web_session')
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const { errors } = helpers as { errors: Errors }
     try {
       const handler = OPERATIONS[operation]
       if (!handler) throw errors.unknownOp(operation)
-      return handler(page, { ...params }, errors)
+      return await handler(page as Page, { ...params }, errors)
     } catch (error) {
       throw errors.wrap(error)
     }

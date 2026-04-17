@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 const SITE = 'https://www.indeed.com'
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -77,29 +79,18 @@ async function autocompleteLocation(page: Page, params: Record<string, unknown>,
 
 /* ---------- adapter export ---------- */
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'indeed-web',
   description: 'Indeed — salary slug + autocomplete fetch (ops requiring fetch or slug transform)',
 
-  async init(_page: Page): Promise<boolean> {
-    return true
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // All ops are public reads
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const { errors } = helpers as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }
+    const p = page as Page
     switch (operation) {
-      case 'getSalary': return getSalary(page, { ...params }, errors)
-      case 'autocompleteJobTitle': return autocompleteJobTitle(page, { ...params }, errors)
-      case 'autocompleteLocation': return autocompleteLocation(page, { ...params }, errors)
+      case 'getSalary': return getSalary(p, { ...params }, errors)
+      case 'autocompleteJobTitle': return autocompleteJobTitle(p, { ...params }, errors)
+      case 'autocompleteLocation': return autocompleteLocation(p, { ...params }, errors)
       default: throw errors.unknownOp(operation)
     }
   },

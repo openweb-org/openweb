@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Airbnb adapter — Node HTML SSR extraction + browser host-profile fetch.
  *
@@ -148,29 +150,17 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getHostProfile,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'airbnb',
   description: 'Airbnb — Node API + SSR HTML fetch. Browser only for host profile.',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('airbnb.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
-    const { errors } = helpers as { errors: AdapterErrors }
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as unknown as { errors: AdapterErrors }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
     try {
-      return await handler(page, { ...params })
+      return await handler(page as Page, { ...params })
     } catch (error) {
       throw errors.wrap(error)
     }

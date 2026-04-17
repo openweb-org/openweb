@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 const PH_ORIGIN = 'https://www.producthunt.com'
 
 interface ApolloCache { [key: string]: any }
@@ -82,26 +84,13 @@ async function getPost(page: Page, params: Readonly<Record<string, unknown>>): P
   }
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'producthunt',
   description: 'Product Hunt — getPost via Apollo cache (other ops in spec extraction)',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('producthunt.com') || url === 'about:blank'
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: { errors: { unknownOp(op: string): Error } },
-  ): Promise<unknown> {
-    if (operation === 'getPost') return getPost(page, params)
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    if (operation === 'getPost') return getPost(page as Page, params)
     throw helpers.errors.unknownOp(operation)
   },
 }

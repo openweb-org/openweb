@@ -1,4 +1,6 @@
 import type { Page, Response as PwResponse } from 'patchright'
+
+import type { CustomRunner } from '../../../types/adapter.js'
 /**
  * Kayak L3 adapter — intercept + extraction.
  *
@@ -239,28 +241,16 @@ const OPERATIONS: Record<
   searchCars,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'kayak-search',
   description: 'Kayak search — flights, hotels, cars via poll interception',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('kayak.com')
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return false // Public search, no auth required
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const { errors } = helpers as { errors: ErrorHelpers }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, errors)
+    return handler(page as Page, { ...params }, errors)
   },
 }
 

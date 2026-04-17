@@ -1,6 +1,6 @@
 import type { Page } from 'patchright'
 
-import type { AdapterHelpers } from '../../../types/adapter.js'
+import type { AdapterHelpers, CustomRunner } from '../../../types/adapter.js'
 
 /* Reuters — thin adapter.
  * Reuters' internal PF API (/pf/api/v3/content/fetch/*) is DataDome-protected
@@ -196,40 +196,30 @@ const operations: Record<string, (page: Page, params: Record<string, unknown>, h
   getArticleDetail,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'reuters-api',
   description: 'Reuters — PF API ops (DataDome-gated same-origin fetch) + getArticleDetail (page.goto with path slashes)',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    if (url.includes('reuters.com')) return true
-    if (url.includes('captcha-delivery.com') || url.includes('datadome')) return true
-    try {
-      await page.goto('https://www.reuters.com', { waitUntil: 'domcontentloaded', timeout: 20_000 })
-      const newUrl = page.url()
-      return newUrl.includes('reuters.com') || newUrl.includes('captcha-delivery.com')
-    } catch {
-      return false
-    }
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const p = page as Page
     const handler = operations[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)
-    if (await isDataDomeBlocked(page)) {
-      await page.waitForTimeout(5_000)
-      if (await isDataDomeBlocked(page)) {
+    // Fold init: ensure we're on reuters.com (or CAPTCHA page)
+    const currentUrl = p.url()
+    if (!currentUrl.includes('reuters.com') && !currentUrl.includes('captcha-delivery.com') && !currentUrl.includes('datadome')) {
+      await p.goto('https://www.reuters.com', { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {})
+    }
+    if (await isDataDomeBlocked(p)) {
+      await p.waitForTimeout(5_000)
+      if (await isDataDomeBlocked(p)) {
         throw helpers.errors.botBlocked(
           'Reuters blocked by DataDome CAPTCHA. Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run `openweb browser restart`, solve the CAPTCHA in the visible Chrome window, then retry.',
         )
       }
       process.stderr.write('DataDome CAPTCHA resolved.\n')
     }
-    return handler(page, { ...params }, helpers)
+    return handler(p, { ...params }, helpers)
   },
 }
 

@@ -1,5 +1,5 @@
 import type { Page } from 'patchright'
-import type { AdapterHelpers } from '../../../types/adapter.js'
+import type { AdapterHelpers, CustomRunner } from '../../../types/adapter.js'
 
 /**
  * Quora adapter — GraphQL intercept (Tier 4) for question/answer ops,
@@ -553,27 +553,15 @@ const OPERATIONS: Record<
   (page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) => Promise<unknown>
 > = { searchQuestions, getQuestion, getAnswers, getProfile }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'quora',
   description: 'Quora — search questions, question detail, answers, user profiles',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('quora.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: AdapterHelpers,
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)
-    return handler(page, { ...params }, helpers)
+    return handler(page as Page, { ...params }, helpers)
   },
 }
 

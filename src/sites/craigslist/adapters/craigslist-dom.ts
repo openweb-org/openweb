@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 type AdapterErrors = { botBlocked(msg: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error }
 
 /** Navigate to a Craigslist URL with the given city subdomain. */
@@ -225,24 +227,17 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   getCategories,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'craigslist-dom',
   description: 'Craigslist — classifieds search, listing details, categories via DOM extraction',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('craigslist.org')
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
-    const { errors } = helpers as { errors: AdapterErrors }
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as unknown as { errors: AdapterErrors }
     try {
       const handler = OPERATIONS[operation]
       if (!handler) throw errors.unknownOp(operation)
-      return await handler(page, { ...params }, errors)
+      return await handler(page as Page, { ...params }, errors)
     } catch (error) {
       throw errors.wrap(error)
     }

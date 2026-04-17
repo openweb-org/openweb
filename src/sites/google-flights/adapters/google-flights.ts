@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 
 import { nodeFetch } from '../../../lib/adapter-helpers.js'
+import type { CustomRunner } from '../../../types/adapter.js'
 
 type AdapterErrors = {
 	botBlocked(msg: string): Error
@@ -368,27 +369,14 @@ const PAGE_OPS: Record<string, (page: Page) => Promise<unknown>> = {
 	exploreDestinations,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
 	name: 'google-flights',
 	description:
 		'Google Flights — search + price insights via node SSR extraction, overview/booking/explore via page DOM',
 
-	async init(page: Page | null): Promise<boolean> {
-		if (!page) return true // node transport — always ready
-		return page.url().includes('google.com')
-	},
-
-	async isAuthenticated(): Promise<boolean> {
-		return true
-	},
-
-	async execute(
-		page: Page | null,
-		operation: string,
-		params: Readonly<Record<string, unknown>>,
-		helpers: Record<string, unknown>,
-	): Promise<unknown> {
-		const { errors } = helpers as { errors: AdapterErrors }
+	async run(ctx) {
+		const { page, operation, params, helpers } = ctx
+		const { errors } = helpers as unknown as { errors: AdapterErrors }
 
 		// Node-transport operations
 		const nodeHandler = NODE_OPS[operation]

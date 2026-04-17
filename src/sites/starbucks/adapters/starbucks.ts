@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Starbucks adapter — store detail lookup requires client-side filter.
  *
@@ -14,6 +16,7 @@ type Errors = {
   missingParam(name: string): Error
   fatal(msg: string): Error
   retriable(msg: string): Error
+  wrap(error: unknown): Error
 }
 
 type Helpers = {
@@ -94,14 +97,20 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, h
   getStoreDetail,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'starbucks',
   description: 'Starbucks — store detail lookup (client-side filter by storeNumber)',
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Helpers): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const h = helpers as unknown as Helpers
     const handler = OPERATIONS[operation]
-    if (!handler) throw helpers.errors.unknownOp(operation)
-    return handler(page, { ...params }, helpers)
+    if (!handler) throw h.errors.unknownOp(operation)
+    try {
+      return await handler(page as Page, { ...params }, h)
+    } catch (error) {
+      throw h.errors.wrap(error)
+    }
   },
 }
 

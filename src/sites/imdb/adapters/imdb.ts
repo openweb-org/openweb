@@ -1,7 +1,7 @@
 import type { Page } from 'patchright'
 
 import { nodeFetch } from '../../../lib/adapter-helpers.js'
-import type { AdapterHelpers } from '../../../types/adapter.js'
+import type { AdapterHelpers, CustomRunner } from '../../../types/adapter.js'
 
 const GQL_URL = 'https://api.graphql.imdb.com/'
 
@@ -279,26 +279,12 @@ const OPERATIONS: Record<string, OpHandler> = {
   getCast,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'imdb',
   description: 'IMDb GraphQL API — search titles, detail, ratings, and cast via api.graphql.imdb.com',
 
-  async init(page: Page | null): Promise<boolean> {
-    if (!page) return true
-    const url = page.url()
-    return url.includes('imdb.com') || url === 'about:blank'
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true // All operations are public read-only
-  },
-
-  async execute(
-    page: Page | null,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: AdapterHelpers,
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)
     return handler(page, params, helpers)

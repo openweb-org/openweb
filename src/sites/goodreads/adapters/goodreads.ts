@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 
 import { nodeFetch } from '../../../lib/adapter-helpers.js'
+import type { CustomRunner } from '../../../types/adapter.js'
 
 type AdapterErrors = { botBlocked(msg: string): Error; unknownOp(op: string): Error; missingParam(name: string): Error; wrap(error: unknown): Error }
 
@@ -253,23 +254,16 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   getAuthor,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'goodreads',
   description: 'Goodreads — thin adapter on nodeFetch: SSR apolloState parse (getBook, getReviews) + HTML regex (searchBooks, getAuthor), zero browser dependency',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('goodreads.com') || page.url() === 'about:blank'
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
-    const { errors } = helpers as { errors: AdapterErrors }
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as unknown as { errors: AdapterErrors }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, errors)
+    return handler(page as Page, { ...params }, errors)
   },
 }
 

@@ -1,4 +1,6 @@
 import type { Page, Response as PwResponse } from 'patchright'
+
+import type { CustomRunner } from '../../../types/adapter.js'
 /**
  * Expedia L3 adapter — GraphQL APQ via browser fetch.
  *
@@ -441,26 +443,18 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   getFlightDetail,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'expedia-graphql',
   description: 'Expedia GraphQL API — hotels, flights via APQ',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('expedia.com')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://www.expedia.com')
-    return cookies.some((c) => c.name === 'EG_SESSIONTOKEN')
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
-    const { errors } = helpers as { errors: ErrorHelpers }
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as unknown as { errors: ErrorHelpers }
     const handler = OPERATIONS[operation]
     if (!handler) {
       throw errors.unknownOp(operation)
     }
-    return handler(page, { ...params }, errors)
+    return handler(page as Page, { ...params }, errors)
   },
 }
 

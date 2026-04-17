@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 const HN_ORIGIN = 'https://news.ycombinator.com'
 
 // ── Write ops: browser page context for auth token extraction ───────
@@ -68,25 +70,12 @@ const OPERATIONS: Record<
   addComment,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'hackernews',
   description: 'Hacker News — Algolia API for parameterized reads (node), page context for writes',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('news.ycombinator.com') || url === 'about:blank'
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(
-    page: Page | null,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: { errors: { unknownOp(op: string): Error } },
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)
     if (!page) throw new Error(`Operation ${operation} requires a page context`)

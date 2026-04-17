@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 
 import { nodeFetch } from '../../../lib/adapter-helpers.js'
+import type { CustomRunner } from '../../../types/adapter.js'
 
 type AdapterErrors = { botBlocked(msg: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error }
 
@@ -201,27 +202,20 @@ const OPERATIONS: Record<string, (page: Page | null, params: Record<string, unkn
   getMarketData,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'redfin',
   description: 'Redfin — node-native Stingray API + HTML fetch. No browser needed.',
 
-  async init(_page: Page | null): Promise<boolean> {
-    return true
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
-  async execute(
-    page: Page | null, operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const { errors } = helpers as { errors: AdapterErrors }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, errors)
+    try {
+      return await handler(page as Page | null, { ...params }, errors)
+    } catch (error) {
+      throw errors.wrap(error)
+    }
   },
 }
 

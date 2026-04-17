@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Todoist adapter — same-origin v1 API via bearer token interception.
  *
@@ -168,25 +170,13 @@ function normalizeCreatedTask(t: Record<string, unknown>): Record<string, unknow
   }
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'todoist-api',
   description: 'Todoist v1 API — projects, tasks, create, complete, uncomplete, delete',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('todoist.com')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://app.todoist.com')
-    return cookies.some((c) => c.name === 'todoistd')
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
+  async run(ctx) {
+    const { page: pageRaw, operation, params, helpers } = ctx
+    const page = pageRaw as Page
     const { errors } = helpers as { errors: Errors }
 
     switch (operation) {

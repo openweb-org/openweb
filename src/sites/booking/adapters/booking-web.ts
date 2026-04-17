@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Booking.com adapter — DOM/LD+JSON extraction from browser-rendered pages.
  *
@@ -267,28 +269,16 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   searchFlights,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'booking-web',
   description: 'Booking.com — DOM/LD+JSON extraction for hotel search, details, reviews, pricing, flights',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('booking.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // Public browsing works without auth
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: Record<string, unknown>,
-  ): Promise<unknown> {
-    const { errors } = helpers as { errors: { unknownOp(op: string): Error } }
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as unknown as { errors: { unknownOp(op: string): Error } }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params })
+    return handler(page as Page, { ...params })
   },
 }
 

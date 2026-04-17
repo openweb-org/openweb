@@ -1,5 +1,7 @@
 import type { Page, Response as PwResponse } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Home Depot L3 adapter — navigation-based GraphQL interception.
  *
@@ -276,23 +278,16 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   getStoreAvailability,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'homedepot-web',
   description: 'Home Depot — search, detail, reviews, pricing, and store availability via GraphQL interception',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('homedepot.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // No login required for public data
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const { errors } = helpers as { errors: Errors }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, errors)
+    return handler(page as Page, { ...params }, errors)
   },
 }
 

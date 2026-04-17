@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 /**
  * Uber Rides adapter — location search, fare estimates, ride history via GraphQL.
  *
@@ -15,6 +17,7 @@ type Errors = {
   missingParam(name: string): Error
   fatal(msg: string): Error
   retriable(msg: string): Error
+  wrap(error: unknown): Error
 }
 
 type Helpers = {
@@ -190,23 +193,20 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, h
   getRideHistory,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'uber-rides',
   description: 'Uber Rides — location search, fare estimates, ride history via GraphQL (Tier 5)',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('uber.com')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies()
-    return cookies.some(c => c.name === 'sid' || c.name === 'csid' || c.name === 'jwt-session')
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Helpers): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
+    const h = helpers as unknown as Helpers
     const handler = OPERATIONS[operation]
-    if (!handler) throw helpers.errors.unknownOp(operation)
-    return handler(page, { ...params }, helpers)
+    if (!handler) throw h.errors.unknownOp(operation)
+    try {
+      return await handler(page as Page, { ...params }, h)
+    } catch (error) {
+      throw h.errors.wrap(error)
+    }
   },
 }
 

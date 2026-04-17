@@ -1,6 +1,8 @@
 import type { Page } from 'patchright'
 import { graphqlGet, normalizeItem } from './queries.js'
 
+import type { CustomRunner } from '../../../types/adapter.js'
+
 type ErrorHelpers = { fatal(msg: string): Error; httpError(status: number): Error; apiError(label: string, msg: string): Error; unknownOp(op: string): Error }
 
 async function searchProducts(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
@@ -223,25 +225,18 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   getNearbyStores,
 }
 
-const adapter = {
+const adapter: CustomRunner = {
   name: 'instacart-graphql',
   description: 'Instacart GraphQL API — grocery search, store products, nearby stores with delivery ETAs',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('instacart.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // guest access — read ops work without login
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+  async run(ctx) {
+    const { page, operation, params, helpers } = ctx
     const { errors } = helpers as { errors: ErrorHelpers }
     const handler = OPERATIONS[operation]
     if (!handler) {
       throw errors.unknownOp(operation)
     }
-    return handler(page, { ...params }, errors)
+    return handler(page as Page, { ...params }, errors)
   },
 }
 
