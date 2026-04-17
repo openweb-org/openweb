@@ -99,6 +99,8 @@ export type ExtractionPrimitive =
       readonly selector: string
       readonly path?: string
       readonly strip_comments?: boolean
+      readonly type_filter?: string
+      readonly multi?: boolean
     }
   | { readonly type: 'page_global_data'; readonly page_url?: string; readonly expression?: string; readonly path?: string; readonly adapter?: string; readonly method?: string }
   | {

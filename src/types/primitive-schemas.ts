@@ -250,6 +250,8 @@ export const extractionPrimitiveSchema = {
         selector: { type: 'string' },
         path: { type: 'string' },
         strip_comments: { type: 'boolean' },
+        type_filter: { type: 'string' },
+        multi: { type: 'boolean' },
       },
       additionalProperties: false,
     },

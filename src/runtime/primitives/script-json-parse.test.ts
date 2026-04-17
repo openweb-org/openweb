@@ -50,3 +50,64 @@ describe('parseScriptJson — HTML selector matching', () => {
     expect(() => parseScriptJson('<div>{}</div>', 'div#data')).toThrow(/must start with "script"/)
   })
 })
+
+describe('parseScriptJson — multi-match + type_filter', () => {
+  const html = `<html>
+<script type="application/ld+json">{"@type":"Hotel","name":"H1"}</script>
+<script type="application/ld+json">{"@type":"BreadcrumbList","items":[]}</script>
+<script type="application/ld+json">{"@type":"FAQPage","q":1}</script>
+</html>`
+
+  it('returns first block matching type_filter=Hotel', () => {
+    expect(
+      parseScriptJson(html, 'script[type="application/ld+json"]', { typeFilter: 'Hotel' }),
+    ).toEqual({ '@type': 'Hotel', name: 'H1' })
+  })
+
+  it('handles @type as string[]', () => {
+    const html2 = `<html>
+<script type="application/ld+json">{"@type":["Thing","Hotel"],"name":"H2"}</script>
+</html>`
+    expect(
+      parseScriptJson(html2, 'script[type="application/ld+json"]', { typeFilter: 'Hotel' }),
+    ).toEqual({ '@type': ['Thing', 'Hotel'], name: 'H2' })
+  })
+
+  it('returns all blocks when multi=true', () => {
+    const result = parseScriptJson(html, 'script[type="application/ld+json"]', { multi: true })
+    expect(Array.isArray(result)).toBe(true)
+    expect((result as unknown[]).length).toBe(3)
+  })
+
+  it('combines multi=true + type_filter', () => {
+    const htmlTwoHotels = `<html>
+<script type="application/ld+json">{"@type":"Hotel","name":"A"}</script>
+<script type="application/ld+json">{"@type":"FAQPage"}</script>
+<script type="application/ld+json">{"@type":"Hotel","name":"B"}</script>
+</html>`
+    const result = parseScriptJson(htmlTwoHotels, 'script[type="application/ld+json"]', {
+      multi: true,
+      typeFilter: 'Hotel',
+    })
+    expect(result).toEqual([
+      { '@type': 'Hotel', name: 'A' },
+      { '@type': 'Hotel', name: 'B' },
+    ])
+  })
+
+  it('throws when type_filter matches nothing', () => {
+    expect(() =>
+      parseScriptJson(html, 'script[type="application/ld+json"]', { typeFilter: 'Movie' }),
+    ).toThrow(/@type "Movie"/)
+  })
+
+  it('skips invalid JSON blocks when iterating', () => {
+    const mixed = `<html>
+<script type="application/ld+json">{not json}</script>
+<script type="application/ld+json">{"@type":"Hotel","name":"OK"}</script>
+</html>`
+    expect(
+      parseScriptJson(mixed, 'script[type="application/ld+json"]', { typeFilter: 'Hotel' }),
+    ).toEqual({ '@type': 'Hotel', name: 'OK' })
+  })
+})

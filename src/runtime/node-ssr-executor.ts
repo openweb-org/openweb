@@ -80,6 +80,8 @@ function extractBody(html: string, extraction: NodeExtraction): unknown {
   return parseScriptJson(html, extraction.selector, {
     path: extraction.path,
     stripComments: extraction.strip_comments,
+    typeFilter: extraction.type_filter,
+    multi: extraction.multi,
   })
 }
 

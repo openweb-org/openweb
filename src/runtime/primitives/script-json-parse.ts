@@ -109,7 +109,33 @@ function findScript(html: string, selector: string): string | undefined {
   return undefined
 }
 
+function findAllScripts(html: string, selector: string): string[] {
+  const sel = parseSelector(selector)
+  const out: string[] = []
+  SCRIPT_TAG_RE.lastIndex = 0
+  for (let m = SCRIPT_TAG_RE.exec(html); m; m = SCRIPT_TAG_RE.exec(html)) {
+    const attrsStr = m[1] ?? ''
+    if (attrsMatch(attrsStr, sel)) out.push(m[2] ?? '')
+  }
+  return out
+}
+
 // ── Public API ──────────────────────────────────────
+
+export interface ParseScriptJsonOptions {
+  readonly path?: string
+  readonly stripComments?: boolean
+  readonly typeFilter?: string
+  readonly multi?: boolean
+}
+
+function matchesTypeFilter(data: unknown, typeFilter: string): boolean {
+  if (!data || typeof data !== 'object') return false
+  const t = (data as { '@type'?: unknown })['@type']
+  if (typeof t === 'string') return t === typeFilter
+  if (Array.isArray(t)) return t.includes(typeFilter)
+  return false
+}
 
 /**
  * Parse JSON from a <script> element in HTML.
@@ -121,8 +147,24 @@ function findScript(html: string, selector: string): string | undefined {
 export function parseScriptJson(
   html: string,
   selector: string,
-  options: { path?: string; stripComments?: boolean } = {},
+  options: ParseScriptJsonOptions = {},
 ): unknown {
+  const { typeFilter, multi } = options
+  if (typeFilter || multi) {
+    const raws = findAllScripts(html, selector)
+    if (raws.length === 0) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Script element matching "${selector}" not found.`,
+        action: 'Ensure the page is fully loaded and the selector targets an existing <script> tag.',
+        retriable: true,
+        failureClass: 'retriable',
+      })
+    }
+    return parseScriptContents(raws, selector, options)
+  }
+
   const raw = findScript(html, selector)
   if (raw === undefined) {
     throw new OpenWebError({
@@ -136,6 +178,48 @@ export function parseScriptJson(
   }
 
   return parseScriptContent(raw, selector, options)
+}
+
+/**
+ * Parse an array of raw <script> contents. Applies type_filter (by @type)
+ * and multi semantics. When multi=false (or undefined), returns the first
+ * matching block; when multi=true, returns an array of all matching blocks.
+ */
+export function parseScriptContents(
+  raws: readonly string[],
+  selector: string,
+  options: ParseScriptJsonOptions = {},
+): unknown {
+  const { typeFilter, multi, path, stripComments } = options
+  const results: unknown[] = []
+  for (const raw of raws) {
+    let parsed: unknown
+    try {
+      parsed = parseScriptContent(raw, selector, { stripComments })
+    } catch {
+      // When iterating multiple blocks, skip invalid JSON rather than failing
+      // the whole extraction — common for mixed ld+json blocks.
+      continue
+    }
+    if (typeFilter && !matchesTypeFilter(parsed, typeFilter)) continue
+    const final = path ? getValueAtPath(parsed, path) : parsed
+    if (final === undefined) continue
+    if (!multi) return final
+    results.push(final)
+  }
+
+  if (multi) return results
+
+  throw new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message: typeFilter
+      ? `No <script> matching "${selector}" had @type "${typeFilter}".`
+      : `No <script> matching "${selector}" produced a usable value.`,
+    action: 'Verify type_filter matches an existing ld+json block on the page.',
+    retriable: false,
+    failureClass: 'fatal',
+  })
 }
 
 /**
