@@ -1,12 +1,14 @@
 import type { Page } from 'patchright'
 
-type Errors = {
-  unknownOp(op: string): Error
-  missingParam(name: string): Error
-  botBlocked(msg: string): Error
-  fatal(msg: string): Error
-  retriable(msg: string): Error
-}
+import type { AdapterHelpers } from '../../../types/adapter.js'
+
+/* Reuters — thin adapter.
+ * Reuters' internal PF API (/pf/api/v3/content/fetch/*) is DataDome-protected
+ * and only responds to same-origin browser fetches. Spec-based
+ * page_global_data expressions cannot call fetch(), so PF API ops stay here
+ * using the pageFetch helper.
+ * getArticleDetail stays here too because article_url contains slashes that
+ * would be percent-encoded by the spec's page_url template substitution. */
 
 async function isDataDomeBlocked(page: Page): Promise<boolean> {
   try {
@@ -22,68 +24,71 @@ async function isDataDomeBlocked(page: Page): Promise<boolean> {
 
 function pfUrl(fetcher: string, query: Record<string, unknown>): string {
   const q = encodeURIComponent(JSON.stringify(query))
-  return `/pf/api/v3/content/fetch/${fetcher}?query=${q}&_website=reuters`
+  return `https://www.reuters.com/pf/api/v3/content/fetch/${fetcher}?query=${q}&_website=reuters`
 }
 
 async function pfFetch(
   page: Page,
+  helpers: AdapterHelpers,
   fetcher: string,
   query: Record<string, unknown>,
-  errors: Errors,
 ): Promise<unknown> {
   const url = pfUrl(fetcher, query)
-  const result = await page.evaluate(async (u: string) => {
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), 15_000)
+  const { status, text } = await helpers.pageFetch(page, {
+    url,
+    method: 'GET',
+    credentials: 'same-origin',
+    timeout: 15_000,
+  })
+  if (status >= 200 && status < 300) {
     try {
-      const r = await fetch(u, { credentials: 'same-origin', signal: ctrl.signal })
-      if (!r.ok) {
-        const body = await r.text().catch(() => '')
-        const isDD = body.includes('captcha-delivery.com') || body.includes('datadome')
-        return { __error: true, status: r.status, isDataDome: isDD }
-      }
-      return JSON.parse(await r.text())
-    } finally {
-      clearTimeout(timer)
+      return JSON.parse(text)
+    } catch {
+      throw helpers.errors.apiError(`Reuters ${fetcher}`, 'Response is not valid JSON')
     }
-  }, url)
-  if (result && typeof result === 'object' && '__error' in result) {
-    const err = result as { status: number; isDataDome?: boolean }
-    if (err.isDataDome || err.status === 401) {
-      throw errors.botBlocked(
-        `Reuters API blocked by DataDome (HTTP ${err.status}). Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run \`openweb browser restart\`, solve the CAPTCHA, then retry.`,
-      )
-    }
-    const isTransient = err.status === 404 || err.status >= 500
-    if (isTransient) throw errors.retriable(`Reuters API returned ${err.status}`)
-    throw errors.fatal(`Reuters API returned ${err.status}`)
   }
-  return result
+  const isDD = text.includes('captcha-delivery.com') || text.includes('datadome')
+  if (isDD || status === 401) {
+    throw helpers.errors.botBlocked(
+      `Reuters API blocked by DataDome (HTTP ${status}). Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run \`openweb browser restart\`, solve the CAPTCHA, then retry.`,
+    )
+  }
+  if (status === 404 || status >= 500) {
+    throw helpers.errors.retriable(`Reuters API returned ${status}`)
+  }
+  throw helpers.errors.fatal(`Reuters API returned ${status}`)
 }
 
-async function searchArticles(page: Page, params: Record<string, unknown>, errors: AdapterErrorHelpers) {
+async function searchArticles(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
   const keyword = String(params.keyword ?? '')
-  if (!keyword) throw errors.missingParam('keyword')
+  if (!keyword) throw helpers.errors.missingParam('keyword')
   const offset = Number(params.offset ?? 0)
   const size = Number(params.size ?? 10)
-  return pfFetch(page, 'articles-by-search-v2', {
+  return pfFetch(page, helpers, 'articles-by-search-v2', {
     keyword, offset, orderby: 'display_date:desc', size, website: 'reuters',
-  }, errors)
+  })
 }
 
-async function getTopicArticles(page: Page, params: Record<string, unknown>, errors: AdapterErrorHelpers) {
+async function getTopicArticles(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
   const sectionId = String(params.section_id ?? '')
-  if (!sectionId) throw errors.missingParam('section_id')
+  if (!sectionId) throw helpers.errors.missingParam('section_id')
   const offset = Number(params.offset ?? 0)
   const size = Number(params.size ?? 10)
-  return pfFetch(page, 'articles-by-section-alias-or-id-v1', {
+  return pfFetch(page, helpers, 'articles-by-section-alias-or-id-v1', {
     section_id: sectionId, offset, size, website: 'reuters',
-  }, errors)
+  })
 }
 
-async function getArticleDetail(page: Page, params: Record<string, unknown>, errors: AdapterErrorHelpers) {
+async function getTopNews(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
+  const size = Number(params.size ?? 10)
+  return pfFetch(page, helpers, 'articles-by-section-alias-or-id-v1', {
+    section_id: '/home', offset: 0, size, website: 'reuters',
+  })
+}
+
+async function getArticleDetail(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
   const articleUrl = String(params.article_url ?? '')
-  if (!articleUrl) throw errors.missingParam('article_url')
+  if (!articleUrl) throw helpers.errors.missingParam('article_url')
 
   const fullUrl = articleUrl.startsWith('http')
     ? articleUrl
@@ -92,7 +97,7 @@ async function getArticleDetail(page: Page, params: Record<string, unknown>, err
   await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 })
 
   if (await isDataDomeBlocked(page)) {
-    throw errors.botBlocked(
+    throw helpers.errors.botBlocked(
       'Reuters blocked by DataDome CAPTCHA. Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run `openweb browser restart`, solve the CAPTCHA, then retry.',
     )
   }
@@ -101,36 +106,43 @@ async function getArticleDetail(page: Page, params: Record<string, unknown>, err
 
   const article = await page.evaluate(() => {
     // Strategy 1: Arc Publishing Fusion SSR data
-    const gc = (window as any).Fusion?.globalContent
-    if (gc?.headlines?.basic) {
-      const bodyParts = (gc.content_elements || [])
-        .filter((el: any) => el.type === 'text')
-        .map((el: any) => {
+    const gc = (window as unknown as { Fusion?: { globalContent?: Record<string, unknown> } }).Fusion?.globalContent as Record<string, unknown> | undefined
+    const headlines = gc?.headlines as { basic?: string } | undefined
+    if (gc && headlines?.basic) {
+      const bodyParts = ((gc.content_elements as Array<Record<string, unknown>>) || [])
+        .filter((el) => el.type === 'text')
+        .map((el) => {
           const div = document.createElement('div')
-          div.innerHTML = el.content || ''
+          div.innerHTML = (el.content as string) || ''
           return div.textContent?.trim() || ''
         })
         .filter(Boolean)
 
+      const credits = gc.credits as { by?: Array<{ name?: string; url?: string }> } | undefined
+      const taxonomy = gc.taxonomy as { primary_section?: { name?: string } } | undefined
+      const desc = gc.description as { basic?: string } | undefined
+      const subheadlines = gc.subheadlines as { basic?: string } | undefined
+      const promo = (gc.promo_items as { basic?: { url?: string; caption?: string; alt_text?: string } } | undefined)?.basic
+
       return {
-        id: gc._id || '',
-        title: gc.headlines.basic,
-        description: gc.description?.basic || gc.subheadlines?.basic || '',
+        id: (gc._id as string) || '',
+        title: headlines.basic,
+        description: desc?.basic || subheadlines?.basic || '',
         body: bodyParts.join('\n\n'),
-        published_time: gc.first_publish_date || gc.publish_date || '',
-        updated_time: gc.last_updated_date || '',
-        authors: (gc.credits?.by || []).map((a: any) => ({
+        published_time: (gc.first_publish_date as string) || (gc.publish_date as string) || '',
+        updated_time: (gc.last_updated_date as string) || '',
+        authors: (credits?.by || []).map((a) => ({
           name: a.name || '',
           topic_url: a.url || '',
         })),
-        section: gc.taxonomy?.primary_section?.name || '',
-        canonical_url: gc.canonical_url || '',
-        word_count: gc.word_count || 0,
-        thumbnail: gc.promo_items?.basic
+        section: taxonomy?.primary_section?.name || '',
+        canonical_url: (gc.canonical_url as string) || '',
+        word_count: (gc.word_count as number) || 0,
+        thumbnail: promo
           ? {
-              url: gc.promo_items.basic.url || '',
-              caption: gc.promo_items.basic.caption || '',
-              alt_text: gc.promo_items.basic.alt_text || '',
+              url: promo.url || '',
+              caption: promo.caption || '',
+              alt_text: promo.alt_text || '',
             }
           : null,
       }
@@ -138,7 +150,7 @@ async function getArticleDetail(page: Page, params: Record<string, unknown>, err
 
     // Strategy 2: DOM/meta fallback
     const title = document.querySelector('h1')?.textContent?.trim() || ''
-    const desc =
+    const descAttr =
       document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
     const paras = Array.from(
       document.querySelectorAll('[data-testid*="paragraph"], article p'),
@@ -162,7 +174,7 @@ async function getArticleDetail(page: Page, params: Record<string, unknown>, err
 
     return {
       title,
-      description: desc,
+      description: descAttr,
       body: paras.join('\n\n'),
       published_time: pubTime,
       authors: Array.from(authorMap.values()),
@@ -173,34 +185,25 @@ async function getArticleDetail(page: Page, params: Record<string, unknown>, err
     }
   })
 
-  if (!article.title) throw errors.fatal('Could not extract article content from page')
+  if (!article.title) throw helpers.errors.fatal('Could not extract article content from page')
   return { result: article }
 }
 
-async function getTopNews(page: Page, params: Record<string, unknown>, errors: AdapterErrorHelpers) {
-  const size = Number(params.size ?? 10)
-  return pfFetch(page, 'articles-by-section-alias-or-id-v1', {
-    section_id: '/home', offset: 0, size, website: 'reuters',
-  }, errors)
-}
-
-const operations: Record<string, (page: Page, params: Record<string, unknown>, errors: AdapterErrorHelpers) => Promise<unknown>> = {
+const operations: Record<string, (page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) => Promise<unknown>> = {
   searchArticles,
   getTopicArticles,
-  getArticleDetail,
   getTopNews,
+  getArticleDetail,
 }
 
 const adapter = {
   name: 'reuters-api',
-  description: 'Reuters — search articles, browse topics, article detail, top news',
+  description: 'Reuters — PF API ops (DataDome-gated same-origin fetch) + getArticleDetail (page.goto with path slashes)',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()
     if (url.includes('reuters.com')) return true
-    // DataDome captcha redirect means we're in the reuters flow
     if (url.includes('captcha-delivery.com') || url.includes('datadome')) return true
-    // Navigate to reuters.com if on a blank or unrelated page
     try {
       await page.goto('https://www.reuters.com', { waitUntil: 'domcontentloaded', timeout: 20_000 })
       const newUrl = page.url()
@@ -214,21 +217,19 @@ const adapter = {
     return true
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
-    const { errors } = helpers
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
     const handler = operations[operation]
-    if (!handler) throw errors.unknownOp(operation)
+    if (!handler) throw helpers.errors.unknownOp(operation)
     if (await isDataDomeBlocked(page)) {
-      // Brief wait for auto-resolution (non-headless browsers may resolve quickly)
       await page.waitForTimeout(5_000)
       if (await isDataDomeBlocked(page)) {
-        throw errors.botBlocked(
+        throw helpers.errors.botBlocked(
           'Reuters blocked by DataDome CAPTCHA. Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run `openweb browser restart`, solve the CAPTCHA in the visible Chrome window, then retry.',
         )
       }
       process.stderr.write('DataDome CAPTCHA resolved.\n')
     }
-    return handler(page, { ...params }, errors)
+    return handler(page, { ...params }, helpers)
   },
 }
 

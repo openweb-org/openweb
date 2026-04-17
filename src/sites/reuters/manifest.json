@@ -1,11 +1,20 @@
 {
   "name": "reuters",
+  "display_name": "Reuters",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.reuters.com",
   "compiled_at": "2026-04-01T23:00:00.000Z",
+  "description": "Reuters — article search, topic feeds, top news, article detail via thin adapter (DataDome-gated PF API requires same-origin browser fetch; article detail navigates to article path with slashes)",
   "requires_auth": false,
   "requires_browser": true,
   "last_verified": null,
-  "quarantined": false
+  "quarantined": false,
+  "stats": {
+    "operation_count": 4,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 4,
+    "ws_count": 0
+  }
 }
