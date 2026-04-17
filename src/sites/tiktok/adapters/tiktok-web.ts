@@ -1,12 +1,8 @@
 import type { Page, Response as PwResponse } from 'patchright'
 
-type Errors = {
-  unknownOp(op: string): Error
-  missingParam(name: string): Error
-  fatal(msg: string): Error
-  retriable(msg: string): Error
-  wrap(error: unknown): Error
-}
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
+type Errors = AdapterHelpers['errors']
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -533,7 +529,7 @@ async function unblockUser(page: Page, params: Record<string, unknown>, errors: 
   return { success: data.status_code === 0, ...data }
 }
 
-/* ── adapter export ──────────────────────────────────────────── */
+/* ── runner export ───────────────────────────────────────────── */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   getVideoDetail,
@@ -559,29 +555,17 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   getExplore,
 }
 
-const adapter = {
+const runner: CustomRunner = {
   name: 'tiktok-web',
   description: 'TikTok — reads via API intercept, writes via patched fetch (auto X-Bogus/X-Gnarly signing)',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('tiktok.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true
-  },
-
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-    helpers: { errors: Errors },
-  ): Promise<unknown> {
-    const { errors } = helpers
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('tiktok-web requires a page (transport: page)')
     const handler = OPERATIONS[operation]
-    if (!handler) throw errors.unknownOp(operation)
-    return handler(page, { ...params }, errors)
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, { ...params }, helpers.errors)
   },
 }
 
-export default adapter
+export default runner
