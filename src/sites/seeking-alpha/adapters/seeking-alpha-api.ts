@@ -228,14 +228,6 @@ const adapter = {
   name: 'seeking-alpha-api',
   description: 'Seeking Alpha — search articles, read articles, stock analysis, earnings data',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('seekingalpha.com')
-  },
-
-  async isAuthenticated(): Promise<boolean> {
-    return true
-  },
-
   async execute(
     page: Page, operation: string,
     params: Readonly<Record<string, unknown>>,

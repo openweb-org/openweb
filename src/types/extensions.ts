@@ -40,6 +40,11 @@ export interface XOpenWebServer {
   readonly headers?: Readonly<Record<string, string>>
   /** Default page-acquisition plan for page-transport operations. */
   readonly page_plan?: PagePlanConfig
+  /** Default adapter reference for operations under this server. Individual
+   *  operations can override with their own `adapter: AdapterRef`, or opt out
+   *  with `adapter: false`. `operation` and `params` here act as defaults when
+   *  op-level doesn't set them. */
+  readonly adapter?: AdapterRef
 }
 
 export interface XOpenWebBuildMeta {
@@ -62,7 +67,7 @@ export interface XOpenWebOperation {
   readonly signing?: SigningPrimitive | false
   readonly pagination?: PaginationPrimitive
   readonly extraction?: ExtractionPrimitive
-  readonly adapter?: AdapterRef
+  readonly adapter?: AdapterRef | false
   /** Real URL path when the spec key is a virtual path (e.g. GraphQL dedup) */
   readonly actual_path?: string
   /** Dot-path into the parsed response body to extract before returning (e.g. 'data', '0.data') */

@@ -175,19 +175,6 @@ const adapter = {
   name: 'starbucks',
   description: 'Starbucks — store finder, store detail, and menu via BFF API proxy',
 
-  async init(page: Page): Promise<boolean> {
-    if (!page.url().includes('starbucks.com')) {
-      try {
-        await page.goto(`${BASE}/`, { waitUntil: 'load', timeout: 30_000 })
-      } catch { return false }
-    }
-    return page.url().includes('starbucks.com')
-  },
-
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true
-  },
-
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Helpers): Promise<unknown> {
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)

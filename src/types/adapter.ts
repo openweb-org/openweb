@@ -24,7 +24,16 @@ export interface CodeAdapter {
   readonly name: string
   readonly description: string
 
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
+  /** Optional. When absent the runtime-level PagePlan (navigation + ready
+   *  selector + settle + warm) is the adapter's init. Only implement this when
+   *  the adapter needs page-specific bootstrapping beyond PagePlan (e.g.
+   *  priming a global variable, opening a side-panel, waiting for a dynamic
+   *  element that isn't expressible as a single ready selector). */
+  init?(page: Page): Promise<boolean>
+  /** Optional. When absent the runtime treats "auth primitive resolves
+   *  successfully" as authenticated (i.e. credentials configured, not
+   *  validated). Override this for adapters that must probe for actual
+   *  credential validity (e.g. fetch /me and check for login_required). */
+  isAuthenticated?(page: Page): Promise<boolean>
   execute(page: Page | null, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown>
 }

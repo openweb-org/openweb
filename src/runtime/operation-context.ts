@@ -1,6 +1,6 @@
 import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiSpec } from '../lib/spec-loader.js'
-import type { PagePlanConfig, XOpenWebServer } from '../types/extensions.js'
+import type { AdapterRef, PagePlanConfig, XOpenWebServer } from '../types/extensions.js'
 import type { Transport } from '../types/extensions.js'
 
 const VALID_TRANSPORTS = new Set<string>(['node', 'page'])
@@ -42,6 +42,7 @@ export function getServerXOpenWeb(spec: OpenApiSpec, operation: OpenApiOperation
   if ('auth' in opExt) (merged as Record<string, unknown>).auth = opExt.auth || undefined
   if ('csrf' in opExt) (merged as Record<string, unknown>).csrf = opExt.csrf || undefined
   if ('signing' in opExt) (merged as Record<string, unknown>).signing = opExt.signing || undefined
+  if ('adapter' in opExt) (merged as Record<string, unknown>).adapter = opExt.adapter || undefined
   return merged as XOpenWebServer
 }
 
@@ -110,4 +111,46 @@ export function resolvePagePlan(spec: OpenApiSpec, operation: OpenApiOperation):
     }
   }
   return merged as PagePlanConfig
+}
+
+/**
+ * Resolve the adapter reference for an operation.
+ *
+ * Precedence: op-level `x-openweb.adapter` wins over server-level
+ * `x-openweb.adapter`. Op-level `adapter: false` is an explicit opt-out — it
+ * clears any server-level adapter for that operation. When op-level is an
+ * AdapterRef, server-level `operation` / `params` serve as fallback defaults
+ * for fields the op didn't set.
+ */
+export function resolveAdapterRef(spec: OpenApiSpec, operation: OpenApiOperation): AdapterRef | undefined {
+  const opExt = operation['x-openweb'] as { adapter?: AdapterRef | false } | undefined
+  if (opExt && 'adapter' in opExt && opExt.adapter === false) return undefined
+
+  // Read raw server-level adapter (bypasses getServerXOpenWeb's merge, which
+  // would otherwise fold op-level adapter into the server view).
+  const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
+  let rawServerExt: XOpenWebServer | undefined
+  if (serverUrl) {
+    const searchLists = [operation.servers, spec.servers]
+    for (const list of searchLists) {
+      if (rawServerExt) break
+      for (const server of list ?? []) {
+        if (server.url === serverUrl) {
+          rawServerExt = (server as Record<string, unknown>)['x-openweb'] as XOpenWebServer | undefined
+          break
+        }
+      }
+    }
+  }
+  const serverAdapter = rawServerExt?.adapter
+  const opAdapter = opExt?.adapter as AdapterRef | undefined
+
+  if (!serverAdapter && !opAdapter) return undefined
+  if (!opAdapter) return serverAdapter
+  if (!serverAdapter) return opAdapter
+  return {
+    name: opAdapter.name ?? serverAdapter.name,
+    operation: opAdapter.operation ?? serverAdapter.operation,
+    params: opAdapter.params ?? serverAdapter.params,
+  }
 }

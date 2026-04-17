@@ -92,6 +92,10 @@ vi.mock('./operation-context.js', () => ({
   resolveTransport: (...a: unknown[]) => mockResolveTransport(...a),
   getServerXOpenWeb: (...a: unknown[]) => mockGetServerXOpenWeb(...a),
   resolvePagePlan: () => undefined,
+  resolveAdapterRef: (_spec: unknown, op: { 'x-openweb'?: { adapter?: unknown } }) => {
+    const a = op['x-openweb']?.adapter
+    return a && a !== false ? a : undefined
+  },
 }))
 
 // Mock browser-lifecycle

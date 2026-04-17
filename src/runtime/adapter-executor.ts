@@ -101,14 +101,19 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
 }
 
 export interface AdapterExecOptions {
-  /** When false, skip the isAuthenticated check. Default: true. */
+  /** When false, skip the auth check entirely. Default: true. */
   readonly requiresAuth?: boolean
+  /** Fallback authentication check invoked when the adapter doesn't export
+   *  `isAuthenticated`. Returning true means the declared auth primitive
+   *  resolved — i.e. credentials are *configured*, not validated. A following
+   *  real request will still surface needs_login if credentials are invalid. */
+  readonly resolveAuth?: (page: Page) => Promise<boolean>
 }
 
 /**
  * Execute an adapter operation:
- * 1. Init (if needed)
- * 2. Check auth (only when the spec declares auth)
+ * 1. Init (adapter override, else runtime default via PagePlan in acquirePage)
+ * 2. Check auth (adapter override, else auth-primitive resolves)
  * 3. Execute operation
  */
 export async function executeAdapter(
@@ -125,39 +130,40 @@ export async function executeAdapter(
   }
 
   await ensurePagePolyfills(page)
-  let ready = await adapter.init(page)
-  if (!ready) {
-    await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForTimeout(TIMEOUT.adapterRetry)
-    ready = await adapter.init(page)
-  }
 
-  if (!ready) {
-    // If the site requires auth and the adapter can't init, likely the user
-    // isn't logged in (no global state bootstrapped). Classify as needs_login
-    // so the auth cascade can trigger profile refresh / login flow.
-    if (options?.requiresAuth !== false) {
+  if (adapter.init) {
+    let ready = await adapter.init(page)
+    if (!ready) {
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(TIMEOUT.adapterRetry)
+      ready = await adapter.init(page)
+    }
+    if (!ready) {
+      if (options?.requiresAuth !== false) {
+        throw new OpenWebError({
+          error: 'auth',
+          code: 'AUTH_FAILED',
+          message: `Adapter "${adapter.name}" failed to initialize — site may require login.`,
+          action: 'Log in to the site and try again.',
+          retriable: true,
+          failureClass: 'needs_login',
+        })
+      }
       throw new OpenWebError({
-        error: 'auth',
-        code: 'AUTH_FAILED',
-        message: `Adapter "${adapter.name}" failed to initialize — site may require login.`,
-        action: 'Log in to the site and try again.',
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Adapter "${adapter.name}" failed to initialize.`,
+        action: 'Ensure the site is loaded and the page is ready.',
         retriable: true,
-        failureClass: 'needs_login',
+        failureClass: 'retriable',
       })
     }
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Adapter "${adapter.name}" failed to initialize.`,
-      action: 'Ensure the site is loaded and the page is ready.',
-      retriable: true,
-      failureClass: 'retriable',
-    })
   }
 
   if (options?.requiresAuth !== false) {
-    const authenticated = await adapter.isAuthenticated(page)
+    const authenticated = adapter.isAuthenticated
+      ? await adapter.isAuthenticated(page)
+      : options?.resolveAuth ? await options.resolveAuth(page) : true
     if (!authenticated) {
       throw new OpenWebError({
         error: 'auth',
