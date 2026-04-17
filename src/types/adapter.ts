@@ -1,6 +1,11 @@
 import type { Page } from 'patchright'
 
-import type { PageFetchOptions, PageFetchResult, GraphqlFetchOptions } from '../lib/adapter-helpers.js'
+import type {
+  DomExtractSpec,
+  GraphqlFetchOptions,
+  PageFetchOptions,
+  PageFetchResult,
+} from '../lib/adapter-helpers.js'
 
 export interface AdapterErrorHelpers {
   unknownOp(operation: string): Error
@@ -17,6 +22,12 @@ export interface AdapterErrorHelpers {
 export interface AdapterHelpers {
   pageFetch(page: Page, options: PageFetchOptions): Promise<PageFetchResult>
   graphqlFetch(page: Page, options: GraphqlFetchOptions): Promise<unknown>
+  /** Extract SSR state (__NEXT_DATA__ or a JS expression), optional dotted path. */
+  ssrExtract(page: Page, source: string, path?: string): Promise<unknown>
+  /** Extract all <script type="application/ld+json"> blocks, optional @type filter. */
+  jsonLdExtract(page: Page, typeFilter?: string): Promise<unknown[]>
+  /** Declarative DOM extraction (single object or array via `container`). */
+  domExtract(page: Page, spec: DomExtractSpec): Promise<Record<string, string | null> | Array<Record<string, string | null>>>
   errors: AdapterErrorHelpers
 }
 

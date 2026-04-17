@@ -6,8 +6,8 @@ import type { BrowserContext, Page } from 'patchright'
 
 import { TIMEOUT } from '../lib/config.js'
 import { OpenWebError, toOpenWebError } from '../lib/errors.js'
-import { pageFetch, graphqlFetch } from '../lib/adapter-helpers.js'
-import type { AdapterErrorHelpers, CodeAdapter } from '../types/adapter.js'
+import { pageFetch, graphqlFetch, ssrExtract, jsonLdExtract, domExtract } from '../lib/adapter-helpers.js'
+import type { AdapterErrorHelpers, AdapterHelpers, CodeAdapter } from '../types/adapter.js'
 import { detectPageBotBlock } from './bot-detect.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
 import { type PagePlan, acquirePage } from './page-plan.js'
@@ -125,7 +125,7 @@ export async function executeAdapter(
 ): Promise<unknown> {
   // When page is null (transport:node), skip all browser-dependent steps
   if (!page) {
-    const result = await adapter.execute(null, operation, params, { pageFetch, graphqlFetch, errors: adapterErrors })
+    const result = await adapter.execute(null, operation, params, buildHelpers())
     return result
   }
 
@@ -180,7 +180,7 @@ export async function executeAdapter(
   // valid cookies. Per-page WeakSet cache makes repeat calls a no-op.
   await warmSession(page, page.url())
 
-  const result = await adapter.execute(page, operation, params, { pageFetch, graphqlFetch, errors: adapterErrors })
+  const result = await adapter.execute(page, operation, params, buildHelpers())
 
   // Post-execution bot detection: catch adapters that silently scrape CAPTCHA pages
   const botSignal = await detectPageBotBlock(page)
@@ -222,6 +222,10 @@ const adapterErrors: AdapterErrorHelpers = {
 /** Clear the adapter cache (useful for tests) */
 export function clearAdapterCache(): void {
   adapterCache.clear()
+}
+
+function buildHelpers(): AdapterHelpers {
+  return { pageFetch, graphqlFetch, ssrExtract, jsonLdExtract, domExtract, errors: adapterErrors }
 }
 
 /**

@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 
 import { nodeFetch } from '../../../lib/adapter-helpers.js'
+import type { AdapterHelpers } from '../../../types/adapter.js'
 
 const GQL_URL = 'https://api.graphql.imdb.com/'
 
@@ -137,7 +138,11 @@ async function getTitleDetail(_page: Page | null, params: Readonly<Record<string
   }
 }
 
-async function getRatings(page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getRatings(
+  page: Page | null,
+  params: Readonly<Record<string, unknown>>,
+  helpers: AdapterHelpers,
+): Promise<unknown> {
   const imdbId = String(params.imdbId ?? '')
   if (!imdbId) throw new Error('imdbId parameter is required')
 
@@ -157,7 +162,7 @@ async function getRatings(page: Page | null, params: Readonly<Record<string, unk
 
   // Histogram + LD+JSON from the title page (not the separate /ratings/ page)
   let histogram: Array<{ rating: number; voteCount: number }> = []
-  let ldJson: Record<string, unknown> | null = null
+  let ldJson: { ratingValue?: unknown; ratingCount?: unknown; bestRating?: unknown; worstRating?: unknown } | null = null
   if (page) {
     try {
       await page.goto(`https://www.imdb.com/title/${encodeURIComponent(imdbId)}/`, {
@@ -167,39 +172,29 @@ async function getRatings(page: Page | null, params: Readonly<Record<string, unk
       // Wait for page to fully settle — IMDB's React hydration can trigger
       // client-side navigations that destroy the execution context.
       await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
-      const extracted = await page.evaluate(`
-        (() => {
-          const result = { histogram: null, ldJson: null };
-          const ndEl = document.querySelector('#__NEXT_DATA__');
-          if (ndEl && ndEl.textContent) {
-            try {
-              const nd = JSON.parse(ndEl.textContent);
-              const hist = nd.props?.pageProps?.mainColumnData?.aggregateRatingsBreakdown?.histogram?.histogramValues;
-              if (Array.isArray(hist)) result.histogram = hist;
-            } catch {}
-          }
-          const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-          for (const s of scripts) {
-            try {
-              const data = JSON.parse(s.textContent || '');
-              if (data.aggregateRating) {
-                result.ldJson = {
-                  ratingValue: data.aggregateRating.ratingValue,
-                  ratingCount: data.aggregateRating.ratingCount,
-                  bestRating: data.aggregateRating.bestRating,
-                  worstRating: data.aggregateRating.worstRating,
-                };
-                break;
-              }
-            } catch {}
-          }
-          return result;
-        })()
-      `)
-      if (Array.isArray(extracted?.histogram)) {
-        histogram = extracted.histogram.map((h: any) => ({ rating: h.rating, voteCount: h.voteCount }))
+
+      const hist = await helpers.ssrExtract(
+        page,
+        '__NEXT_DATA__',
+        'props.pageProps.mainColumnData.aggregateRatingsBreakdown.histogram.histogramValues',
+      ).catch(() => null)
+      if (Array.isArray(hist)) {
+        histogram = hist.map((h: any) => ({ rating: h.rating, voteCount: h.voteCount }))
       }
-      if (extracted?.ldJson) ldJson = extracted.ldJson
+
+      const ldBlocks = await helpers.jsonLdExtract(page).catch(() => [] as unknown[])
+      for (const block of ldBlocks) {
+        const agg = (block as { aggregateRating?: Record<string, unknown> }).aggregateRating
+        if (agg) {
+          ldJson = {
+            ratingValue: agg.ratingValue,
+            ratingCount: agg.ratingCount,
+            bestRating: agg.bestRating,
+            worstRating: agg.worstRating,
+          }
+          break
+        }
+      }
     } catch {
       // Title page unavailable — return GraphQL data without histogram
     }
@@ -275,7 +270,9 @@ async function getCast(_page: Page | null, params: Readonly<Record<string, unkno
   }
 }
 
-const OPERATIONS: Record<string, (page: Page | null, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
+type OpHandler = (page: Page | null, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
+
+const OPERATIONS: Record<string, OpHandler> = {
   searchTitles,
   getTitleDetail,
   getRatings,
@@ -300,11 +297,11 @@ const adapter = {
     page: Page | null,
     operation: string,
     params: Readonly<Record<string, unknown>>,
-    helpers: { errors: { unknownOp(op: string): Error } },
+    helpers: AdapterHelpers,
   ): Promise<unknown> {
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)
-    return handler(page, params)
+    return handler(page, params, helpers)
   },
 }
 

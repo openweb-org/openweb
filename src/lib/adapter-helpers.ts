@@ -4,6 +4,10 @@ import { DEFAULT_USER_AGENT } from './config.js'
 import { OpenWebError, getHttpFailure } from './errors.js'
 import { validateSSRF } from './ssrf.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
+import { resolvePageGlobalData } from '../runtime/primitives/page-global-data.js'
+import { parseScriptContent } from '../runtime/primitives/script-json-parse.js'
+import { resolveSsrNextData } from '../runtime/primitives/ssr-next-data.js'
+import type { BrowserHandle } from '../runtime/primitives/types.js'
 
 export interface InterceptOptions {
   readonly urlMatch: string | RegExp
@@ -261,4 +265,106 @@ export async function interceptResponse(page: Page, options: InterceptOptions): 
   }
 
   return captured
+}
+
+/**
+ * Extract SSR state from a page. `source` is either '__NEXT_DATA__' (delegates
+ * to ssr_next_data logic: window global with script tag fallback) or any JS
+ * expression evaluated in the page context (e.g. 'window.__INITIAL_STATE__').
+ * Optional `path` is a dotted path into the resolved value.
+ */
+export async function ssrExtract(page: Page, source: string, path?: string): Promise<unknown> {
+  const handle: BrowserHandle = { page, context: page.context() }
+  if (source === '__NEXT_DATA__') {
+    return resolveSsrNextData(handle, { path: path ?? '' })
+  }
+  return resolvePageGlobalData(handle, { expression: source, path })
+}
+
+/**
+ * Extract all <script type="application/ld+json"> blocks on the page, parse
+ * them, and optionally filter by `@type`. Malformed JSON blocks are skipped.
+ * Returns an array (empty when nothing matches).
+ */
+export async function jsonLdExtract(page: Page, typeFilter?: string): Promise<unknown[]> {
+  const rawScripts = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+      .map((s) => s.textContent ?? '')
+  })
+
+  const selector = 'script[type="application/ld+json"]'
+  const results: unknown[] = []
+  for (const raw of rawScripts) {
+    if (!raw.trim()) continue
+    let parsed: unknown
+    try {
+      parsed = parseScriptContent(raw, selector)
+    } catch {
+      continue
+    }
+    const items = Array.isArray(parsed) ? parsed : [parsed]
+    for (const item of items) {
+      if (!typeFilter) {
+        results.push(item)
+        continue
+      }
+      const t = (item as { '@type'?: unknown })?.['@type']
+      const matches = Array.isArray(t) ? t.includes(typeFilter) : t === typeFilter
+      if (matches) results.push(item)
+    }
+  }
+  return results
+}
+
+export interface DomExtractField {
+  readonly selector: string
+  /** 'text' (default), 'innerHTML', or 'attr:name' */
+  readonly extract?: string
+  /** Regex applied to the extracted value; capture group 1, else whole match. */
+  readonly pattern?: string
+}
+
+export interface DomExtractSpec {
+  /** When set: each matching element becomes one row; fields are queried
+   *  relative to it. When absent: fields are queried against document once. */
+  readonly container?: string
+  readonly fields: Readonly<Record<string, DomExtractField>>
+}
+
+/**
+ * Declarative DOM extraction. With `container`, returns an array of row
+ * objects; without, returns a single object. Fields support text/innerHTML/
+ * attribute extraction plus an optional regex refinement.
+ */
+export async function domExtract(
+  page: Page,
+  spec: DomExtractSpec,
+): Promise<Record<string, string | null> | Array<Record<string, string | null>>> {
+  return page.evaluate((s) => {
+    const extractValue = (target: Element, extract: string, pattern?: string): string | null => {
+      let value: string | null
+      if (extract === 'innerHTML') value = (target as HTMLElement).innerHTML
+      else if (extract.startsWith('attr:')) value = target.getAttribute(extract.slice(5))
+      else value = target.textContent?.trim() ?? null
+      if (value !== null && pattern) {
+        const m = new RegExp(pattern).exec(value)
+        value = m ? (m[1] ?? m[0]) : null
+      }
+      return value
+    }
+
+    const extractFields = (root: ParentNode): Record<string, string | null> => {
+      const out: Record<string, string | null> = {}
+      for (const [k, f] of Object.entries(s.fields)) {
+        const t = root.querySelector(f.selector)
+        out[k] = t ? extractValue(t, f.extract ?? 'text', f.pattern) : null
+      }
+      return out
+    }
+
+    if (s.container) {
+      return Array.from(document.querySelectorAll(s.container)).map(extractFields)
+    }
+    return extractFields(document)
+  }, spec as unknown as { container?: string; fields: Record<string, DomExtractField> })
 }
