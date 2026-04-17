@@ -190,6 +190,7 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 - `page` — Meta bot detection blocks direct node HTTP requests
 - Non-adapter ops: requests execute via page transport (browser-context fetch)
 - Adapter ops: `getUserPosts` composes profile + feed; `muteUser`/`unmuteUser` route to mute endpoint; `getReels` POSTs to clips endpoint; `getNotifications` POSTs to news/inbox (GET returns 500)
+- Adapter shape: `CustomRunner` (`adapters/instagram-api.ts`) — single `run(ctx)` entry; runtime supplies the prepared page, resolved auth, and helpers. Init/auth-probe handled by runtime defaults (PagePlan + `cookie_session` resolver); auth validity surfaces from real fetches via `guardAuthExpired()` → `needsLogin()`.
 - Page URL: `https://www.instagram.com/`
 
 ### Known Issues

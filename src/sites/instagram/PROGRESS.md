@@ -54,3 +54,12 @@
 **Verification:** 12/12 PASS, pnpm build clean, no test regressions
 **Key discovery:** Copied Chrome profile cookies are encrypted — `Local State` (in Chrome root, not profile dir) holds the decryption key. Without it, `sessionid` values are ciphertext and auth silently fails.
 **Pitfalls encountered:** Sending stale `x-ig-www-claim` from copied Session Storage triggers 401 on POST endpoints; omitting the header entirely (or sending `'0'`) works. Also, `getNotifications` endpoint `/api/v1/news/inbox/` requires POST — GET returns 500 with `{status: "fail"}`.
+
+## 2026-04-17 — CustomRunner Migration (Phase 5B)
+
+**Context:** Phase 5B of the normalize-adapter design introduced `CustomRunner` — a minimal adapter interface with a single `run(ctx)` entry. Instagram chosen as the proof-migration site (smallest permanent-bucket candidate at 261 lines).
+**Changes:**
+- `adapters/instagram-api.ts`: rewritten as `CustomRunner` (261 → 170 lines). `init()` and `isAuthenticated()` removed — runtime handles via PagePlan (navigation + ready) and the auth-primitive (`cookie_session`) "configured = authenticated" default. Auth validity is still enforced by `guardAuthExpired()` on each fetch, which throws `needsLogin()` on 401/403 / `login_required` payloads.
+- Operation handlers unchanged in behaviour; helpers (`fetchJson`, `postJson`, `getCsrfToken`) now receive `AdapterHelpers` directly instead of a custom `Errors` shape.
+**Verification:** `pnpm dev verify instagram` → 12/12 PASS.
+**Key discovery:** The previous `isAuthenticated` cookie-expiry probe is redundant — the auth-primitive resolver already short-circuits when `sessionid` is absent, and a stale-but-present cookie surfaces immediately as a 401 inside the first real fetch.
