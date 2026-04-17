@@ -4,14 +4,14 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.producthunt.com",
-  "description": "Product Hunt — today's products, featured posts, product details, search via page adapter",
+  "description": "Product Hunt — today's products, featured posts, product details, search via page extraction",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
     "operation_count": 4,
     "l1_count": 0,
-    "l2_count": 0,
-    "l3_count": 4,
+    "l2_count": 4,
+    "l3_count": 0,
     "ws_count": 0
   }
 }

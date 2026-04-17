@@ -9,6 +9,8 @@ servers:
   - url: https://www.producthunt.com
     x-openweb:
       transport: page
+      page_plan:
+        settle_ms: 3000
 paths:
   /internal/getToday:
     get:
@@ -21,10 +23,60 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
-        adapter:
-          name: producthunt
-          operation: getToday
+            - page_global_data
+        extraction:
+          type: page_global_data
+          page_url: /
+          expression: |
+            (() => {
+              const client = window.__APOLLO_CLIENT__;
+              if (!client) return [];
+              const cache = client.cache.extract();
+              const resolveRef = (r) => (r && typeof r === 'object' && '__ref' in r) ? (cache[r.__ref] ?? null) : r;
+              const extractTagline = (e) => {
+                if (e.tagline) return e.tagline;
+                const k = Object.keys(e).find(x => x.startsWith('tagline('));
+                return k ? e[k] : null;
+              };
+              const extractTopics = (e) => {
+                const k = Object.keys(e).find(x => x.startsWith('topics('));
+                const t = k ? e[k] : null;
+                if (!t || !t.edges) return [];
+                return t.edges.map(x => resolveRef(x.node)).filter(Boolean).map(n => n.name);
+              };
+              const formatPost = (p) => {
+                const product = resolveRef(p.product);
+                return {
+                  id: p.id, name: p.name, slug: p.slug,
+                  tagline: extractTagline(p),
+                  votesCount: p.latestScore ?? 0,
+                  commentsCount: p.commentsCount ?? 0,
+                  dailyRank: p.dailyRank ?? null,
+                  createdAt: p.createdAt ?? null,
+                  featuredAt: p.featuredAt ?? null,
+                  thumbnailUrl: p.thumbnailImageUuid ? ('https://ph-files.imgix.net/' + p.thumbnailImageUuid + '?auto=format&fit=crop&h=150&w=150') : null,
+                  topics: extractTopics(p),
+                  productSlug: (product && product.slug) ? product.slug : p.slug,
+                };
+              };
+              const root = cache.ROOT_QUERY;
+              if (!root) return [];
+              const key = Object.keys(root).find(k => k.includes('homefeed') && k.includes('TODAY'));
+              if (!key) return [];
+              const feed = resolveRef(root[key]);
+              if (!feed || !feed.edges) return [];
+              const pages = feed.edges.map(e => resolveRef(e.node)).filter(Boolean);
+              const posts = [];
+              for (const fp of pages) {
+                if (!fp.items) continue;
+                for (const ref of fp.items) {
+                  const item = resolveRef(ref);
+                  if (!item || item.__typename !== 'Post') continue;
+                  posts.push(formatPost(item));
+                }
+              }
+              return posts;
+            })()
       responses:
         '200':
           description: Array of today's featured products.
@@ -95,10 +147,61 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
-        adapter:
-          name: producthunt
-          operation: getPosts
+            - page_global_data
+        extraction:
+          type: page_global_data
+          page_url: /
+          expression: |
+            (() => {
+              const client = window.__APOLLO_CLIENT__;
+              if (!client) return [];
+              const cache = client.cache.extract();
+              const section = (new URLSearchParams(location.search).get('section') || 'TODAY').toUpperCase();
+              const resolveRef = (r) => (r && typeof r === 'object' && '__ref' in r) ? (cache[r.__ref] ?? null) : r;
+              const extractTagline = (e) => {
+                if (e.tagline) return e.tagline;
+                const k = Object.keys(e).find(x => x.startsWith('tagline('));
+                return k ? e[k] : null;
+              };
+              const extractTopics = (e) => {
+                const k = Object.keys(e).find(x => x.startsWith('topics('));
+                const t = k ? e[k] : null;
+                if (!t || !t.edges) return [];
+                return t.edges.map(x => resolveRef(x.node)).filter(Boolean).map(n => n.name);
+              };
+              const formatPost = (p) => {
+                const product = resolveRef(p.product);
+                return {
+                  id: p.id, name: p.name, slug: p.slug,
+                  tagline: extractTagline(p),
+                  votesCount: p.latestScore ?? 0,
+                  commentsCount: p.commentsCount ?? 0,
+                  dailyRank: p.dailyRank ?? null,
+                  createdAt: p.createdAt ?? null,
+                  featuredAt: p.featuredAt ?? null,
+                  thumbnailUrl: p.thumbnailImageUuid ? ('https://ph-files.imgix.net/' + p.thumbnailImageUuid + '?auto=format&fit=crop&h=150&w=150') : null,
+                  topics: extractTopics(p),
+                  productSlug: (product && product.slug) ? product.slug : p.slug,
+                };
+              };
+              const root = cache.ROOT_QUERY;
+              if (!root) return [];
+              const key = Object.keys(root).find(k => k.includes('homefeed') && k.includes(section));
+              if (!key) return [];
+              const feed = resolveRef(root[key]);
+              if (!feed || !feed.edges) return [];
+              const pages = feed.edges.map(e => resolveRef(e.node)).filter(Boolean);
+              const posts = [];
+              for (const fp of pages) {
+                if (!fp.items) continue;
+                for (const ref of fp.items) {
+                  const item = resolveRef(ref);
+                  if (!item || item.__typename !== 'Post') continue;
+                  posts.push(formatPost(item));
+                }
+              }
+              return posts;
+            })()
       parameters:
         - name: section
           in: query
@@ -183,10 +286,66 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
-        adapter:
-          name: producthunt
-          operation: getPost
+            - page_global_data
+        extraction:
+          type: page_global_data
+          page_url: https://www.producthunt.com/posts/{slug}
+          expression: |
+            (() => {
+              const client = window.__APOLLO_CLIENT__;
+              if (!client) return null;
+              const cache = client.cache.extract();
+              const slug = (location.pathname.split('/posts/')[1] || '').split('/')[0].split('?')[0];
+              const resolveRef = (r) => (r && typeof r === 'object' && '__ref' in r) ? (cache[r.__ref] ?? null) : r;
+              const extractTagline = (e) => {
+                if (!e) return null;
+                if (e.tagline) return e.tagline;
+                const k = Object.keys(e).find(x => x.startsWith('tagline('));
+                return k ? e[k] : null;
+              };
+              let product = null, post = null;
+              for (const k of Object.keys(cache)) {
+                const entry = cache[k];
+                if (!entry) continue;
+                if (!product && entry.__typename === 'Product' && entry.slug === slug) product = entry;
+                if (!post && entry.__typename === 'Post' && entry.slug === slug) post = entry;
+                if (product && post) break;
+              }
+              if (!product && !post) return null;
+              const makers = [];
+              for (const k of Object.keys(cache)) {
+                if (!k.startsWith('User')) continue;
+                const u = cache[k];
+                if (u && u.name) makers.push({ name: u.name, username: u.username ?? null, headline: u.headline ?? null });
+              }
+              const categories = [];
+              if (product && product.categories) {
+                for (const ref of product.categories) {
+                  const c = resolveRef(ref);
+                  if (c && c.name) categories.push(c.name);
+                }
+              }
+              return {
+                id: (product && product.id) || (post && post.id),
+                name: (product && product.name) || (post && post.name),
+                slug: (product && product.slug) || (post && post.slug),
+                tagline: (product && product.tagline) || extractTagline(post),
+                description: (product && product.description) || (post && post.description) || null,
+                websiteUrl: (product && product.websiteUrl) || null,
+                votesCount: (post && post.latestScore) || 0,
+                commentsCount: (post && post.commentsCount) || 0,
+                dailyRank: (post && post.dailyRank) || null,
+                createdAt: (post && post.createdAt) || null,
+                featuredAt: (post && post.featuredAt) || null,
+                followersCount: (product && product.followersCount) || 0,
+                reviewsCount: (product && product.reviewsCount) || 0,
+                reviewsRating: (product && product.reviewsRating) || 0,
+                categories,
+                makers: makers.slice(0, 10),
+                thumbnailUrl: (post && post.thumbnailImageUuid) ? ('https://ph-files.imgix.net/' + post.thumbnailImageUuid + '?auto=format&fit=crop&h=150&w=150') : null,
+                logoUrl: (product && product.logoUuid) ? ('https://ph-files.imgix.net/' + product.logoUuid + '?auto=format&fit=crop&h=150&w=150') : null,
+              };
+            })()
       parameters:
         - name: slug
           in: query
@@ -301,10 +460,34 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
-        adapter:
-          name: producthunt
-          operation: searchProducts
+            - page_global_data
+        extraction:
+          type: page_global_data
+          page_url: https://www.producthunt.com/search?q={query}
+          expression: |
+            (() => {
+              const client = window.__APOLLO_CLIENT__;
+              if (!client) return [];
+              const cache = client.cache.extract();
+              const resolveRef = (r) => (r && typeof r === 'object' && '__ref' in r) ? (cache[r.__ref] ?? null) : r;
+              const root = cache.ROOT_QUERY;
+              if (!root) return [];
+              const key = Object.keys(root).find(k => k.startsWith('productSearch('));
+              if (!key) return [];
+              const result = root[key];
+              if (!result || !result.edges) return [];
+              return result.edges.map(edge => {
+                const p = resolveRef(edge.node);
+                if (!p) return null;
+                return {
+                  id: p.id, name: p.name, slug: p.slug,
+                  tagline: p.tagline ?? null,
+                  reviewsRating: p.reviewsRating ?? 0,
+                  reviewsCount: p.reviewsCount ?? 0,
+                  logoUrl: p.logoUuid ? ('https://ph-files.imgix.net/' + p.logoUuid + '?auto=format&fit=crop&h=150&w=150') : null,
+                };
+              }).filter(Boolean);
+            })()
       parameters:
         - name: query
           in: query
