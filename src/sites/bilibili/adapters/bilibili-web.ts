@@ -1,6 +1,9 @@
 import type { Page, Response as PwResponse } from 'patchright'
+
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
 /**
- * Bilibili L3 adapter — page-based API access with Wbi signing.
+ * Bilibili L3 runner — page-based API access with Wbi signing.
  *
  * Bilibili uses Wbi signing on most API endpoints: an MD5-based hash of sorted
  * query params + mixing key derived from /x/web-interface/nav. The browser's own
@@ -10,9 +13,7 @@ import type { Page, Response as PwResponse } from 'patchright'
  * For other endpoints, we navigate to the relevant page and intercept the API calls.
  */
 
-const API_BASE = 'https://api.bilibili.com'
-
-type Errors = { missingParam(name: string): Error; unknownOp(op: string): Error; needsLogin(): Error; wrap(error: unknown): Error }
+type Errors = AdapterHelpers['errors']
 
 /** Check if a Bilibili API response indicates success (code === 0). */
 function isApiOk(resp: unknown): boolean {
@@ -99,7 +100,8 @@ async function fetchApiViaPage(
 
 /* ---------- operation handlers ---------- */
 
-async function searchVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function searchVideos(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const keyword = String(params.keyword ?? '')
   if (!keyword) throw errors.missingParam('keyword')
   const pg = Number(params.page ?? 1)
@@ -123,7 +125,8 @@ async function searchVideos(page: Page, params: Record<string, unknown>, errors:
   })
 }
 
-async function getVideoDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getVideoDetail(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const bvid = String(params.bvid ?? '')
   if (!bvid) throw errors.missingParam('bvid')
 
@@ -131,7 +134,7 @@ async function getVideoDetail(page: Page, params: Record<string, unknown>, error
   return fetchApiViaPage(page, '/x/web-interface/view', { bvid })
 }
 
-async function getPopularVideos(page: Page, params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
+async function getPopularVideos(page: Page, params: Readonly<Record<string, unknown>>, _helpers: AdapterHelpers): Promise<unknown> {
   const pn = Number(params.pn ?? 1)
   const ps = Number(params.ps ?? 20)
 
@@ -144,7 +147,8 @@ async function getPopularVideos(page: Page, params: Record<string, unknown>, _er
   })
 }
 
-async function getVideoComments(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getVideoComments(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const oid = Number(params.oid)
   if (!oid) throw errors.missingParam('oid')
   const type = Number(params.type ?? 1)
@@ -171,7 +175,8 @@ async function getVideoComments(page: Page, params: Record<string, unknown>, err
   return result
 }
 
-async function getUserInfo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getUserInfo(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const mid = Number(params.mid)
   if (!mid) throw errors.missingParam('mid')
 
@@ -187,7 +192,8 @@ async function getUserInfo(page: Page, params: Record<string, unknown>, errors: 
   ).catch(() => result)
 }
 
-async function getUserVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getUserVideos(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const mid = Number(params.mid)
   if (!mid) throw errors.missingParam('mid')
   const pn = Number(params.pn ?? 1)
@@ -206,7 +212,7 @@ async function getUserVideos(page: Page, params: Record<string, unknown>, errors
   ).catch(() => result)
 }
 
-async function getRecommendedFeed(page: Page, params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
+async function getRecommendedFeed(page: Page, params: Readonly<Record<string, unknown>>, _helpers: AdapterHelpers): Promise<unknown> {
   const ps = Number(params.ps ?? 12)
 
   return interceptApiResponse(
@@ -332,7 +338,8 @@ async function fetchProtobufDanmaku(
   )
 }
 
-async function getDanmaku(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getDanmaku(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const oid = Number(params.oid)
   if (!oid) throw errors.missingParam('oid')
   const segmentIndex = Number(params.segment_index ?? 1)
@@ -347,11 +354,12 @@ async function getDanmaku(page: Page, params: Record<string, unknown>, errors: E
 
 /* ---------- nav / relation / online ---------- */
 
-async function getNavInfo(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
+async function getNavInfo(page: Page, _params: Readonly<Record<string, unknown>>, _helpers: AdapterHelpers): Promise<unknown> {
   return fetchApiViaPage(page, '/x/web-interface/nav', {})
 }
 
-async function getVideoOnlineCount(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getVideoOnlineCount(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const bvid = String(params.bvid ?? '')
   const aid = params.aid != null ? Number(params.aid) : undefined
   if (!bvid && !aid) throw errors.missingParam('bvid')
@@ -363,7 +371,8 @@ async function getVideoOnlineCount(page: Page, params: Record<string, unknown>, 
   return fetchApiViaPage(page, '/x/player/online/total', qs)
 }
 
-async function getVideoUserRelation(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function getVideoUserRelation(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const bvid = String(params.bvid ?? '')
   const aid = params.aid != null ? Number(params.aid) : undefined
   if (!bvid && !aid) throw errors.missingParam('bvid')
@@ -375,7 +384,8 @@ async function getVideoUserRelation(page: Page, params: Record<string, unknown>,
 
 /* ---------- write operations ---------- */
 
-async function likeVideo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function likeVideo(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const aid = Number(params.aid)
   if (!aid) throw errors.missingParam('aid')
   const like = Number(params.like ?? 1)
@@ -383,7 +393,8 @@ async function likeVideo(page: Page, params: Record<string, unknown>, errors: Er
   return postApiViaPage(page, '/x/web-interface/archive/like', { aid, like, csrf })
 }
 
-async function addToFavorites(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function addToFavorites(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const rid = Number(params.rid)
   if (!rid) throw errors.missingParam('rid')
   const addMediaIds = String(params.add_media_ids ?? '')
@@ -398,7 +409,8 @@ async function addToFavorites(page: Page, params: Record<string, unknown>, error
   })
 }
 
-async function followUploader(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function followUploader(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const fid = Number(params.fid)
   if (!fid) throw errors.missingParam('fid')
   const act = Number(params.act ?? 1)
@@ -408,11 +420,12 @@ async function followUploader(page: Page, params: Record<string, unknown>, error
 
 /* ---------- reverse write operations ---------- */
 
-async function unlikeVideo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  return likeVideo(page, { ...params, like: 2 }, errors)
+async function unlikeVideo(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  return likeVideo(page, { ...params, like: 2 }, helpers)
 }
 
-async function removeFromFavorites(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+async function removeFromFavorites(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
   const rid = Number(params.rid)
   if (!rid) throw errors.missingParam('rid')
   const delMediaIds = String(params.del_media_ids ?? '')
@@ -427,15 +440,15 @@ async function removeFromFavorites(page: Page, params: Record<string, unknown>, 
   })
 }
 
-async function unfollowUploader(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  return followUploader(page, { ...params, act: 2 }, errors)
+async function unfollowUploader(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  return followUploader(page, { ...params, act: 2 }, helpers)
 }
 
-/* ---------- adapter export ---------- */
+/* ---------- runner export ---------- */
 
-type OpHandler = (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
 
-const OPERATIONS: Record<string, OpHandler> = {
+const OPERATIONS: Record<string, Handler> = {
   searchVideos,
   getVideoDetail,
   getPopularVideos,
@@ -455,30 +468,17 @@ const OPERATIONS: Record<string, OpHandler> = {
   searchUserVideos: getUserVideos,
 }
 
-const adapter = {
+const runner: CustomRunner = {
   name: 'bilibili-web',
   description: 'Bilibili (哔哩哔哩) — video search, detail, trending, comments, user profiles via page API interception',
 
-  async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('bilibili.com')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://www.bilibili.com')
-    return cookies.some((c) => c.name === 'SESSDATA')
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
-    const { errors } = helpers as { errors: Errors }
-    try {
-      const handler = OPERATIONS[operation]
-      if (!handler) throw errors.unknownOp(operation)
-      return handler(page, { ...params }, errors)
-    } catch (error) {
-      throw errors.wrap(error)
-    }
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('bilibili-web requires a page (transport: page)')
+    const handler = OPERATIONS[operation]
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, params, helpers)
   },
 }
 
-export default adapter
+export default runner
