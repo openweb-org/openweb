@@ -1,27 +1,14 @@
 import type { Page } from 'patchright'
 
+import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
+
 /**
- * Notion adapter — page create/update via submitTransaction.
+ * Notion adapter — page create/update/delete via submitTransaction.
  *
  * Notion's internal API uses a transaction-based mutation system.
  * This adapter wraps the complex transaction format behind simple
  * params (title, parentId, pageId).
  */
-
-type Errors = {
-  unknownOp(op: string): Error
-  missingParam(name: string): Error
-  fatal(msg: string): Error
-  retriable(msg: string): Error
-}
-
-type Helpers = {
-  pageFetch: (page: Page, opts: {
-    url: string; method?: string; body?: string;
-    headers?: Record<string, string>; timeout?: number
-  }) => Promise<{ status: number; text: string }>
-  errors: Errors
-}
 
 const API_BASE = 'https://www.notion.so/api/v3'
 
@@ -40,9 +27,10 @@ async function getNotionUserId(page: Page): Promise<string> {
   return c?.value || ''
 }
 
-/** Build common headers for Notion API calls. */
-async function buildHeaders(page: Page, spaceId: string): Promise<Record<string, string>> {
+/** Build common headers for Notion API calls. Throws needsLogin if user cookie missing. */
+async function buildHeaders(page: Page, spaceId: string, helpers: AdapterHelpers): Promise<Record<string, string>> {
   const userId = await getNotionUserId(page)
+  if (!userId) throw helpers.errors.needsLogin()
   return {
     'content-type': 'application/json',
     'x-notion-active-user-header': userId,
@@ -50,185 +38,147 @@ async function buildHeaders(page: Page, spaceId: string): Promise<Record<string,
   }
 }
 
-async function createPage(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+async function submitTransaction(
+  page: Page,
+  helpers: AdapterHelpers,
+  spaceId: string,
+  operations: unknown[],
+): Promise<void> {
   const { errors } = helpers
-  const spaceId = String(params['x-notion-space-id'] || '')
-  const title = String(params.title || '')
-  const parentId = String(params.parentId || '') || spaceId
-
-  if (!spaceId) throw errors.missingParam('x-notion-space-id')
-  if (!title) throw errors.missingParam('title')
-
-  const isSubpage = params.parentId && String(params.parentId) !== spaceId
-  const parentTable = isSubpage ? 'block' : 'space'
-  const newPageId = uuid()
-  const now = Date.now()
   const txnId = uuid()
+  const body = JSON.stringify({
+    requestId: txnId,
+    transactions: [{ id: txnId, spaceId, operations }],
+  })
+  const headers = await buildHeaders(page, spaceId, helpers)
+  const resp = await helpers.pageFetch(page, {
+    url: `${API_BASE}/submitTransaction`,
+    method: 'POST',
+    headers,
+    body,
+  })
+  if (resp.status !== 200) {
+    throw errors.fatal(`submitTransaction returned ${resp.status}: ${resp.text.slice(0, 200)}`)
+  }
+}
 
-  const operations = [
-    {
-      pointer: { table: 'block', id: newPageId, spaceId },
-      command: 'set',
-      path: [],
-      args: {
-        type: 'page',
-        id: newPageId,
-        version: 1,
-        alive: true,
-        parent_id: parentId,
-        parent_table: parentTable,
-        space_id: spaceId,
-        created_time: now,
-        last_edited_time: now,
-        properties: { title: [[title]] },
+type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
+
+const OPERATIONS: Record<string, Handler> = {
+  async createPage(page, params, helpers) {
+    const { errors } = helpers
+    const spaceId = String(params['x-notion-space-id'] || '')
+    const title = String(params.title || '')
+    const parentId = String(params.parentId || '') || spaceId
+
+    if (!spaceId) throw errors.missingParam('x-notion-space-id')
+    if (!title) throw errors.missingParam('title')
+
+    const isSubpage = params.parentId && String(params.parentId) !== spaceId
+    const parentTable = isSubpage ? 'block' : 'space'
+    const newPageId = uuid()
+    const now = Date.now()
+
+    const operations = [
+      {
+        pointer: { table: 'block', id: newPageId, spaceId },
+        command: 'set',
+        path: [],
+        args: {
+          type: 'page',
+          id: newPageId,
+          version: 1,
+          alive: true,
+          parent_id: parentId,
+          parent_table: parentTable,
+          space_id: spaceId,
+          created_time: now,
+          last_edited_time: now,
+          properties: { title: [[title]] },
+        },
       },
-    },
-    {
-      pointer: { table: parentTable, id: parentId, spaceId },
-      command: 'listAfter',
-      path: parentTable === 'space' ? ['pages'] : ['content'],
-      args: { id: newPageId },
-    },
-  ]
+      {
+        pointer: { table: parentTable, id: parentId, spaceId },
+        command: 'listAfter',
+        path: parentTable === 'space' ? ['pages'] : ['content'],
+        args: { id: newPageId },
+      },
+    ]
 
-  const body = JSON.stringify({
-    requestId: txnId,
-    transactions: [{ id: txnId, spaceId, operations }],
-  })
+    await submitTransaction(page, helpers, spaceId, operations)
+    return { pageId: newPageId, title, parentId, parentTable }
+  },
 
-  const headers = await buildHeaders(page, spaceId)
-  const resp = await helpers.pageFetch(page, {
-    url: `${API_BASE}/submitTransaction`,
-    method: 'POST',
-    headers,
-    body,
-  })
+  async updatePage(page, params, helpers) {
+    const { errors } = helpers
+    const spaceId = String(params['x-notion-space-id'] || '')
+    const pageId = String(params.pageId || '')
+    const title = String(params.title || '')
 
-  if (resp.status !== 200) {
-    throw errors.fatal(`submitTransaction returned ${resp.status}: ${resp.text.slice(0, 200)}`)
-  }
+    if (!spaceId) throw errors.missingParam('x-notion-space-id')
+    if (!pageId) throw errors.missingParam('pageId')
+    if (!title) throw errors.missingParam('title')
 
-  return { pageId: newPageId, title, parentId, parentTable }
+    const now = Date.now()
+    const operations = [
+      {
+        pointer: { table: 'block', id: pageId, spaceId },
+        command: 'update',
+        path: ['properties', 'title'],
+        args: [[title]],
+      },
+      {
+        pointer: { table: 'block', id: pageId, spaceId },
+        command: 'update',
+        path: ['last_edited_time'],
+        args: now,
+      },
+    ]
+
+    await submitTransaction(page, helpers, spaceId, operations)
+    return { pageId, title, updated: true }
+  },
+
+  async deletePage(page, params, helpers) {
+    const { errors } = helpers
+    const spaceId = String(params['x-notion-space-id'] || '')
+    const pageId = String(params.pageId || '')
+
+    if (!spaceId) throw errors.missingParam('x-notion-space-id')
+    if (!pageId) throw errors.missingParam('pageId')
+
+    const now = Date.now()
+    const operations = [
+      {
+        pointer: { table: 'block', id: pageId, spaceId },
+        command: 'update',
+        path: [],
+        args: { alive: false },
+      },
+      {
+        pointer: { table: 'block', id: pageId, spaceId },
+        command: 'update',
+        path: ['last_edited_time'],
+        args: now,
+      },
+    ]
+
+    await submitTransaction(page, helpers, spaceId, operations)
+    return { pageId, deleted: true }
+  },
 }
 
-async function updatePage(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
-  const { errors } = helpers
-  const spaceId = String(params['x-notion-space-id'] || '')
-  const pageId = String(params.pageId || '')
-  const title = String(params.title || '')
-
-  if (!spaceId) throw errors.missingParam('x-notion-space-id')
-  if (!pageId) throw errors.missingParam('pageId')
-  if (!title) throw errors.missingParam('title')
-
-  const now = Date.now()
-  const txnId = uuid()
-
-  const operations = [
-    {
-      pointer: { table: 'block', id: pageId, spaceId },
-      command: 'update',
-      path: ['properties', 'title'],
-      args: [[title]],
-    },
-    {
-      pointer: { table: 'block', id: pageId, spaceId },
-      command: 'update',
-      path: ['last_edited_time'],
-      args: now,
-    },
-  ]
-
-  const body = JSON.stringify({
-    requestId: txnId,
-    transactions: [{ id: txnId, spaceId, operations }],
-  })
-
-  const headers = await buildHeaders(page, spaceId)
-  const resp = await helpers.pageFetch(page, {
-    url: `${API_BASE}/submitTransaction`,
-    method: 'POST',
-    headers,
-    body,
-  })
-
-  if (resp.status !== 200) {
-    throw errors.fatal(`submitTransaction returned ${resp.status}: ${resp.text.slice(0, 200)}`)
-  }
-
-  return { pageId, title, updated: true }
-}
-
-async function deletePage(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
-  const { errors } = helpers
-  const spaceId = String(params['x-notion-space-id'] || '')
-  const pageId = String(params.pageId || '')
-
-  if (!spaceId) throw errors.missingParam('x-notion-space-id')
-  if (!pageId) throw errors.missingParam('pageId')
-
-  const now = Date.now()
-  const txnId = uuid()
-
-  const operations = [
-    {
-      pointer: { table: 'block', id: pageId, spaceId },
-      command: 'update',
-      path: [],
-      args: { alive: false },
-    },
-    {
-      pointer: { table: 'block', id: pageId, spaceId },
-      command: 'update',
-      path: ['last_edited_time'],
-      args: now,
-    },
-  ]
-
-  const body = JSON.stringify({
-    requestId: txnId,
-    transactions: [{ id: txnId, spaceId, operations }],
-  })
-
-  const headers = await buildHeaders(page, spaceId)
-  const resp = await helpers.pageFetch(page, {
-    url: `${API_BASE}/submitTransaction`,
-    method: 'POST',
-    headers,
-    body,
-  })
-
-  if (resp.status !== 200) {
-    throw errors.fatal(`submitTransaction returned ${resp.status}: ${resp.text.slice(0, 200)}`)
-  }
-
-  return { pageId, deleted: true }
-}
-
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, helpers: Helpers) => Promise<unknown>> = {
-  createPage,
-  updatePage,
-  deletePage,
-}
-
-const adapter = {
+const runner: CustomRunner = {
   name: 'notion-api',
   description: 'Notion — create, update, and delete pages via submitTransaction',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('notion.so')
-  },
-
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const userId = await getNotionUserId(page)
-    return userId.length > 0
-  },
-
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Helpers): Promise<unknown> {
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('notion-api requires a page (transport: page)')
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)
-    return handler(page, { ...params }, helpers)
+    return handler(page, params, helpers)
   },
 }
 
-export default adapter
+export default runner
