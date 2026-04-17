@@ -24,9 +24,42 @@ paths:
           tool_version: 1
           signals:
             - extraction_detected
-        adapter:
-          name: etsy
-          operation: searchListings
+        extraction:
+          type: page_global_data
+          page_url: /search?q={query}
+          expression: |
+            (() => {
+              const query = new URLSearchParams(location.search).get('q') || '';
+              const cards = document.querySelectorAll('a[data-listing-id]');
+              const seen = new Set();
+              const listings = [];
+              for (const a of cards) {
+                const id = a.getAttribute('data-listing-id');
+                if (!id || seen.has(id)) continue;
+                seen.add(id);
+                const card = a.closest('div[data-appears-component-name]') || a.closest('li') || a.parentElement?.parentElement;
+                if (!card) continue;
+                const text = card.innerText || '';
+                const priceMatch = text.match(/\$[\d,.]+/);
+                const ratingMatch = text.match(/([\d.]+)\s*\n\s*\(([\d,.k]+)\)/);
+                const shopMatch = text.match(/(?:Ad・)?By\s+(\S+)/i);
+                const img = a.querySelector('img');
+                const href = a.href;
+                listings.push({
+                  listingId: id,
+                  title: card.querySelector('h3')?.textContent?.trim() || '',
+                  url: href ? href.split('?')[0] : '',
+                  price: priceMatch ? priceMatch[0] : null,
+                  currency: 'USD',
+                  image: img?.src || '',
+                  shopName: shopMatch ? shopMatch[1] : '',
+                  rating: ratingMatch ? Number.parseFloat(ratingMatch[1]) : null,
+                  reviewCount: ratingMatch ? ratingMatch[2] : null,
+                  freeShipping: text.includes('Free shipping'),
+                });
+              }
+              return { query, totalResults: listings.length, listings };
+            })()
       parameters:
         - name: query
           in: path
@@ -112,9 +145,48 @@ paths:
           tool_version: 1
           signals:
             - extraction_detected
-        adapter:
-          name: etsy
-          operation: getListingDetail
+        extraction:
+          type: page_global_data
+          page_url: /listing/{listingId}
+          expression: |
+            (() => {
+              const pathMatch = location.pathname.match(/\/listing\/(\d+)/);
+              const listingId = pathMatch ? pathMatch[1] : '';
+              let product = null;
+              for (const s of document.querySelectorAll('script[type="application/ld+json"]')) {
+                try {
+                  const d = JSON.parse(s.textContent || '');
+                  if (d && d['@type'] === 'Product') { product = d; break; }
+                } catch {}
+              }
+              if (!product) return null;
+              const offers = product.offers || {};
+              const rating = product.aggregateRating || {};
+              const brand = product.brand || {};
+              const imgs = document.querySelectorAll('img[src*="etsystatic.com"][src*="il_"]');
+              const photoSet = new Set();
+              for (const img of imgs) {
+                const src = img.src || '';
+                if (src.includes('il_fullxfull') || src.includes('il_794x')) photoSet.add(src);
+              }
+              const photos = [...photoSet].slice(0, 10);
+              return {
+                listingId: String(product.sku || listingId),
+                title: String(product.name || ''),
+                url: String(product.url || ''),
+                description: String(product.description || ''),
+                price: offers.price ? Number(offers.price) : null,
+                currency: String(offers.priceCurrency || 'USD'),
+                availability: String(offers.availability || '').replace('https://schema.org/', ''),
+                shopName: String(brand.name || ''),
+                category: String(product.category || ''),
+                material: product.material ?? null,
+                rating: rating.ratingValue ? Number(rating.ratingValue) : null,
+                reviewCount: rating.reviewCount ? Number(rating.reviewCount) : null,
+                photos,
+                image: String(product.image || ''),
+              };
+            })()
       parameters:
         - name: listingId
           in: path
@@ -200,9 +272,40 @@ paths:
           tool_version: 1
           signals:
             - extraction_detected
-        adapter:
-          name: etsy
-          operation: getReviews
+        extraction:
+          type: page_global_data
+          page_url: /listing/{listingId}
+          expression: |
+            (() => {
+              const pathMatch = location.pathname.match(/\/listing\/(\d+)/);
+              const listingId = pathMatch ? pathMatch[1] : '';
+              let product = null;
+              for (const s of document.querySelectorAll('script[type="application/ld+json"]')) {
+                try {
+                  const d = JSON.parse(s.textContent || '');
+                  if (d && d['@type'] === 'Product') { product = d; break; }
+                } catch {}
+              }
+              if (!product) return null;
+              const aggregateRating = product.aggregateRating || {};
+              const rawReviews = Array.isArray(product.review) ? product.review : [];
+              const reviews = rawReviews.map(r => {
+                const reviewRating = r.reviewRating || {};
+                const author = r.author || {};
+                return {
+                  rating: reviewRating.ratingValue ? Number(reviewRating.ratingValue) : null,
+                  text: String(r.reviewBody || ''),
+                  author: String(author.name || ''),
+                  date: String(r.datePublished || ''),
+                };
+              });
+              return {
+                listingId,
+                averageRating: aggregateRating.ratingValue ? Number(aggregateRating.ratingValue) : null,
+                totalReviews: aggregateRating.reviewCount ? Number(aggregateRating.reviewCount) : null,
+                reviews,
+              };
+            })()
       parameters:
         - name: listingId
           in: path
@@ -272,9 +375,43 @@ paths:
           tool_version: 1
           signals:
             - extraction_detected
-        adapter:
-          name: etsy
-          operation: getShop
+        extraction:
+          type: page_global_data
+          page_url: /shop/{shopName}
+          expression: |
+            (() => {
+              const pathMatch = location.pathname.match(/\/shop\/([^/?#]+)/);
+              const shopName = pathMatch ? decodeURIComponent(pathMatch[1]) : '';
+              let org = null;
+              for (const s of document.querySelectorAll('script[type="application/ld+json"]')) {
+                try {
+                  const d = JSON.parse(s.textContent || '');
+                  if (d && d['@type'] === 'Organization') { org = d; break; }
+                } catch {}
+              }
+              if (!org) return null;
+              const rating = org.aggregateRating || {};
+              const employees = Array.isArray(org.employee) ? org.employee : [];
+              const text = document.body?.innerText || '';
+              const salesMatch = text.match(/([\d,.]+[kK]?)\s*sales/i);
+              const yearsMatch = text.match(/(\d+)\s+years?\s+on\s+Etsy/i);
+              const itemCount = document.querySelectorAll('[data-listing-id]').length;
+              return {
+                shopName: String(org.name || shopName),
+                description: String(org.description || ''),
+                url: String(org.url || ''),
+                logo: String(org.logo || ''),
+                location: String(org.location || ''),
+                slogan: org.slogan ? String(org.slogan) : null,
+                owner: employees[0] ? String(employees[0].name || '') : null,
+                rating: rating.ratingValue ? Number(rating.ratingValue) : null,
+                reviewCount: rating.reviewCount ? Number(rating.reviewCount) : null,
+                sales: salesMatch ? salesMatch[1] : null,
+                yearsOnEtsy: yearsMatch ? Number.parseInt(yearsMatch[1]) : null,
+                activeListings: itemCount,
+                image: org.image ? String(org.image) : null,
+              };
+            })()
       parameters:
         - name: shopName
           in: path
