@@ -287,65 +287,9 @@ paths:
           verified: true
           signals:
             - page_global_data
-        extraction:
-          type: page_global_data
-          page_url: https://www.producthunt.com/posts/{slug}
-          expression: |
-            (() => {
-              const client = window.__APOLLO_CLIENT__;
-              if (!client) return null;
-              const cache = client.cache.extract();
-              const slug = (location.pathname.split('/posts/')[1] || '').split('/')[0].split('?')[0];
-              const resolveRef = (r) => (r && typeof r === 'object' && '__ref' in r) ? (cache[r.__ref] ?? null) : r;
-              const extractTagline = (e) => {
-                if (!e) return null;
-                if (e.tagline) return e.tagline;
-                const k = Object.keys(e).find(x => x.startsWith('tagline('));
-                return k ? e[k] : null;
-              };
-              let product = null, post = null;
-              for (const k of Object.keys(cache)) {
-                const entry = cache[k];
-                if (!entry) continue;
-                if (!product && entry.__typename === 'Product' && entry.slug === slug) product = entry;
-                if (!post && entry.__typename === 'Post' && entry.slug === slug) post = entry;
-                if (product && post) break;
-              }
-              if (!product && !post) return null;
-              const makers = [];
-              for (const k of Object.keys(cache)) {
-                if (!k.startsWith('User')) continue;
-                const u = cache[k];
-                if (u && u.name) makers.push({ name: u.name, username: u.username ?? null, headline: u.headline ?? null });
-              }
-              const categories = [];
-              if (product && product.categories) {
-                for (const ref of product.categories) {
-                  const c = resolveRef(ref);
-                  if (c && c.name) categories.push(c.name);
-                }
-              }
-              return {
-                id: (product && product.id) || (post && post.id),
-                name: (product && product.name) || (post && post.name),
-                slug: (product && product.slug) || (post && post.slug),
-                tagline: (product && product.tagline) || extractTagline(post),
-                description: (product && product.description) || (post && post.description) || null,
-                websiteUrl: (product && product.websiteUrl) || null,
-                votesCount: (post && post.latestScore) || 0,
-                commentsCount: (post && post.commentsCount) || 0,
-                dailyRank: (post && post.dailyRank) || null,
-                createdAt: (post && post.createdAt) || null,
-                featuredAt: (post && post.featuredAt) || null,
-                followersCount: (product && product.followersCount) || 0,
-                reviewsCount: (product && product.reviewsCount) || 0,
-                reviewsRating: (product && product.reviewsRating) || 0,
-                categories,
-                makers: makers.slice(0, 10),
-                thumbnailUrl: (post && post.thumbnailImageUuid) ? ('https://ph-files.imgix.net/' + post.thumbnailImageUuid + '?auto=format&fit=crop&h=150&w=150') : null,
-                logoUrl: (product && product.logoUuid) ? ('https://ph-files.imgix.net/' + product.logoUuid + '?auto=format&fit=crop&h=150&w=150') : null,
-              };
-            })()
+        adapter:
+          name: producthunt
+          operation: getPost
       parameters:
         - name: slug
           in: query
