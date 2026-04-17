@@ -312,15 +312,15 @@ const runner: CustomRunner = {
     }
 
     // GraphQL pathfinder operation
-    const config = graphqlConfig!
-    const variables = { ...config.defaultVariables, ...params }
+    if (!graphqlConfig) throw errors.unknownOp(operation)
+    const variables = { ...graphqlConfig.defaultVariables, ...params }
 
     try {
-      return await pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+      return await pathfinderFetch(page, graphqlConfig, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
     } catch (err) {
       if (isNeedsLogin(err)) {
         cachedTokens = await extractToken(page, errors)
-        return pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+        return pathfinderFetch(page, graphqlConfig, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
       }
       throw err
     }

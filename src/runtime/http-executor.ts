@@ -134,24 +134,6 @@ export async function executeOperation(
     const hasServer = !!(operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url)
     const serverUrlForAuth = hasServer ? getServerUrl(spec, operationRef.operation, adapterParams) : ''
     const authPrimitive = serverExt?.auth
-    // Runtime default for isAuthenticated: "auth primitive resolves" = configured.
-    // Real validity is only confirmed by the first real call below — that's the
-    // design contract; adapters that probe for validity must override.
-    const resolveAuthFallback = authPrimitive
-      ? async (page: import('patchright').Page) => {
-          try {
-            await resolveAuth(
-              { page, context: page.context() },
-              authPrimitive,
-              serverUrlForAuth,
-              { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator ?? validateSSRF },
-            )
-            return true
-          } catch {
-            return false
-          }
-        }
-      : undefined
     const resolveAuthResult = authPrimitive
       ? async (page: import('patchright').Page | null) => {
           if (!page) return undefined
@@ -167,7 +149,7 @@ export async function executeOperation(
           }
         }
       : undefined
-    const adapterOptions = { requiresAuth, resolveAuth: resolveAuthFallback, resolveAuthResult }
+    const adapterOptions = { requiresAuth, resolveAuthResult }
 
     /** Single adapter attempt: acquire browser → find/create page → execute */
     const adapterAttempt = async (): Promise<unknown> => {

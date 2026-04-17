@@ -4,38 +4,32 @@ import { pathToFileURL } from 'node:url'
 
 import type { BrowserContext, Page } from 'patchright'
 
-import { TIMEOUT } from '../lib/config.js'
 import { OpenWebError, toOpenWebError } from '../lib/errors.js'
 import { pageFetch, graphqlFetch, ssrExtract, jsonLdExtract, domExtract } from '../lib/adapter-helpers.js'
 import type {
   AdapterErrorHelpers,
   AdapterHelpers,
   AuthResult,
-  CodeAdapter,
   CustomRunner,
-  LoadedAdapter,
   PreparedContext,
 } from '../types/adapter.js'
-import { isCustomRunner } from '../types/adapter.js'
 import { detectPageBotBlock } from './bot-detect.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
 import { type PagePlan, acquirePage } from './page-plan.js'
 import { warmSession } from './warm-session.js'
 
-const adapterCache = new Map<string, LoadedAdapter>()
+const adapterCache = new Map<string, CustomRunner>()
 
 function preferTypeScriptAdapter(): boolean {
   return process.argv[1]?.endsWith('.ts') ?? false
 }
 
 /**
- * Load an adapter from the site package's adapters/ directory. The module's
- * default export may be either a `CodeAdapter` (init/execute/isAuthenticated)
- * or a `CustomRunner` (single `run(ctx)` method). When both shapes are
- * present, `CustomRunner` wins — clearer intent.
+ * Load a CustomRunner adapter from the site package's adapters/ directory.
+ * The module's default export must expose `run(ctx)`.
  * Tries .js first (production builds), then .ts (dev mode under tsx).
  */
-export async function loadAdapter(siteRoot: string, adapterName: string): Promise<LoadedAdapter> {
+export async function loadAdapter(siteRoot: string, adapterName: string): Promise<CustomRunner> {
   // Validate adapter name — prevent path traversal
   if (adapterName.includes('/') || adapterName.includes('\\') || adapterName.includes('..')) {
     throw new OpenWebError({
@@ -63,7 +57,7 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
         path.join(adapterDir, `${adapterName}.ts`),
       ]
 
-  let adapter: LoadedAdapter | undefined
+  let adapter: CustomRunner | undefined
   let lastError: Error | undefined
   let foundFile = false
   for (const filePath of candidates) {
@@ -73,13 +67,13 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
       const fileUrl = pathToFileURL(filePath).href
       const mod = await import(fileUrl) as { default?: unknown; run?: unknown }
       const candidate = (mod.default ?? (typeof mod.run === 'function' ? mod : undefined)) as
-        | Partial<CodeAdapter & CustomRunner>
+        | Partial<CustomRunner>
         | undefined
-      if (candidate && (typeof candidate.run === 'function' || typeof candidate.execute === 'function')) {
-        adapter = candidate as LoadedAdapter
+      if (candidate && typeof candidate.run === 'function') {
+        adapter = candidate as CustomRunner
         break
       }
-      lastError = new Error(`${filePath}: module has no valid adapter export (expected \`run\` or \`execute\`)`)
+      lastError = new Error(`${filePath}: module has no valid adapter export (expected \`run\`)`)
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err))
     }
@@ -103,7 +97,7 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
       message: foundFile
         ? `Adapter "${adapterName}" has no valid adapter export in ${adapterDir}`
         : `Adapter "${adapterName}" not found in ${adapterDir}`,
-      action: 'Ensure the adapter file exists and exports a CodeAdapter or CustomRunner.',
+      action: 'Ensure the adapter file exists and exports a CustomRunner (object with `run`).',
       retriable: false,
       failureClass: 'fatal',
     })
@@ -114,119 +108,23 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
 }
 
 export interface AdapterExecOptions {
-  /** When false, skip the auth check entirely. Default: true. */
+  /** When false, skip the auth-resolution step entirely. Default: true. */
   readonly requiresAuth?: boolean
-  /** Fallback authentication check invoked when the adapter doesn't export
-   *  `isAuthenticated`. Returning true means the declared auth primitive
-   *  resolved — i.e. credentials are *configured*, not validated. A following
-   *  real request will still surface needs_login if credentials are invalid. */
-  readonly resolveAuth?: (page: Page) => Promise<boolean>
-  /** For CustomRunner: eagerly resolve the spec auth primitive and hand the
-   *  result to `run(ctx)`. When omitted, `ctx.auth` is undefined and the
-   *  runner is expected to read credentials from the page itself. */
+  /** Eagerly resolve the spec auth primitive and hand the result to
+   *  `run(ctx)`. When omitted, `ctx.auth` is undefined and the runner is
+   *  expected to read credentials from the page itself. */
   readonly resolveAuthResult?: (page: Page | null) => Promise<AuthResult | undefined>
-  /** For CustomRunner: interpolated server URL exposed via `ctx.serverUrl`. */
+  /** Interpolated server URL exposed via `ctx.serverUrl`. */
   readonly serverUrl?: string
 }
 
 /**
- * Execute an adapter operation. Dispatches to the CustomRunner path when the
- * module exports `run`; otherwise runs the CodeAdapter init/auth/execute pipeline.
+ * Execute a CustomRunner: resolve auth eagerly, warm the session, invoke
+ * `run(ctx)`, then apply the post-call bot-detection guard. PagePlan (runtime
+ * default) already delivered a ready page; auth failures surface as real-call
+ * errors inside `run`.
  */
 export async function executeAdapter(
-  page: Page | null,
-  adapter: LoadedAdapter,
-  operation: string,
-  params: Readonly<Record<string, unknown>>,
-  options?: AdapterExecOptions,
-): Promise<unknown> {
-  if (isCustomRunner(adapter)) {
-    return executeCustomRunner(page, adapter, operation, params, options)
-  }
-
-  // When page is null (transport:node), skip all browser-dependent steps
-  if (!page) {
-    const result = await adapter.execute(null, operation, params, buildHelpers())
-    return result
-  }
-
-  await ensurePagePolyfills(page)
-
-  if (adapter.init) {
-    let ready = await adapter.init(page)
-    if (!ready) {
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await page.waitForTimeout(TIMEOUT.adapterRetry)
-      ready = await adapter.init(page)
-    }
-    if (!ready) {
-      if (options?.requiresAuth !== false) {
-        throw new OpenWebError({
-          error: 'auth',
-          code: 'AUTH_FAILED',
-          message: `Adapter "${adapter.name}" failed to initialize — site may require login.`,
-          action: 'Log in to the site and try again.',
-          retriable: true,
-          failureClass: 'needs_login',
-        })
-      }
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `Adapter "${adapter.name}" failed to initialize.`,
-        action: 'Ensure the site is loaded and the page is ready.',
-        retriable: true,
-        failureClass: 'retriable',
-      })
-    }
-  }
-
-  if (options?.requiresAuth !== false) {
-    const authenticated = adapter.isAuthenticated
-      ? await adapter.isAuthenticated(page)
-      : options?.resolveAuth ? await options.resolveAuth(page) : true
-    if (!authenticated) {
-      throw new OpenWebError({
-        error: 'auth',
-        code: 'AUTH_FAILED',
-        message: `Adapter "${adapter.name}": not authenticated.`,
-        action: 'Log in to the site and try again.',
-        retriable: true,
-        failureClass: 'needs_login',
-      })
-    }
-  }
-
-  // Warm the session before executing — lets bot-detection sensors generate
-  // valid cookies. Per-page WeakSet cache makes repeat calls a no-op.
-  await warmSession(page, page.url())
-
-  const result = await adapter.execute(page, operation, params, buildHelpers())
-
-  // Post-execution bot detection: catch adapters that silently scrape CAPTCHA pages
-  const botSignal = await detectPageBotBlock(page)
-  if (botSignal) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Bot detection on page: ${botSignal}`,
-      action: 'Solve CAPTCHA in visible browser, then retry.',
-      retriable: true,
-      failureClass: 'bot_blocked',
-    })
-  }
-
-  return result
-}
-
-/**
- * CustomRunner dispatch: resolve auth eagerly, warm the session, invoke
- * `run(ctx)`, then apply the post-call bot-detection guard. Init /
- * isAuthenticated hooks don't exist on this interface — PagePlan (runtime
- * default) already delivered a ready page and auth failures surface as
- * real-call errors inside `run`.
- */
-async function executeCustomRunner(
   page: Page | null,
   runner: CustomRunner,
   operation: string,
@@ -311,7 +209,7 @@ export async function executeAdapterWithAcquire(
   context: BrowserContext,
   serverUrl: string,
   plan: PagePlan,
-  adapter: LoadedAdapter,
+  adapter: CustomRunner,
   operation: string,
   params: Readonly<Record<string, unknown>>,
   options?: AdapterExecOptions,

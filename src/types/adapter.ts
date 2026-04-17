@@ -51,36 +51,11 @@ export interface PreparedContext {
   readonly serverUrl: string
 }
 
-/** Minimal adapter surface: a single `run(ctx)` entry point. The runtime
- *  performs page acquisition (PagePlan), auth resolution, warm-up, and
- *  post-call bot detection — the runner just executes the operation. */
+/** Adapter surface: a single `run(ctx)` entry. The runtime performs page
+ *  acquisition (PagePlan), auth resolution, warm-up, and post-call bot
+ *  detection — the runner just executes the operation. */
 export interface CustomRunner {
   readonly name: string
   readonly description: string
   run(ctx: PreparedContext): Promise<unknown>
-}
-
-export type LoadedAdapter = CodeAdapter | CustomRunner
-
-export function isCustomRunner(adapter: LoadedAdapter): adapter is CustomRunner {
-  return typeof (adapter as { run?: unknown }).run === 'function'
-    && typeof (adapter as { execute?: unknown }).execute !== 'function'
-}
-
-export interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-
-  /** Optional. When absent the runtime-level PagePlan (navigation + ready
-   *  selector + settle + warm) is the adapter's init. Only implement this when
-   *  the adapter needs page-specific bootstrapping beyond PagePlan (e.g.
-   *  priming a global variable, opening a side-panel, waiting for a dynamic
-   *  element that isn't expressible as a single ready selector). */
-  init?(page: Page): Promise<boolean>
-  /** Optional. When absent the runtime treats "auth primitive resolves
-   *  successfully" as authenticated (i.e. credentials configured, not
-   *  validated). Override this for adapters that must probe for actual
-   *  credential validity (e.g. fetch /me and check for login_required). */
-  isAuthenticated?(page: Page): Promise<boolean>
-  execute(page: Page | null, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown>
 }
