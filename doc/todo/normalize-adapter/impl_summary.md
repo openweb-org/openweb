@@ -1,6 +1,6 @@
 # Adapter Normalization v2 — Implementation Summary
 
-Branch: `task/normalize-adapter` · 64 commits · 18 tasks · 5 phase handoff docs.
+Branch: `task/normalize-adapter` · 65 commits · 18 tasks · 5 phase handoff docs + design docs.
 
 ## Goal Recap
 
@@ -8,15 +8,20 @@ Move common lifecycle, request, and extraction behavior from per-site adapters i
 
 ## Outcome — Hard Numbers
 
-| Metric | Before | After | Δ |
-|---|---|---|---|
-| Adapter-backed operations | 378 | **323** | −55 (−14.5%) |
-| Sites with adapter code | 60 | **53** | −7 (deleted: substack, fidelity, weibo, ebay, douban, yelp, etsy, boss, goodrx, zhihu) |
-| Lines of adapter TS removed | — | ~6 800 | trimmed sites: ~2 000 add'l |
-| Sites passing `pnpm dev verify` | 93 | 93 | maintained |
-| Adapter interfaces | 1 (`CodeAdapter`) | **1 (`CustomRunner`)** | unified contract, init/isAuth gone |
+Baselines: `main` at `7cfdf7d` (before this branch). Measurements verified by running `scripts/adapter-inventory.ts` against both states and counting files on disk.
 
-**Verify pass rate after CustomRunner migration**: 108/112 ops PASS (96.4%) — 4 misses are environmental (browser tab race, upstream API drift), not regressions.
+| Metric | Main (before) | Branch HEAD (after) | Δ |
+|---|---|---|---|
+| Adapter-backed operations | **380** | 323 | −57 (−15.0%) |
+| Sites with adapter dirs | 60 | 49 | −11 |
+| Adapter `.ts` files | 63 | 53 | −10 (deleted: zhihu, substack, fidelity, weibo, ebay, douban, yelp, etsy, boss, goodrx) |
+| Adapter TS total lines | 20 888 | 17 065 | **−3 823 (−18.3%)** |
+| Sites passing `pnpm dev verify` | 93 | 93 | maintained |
+| Adapter interfaces | `CodeAdapter` + (new) `CustomRunner` dual | single `CustomRunner` | CodeAdapter + init/isAuth gone |
+
+**Verify pass rate after CustomRunner migration** (Phase 5C scope): 108/112 ops PASS (96.4%) — 4 misses are environmental (bilibili browser-tab race, x Twitter API drift), not regressions; `na-verify-regressions` task tracks follow-up.
+
+**Note on intermediate baseline:** Phase 0 (commit 5624b8c) was the first op removal, dropping the count from 380 → 378 before the "inventory baseline" was captured. Several downstream handoff docs cite "378 baseline" for that reason — it's the Phase 1 baseline, not the milestone baseline.
 
 ## What Landed
 
@@ -92,29 +97,38 @@ paths:
 
 ## Runtime Gaps Surfaced — Concrete Backlog
 
-The migration honestly hit 7 primitive gaps that block specific op classes from converting. Each has a clear unblock path:
+The migration honestly hit 7 primary primitive gaps plus several smaller composition/transform gaps. Each has a clear unblock path:
+
+**Primary gaps (each has a dedicated `na-rt-*` task):**
 
 | Gap | Unblocks | Estimate |
 |---|---|---|
-| Multi-match + `@type` filter on `script_json` | booking `getHotelDetail` (and any LD+JSON site with multiple `@type` blocks) | xs (~30 LoC) |
-| Response-transform primitive (declarative `mapping: { … }` from JSONPath) | costco 14 ops, booking reshape, hackernews `response_wrap`, several thin-adapter survivors | m (new primitive) |
-| GET-flavor APQ for `graphql_hash` | airbnb 2 ops, any Relay-style API | s |
-| `browser_fetch` `TypeError: Failed to fetch` normalization (matches adapter `pageFetch` behavior) | grubhub 3 ops, likely other cross-origin API gateways | s |
-| `warmSession` on page origin (not API server) | apple-podcasts 4 ops, any site whose entry page differs from the API origin | xs |
-| Param-level template into query values (e.g. `tags=story,author_{id}`) | hackernews 3 reads | s |
-| Patched-fetch reuse for `response_capture` (attach listener to warmed signing-enabled page) | tiktok read intercepts (X-Bogus / X-Gnarly), other signed-fetch sites | l (architectural — trades safety for capability) |
+| Multi-match + `@type` filter on `script_json` | booking `getHotelDetail` + any multi-block LD+JSON site | xs (~30 LoC) |
+| `response_transform` primitive (JSONPath mapping) | hackernews `response_wrap`, booking Hotel reshape, simple thin-adapter survivors. **Does NOT alone unlock costco** — see secondary gaps below. | m (new primitive) |
+| GET-flavor APQ for `graphql_hash` | airbnb 2 ops, Relay-style APIs | s |
+| `browser_fetch` `TypeError: Failed to fetch` normalization | grubhub 3 ops, cross-origin API gateway class | s |
+| `warmSession` on page origin (not API server) | apple-podcasts 4 ops | xs |
+| Param-level template into query values | hackernews 3 reads | s |
+| Patched-fetch reuse for `response_capture` | tiktok read intercepts (architectural tradeoff — loses listener-before-goto safety) | l |
 
-## Production Deployment — Critical
+**Secondary gaps surfaced in handoffs but larger scope:**
 
-**Compiled `dist/sites/*/adapters/*.js` still ship the old `CodeAdapter` shape.** Until `pnpm build` regenerates them and the skill is reinstalled at user sites, runtime will fail to load with:
+- **Multi-call composition** (phase3 pure-spec handoff:70) — chain ops together e.g. username→userId→feed. Not in any current task. Blocks instagram-class sites from reducing further.
+- **Array filter + aggregation transforms** — costco needs `attributes[].name→value` collapse, service-code lookup, hours formatting, etc. `response_transform` alone (simple JSONPath) handles maybe half. Honest scope for costco: `response_transform` + declarative array reducers.
+- **Apollo `__ref` resolution** for SSR state — mentioned in phase3-extraction handoff; goodreads/booking Apollo SSR needs follow-pointer traversal.
+- **HTML regex extraction** — for inline `<script>` JSON embedded with surrounding noise (not a fixed JSON block).
+- **Slug/path transform** (e.g. zillow regionId→slug lookup table) — site-specific but a general "lookup table" primitive might compose.
+- **Inventory classifier refinement** (phase4 handoff:57) — `capture-simple` bucket misclassifies signed-fetch sites. Not a runtime gap, but blocks accurate planning.
 
-```
-module has no valid adapter export (expected `run`)
-```
+Tasks for multi-call composition, array reducers, Apollo `__ref`, classifier refinement are **NOT yet in the backlog** — add if the next milestone needs them.
 
-Two unblockers:
-1. **Dev/verify in this worktree:** loader prefers `.ts` under tsx — already working.
-2. **Production:** `pnpm build` → reinstall `~/.openweb/sites/<site>/adapters/*.js` via the skill bundle.
+## Production Deployment — Ship Discipline
+
+**Current `dist/cli.js` still accepts BOTH `run` and `execute` exports** (legacy loader kept the dual shape). So a user who runs the installed `@openweb-org/openweb` today against the migrated `.js` in `~/.openweb/sites/<site>/adapters/` will NOT see an immediate "no valid adapter export" error. The real failure mode is **post-rebuild**: once `pnpm build` regenerates dist against the new single-shape loader (41850f2), any site whose compiled `.js` still references `CodeAdapter` or `init`/`isAuthenticated` will fail to load.
+
+Unblockers:
+1. **Dev/verify in this worktree:** loader prefers `.ts` under tsx — working today.
+2. **Production release:** `pnpm build` → verify no `.js` references `CodeAdapter` → reinstall `~/.openweb/sites/<site>/adapters/*.js` via the skill bundle. Track in `na-prod-deploy`.
 
 ## Lessons Learned (Honest)
 
