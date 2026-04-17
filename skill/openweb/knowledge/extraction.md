@@ -27,6 +27,7 @@ Server-rendered Next.js pages embed JSON in a `<script id="__NEXT_DATA__">` tag.
 - **Transport:** node (fetch HTML, parse) or page (query DOM)
 - **Example:** `JSON.parse(document.getElementById('__NEXT_DATA__').textContent).props.pageProps`
 - **Gotcha:** Some Next.js sites use client-side fetching -- `__NEXT_DATA__` exists but contains only a skeleton. Verify the data you need is actually in `pageProps`.
+- **Apollo cache:** If `pageProps.apolloState` (or similar) contains `{ __ref: "TypeName:id" }` pointers, set `resolve_apollo_refs: true` on the primitive and the runtime will deep-walk the extracted value, substituting refs from the cache. Used by Goodreads (`apolloState` as raw response).
 
 ## __NUXT__
 

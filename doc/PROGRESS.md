@@ -1,3 +1,22 @@
+## 2026-04-17: runtime — Apollo __ref resolution for SSR extraction
+
+**What changed:**
+- Added `src/runtime/apollo-refs.ts` (`resolveApolloRefs(value, cache)`): deep-walks a value, substitutes every `{ __ref: "TypeName:id" }` pointer with its target from the Apollo cache. Recursive, depth-capped at 32, cycles break by leaving the `__ref` sentinel in place.
+- Extended `ssr_next_data` and `page_global_data` extraction primitives with `resolve_apollo_refs: boolean` and optional `apollo_cache_path: string`. Wired through browser-backed resolvers (`primitives/ssr-next-data.ts`, `primitives/page-global-data.ts`) AND the node-only path (`node-ssr-executor.ts`).
+- Migrated `goodreads getBook` from custom adapter to spec: `ssr_next_data` at `props.pageProps.apolloState` with `resolve_apollo_refs: true`. Response shape changes to the raw Apollo cache (caller looks up `Book:<id>`), per raw-API principle.
+- Unit tests: `apollo-refs.test.ts` (3 tests — 2-level chain, unresolvable refs, cycle), and an integration test in `extraction-resolvers.test.ts` for the primitive flag.
+
+**Why:**
+- Apollo-cached SSR pages (Goodreads, Booking) blocked Phase 3 extraction because the cache stores linked entities as `__ref` pointers, not inline objects. Adapters were resolving these manually. Making it a primitive flag unblocks that class of sites and removes one more reason to write a bespoke adapter.
+
+**Key files:** `src/runtime/apollo-refs.ts`, `src/runtime/primitives/{ssr-next-data,page-global-data}.ts`, `src/runtime/node-ssr-executor.ts`, `src/types/primitives.ts`, `src/types/primitive-schemas.ts`, `src/sites/goodreads/openapi.yaml`
+**Verification:** `pnpm exec vitest run src/runtime/apollo-refs.test.ts src/runtime/primitives/extraction-resolvers.test.ts src/runtime/node-ssr-executor.test.ts src/types/validator.test.ts` — 102/102 passed. `pnpm build` clean. Lint clean on changed files.
+**Commit:** 3b38519
+**Next:** task `na-rt-apollo-ref` ✓ closed; continue ready-task queue in `doc/todo/normalize-adapter/next-session.md`.
+**Blockers:** None.
+
+---
+
 ## 2026-04-17: normalize-adapter guardrails — pattern report + CI ratchet
 
 **What changed:**

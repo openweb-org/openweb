@@ -33,7 +33,7 @@ Read `doc/todo/tasks.json`, filter `parent: normalize-adapter`, `state: ready`. 
 - `na-rt-get-apq` — GET-flavor APQ for `graphql_hash` (unblocks airbnb 2 ops)
 
 **Borderline / lower priority:**
-- `na-rt-apollo-ref` — `__ref` resolution for Apollo SSR (goodreads, booking SSR)
+- `na-rt-apollo-ref` — ✅ done (`3b38519`). `resolve_apollo_refs` + `apollo_cache_path` flags on `ssr_next_data` / `page_global_data`. Goodreads `getBook` migrated to spec (raw Apollo cache).
 - `na-classifier-refinement` — **DONE** (`ece57cb`): `capture-signed` bucket added; centralised-signing sites moved to `custom-permanent`. `capture-simple` dropped 23 → 4.
 
 **Third wave:**

@@ -109,7 +109,7 @@ The migration hit 5 primary primitive gaps, each with a dedicated `na-rt-*` task
 
 **Borderline, lower priority:**
 
-- `na-rt-apollo-ref` — resolve `__ref` pointers in SSR extraction for Apollo-framework sites (goodreads / booking SSR). Framework-specific extraction helper, same category as existing `ssr_next_data` for Next.js.
+- `na-rt-apollo-ref` — ✅ done (`3b38519`). `resolve_apollo_refs` + `apollo_cache_path` on `ssr_next_data` / `page_global_data`: deep-walks extracted values and substitutes `{ __ref: "TypeName:id" }` pointers from the Apollo cache. Goodreads `getBook` migrated off adapter to spec (returns raw apolloState).
 - `na-classifier-refinement` — inventory classifier demote `capture-simple` bucket when signing/interceptApi evidence present (tiktok was misclassified).
 
 These are `wire-level` / `framework-specific extraction` / `tooling` — distinct from the cancelled response-reshape + chain + tiktok-signed-capture tasks, which are all client-side concerns that don't belong in runtime.

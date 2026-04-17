@@ -102,8 +102,8 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 
 | Type | Fields | Description |
 |------|--------|-------------|
-| `ssr_next_data` | `page_url?`, `path` | Extract from Next.js `__NEXT_DATA__` JSON |
-| `page_global_data` | `page_url?`, `expression?`, `path?`, `adapter?`, `method?` | Read a `window.*` global variable |
+| `ssr_next_data` | `page_url?`, `path`, `resolve_apollo_refs?`, `apollo_cache_path?` | Extract from Next.js `__NEXT_DATA__` JSON. Set `resolve_apollo_refs: true` to deep-walk `{ __ref: "TypeName:id" }` pointers against the Apollo cache (defaults to the extracted value; override with `apollo_cache_path`) |
+| `page_global_data` | `page_url?`, `expression?`, `path?`, `adapter?`, `method?`, `resolve_apollo_refs?`, `apollo_cache_path?` | Read a `window.*` global variable. Same `resolve_apollo_refs` semantics as `ssr_next_data` |
 | `html_selector` | `page_url?`, `selectors`, `attribute?`, `multiple?` | CSS selector on the DOM |
 | `script_json` | `selector`, `path?`, `strip_comments?`, `type_filter?`, `multi?` | Parse `<script>` JSON blocks. `strip_comments: true` unwraps `<!-- -->`-wrapped JSON (Yelp-style). `type_filter` picks ld+json by `@type` (string or string[]); `multi: true` returns all matching blocks as array |
 | `response_capture` | `match_url` (glob), `page_url?`, `wait_until?`, `unwrap?` | Navigate via PagePlan and capture the first network response matching `match_url`. Listener installed before `page.goto` — always forces fresh navigation |
