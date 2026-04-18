@@ -1,0 +1,15 @@
+{
+  "operation_id": "unstarProject",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 2,
+  "cases": [
+    {
+      "input": { "projectId": 81206763 },
+      "assertions": {
+        "status": 201,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

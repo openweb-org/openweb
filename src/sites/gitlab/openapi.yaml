@@ -823,7 +823,7 @@ paths:
           type: integer
         description: The ID or URL-encoded path of the project.
       responses:
-        '200':
+        '201':
           description: Project unstarred successfully.
           content:
             application/json:
