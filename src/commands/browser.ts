@@ -54,8 +54,15 @@ export async function copyProfileSelective(src: string, dest: string): Promise<v
   await mkdir(dest, { recursive: true, mode: 0o700 })
 
   // Only copy files needed for auth: Cookies, Local Storage (leveldb only), Session Storage, IndexedDB, Web Data
+  // SQLite WAL/SHM sidecars (-wal, -shm) are critical when source Chrome is running — without them the
+  // copied DB snapshots only the last checkpoint and misses the most recent uncommitted transactions
+  // (i.e. the active session's logins).
   const relevantDirs = ['Session Storage', 'IndexedDB']
-  const relevantFiles = ['Cookies', 'Cookies-journal', 'Web Data', 'Web Data-journal', 'Preferences', 'Secure Preferences']
+  const relevantFiles = [
+    'Cookies', 'Cookies-journal', 'Cookies-wal', 'Cookies-shm',
+    'Web Data', 'Web Data-journal', 'Web Data-wal', 'Web Data-shm',
+    'Preferences', 'Secure Preferences',
+  ]
 
   for (const file of relevantFiles) {
     const srcPath = join(src, file)
@@ -231,6 +238,20 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
       log(`Chrome already running (PID ${existingPid}) at http://localhost:${existingPort}\n`)
       return
     }
+  }
+
+  // Detect untracked Chrome already bound to the target port (e.g. user manually started one,
+  // or a previous run leaked). Two Chromes on the same port cause IPv4/IPv6 split-brain where
+  // the runtime connects to one (no auth) while CDP probes hit the other (logged in).
+  const portOwner = await discoverPidFromPort(port)
+  if (portOwner !== null && portOwner !== existingPid) {
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `Port ${port} is already bound by external process PID ${portOwner}. ` +
+        `An untracked Chrome on the same port causes session split-brain.`,
+      action: `Kill it (\`kill ${portOwner}\`) or set a different port in ${openwebHome()}/config.json under "browser.port", then retry.`,
+      retriable: false, failureClass: 'fatal',
+    })
   }
 
   // Get and copy profile

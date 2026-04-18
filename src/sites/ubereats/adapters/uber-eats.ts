@@ -41,11 +41,17 @@ async function apiCall(page: Page, helpers: Helpers, endpoint: string, body: unk
     timeout: 10_000,
   })
   if (resp.status !== 200) {
+    if (resp.status === 401 || resp.status === 403) throw helpers.errors.needsLogin()
     throw helpers.errors.fatal(`${endpoint} returned ${resp.status}`)
   }
   const data = JSON.parse(resp.text)
   if (data.status !== 'success') {
-    throw helpers.errors.fatal(`${endpoint}: ${data.data?.message || 'unknown error'}`)
+    const msg = data.data?.message || 'unknown error'
+    // Eater-scoped endpoints return {status:'failure', data.code:3} or empty {message:""} when the eater session
+    // is gone (cookie expiry / region invalidation). Surface as needs_login so refreshProfile + Tier 4 can recover.
+    const looksUnauth = data.data?.code === 3 || msg === '' || /unauth|session|status code error/i.test(msg)
+    if (looksUnauth) throw helpers.errors.needsLogin()
+    throw helpers.errors.fatal(`${endpoint}: ${msg}`)
   }
   return data.data
 }

@@ -43,11 +43,15 @@ async function gqlCall(page: Page, helpers: Helpers, endpoint: string, body: unk
     timeout: 15_000,
   })
   if (resp.status !== 200) {
+    if (resp.status === 401 || resp.status === 403) throw helpers.errors.needsLogin()
     throw helpers.errors.fatal(`GraphQL returned ${resp.status}`)
   }
   const data = JSON.parse(resp.text)
   if (data.errors?.length) {
     const msg = data.errors.map((e: { message: string }) => e.message).join('; ')
+    // Uber returns {message:"not found"} for unauthenticated GraphQL calls — surface as needs_login
+    // so the runtime auth cascade (refreshProfile + Tier 4) can recover instead of dying as fatal.
+    if (/not found|unauthorized|unauthenticated/i.test(msg)) throw helpers.errors.needsLogin()
     throw helpers.errors.fatal(`GraphQL error: ${msg}`)
   }
   return data.data
@@ -69,7 +73,7 @@ async function ensurePage(page: Page, origin: string, helpers: Helpers): Promise
   const finalUrl = page.url()
   const finalHost = (() => { try { return new URL(finalUrl).hostname } catch { return '' } })()
   if (finalHost === 'auth.uber.com' || finalHost === 'login.uber.com') {
-    throw helpers.errors.fatal(`Uber session expired — redirected to ${finalHost}. Log in to ${targetHost} in the managed browser.`)
+    throw helpers.errors.needsLogin()
   }
   if (finalHost !== targetHost) {
     throw helpers.errors.retriable(`expected ${targetHost} after nav, got ${finalUrl}`)
