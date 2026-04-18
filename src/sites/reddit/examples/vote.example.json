@@ -1,0 +1,17 @@
+{
+  "operation_id": "vote",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "id": "t3_1si747w",
+        "dir": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
