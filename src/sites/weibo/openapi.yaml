@@ -26,9 +26,6 @@ paths:
         build:
           stable_id: a3645dc7d9c37028
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: getFriendsFeed
       parameters:
       - name: list_id
         in: query
@@ -270,9 +267,6 @@ paths:
         build:
           stable_id: 7d7bf2fbf50c4d9f
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: getHotFeed
       parameters:
       - name: group_id
         in: query
@@ -537,9 +531,6 @@ paths:
         build:
           stable_id: c2d3e4f5a6b78901
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: getHotSearch
       parameters: []
       responses:
         "200":
@@ -601,9 +592,6 @@ paths:
         build:
           stable_id: 254bd0dfa3f12586
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: getUserProfile
       parameters:
       - name: uid
         in: query
@@ -702,9 +690,6 @@ paths:
         build:
           stable_id: f5a6b7c8d9e01234
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: getUserDetail
       parameters:
       - name: uid
         in: query
@@ -758,9 +743,6 @@ paths:
         build:
           stable_id: 5cbe6a8939f65367
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: getUserStatuses
       parameters:
       - name: uid
         in: query
@@ -1037,9 +1019,6 @@ paths:
         build:
           stable_id: 2defa3b7e0a39a48
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: getPost
       parameters:
       - name: id
         in: query
@@ -1276,9 +1255,6 @@ paths:
         build:
           stable_id: a6b7c8d9e0f12345
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: getLongtext
       parameters:
       - name: id
         in: query
@@ -1341,9 +1317,6 @@ paths:
         build:
           stable_id: b7c8d9e0f1a23456
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: listReposts
       parameters:
       - name: id
         in: query
@@ -1609,9 +1582,6 @@ paths:
         build:
           stable_id: d7daf592e0dd3220
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: likePost
       requestBody:
         required: true
         content:
@@ -1863,9 +1833,6 @@ paths:
         build:
           stable_id: weibo0012
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: repost
       requestBody:
         required: true
         content:
@@ -2086,9 +2053,6 @@ paths:
         build:
           stable_id: weibo0013
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: followUser
       requestBody:
         required: true
         content:
@@ -2167,9 +2131,6 @@ paths:
         build:
           stable_id: weibo0014
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: bookmarkPost
       requestBody:
         required: true
         content:
@@ -2393,9 +2354,6 @@ paths:
         build:
           stable_id: weibo0015
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: unlikePost
       requestBody:
         required: true
         content:
@@ -2428,9 +2386,6 @@ paths:
         build:
           stable_id: weibo0016
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: unfollowUser
       requestBody:
         required: true
         content:
@@ -2463,9 +2418,6 @@ paths:
         build:
           stable_id: weibo0017
           tool_version: 2
-        adapter:
-          name: weibo-web
-          operation: unbookmarkPost
       requestBody:
         required: true
         content:

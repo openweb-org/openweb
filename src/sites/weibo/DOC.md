@@ -46,12 +46,12 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 | getLongtext | full text for truncated post | id ← getPost (when isLongText=true) | longTextContent, longTextContent_raw | |
 | listReposts | post reposts | id ← getPost id (numeric) | data[], total_number | page-based |
 | likePost | like a post | id ← getPost mid | ok, attitude | SAFE: reversible |
-| repost | repost/retweet | id ← getPost mid, reason | ok, statuses | SAFE: reversible (adapter) |
-| followUser | follow a user | friend_uid ← getPost user.id | ok, data (user) | SAFE: reversible (adapter) |
-| bookmarkPost | bookmark a post | id ← getPost mid | ok, favorited_time | SAFE: reversible (adapter) |
-| unlikePost | unlike a post | id ← getPost mid | ok | CAUTION: reverses likePost (adapter) |
-| unfollowUser | unfollow a user | friend_uid ← getPost user.id | ok | CAUTION: reverses followUser (adapter) |
-| unbookmarkPost | remove bookmark | id ← getPost mid | ok | CAUTION: reverses bookmarkPost (adapter) |
+| repost | repost/retweet | id ← getPost mid, reason | ok, statuses | SAFE: reversible |
+| followUser | follow a user | friend_uid ← getPost user.id | ok, data (user) | SAFE: reversible |
+| bookmarkPost | bookmark a post | id ← getPost mid | ok, favorited_time | SAFE: reversible |
+| unlikePost | unlike a post | id ← getPost mid | ok | CAUTION: reverses likePost |
+| unfollowUser | unfollow a user | friend_uid ← getPost user.id | ok | CAUTION: reverses followUser |
+| unbookmarkPost | remove bookmark | id ← getPost mid | ok | CAUTION: reverses bookmarkPost |
 
 ## Quick Start
 
@@ -96,11 +96,10 @@ openweb weibo exec listReposts '{"id": 5281762063682574, "page": 1, "count": 10}
 - XSRF tokens rotate on every response — runtime uses fresh tokens from browser context
 
 ## Transport
-- `adapter` (`adapters/weibo-web.ts`) — all ops route through `helpers.pageFetch` (page-context `fetch`)
-- Adapter is a thin shim: parameter validation + `page.evaluate(fetch(...))`; no transformation
+- All ops use declarative `transport: page` (browser_fetch) — runtime issues `window.fetch` from the live weibo.com tab so `Origin: https://weibo.com` and `Referer` flow naturally and weibo's CSRF accepts the request.
 - Node transport is blocked by anti-bot (returns 403)
 - Requires managed browser with an open weibo.com tab
-- **Why not `browser_fetch`?** The runtime's `browser_fetch` executor uses an `about:blank` iframe to obtain a clean `fetch` reference, which sends `Origin: null` + `Sec-Fetch-Site: cross-site`. Weibo's CSRF rejects this with HTTP 403 (surfaces as `auth_expired` even with valid cookies). Page-context `fetch` preserves `Origin: https://weibo.com/`, so cookies + Origin both validate. See PROGRESS 2026-04-18 for the full root cause. If runtime gains a same-origin trampoline iframe, this adapter can be dropped.
+- CSRF resolved declaratively via `cookie_to_header` (XSRF-TOKEN → x-xsrf-token).
 
 ## Known Issues
 - **Login required** — all ops need an active Weibo session (SUB cookie)

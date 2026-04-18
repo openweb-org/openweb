@@ -234,12 +234,14 @@ export async function executeBrowserFetch(
     // before bot-detection sensors have warmed up. Retry transparently up to 2x
     // (3 attempts total) before surfacing as retriable.
     //
-    // We route the fetch through a same-origin about:blank iframe to obtain
-    // an unwrapped `fetch` reference. Page scripts (DataDog RUM, Sentry,
-    // OneTrust, etc.) routinely monkey-patch `window.fetch` and the wrappers
-    // can throw `TypeError: Failed to fetch` for our absolute-URL +
-    // credentials:'include' calls. The iframe's window has a fresh fetch
-    // that no page script has touched.
+    // First attempt uses the page's own `window.fetch` so the request carries a
+    // real same-origin `Origin` header — required by strict-CSRF sites like
+    // weibo, fidelity, anything checking Origin/Referer. If page scripts
+    // (DataDog RUM, Sentry, OneTrust, etc.) have monkey-patched `window.fetch`
+    // and that wrapper throws `TypeError: Failed to fetch` for our absolute-URL
+    // + credentials:'include' calls, we fall back to an about:blank iframe's
+    // pristine `fetch` reference. The iframe path stamps `Origin: null` (opaque
+    // origin per HTML spec), which is fine for sites that don't validate it.
     let fetchResult: { status: number; headers: Record<string, string>; text: string } | undefined
     let lastError: unknown
     const MAX_ATTEMPTS = 3
@@ -247,25 +249,35 @@ export async function executeBrowserFetch(
       try {
         fetchResult = await page.evaluate(
           async (args: { url: string; method: string; headers: Record<string, string>; body: string | undefined }) => {
-            const ifr = document.createElement('iframe')
-            ifr.style.display = 'none'
-            ifr.src = 'about:blank'
-            document.documentElement.appendChild(ifr)
-            try {
-              const win = ifr.contentWindow as (Window & typeof globalThis) | null
-              const cleanFetch: typeof fetch = win ? win.fetch.bind(win) : fetch
-              const resp = await cleanFetch(args.url, {
-                method: args.method,
-                headers: args.headers,
-                body: args.method !== 'GET' && args.method !== 'HEAD' ? args.body : undefined,
-                credentials: 'include',
-              })
+            const init: RequestInit = {
+              method: args.method,
+              headers: args.headers,
+              body: args.method !== 'GET' && args.method !== 'HEAD' ? args.body : undefined,
+              credentials: 'include',
+            }
+            const readResult = async (resp: Response) => {
               const respHeaders: Record<string, string> = {}
               resp.headers.forEach((v, k) => { respHeaders[k] = v })
               const text = await resp.text()
               return { status: resp.status, headers: respHeaders, text }
-            } finally {
-              ifr.remove()
+            }
+            try {
+              const resp = await window.fetch(args.url, init)
+              return await readResult(resp)
+            } catch (err) {
+              if (!(err instanceof TypeError)) throw err
+              const ifr = document.createElement('iframe')
+              ifr.style.display = 'none'
+              ifr.src = 'about:blank'
+              document.documentElement.appendChild(ifr)
+              try {
+                const win = ifr.contentWindow as (Window & typeof globalThis) | null
+                const cleanFetch: typeof fetch = win ? win.fetch.bind(win) : fetch
+                const resp = await cleanFetch(args.url, init)
+                return await readResult(resp)
+              } finally {
+                ifr.remove()
+              }
             }
           },
           { url: requestUrl, method: upperMethod, headers, body: requestBody },

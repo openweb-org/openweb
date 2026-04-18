@@ -1,3 +1,16 @@
+## 2026-04-18: Drop weibo-web adapter — runtime now preserves Origin in browser_fetch
+
+**What changed:**
+- Deleted `src/sites/weibo/adapters/weibo-web.ts` (~225 LOC)
+- Stripped `x-openweb.adapter` blocks from all 16 ops; ops now use declarative `transport: page` + `csrf: cookie_to_header` from server config
+- Updated `DOC.md § Transport` — adapter section removed
+
+**Why:**
+- The L3 adapter existed only to bypass `Origin: null` from runtime's about:blank iframe trampoline (weibo CSRF rejects null Origin with 403 → `auth_expired`).
+- Runtime fix in `browser-fetch-executor.ts` now tries `window.fetch` first (real Origin = `https://weibo.com`), falls back to the iframe path only on `TypeError: Failed to fetch` (page-script fetch monkey-patching).
+
+**Verification:** verify weibo --browser → 8/8 PASS (matches prior baseline with adapter).
+
 ## 2026-04-02: Fix malformed schemas (Ajv compilation)
 
 **What changed:**

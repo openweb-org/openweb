@@ -1,3 +1,14 @@
+## 2026-04-18: Drop fidelity-api adapter — declarative path now sufficient
+
+**What changed:**
+- Deleted leftover `src/sites/fidelity/adapters/fidelity-api.js` (untracked artifact, ~118 LOC)
+- Ops were already on `adapter: false` declarative path (server-level `transport: page` + `csrf: api_response` extracting `csrfToken` → `X-CSRF-TOKEN`); the adapter file was dead code.
+
+**Why:**
+- Companion to the runtime Origin fix in `browser-fetch-executor.ts` — strict-CSRF sites no longer need a per-site adapter shim. The dead adapter was kept around as a backup; with the runtime fix verified end-to-end against weibo (the canonical strict-CSRF site), the backup is unnecessary.
+
+**Verification:** verify fidelity --browser → 13/13 PASS (matches prior baseline).
+
 ## 2026-04-02: Adapter fix — 13/13 PASS
 
 **What changed:**
