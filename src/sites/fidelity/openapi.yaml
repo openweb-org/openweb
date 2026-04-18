@@ -27,9 +27,7 @@ paths:
       summary: Get real-time stock quote — price, volume, PE ratio, market cap, 52-week range, dividends, short interest
       x-openweb:
         permission: read
-        adapter:
-          name: fidelity-api
-          operation: getQuote
+        adapter: false
         build:
           stable_id: fid0001
           tool_version: 3
@@ -107,9 +105,7 @@ paths:
       summary: Get major market indices (S&P 500, DJIA, NASDAQ) with current prices and changes
       x-openweb:
         permission: read
-        adapter:
-          name: fidelity-api
-          operation: getMarketSummary
+        adapter: false
         build:
           stable_id: fid0004
           tool_version: 3
@@ -157,9 +153,7 @@ paths:
       summary: Get company profile — sector, industry, employees, address, website, description
       x-openweb:
         permission: read
-        adapter:
-          name: fidelity-api
-          operation: getCompanyProfile
+        adapter: false
         build:
           stable_id: fid0002
           tool_version: 3
@@ -215,9 +209,7 @@ paths:
       summary: Get news headlines for a stock or market topic — headline text, provider, date, impact rating
       x-openweb:
         permission: read
-        adapter:
-          name: fidelity-api
-          operation: getNewsHeadlines
+        adapter: false
         build:
           stable_id: fid0003
           tool_version: 3
@@ -274,9 +266,7 @@ paths:
       summary: Get quotes for global indices or currencies — symbol, name, percent change, ask price
       x-openweb:
         permission: read
-        adapter:
-          name: fidelity-api
-          operation: getIndexQuotes
+        adapter: false
         build:
           stable_id: fid0005
           tool_version: 3
@@ -326,9 +316,7 @@ paths:
       summary: Get analyst ratings, ETF holdings, or commentary via Fidelity research proxy
       x-openweb:
         permission: read
-        adapter:
-          name: fidelity-api
-          operation: getResearchData
+        adapter: false
         build:
           stable_id: fid0006
           tool_version: 3
@@ -384,9 +372,7 @@ paths:
       summary: Get company logo image URL for a stock symbol
       x-openweb:
         permission: read
-        adapter:
-          name: fidelity-api
-          operation: getCompanyLogo
+        adapter: false
         build:
           stable_id: fid0007
           tool_version: 3

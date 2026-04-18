@@ -41,8 +41,14 @@
 
 ## 2026-04-17 — Restore browser-context CSRF for digital.fidelity.com
 
-**Root cause of cold-start auth_expired:** The runtime's `api_response` CSRF resolver fetches `/prgw/digital/research/api/tokens` via node `fetch` (cookies copied from the browser context). The token endpoint returns the CSRF token bundled with `Set-Cookie` updates. Node-side cookies are not synced back to the browser jar, so the subsequent `page.evaluate(fetch(...))` API call presents the new CSRF token alongside the *old* cookies → 401. Symptom: any first call against a cold browser failed with `auth_expired` (most often `getCompanyLogo` because it sorts first in verify).
+**Root cause of cold-start auth_expired:** The runtime's `api_response` CSRF resolver fetched `/prgw/digital/research/api/tokens` via node `fetch` (cookies copied from the browser context). The token endpoint returns the CSRF token bundled with `Set-Cookie` updates. Node-side cookies were not synced back to the browser jar, so the subsequent `page.evaluate(fetch(...))` API call presented the new CSRF token alongside the *old* cookies → 401. Symptom: any first call against a cold browser failed with `auth_expired` (most often `getCompanyLogo` because it sorts first in verify).
 
-**Fix:** Re-introduced `adapters/fidelity-api.ts` as a `CustomRunner`. Both the CSRF token fetch and the API POST run inside the same `page.evaluate(...)`, so the browser's cookie jar stays coherent. Page navigation to `/research/quote-and-research/` is delegated to server-level `page_plan` (no `init()` needed). All 7 digital.fidelity.com ops use this adapter; 6 fundresearch.fidelity.com ops remain pure spec.
+**Initial workaround (reverted):** Re-introduced `adapters/fidelity-api.ts` as a `CustomRunner` to keep CSRF + API in one `page.evaluate`.
 
-**Verification:** Cold `pnpm dev verify fidelity` → 13/13 PASS.
+## 2026-04-18 — Drop adapter; runtime now keeps CSRF browser-coherent
+
+**Forward fix:** `src/runtime/primitives/api-response.ts` now performs the token fetch *inside* the browser context via `page.evaluate(fetch, { credentials: 'include' })`. Set-Cookie updates land in the browser's cookie jar automatically, so the follow-up API call sees a coherent cookie/token pair. The fidelity-api adapter and the per-op `adapter:` directives are no longer needed.
+
+**Changes:** Deleted `adapters/fidelity-api.ts`; reverted openapi.yaml to pure spec form (server-level `cookie_session` + `api_response` CSRF, no `page_plan`, no per-op adapter directives). All 13 ops are now spec-only.
+
+**Verification:** Cold `pnpm dev verify fidelity` → 13/13 PASS, including `getCompanyLogo` on cold start.
