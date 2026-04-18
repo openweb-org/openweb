@@ -1,20 +1,20 @@
-## 2026-04-18 — Write-op verify: clapArticle fixed; unsaveArticle blocked
+## 2026-04-18 — Write-op verify: clapArticle + unsaveArticle fixed
 
-**clapArticle:** Spec was missing `numClaps` query param. Adapter accepted it, but
-the param-validator rejected unknown keys. Added `numClaps` (1–50, default 1) to
-the operation parameters. Verified PASS via `verify medium --write --browser --ops clapArticle`.
+**clapArticle:** Spec was missing `numClaps` query param. Adapter accepted the
+value but the param-validator rejected unknown keys. Added `numClaps` (1–50,
+default 1) to the operation parameters.
 
-**unsaveArticle:** BLOCKED — upstream API removed `removeFromPredefinedCatalog`.
-Server now suggests `addToPredefinedCatalog`, but that mutation only accepts
-`PredefinedCatalogAddOperationInput` with variants `{preprend, append}` (no
-`remove` / `delete`). Probed candidate replacements:
-`removeItemsFromCatalog`, `removeFromCatalog`, `removeFromReadingList`,
-`unsavePost`, `removePredefinedCatalogItem`, `removeItemsFromPredefinedCatalog`,
-`deletePredefinedCatalogItems`, `predefinedCatalogItem*`, etc. — none exist.
-Introspection on `__type`/`__schema` is denied. To unblock: capture the live
-"remove from reading list" GraphQL request via the medium.com UI (click the
-remove menu item on a saved article) and replace `UNSAVE_ARTICLE_MUTATION` in
-`adapters/queries.ts` accordingly.
+**unsaveArticle:** Upstream removed `removeFromPredefinedCatalog`; reading-list
+removal now uses `editCatalogItems(catalogId, version, operations: [{delete:
+{itemId}}])`. The mutation expects `catalogItemId` (not `postId`), so the
+adapter first calls `getPredefinedCatalog(userId, READING_LIST).itemsConnection`
+to map `postId → catalogItemId(s)`, then deletes all matching entries.
+Discovered via response-shape probing after introspection was denied
+(`__schema`/`__type` blocked). Fragment names in queued GraphQL fragments
+(`editCatalogItemsMutation_postViewerEdge`) gave the lead.
+
+Verified PASS for all 5 write ops via
+`verify medium --write --browser --ops clapArticle,followWriter,saveArticle,unfollowWriter,unsaveArticle`.
 
 ## 2026-04-14 — Transport Upgrade Probe: No __NEXT_DATA__, GraphQL works from node
 

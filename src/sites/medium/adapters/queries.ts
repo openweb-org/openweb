@@ -317,10 +317,29 @@ export const UNFOLLOW_USER_MUTATION = `mutation UnfollowUserMutation($userId: ID
   }
 }`
 
-export const UNSAVE_ARTICLE_MUTATION = `mutation RemoveFromPredefinedCatalog($type: PredefinedCatalogType!, $itemId: ID!) {
-  removeFromPredefinedCatalog(type: $type, itemId: $itemId) {
+export const READING_LIST_ITEMS_QUERY = `query ReadingListItemsQuery($userId: ID!, $limit: Int!) {
+  getPredefinedCatalog(userId: $userId, type: READING_LIST) {
     __typename
-    ... on RemoveFromPredefinedCatalogSuccess {
+    ... on Catalog {
+      id
+      version
+      itemsConnection(pagingOptions: { limit: $limit }) {
+        items {
+          catalogItemId
+          entity {
+            __typename
+            ... on Post { id }
+          }
+        }
+      }
+    }
+  }
+}`
+
+export const EDIT_CATALOG_ITEMS_MUTATION = `mutation EditCatalogItems($catalogId: String!, $version: String!, $operations: [CatalogItemMutateOperationInput!]!) {
+  editCatalogItems(catalogId: $catalogId, version: $version, operations: $operations) {
+    __typename
+    ... on EditCatalogItemsSuccess {
       version
       __typename
     }

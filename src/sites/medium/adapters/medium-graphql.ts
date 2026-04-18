@@ -1,9 +1,11 @@
 import type { Page } from 'patchright'
 import {
   CLAP_MUTATION,
+  EDIT_CATALOG_ITEMS_MUTATION,
   FOLLOW_USER_MUTATION,
   POST_CLAPS_QUERY,
   POST_DETAIL_QUERY,
+  READING_LIST_ITEMS_QUERY,
   RECOMMENDED_FEED_QUERY,
   RECOMMENDED_TAGS_QUERY,
   RECOMMENDED_WRITERS_QUERY,
@@ -12,7 +14,6 @@ import {
   TOPIC_LATEST_STORIES_QUERY,
   TOPIC_WRITERS_QUERY,
   UNFOLLOW_USER_MUTATION,
-  UNSAVE_ARTICLE_MUTATION,
   VIEWER_QUERY,
 } from './queries.js'
 
@@ -356,15 +357,43 @@ async function unsaveArticle(page: Page, params: Record<string, unknown>, errors
   const postId = String(params.postId ?? params.id ?? '')
   if (!postId) throw errors.missingParam('postId')
 
-  const data = (await graphqlFetch(page, 'RemoveFromPredefinedCatalog', UNSAVE_ARTICLE_MUTATION, {
-    type: 'READING_LIST',
-    itemId: postId,
+  const userId = await getViewerId(page, errors)
+
+  const listData = (await graphqlFetch(page, 'ReadingListItemsQuery', READING_LIST_ITEMS_QUERY, {
+    userId,
+    limit: 250,
   }, errors)) as Record<string, unknown>
 
-  const result = data.removeFromPredefinedCatalog as Record<string, unknown>
+  const catalog = listData.getPredefinedCatalog as Record<string, unknown> | undefined
+  if (!catalog || catalog.__typename !== 'Catalog') {
+    return { postId, removed: false, reason: 'reading_list_unavailable' }
+  }
+  const catalogId = String(catalog.id)
+  const version = String(catalog.version)
+  const itemsConnection = catalog.itemsConnection as Record<string, unknown> | undefined
+  const items = (itemsConnection?.items ?? []) as Array<Record<string, unknown>>
+
+  const matches = items.filter((it) => {
+    const entity = it.entity as Record<string, unknown> | undefined
+    return entity?.__typename === 'Post' && entity.id === postId
+  })
+
+  if (matches.length === 0) {
+    return { postId, removed: false, reason: 'not_in_reading_list' }
+  }
+
+  const operations = matches.map((it) => ({ delete: { itemId: String(it.catalogItemId) } }))
+  const editData = (await graphqlFetch(page, 'EditCatalogItems', EDIT_CATALOG_ITEMS_MUTATION, {
+    catalogId,
+    version,
+    operations,
+  }, errors)) as Record<string, unknown>
+
+  const result = editData.editCatalogItems as Record<string, unknown>
   return {
     postId,
-    removed: result?.__typename === 'RemoveFromPredefinedCatalogSuccess',
+    removed: result?.__typename === 'EditCatalogItemsSuccess',
+    removedCount: matches.length,
   }
 }
 
