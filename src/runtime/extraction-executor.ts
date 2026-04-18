@@ -127,6 +127,10 @@ export async function executeExtraction(
   const isResponseCapture = extraction.type === 'response_capture'
   const hasExplicitPageUrl = 'page_url' in extraction && !!extraction.page_url
   const hasExplicitPlanEntry = !!planConfig.entry_url
+  // State-bound extractions read URL-coupled state (window globals, inline
+  // <script> JSON). A reused tab whose URL prefix-matches but isn't the
+  // operation's entry_url leaks stale state from the previous nav.
+  const isStateBoundExtraction = extraction.type === 'page_global_data' || extraction.type === 'script_json'
   let page: Page
   let ownedPage: boolean
   try {
@@ -139,6 +143,7 @@ export async function executeExtraction(
       nav_timeout_ms: planConfig.nav_timeout_ms,
       forceFresh: isResponseCapture,
       allow_origin_fallback: !isResponseCapture && !hasExplicitPageUrl && !hasExplicitPlanEntry,
+      refresh_on_reuse: isStateBoundExtraction,
     })
     page = acquired.page
     ownedPage = acquired.owned

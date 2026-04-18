@@ -1,3 +1,13 @@
+## 2026-04-18 — Runtime Fix: refresh page on reuse for state-bound extractions
+
+**Context:** Sequential `pnpm dev verify indeed` showed 6/8 PASS, 2 DRIFT (`getCompanyReviews`, `searchJobs`) — yet each op individually PASSED. Root cause: runtime `acquirePage` reuses any tab whose URL prefix-matches `entry_url`. Verify warm-up navs to `indeed.com/`, leaving `window._initialData` populated with HOMEPAGE data; subsequent indeed ops (all 5 use `page_global_data` reading `_initialData`) prefix-match the homepage tab and read STALE state instead of their op-specific page.
+
+**Changes:** Runtime-only — no indeed package changes.
+- `src/runtime/page-plan.ts`: Added `refresh_on_reuse?: boolean` to `PagePlan`. When set, `applyPostAcquire` re-navigates the reused page via `page.goto(entry_url)` if the page's current URL is not exactly entry_url (same-origin path-equality with query-superset).
+- `src/runtime/extraction-executor.ts`: Sets `refresh_on_reuse: true` when extraction type is `page_global_data` or `script_json` (URL-coupled state). Other transports (browser_fetch, response_capture) keep prefix-only reuse — they only care about cookie origin, not page state.
+
+**Verification:** `pnpm dev verify indeed` — 8/8 PASS. Spot-checks: ebay 3/3, yelp 2/2, zillow 4/4 — no regressions on other page_global_data sites. `pnpm test src/runtime` — 476 tests pass.
+
 ## 2026-04-01: Fresh discovery and compile
 
 **What changed:**

@@ -44,6 +44,16 @@ export interface PagePlan {
    * operation path template (no user-provided page_url).
    */
   readonly allow_origin_fallback?: boolean
+  /**
+   * When true, a reused page whose URL is not exactly entry_url is re-navigated
+   * via page.goto(entry_url) before being returned. Path-prefix reuse is unsafe
+   * for state-bound extractions (page_global_data, script_json) where the
+   * window/script-tag state is tied to the specific URL — a homepage tab that
+   * prefix-matches every site path would otherwise leak stale state into
+   * subsequent ops. Reuse rule remains path-prefix; this flag only changes
+   * post-match behavior. Set by extraction-executor for state-bound primitives.
+   */
+  readonly refresh_on_reuse?: boolean
 }
 
 export interface AcquiredPage {
@@ -113,7 +123,36 @@ async function findPageMatchingEntry(
   return undefined
 }
 
+/** Same-origin URL equality ignoring hash, with query-superset semantics
+ *  matching matchesEntryUrl. Returns true when the page is "already on"
+ *  entry_url such that no refresh is needed. */
+function isExactEntryUrl(pageUrl: string, entryUrl: string): boolean {
+  try {
+    const p = new URL(pageUrl)
+    const e = new URL(entryUrl)
+    if (p.origin !== e.origin) return false
+    if (decodeURIComponent(p.pathname) !== decodeURIComponent(e.pathname)) return false
+    for (const [key, value] of e.searchParams) {
+      const pageValues = p.searchParams.getAll(key)
+      if (!pageValues.includes(value)) return false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function refreshIfNeeded(page: Page, plan: PagePlan): Promise<void> {
+  if (!plan.refresh_on_reuse) return
+  if (isExactEntryUrl(page.url(), plan.entry_url)) return
+  const waitUntil = plan.wait_until ?? 'load'
+  const timeout = plan.nav_timeout_ms ?? TIMEOUT.navigation
+  logger.debug(`acquirePage: refresh_on_reuse navigating ${page.url()} → ${plan.entry_url}`)
+  await page.goto(plan.entry_url, { waitUntil, timeout })
+}
+
 async function applyPostAcquire(page: Page, plan: PagePlan): Promise<void> {
+  await refreshIfNeeded(page, plan)
   if (plan.ready) {
     try {
       await page.waitForSelector(plan.ready, {
