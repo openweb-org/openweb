@@ -166,6 +166,12 @@ The only thing this milestone (normalize-adapter) needed to gate was zero adapte
 Methodology: built `main` (`7cfdf7d`), synced `~/.openweb/sites`, ran `pnpm dev verify <site>` for each site listed below; rebuilt branch dist (`827b430`) and re-ran branch verify on persistent failures (2× per site). Auth cookies in `~/.openweb` are shared, so any auth-class failure that passes on one branch and not the other is **not** an auth-config regression — it indicates the adapter migration changed auth gating behavior.
 
 ### Per-site comparison: main vs. branch (fresh re-verify)
+> 所有main pass的，当前必须pass。bilibili no tab不是真的no tab, 是哪里的bug。bloomberg的fail可能是bot detection，看看原来adapter怎么解决的。
+> bluesky login了，现在重启browser不该fail了。
+> 别的main pass的，都该修好，肯定是当前实现的问题。没有任何所谓transient issue。
+> 如果bot detection解决不了，比如substack，应该尝试一下，实在不行，就先退回adapter.
+> prexisting error也要修复。
+> 都可以point to skill/openweb/add-site/guide.md (但要注意skill/ 还是旧的)，要同时注意新的变化(refer to whatever doc you think proper)。
 
 | Site | Op | main result | branch (run 1) | branch (run 2) | Verdict |
 |---|---|---|---|---|---|
@@ -213,3 +219,30 @@ Every persistent branch failure that doesn't reproduce on main falls into the **
 ### Worktree cleanup
 - main worktree was already at repo root (`/Users/moonkey/workspace/openweb-workspace/openweb`); no `.worktrees/main-baseline` was created.
 - Branch dist restored: `pnpm build` in `.worktrees/normalize-adapter` re-synced 93 sites to `~/.openweb/sites`.
+
+## na-main-baseline-fix — wave-2 fixes (2026-04-17, multmux-coordinated)
+
+After project lead's correction ("所有main pass的，当前必须pass... 没有任何所谓transient issue"), dispatched 9 fix agents (3 waves of 3 via multmux). Outcome:
+
+| Site | Ops fixed | Verify | Commit | Root cause / fix |
+|---|---|---|---|---|
+| bilibili | searchVideos | 8/8 PASS | `1991eba` | Phase 5C had swapped searchVideos to `transport: page` + `extraction: response_capture`; that executor lacks tab acquisition. Restored `adapter: { name: bilibili-web, operation: searchVideos }` in openapi.yaml — handler navigates via `page.goto`. |
+| fidelity | getCompanyLogo (+ all 7 digital.* ops) | 13/13 PASS | `25d7021` | `api_response` CSRF resolver fetched the token via node `fetch` with copied cookies; rotated `Set-Cookie` updates didn't sync back to the browser jar, so the subsequent `page.evaluate(fetch)` API call presented new CSRF + old cookies → 401. Re-introduced `adapters/fidelity-api.ts` as `CustomRunner` running CSRF GET + API POST inside one `page.evaluate`. |
+| walmart | getProductDetail, getProductPricing | 3/3 PASS | `6ed987e` | Live responses had `wasPrice: null` (and `savingsAmount: null`) when no markdown; schema required `object`. Relaxed to `[object, null]` while preserving inner shape. |
+| ebay | getItemDetail, getSellerProfile | 3/3 PASS | `996e98f` | Phase 3 inlined adapter code into `page_global_data` expressions but lost the closure params (`itemId`, `username` → `ReferenceError`, swallowed → undefined). Derived both from `location.pathname` inside each expression. |
+| bluesky | getNotifications, searchPosts | 10/10 PASS | (no fix) | Cookies refreshed by user → both ops pass cleanly on existing CustomRunner. PagePlan correctly replaces dropped `init()`. |
+| bloomberg | getCompanyProfile, getMarketOverview, getStockChart, searchBloomberg | committed; verify CAPTCHA-blocked | `6721ca6` | **Cross-cutting finding:** new `acquirePage` (src/runtime/page-plan.ts) dropped the `findPageForOrigin` fuzzy fallback; extraction-only ops now navigate to literal op paths instead of reusing the homepage. Pinned the 4 ops via `extraction.page_url: /`. Verify pending — Bloomberg session is currently CAPTCHA-walled. |
+| substack | getArchive, getPost, getPostComments (+ getTrending dropped) | 4/4 PASS | `5c58e5e` | DataDog RUM (loaded on substack publication subdomains) monkey-patches `window.fetch`; the runtime's absolute-URL `credentials:'include'` path tripped `TypeError: Failed to fetch` inside the wrapper. Restored `substack-api` adapter under CustomRunner (same-origin relative-path fetch dodges the wrapper). `getTrending` removed — upstream `/api/v1/trending` returns 404 with no documented replacement. |
+| ubereats | getEatsOrderHistory, addToCart | 5/5 default, 8/8 with `--write` | `b7f8e82` | (1) `_p/api/getPastOrdersV1` server-routed POST returned an error envelope due to cookie/origin mismatch outside page context — moved to `uber-eats` adapter via `pageFetch`. (2) `addToCart` example had non-canonical `replay_safety: "unsafe_write"` which `resolveReplaySafety` treats as `safe_read`; corrected to `unsafe_mutation` so it's gated like other write ops. |
+| x | getUserFollowers, searchTweets, getBookmarks | 11/11 PASS | `d2c6563` | (1) `DEFAULT_FEATURES` was stale — Twitter now requires ~37 feature flags; missing flags → 404 on SearchTimeline / Followers. Replaced with full set captured live. (2) `SIGNER_MODULE_ID = 938838` no longer existed in `main.js` (Twitter renames module IDs each deploy) — without `x-client-transaction-id`, both endpoints 404. Replaced hardcoded constant with runtime discovery (scan `main.js` for the awaited transaction-id binding, walk back to nearest module declaration). |
+
+### Cross-cutting findings worth flagging in next handoff
+
+1. **`acquirePage` dropped `findPageForOrigin` fuzzy fallback** (src/runtime/page-plan.ts). Effect: extraction-only ops without explicit `page_url` now navigate to the operation's literal path (often a SPA shell or CAPTCHA target), instead of reusing whatever same-origin tab is already open. The bilibili `searchVideos` "no browser tab" failure and bloomberg's 4 extraction-only failures both root in this. Workaround so far is per-op (`page_url: /` or restored adapter); a runtime-level reinstatement of fuzzy fallback would unblock more sites cheaply.
+2. **`api_response` CSRF resolver doesn't sync `Set-Cookie` back to the browser jar.** Any site using server-level CSRF + page transport is at risk of cookie/CSRF rotation drift on cold runs. fidelity hit this; others may surface intermittently. Either the resolver should round-trip cookies through the browser, or the migration guide should default to in-page CSRF for page-transport sites.
+3. **Adapter inlining into `extraction.expression` strings loses closure params.** ebay's `itemId`/`username` were the symptom; the same pattern likely exists wherever Phase 3 collapsed `page.evaluate(fn, arg)` adapters into bare `expression:` strings. Audit Phase 3 conversions for free identifiers.
+4. **`replay_safety: "unsafe_write"` is silently treated as `safe_read` by `resolveReplaySafety`** (src/lifecycle/verify.ts:123). Either reject the unknown value loudly, or add it as a real alias of `unsafe_mutation`.
+
+### Final touched-site verify counts (wave 2)
+- bilibili 8/8, fidelity 13/13, walmart 3/3, ebay 3/3, bluesky 10/10, substack 4/4, ubereats 5/5 (8/8 with `--write`), x 11/11 — total **57/57** verified PASS across 8 sites.
+- bloomberg fix committed; re-verify after solving the bloomberg.com CAPTCHA in the visible browser.
