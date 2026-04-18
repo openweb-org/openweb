@@ -126,6 +126,7 @@ paths:
           page_url: /itm/{itemId}
           expression: |
             (() => {
+              const itemId = (location.pathname.match(/\/itm\/(\d+)/) || [])[1] || '';
               const g = (sel) => document.querySelector(sel)?.textContent?.trim() || '';
               const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
               let ldProduct = null;
@@ -259,6 +260,7 @@ paths:
           page_url: /str/{username}
           expression: |
             (() => {
+              const username = decodeURIComponent((location.pathname.match(/\/str\/([^/?#]+)/) || [])[1] || '');
               const notFound = document.querySelector('.page-notice--attention');
               if (notFound && notFound.textContent?.includes('not found')) {
                 return { error: 'Seller not found', username };
