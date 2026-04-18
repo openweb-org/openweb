@@ -137,7 +137,9 @@ paths:
                           priceString:
                             type: string
                       wasPrice:
-                        type: object
+                        type:
+                        - object
+                        - 'null'
                         properties:
                           price:
                             type: number
@@ -197,14 +199,18 @@ paths:
                       currencyUnit:
                         type: string
                   wasPrice:
-                    type: object
+                    type:
+                    - object
+                    - 'null'
                     properties:
                       price:
                         type: number
                       priceString:
                         type: string
                   savingsAmount:
-                    type: object
+                    type:
+                    - object
+                    - 'null'
                     properties:
                       amount:
                         type: number
