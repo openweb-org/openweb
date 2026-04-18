@@ -10,6 +10,10 @@ servers:
 - url: https://digital.fidelity.com
   x-openweb:
     transport: page
+    page_plan:
+      entry_url: https://digital.fidelity.com/research/quote-and-research/
+      wait_until: domcontentloaded
+      settle_ms: 2000
     csrf:
       type: api_response
       endpoint: https://digital.fidelity.com/prgw/digital/research/api/tokens
@@ -23,7 +27,9 @@ paths:
       summary: Get real-time stock quote — price, volume, PE ratio, market cap, 52-week range, dividends, short interest
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: fidelity-api
+          operation: getQuote
         build:
           stable_id: fid0001
           tool_version: 3
@@ -101,7 +107,9 @@ paths:
       summary: Get major market indices (S&P 500, DJIA, NASDAQ) with current prices and changes
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: fidelity-api
+          operation: getMarketSummary
         build:
           stable_id: fid0004
           tool_version: 3
@@ -149,7 +157,9 @@ paths:
       summary: Get company profile — sector, industry, employees, address, website, description
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: fidelity-api
+          operation: getCompanyProfile
         build:
           stable_id: fid0002
           tool_version: 3
@@ -205,7 +215,9 @@ paths:
       summary: Get news headlines for a stock or market topic — headline text, provider, date, impact rating
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: fidelity-api
+          operation: getNewsHeadlines
         build:
           stable_id: fid0003
           tool_version: 3
@@ -262,7 +274,9 @@ paths:
       summary: Get quotes for global indices or currencies — symbol, name, percent change, ask price
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: fidelity-api
+          operation: getIndexQuotes
         build:
           stable_id: fid0005
           tool_version: 3
@@ -312,7 +326,9 @@ paths:
       summary: Get analyst ratings, ETF holdings, or commentary via Fidelity research proxy
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: fidelity-api
+          operation: getResearchData
         build:
           stable_id: fid0006
           tool_version: 3
@@ -368,7 +384,9 @@ paths:
       summary: Get company logo image URL for a stock symbol
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: fidelity-api
+          operation: getCompanyLogo
         build:
           stable_id: fid0007
           tool_version: 3

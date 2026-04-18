@@ -38,3 +38,11 @@
 - Response schemas already matched the raw upstream JSON; adapter passed payloads through.
 - Adapter file deleted.
 **Verification:** `pnpm dev verify fidelity` → 13/13 PASS at conversion time. Subsequent re-verify shows 1 pre-existing `auth_expired` (varies between getCompanyLogo / getQuote / getResearchData depending on session state) — not a regression, just session expiry.
+
+## 2026-04-17 — Restore browser-context CSRF for digital.fidelity.com
+
+**Root cause of cold-start auth_expired:** The runtime's `api_response` CSRF resolver fetches `/prgw/digital/research/api/tokens` via node `fetch` (cookies copied from the browser context). The token endpoint returns the CSRF token bundled with `Set-Cookie` updates. Node-side cookies are not synced back to the browser jar, so the subsequent `page.evaluate(fetch(...))` API call presents the new CSRF token alongside the *old* cookies → 401. Symptom: any first call against a cold browser failed with `auth_expired` (most often `getCompanyLogo` because it sorts first in verify).
+
+**Fix:** Re-introduced `adapters/fidelity-api.ts` as a `CustomRunner`. Both the CSRF token fetch and the API POST run inside the same `page.evaluate(...)`, so the browser's cookie jar stays coherent. Page navigation to `/research/quote-and-research/` is delegated to server-level `page_plan` (no `init()` needed). All 7 digital.fidelity.com ops use this adapter; 6 fundresearch.fidelity.com ops remain pure spec.
+
+**Verification:** Cold `pnpm dev verify fidelity` → 13/13 PASS.
