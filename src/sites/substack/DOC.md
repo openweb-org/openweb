@@ -49,27 +49,31 @@ openweb substack exec getPostComments '{"subdomain":"astralcodexten","postId":15
 ## API Architecture
 REST API at `/api/v1/*` on each publication's domain. Main site (`substack.com`)
 hosts search. Each publication lives on `{subdomain}.substack.com` (or a custom
-domain that redirects). The adapter navigates to the correct domain before making
-same-origin API calls.
+domain that redirects).
 
 ## Auth
 No auth required for public read operations. Paywalled posts return truncated
 `body_html`. Login required only for subscriber-only content.
 
 ## Transport
-`page` — adapter navigates the browser to the publication's subdomain, then uses
-`page.evaluate(fetch())` with relative path + `credentials:'same-origin'`.
-Required because (a) publications live on different subdomains; node transport
-cannot dynamically switch origins, and (b) on publication subdomains the
-DataDog RUM script monkey-patches `fetch` and breaks absolute cross-origin URLs
-issued from the runtime's generic browser-fetch path. The adapter's relative
-same-origin fetch sidesteps the wrapper.
+`page` — pure spec, no adapter. Per-publication ops (getArchive, getPost,
+getPostComments) use operation-level `servers: - url: https://{subdomain}.substack.com`
+with the `subdomain` param consumed as a server variable. The runtime acquires a
+page on the resolved subdomain, then `page.evaluate(fetch())` runs same-origin.
+searchPosts stays on the default `substack.com` server.
+
+Many publication subdomains (`{pub}.substack.com`) redirect to the publication's
+custom domain (`www.{pub}.com`). The runtime's browser-fetch path detects the
+redirect and rewrites the absolute API URL to the page's actual origin so the
+call stays same-origin (substack serves `/api/v1/*` on both hosts). Without this
+rewrite the absolute URL becomes cross-origin from the redirected page and
+fails CORS as `TypeError: Failed to fetch`.
 
 ## Known Issues
 - `searchPosts` returns empty results in headless browser context — likely bot detection on the search endpoint. Use `getArchive` with `search` param as a workaround for per-publication search.
 - `/api/v1/publication` returns 403 on some publications (not available for all pubs).
 - Custom domain publications (e.g., platformer.news) redirect from `*.substack.com`.
-  The adapter uses `{subdomain}.substack.com` which follows redirects automatically.
+  The runtime uses `{subdomain}.substack.com` which follows redirects automatically.
 - Paywalled posts (`audience: "only_paid"`) have truncated content in `body_html`.
 - `getTrending` was removed: the public `/api/v1/trending` endpoint now returns
   HTTP 404 from every host (substack.com and publication subdomains). No
