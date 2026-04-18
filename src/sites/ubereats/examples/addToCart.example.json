@@ -1,6 +1,6 @@
 {
   "operation_id": "addToCart",
-  "replay_safety": "unsafe_write",
+  "replay_safety": "unsafe_mutation",
   "order": 1,
   "cases": [
     {

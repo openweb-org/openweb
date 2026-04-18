@@ -175,7 +175,10 @@ paths:
       summary: Get Uber Eats past orders — stores, items, prices, timestamps
       x-openweb:
         permission: read
-        unwrap: data
+        adapter:
+          name: uber-eats
+          operation: getEatsOrderHistory
+        transport: page
         build:
           stable_id: ub0003
           tool_version: 2

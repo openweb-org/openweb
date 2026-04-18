@@ -219,6 +219,21 @@ async function emptyCart(page: Page, params: Record<string, unknown>, helpers: H
   }
 }
 
+async function getEatsOrderHistory(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const lastWorkflowUUID = params.lastWorkflowUUID ? String(params.lastWorkflowUUID) : ''
+
+  await ensureUberEatsPage(page)
+
+  const data = await apiCall(page, helpers, 'getPastOrdersV1', { lastWorkflowUUID })
+
+  return {
+    ordersMap: data.ordersMap || {},
+    orderUuids: data.orderUuids || [],
+    paginationData: data.paginationData ?? null,
+    meta: data.meta ?? null,
+  }
+}
+
 async function getCart(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
   const storeUuid = String(params.storeUuid || '')
 
@@ -252,6 +267,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, h
   removeFromCart,
   emptyCart,
   getCart,
+  getEatsOrderHistory,
 }
 
 const adapter: CustomRunner = {
