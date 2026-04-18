@@ -125,6 +125,8 @@ export async function executeExtraction(
   const targetPageUrl = resolvePageUrl(serverUrl, extraction, pathTemplate, spec, operation, params)
   const planConfig = resolvePagePlan(spec, operation) ?? {}
   const isResponseCapture = extraction.type === 'response_capture'
+  const hasExplicitPageUrl = 'page_url' in extraction && !!extraction.page_url
+  const hasExplicitPlanEntry = !!planConfig.entry_url
   let page: Page
   let ownedPage: boolean
   try {
@@ -136,6 +138,7 @@ export async function executeExtraction(
       warm: planConfig.warm,
       nav_timeout_ms: planConfig.nav_timeout_ms,
       forceFresh: isResponseCapture,
+      allow_origin_fallback: !isResponseCapture && !hasExplicitPageUrl && !hasExplicitPlanEntry,
     })
     page = acquired.page
     ownedPage = acquired.owned

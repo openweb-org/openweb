@@ -6,6 +6,7 @@ import { listCandidatePages } from './page-candidates.js'
 import {
   autoNavigate,
   createNeedsPageError,
+  findPageForOrigin,
 } from './session-executor.js'
 import { warmSession } from './warm-session.js'
 
@@ -34,6 +35,15 @@ export interface PagePlan {
    * against a page that has already loaded.
    */
   readonly forceFresh?: boolean
+  /**
+   * When true, after the strict entry_url match misses, try a same-origin
+   * fuzzy match (findPageForOrigin) before navigating. Lets extraction-only
+   * ops without an explicit page_url reuse whatever same-origin tab is open
+   * instead of forcing a literal-path navigation that may hit a SPA shell or
+   * CAPTCHA target. Callers set this when entry_url was derived from the
+   * operation path template (no user-provided page_url).
+   */
+  readonly allow_origin_fallback?: boolean
 }
 
 export interface AcquiredPage {
@@ -130,8 +140,10 @@ async function applyPostAcquire(page: Page, plan: PagePlan): Promise<void> {
  * autoNavigate(serverUrl) which applies the parent-domain retry — this
  * handles API subdomains (e.g. stock.xueqiu.com → xueqiu.com).
  *
- * No origin-only fuzzy fallback: callers that want origin-level reuse should
- * set entry_url to the server origin.
+ * No origin-only fuzzy fallback by default: callers that want origin-level
+ * reuse should set entry_url to the server origin, OR pass
+ * allow_origin_fallback: true (e.g. extraction ops without explicit page_url)
+ * to opt into a same-origin tab match before navigating.
  *
  * PagePlan skipped by callers when resolvedTransport === 'node'.
  */
@@ -151,6 +163,17 @@ export async function acquirePage(
   if (entryMatch) {
     await applyPostAcquire(entryMatch, plan)
     return { page: entryMatch, owned: false }
+  }
+
+  // 1b. Fuzzy origin fallback: when caller has no explicit page_url, reuse
+  // any same-origin tab rather than forcing nav to the operation's literal
+  // path (which may be a SPA shell, search-results page, or CAPTCHA target).
+  if (plan.allow_origin_fallback) {
+    const originMatch = await findPageForOrigin(context, plan.entry_url)
+    if (originMatch) {
+      await applyPostAcquire(originMatch, plan)
+      return { page: originMatch, owned: false }
+    }
   }
 
   // 2. Navigate to entry_url directly.
