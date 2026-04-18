@@ -10,6 +10,8 @@ servers:
 - url: https://www.booking.com
   x-openweb:
     transport: page
+    page_plan:
+      warm: true
 paths:
   /searchresults.html:
     get:
@@ -112,6 +114,10 @@ paths:
           type: script_json
           selector: script[type="application/ld+json"]
           type_filter: Hotel
+        page_plan:
+          entry_url: https://www.booking.com/hotel/{country}/{slug}.html
+          ready: 'script[type="application/ld+json"]'
+          wait_until: domcontentloaded
       parameters:
       - name: country
         in: path

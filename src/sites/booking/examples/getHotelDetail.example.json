@@ -2,7 +2,7 @@
   "operation_id": "getHotelDetail",
   "cases": [
     {
-      "input": { "country": "us", "slug": "riverside-tower", "checkin": "2026-05-01", "checkout": "2026-05-03" },
+      "input": { "country": "us", "slug": "new-york-manhattan-times-square-west", "checkin": "2026-05-01", "checkout": "2026-05-03" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true
