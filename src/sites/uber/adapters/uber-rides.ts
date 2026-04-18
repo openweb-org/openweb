@@ -28,6 +28,13 @@ type Helpers = {
 const GQL_HEADERS = { 'content-type': 'application/json', 'x-csrf-token': 'x' }
 
 async function gqlCall(page: Page, helpers: Helpers, endpoint: string, body: unknown): Promise<any> {
+  // Same-origin guard: pageFetch from a cross-origin page yields opaque CORS failures
+  // ("Failed to fetch"). We guarantee the page hostname matches the GraphQL host.
+  const endpointHost = new URL(endpoint).hostname
+  const pageHost = (() => { try { return new URL(page.url()).hostname } catch { return '' } })()
+  if (pageHost !== endpointHost) {
+    throw helpers.errors.retriable(`page on ${pageHost || 'about:blank'} but GraphQL endpoint is ${endpointHost} — same-origin nav required`)
+  }
   const resp = await helpers.pageFetch(page, {
     url: endpoint,
     method: 'POST',
@@ -46,10 +53,26 @@ async function gqlCall(page: Page, helpers: Helpers, endpoint: string, body: unk
   return data.data
 }
 
-async function ensurePage(page: Page, origin: string): Promise<void> {
-  if (!page.url().includes(new URL(origin).hostname)) {
-    await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
-    await page.waitForTimeout(2000)
+async function ensurePage(page: Page, origin: string, helpers: Helpers): Promise<void> {
+  const targetHost = new URL(origin).hostname
+  // Always re-navigate: prior verify ops may leave the page on a different
+  // uber subdomain (m.uber.com vs riders.uber.com vs auth.uber.com), and
+  // a passing hostname check immediately after goto() can race a client-side
+  // SPA redirect into auth.uber.com.
+  try {
+    await page.goto(origin, { waitUntil: 'load', timeout: 25_000 })
+  } catch (err) {
+    throw helpers.errors.retriable(`navigation to ${origin} failed: ${(err as Error).message}`)
+  }
+  // Allow client-side redirects (auth bounce) to settle before hostname check.
+  await page.waitForTimeout(3000)
+  const finalUrl = page.url()
+  const finalHost = (() => { try { return new URL(finalUrl).hostname } catch { return '' } })()
+  if (finalHost === 'auth.uber.com' || finalHost === 'login.uber.com') {
+    throw helpers.errors.fatal(`Uber session expired — redirected to ${finalHost}. Log in to ${targetHost} in the managed browser.`)
+  }
+  if (finalHost !== targetHost) {
+    throw helpers.errors.retriable(`expected ${targetHost} after nav, got ${finalUrl}`)
   }
 }
 
@@ -70,7 +93,7 @@ async function searchLocations(page: Page, params: Record<string, unknown>, help
 
   if (!query) throw helpers.errors.missingParam('query')
 
-  await ensurePage(page, 'https://m.uber.com/go/home')
+  await ensurePage(page, 'https://m.uber.com/go/home', helpers)
 
   const data = await gqlCall(page, helpers, 'https://m.uber.com/go/graphql', {
     operationName: 'PudoLocationSearch',
@@ -112,7 +135,7 @@ async function getRideEstimate(page: Page, params: Record<string, unknown>, help
   if (!pickup?.latitude || !pickup?.longitude) throw helpers.errors.missingParam('pickup (with latitude/longitude)')
   if (!destination?.latitude || !destination?.longitude) throw helpers.errors.missingParam('destination (with latitude/longitude)')
 
-  await ensurePage(page, 'https://m.uber.com/go/home')
+  await ensurePage(page, 'https://m.uber.com/go/home', helpers)
 
   const data = await gqlCall(page, helpers, 'https://m.uber.com/go/graphql', {
     operationName: 'Products',
@@ -163,7 +186,7 @@ async function getRideHistory(page: Page, params: Record<string, unknown>, helpe
   const limit = Number(params.limit) || 10
   const nextPageToken = params.nextPageToken ? String(params.nextPageToken) : undefined
 
-  await ensurePage(page, 'https://riders.uber.com/trips')
+  await ensurePage(page, 'https://riders.uber.com/trips', helpers)
 
   const data = await gqlCall(page, helpers, 'https://riders.uber.com/graphql', {
     operationName: 'Activities',
