@@ -1,0 +1,14 @@
+{
+  "operation_id": "removeFromCart",
+  "replay_safety": "unsafe_mutation",
+  "order": 3,
+  "cases": [
+    {
+      "input": { "orderItemId": "0" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
