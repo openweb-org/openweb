@@ -904,13 +904,16 @@ paths:
                     type: string
                 required:
                   - status
-  /api/v1/web/friendships/{id}/follow/:
+  /api/v1/friendships/create/{id}/:
     post:
       operationId: followUser
       summary: "Follow a user — instant for public accounts, pending for private"
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: followUser
       parameters:
         - name: id
           in: path
@@ -951,13 +954,16 @@ paths:
                     type: string
                 required:
                   - status
-  /api/v1/web/friendships/{id}/unfollow/:
+  /api/v1/friendships/destroy/{id}/:
     post:
       operationId: unfollowUser
       summary: "Unfollow a user — remove from following list"
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: unfollowUser
       parameters:
         - name: id
           in: path

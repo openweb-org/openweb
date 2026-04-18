@@ -91,6 +91,16 @@ async function postJson(
   return guardAuthExpired(data, errors)
 }
 
+async function postFriendship(
+  helpers: AdapterHelpers,
+  page: Page,
+  action: string,
+  userId: string,
+): Promise<unknown> {
+  const url = `https://www.instagram.com/api/v1/friendships/${action}/${userId}/`
+  return postJson(helpers, page, url, '')
+}
+
 type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
 
 const OPERATIONS: Record<string, Handler> = {
@@ -117,6 +127,18 @@ const OPERATIONS: Record<string, Handler> = {
       next_max_id: feed.next_max_id,
       items: feed.items,
     }
+  },
+
+  async followUser(page, params, helpers) {
+    const userId = String(params.id || '')
+    if (!userId) throw helpers.errors.missingParam('id')
+    return postFriendship(helpers, page, 'create', userId)
+  },
+
+  async unfollowUser(page, params, helpers) {
+    const userId = String(params.id || '')
+    if (!userId) throw helpers.errors.missingParam('id')
+    return postFriendship(helpers, page, 'destroy', userId)
   },
 
   async muteUser(page, params, helpers) {
