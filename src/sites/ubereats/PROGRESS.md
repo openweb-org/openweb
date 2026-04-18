@@ -1,5 +1,33 @@
 # Uber Fixture — Progress
 
+## 2026-04-18: Re-route getEatsOrderHistory through adapter (forward-fix from 294e9df) — getCart + getEatsOrderHistory verify still BLOCKED
+
+**Context:** `pnpm dev verify ubereats` reproducibly fails 2/5 ops:
+- `getCart: FAIL — getDraftOrdersByEaterUuidV1: status code error`
+- `getEatsOrderHistory: FAIL — expected status=200 schema=true; got status=200 schema=false`
+
+294e9df dropped the adapter routing for `getEatsOrderHistory` claiming declarative `transport: page` would work via `page.evaluate(fetch(...))`. Reading the code, declarative `transport: page` actually routes through `browser-fetch-executor.ts` which executes the fetch from an `about:blank` iframe — that yields `Origin: null` (per HTML spec, opaque origin) and Uber's `_p/api/getPastOrdersV1` rejects with the bare error envelope `{"message":"","code":3,"meta":{}}` instead of the success envelope `{status:"success", data:{...}}`. The 294e9df commit's "5/5 PASS" claim couldn't be reproduced today; the shape of the runtime path means it was likely never green stably.
+
+**Changes:**
+- Restored `getEatsOrderHistory` adapter handler in `adapters/uber-eats.ts` (revert of 294e9df, equivalent to b7f8e82). Adapter routes through `pageFetch` (page-context `fetch` with proper `Origin`) which is what `getCart` and other cart ops already use.
+- Re-added `x-openweb.adapter` ref on `getPastOrdersV1` while keeping `transport: page` so the adapter executor takes the path. Removed the now-redundant `unwrap: data` (adapter returns the unwrapped shape directly).
+- Synced `openapi.yaml` and built adapter to `~/.openweb/sites/ubereats/`.
+
+**Verify result (2 consecutive runs, deterministic):** 3/5 PASS. searchRestaurants + getRestaurantMenu + getItemDetails (all `transport: node`, public endpoints) PASS. The two cart/history ops still fail with backend-level error envelopes:
+- `getDraftOrdersByEaterUuidV1` returns `{status:"failure", data:{message:"status code error"}}` even with `pageFetch` from a warmed page (whether at `/`, `/cart`, `/orders`, or `/feed`).
+- `getPastOrdersV1` returns `{message:"", code:3, meta:{}}` from the same path.
+
+**Blocker — upstream auth/eater context, not OpenWeb code:**
+Both failing endpoints are user-scoped (`getDraftOrdersByEaterUuidV1`, `getPastOrdersV1`). The passing endpoints (`getSearchFeedV1`, `getStoreV1`, `getMenuItemV1`) are public. The error shapes (`code:3` enum + Uber's "status code error" string) are application-layer rejections from Uber, not 401/403 HTTP. Most likely the browser session at `ubereats.com` has lost user/eater identity (cookie expiry, region/delivery-address invalidation, or a cookie scope shift) — the public endpoints work because they don't read the eater UUID. None of the in-spec mitigations (`page_plan.entry_url` to `/`, `/cart`, `/orders`, `/feed`; warm-on-page) move the result.
+
+**Next step (out of this fix's scope):**
+- Manually open the browser (`openweb browser start --no-headless`), navigate to `ubereats.com/orders`, confirm the orders list renders for the logged-in user, and refresh delivery address if prompted. If the orders page itself shows "sign in" or "set address", the session needs re-auth or address re-selection — not a code fix.
+- If after a manual session refresh `getPastOrdersV1` from devtools still returns `{message:"", code:3}`, investigate Uber-side changes (new required header such as `x-uber-client-name` / locale cookie).
+
+**Files touched this session:**
+- `src/sites/ubereats/openapi.yaml` — `getPastOrdersV1` re-routed through `uber-eats` adapter (`transport: page` retained, `unwrap: data` removed).
+- `src/sites/ubereats/adapters/uber-eats.ts` — restored `getEatsOrderHistory` handler + OPERATIONS map entry.
+
 ## 2026-04-13: Transport upgrade — Tier 1 (DOM clicks) → Tier 5 (page.evaluate API)
 
 **Context:** After fixing removeFromCart with DOM-based checkout edit modal approach, CDP network interception revealed the actual mutation APIs: `createDraftOrderV2` (add) and `discardDraftOrdersV1` (remove). Both work via `page.evaluate(fetch)`.
