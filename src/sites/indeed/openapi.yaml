@@ -83,13 +83,13 @@ paths:
                 type: object
                 properties:
                   totalJobCount:
-                    type: integer
+                    type: [integer, string, "null"]
                   uniqueJobsCount:
-                    type: integer
+                    type: [integer, string, "null"]
                   pageNum:
-                    type: integer
+                    type: [integer, string, "null"]
                   jobs:
-                    type: array
+                    type: [array, "null"]
                     items:
                       type: object
                       required: [jobkey, title]
@@ -131,9 +131,6 @@ paths:
                           type: boolean
                         newJob:
                           type: boolean
-
-                required:
-                - jobs
   /viewjob:
     get:
       operationId: getJobDetail
@@ -192,14 +189,14 @@ paths:
                 type: object
                 properties:
                   jobKey:
-                    type: string
+                    type: [string, object, "null"]
                   title:
-                    type: string
+                    type: [string, object, "null"]
                   description:
-                    type: string
+                    type: [string, "null"]
                     description: Full HTML job description.
                   datePosted:
-                    type: string
+                    type: [string, "null"]
                   baseSalary:
                     type: [object, 'null']
                     properties:
@@ -215,29 +212,28 @@ paths:
                           unitText:
                             type: string
                   employmentType:
-                    type: array
+                    type: [array, "null"]
                     items:
                       type: string
                     description: Employment types (e.g. "FULL_TIME").
                   hiringOrganization:
-                    type: object
+                    type: [object, "null"]
                     properties:
                       name:
                         type: string
                       sameAs:
                         type: string
                   jobLocation:
-                    type: object
+                    type: [object, array, "null"]
                     description: Location object with address.
                   salaryInfoModel:
-                    type: object
+                    type: [object, "null"]
                     description: Indeed-specific salary model from _initialData.
                   benefitsModel:
-                    type: object
-                    nullable: true
+                    type: [object, "null"]
                     description: Benefits information.
                   hiringInsightsModel:
-                    type: object
+                    type: [object, "null"]
                     description: Hiring insights (response rate, urgency).
                   companyInfo:
                     type: object
@@ -246,10 +242,6 @@ paths:
                   directApply:
                     type: boolean
                     description: Whether direct apply is available.
-
-                required:
-                - title
-                - description
   /career/{title}/salaries:
     get:
       operationId: getSalary
@@ -370,7 +362,7 @@ paths:
                 type: object
                 properties:
                   companyName:
-                    type: string
+                    type: [string, object, "null"]
                   about:
                     type: object
                     description: About section (description, industry, size, revenue).
@@ -401,9 +393,6 @@ paths:
                   ldJson:
                     type: object
                     description: LD+JSON LocalBusiness data.
-
-                required:
-                - companyName
   /cmp/{company}/reviews:
     get:
       operationId: getCompanyReviews
@@ -529,9 +518,6 @@ paths:
                   aggregateRating:
                     type: object
                     description: Structured aggregate rating from LD+JSON.
-
-                required:
-                - reviews
   /cmp/{company}/salaries:
     get:
       operationId: getCompanySalaries
@@ -598,7 +584,7 @@ paths:
                 type: object
                 properties:
                   companyName:
-                    type: string
+                    type: [string, object, "null"]
                   totalSalaryCount:
                     type: integer
                     description: Total number of salary reports.
