@@ -58,7 +58,8 @@ API key passed as `api-key` query parameter. The key `test` works for developmen
 `node` — direct HTTP. Public JSON API, no bot detection, no browser needed.
 
 ### Known Issues
-- The `test` API key has low rate limits (~12 calls/minute). Register for a free key at open-platform.theguardian.com for higher limits.
+- The `test` API key has low rate limits (~12 calls/minute, shared globally). Register for a free key at open-platform.theguardian.com for higher limits.
+- **Verify flakes on `getSectionFeed`**: `pnpm dev verify guardian` runs all three ops back-to-back against the shared `test` key; `getSectionFeed` is the third call and frequently returns HTTP 429. Verify already labels this as a transient error (driftType: `error`). Re-running the op in isolation typically passes. Not a spec bug — supply your own `api-key` to eliminate.
 - Article body (`fields.body`) is raw HTML, not plain text.
 - Some older articles may have null byline or thumbnail fields.
 - Section slugs use hyphens (e.g. `uk-news`, `us-news`), not underscores.
