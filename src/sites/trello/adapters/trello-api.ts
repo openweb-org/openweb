@@ -40,6 +40,12 @@ async function apiFetch(
   if (result.status === 401) {
     throw Object.assign(new Error('Trello session expired. Run `openweb login trello` to re-authenticate.'), { failureClass: 'needs_login' })
   }
+  // Trello returns HTTP 400 "invalid token" when the cloud.session.token cookie is
+  // missing (logged-out state). Treat as needs_login rather than execution_failed
+  // so verify surfaces it correctly and the user is prompted to log in.
+  if (result.status === 400 && /invalid token/i.test(result.text)) {
+    throw Object.assign(new Error('Trello session missing (no cloud.session.token cookie). Open https://trello.com and log in via the persistent browser, then retry.'), { failureClass: 'needs_login' })
+  }
   if (result.status >= 400) {
     throw Object.assign(new Error(`Trello API ${method} ${path}: HTTP ${result.status} — ${result.text.slice(0, 200)}`), { failureClass: 'execution_failed' })
   }

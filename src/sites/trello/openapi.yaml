@@ -12,6 +12,8 @@ servers:
       transport: page
       auth:
         type: cookie_session
+      page_plan:
+        entry_url: https://trello.com/
 paths:
   /internal/getBoards:
     get:
