@@ -703,8 +703,7 @@ paths:
                         districtId:
                           type: integer
                   isRecommend:
-                    type: boolean
-                    nullable: true
+                    type: [boolean, integer, "null"]
                   key:
                     type: string
                     nullable: true
