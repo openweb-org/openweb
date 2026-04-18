@@ -69,16 +69,16 @@ openweb pinterest exec getBoard '{"source_url":"/WhoWhatWear/travel/","data":"{\
 openweb pinterest exec getUserProfile '{"source_url":"/pinterest/","data":"{\"options\":{\"username\":\"pinterest\",\"field_set_key\":\"profile\"},\"context\":{}}"}'
 
 # Save a pin to a board
-openweb pinterest exec savePin '{"pin_id":"1149473504911636509","board_id":"1076aborede6421"}'
+openweb pinterest exec savePin '{"source_url":"/","data":"{\"options\":{\"pin_id\":\"PIN_ID\",\"board_id\":\"BOARD_ID\",\"section_id\":null},\"context\":{}}"}'
 
-# Unsave a pin from a board
-openweb pinterest exec unsavePin '{"pin_id":"1149473504911636509","board_id":"1076aborede6421"}'
+# Unsave a pin (uses PinResource/delete — id is the saved-pin id from savePin response, NOT the original pin_id)
+openweb pinterest exec unsavePin '{"source_url":"/","data":"{\"options\":{\"id\":\"SAVED_PIN_ID\",\"board_id\":\"BOARD_ID\"},\"context\":{}}"}'
 
-# Follow a board
-openweb pinterest exec followBoard '{"board_id":"549autonomy4212"}'
+# Follow a board (BLOCKED 2026-04-18: Pinterest deprecated BoardFollowResource; modern follow flow appears to be GraphQL-only and requires reverse-engineering a persisted query hash)
+openweb pinterest exec followBoard '{"source_url":"/","data":"{\"options\":{\"board_id\":\"BOARD_ID\"},\"context\":{}}"}'
 
-# Unfollow a board
-openweb pinterest exec unfollowBoard '{"board_id":"549autonomy4212"}'
+# Unfollow a board (BLOCKED — same reason as followBoard)
+openweb pinterest exec unfollowBoard '{"source_url":"/","data":"{\"options\":{\"board_id\":\"BOARD_ID\"},\"context\":{}}"}'
 
 # Get home feed
 openweb pinterest exec getHomeFeed '{"source_url":"/","data":"{\"options\":{\"field_set_key\":\"hifi\",\"in_nux\":false,\"prependPartner\":false,\"page_size\":25},\"context\":{}}"}'

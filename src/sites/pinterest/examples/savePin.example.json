@@ -5,8 +5,8 @@
   "cases": [
     {
       "input": {
-        "pin_id": "1149473504911636509",
-        "board_id": "1076aborede6421"
+        "source_url": "/",
+        "data": "{\"options\":{\"pin_id\":\"1149473504911636509\",\"board_id\":\"1076605338497936421\",\"section_id\":null},\"context\":{}}"
       },
       "assertions": {
         "status": 200,

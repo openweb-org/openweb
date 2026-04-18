@@ -5,7 +5,8 @@
   "cases": [
     {
       "input": {
-        "board_id": "549autonomy4212"
+        "source_url": "/",
+        "data": "{\"options\":{\"board_id\":\"549755813932144212\"},\"context\":{}}"
       },
       "assertions": {
         "status": 200,

@@ -541,22 +541,21 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
-              - pin_id
-              - board_id
+              - source_url
+              - data
               properties:
-                pin_id:
+                source_url:
                   type: string
-                  description: "ID of the pin to save. Get from searchPins or getPin"
-                board_id:
+                  default: /
+                  description: "Source URL path for the request context (e.g. / or /pin/{pin_id}/)"
+                data:
                   type: string
-                  description: "ID of the board to save the pin to. Get from getBoard"
-                section_id:
-                  type: string
-                  description: "Optional board section ID to save the pin into"
+                  description: 'JSON string wrapping options. Example: {"options":{"pin_id":"PIN","board_id":"BOARD"},"context":{}}. Optional section_id for board sections.'
+                  example: '{"options":{"pin_id":"1149473504911636509","board_id":"549755714253","section_id":null},"context":{}}'
       responses:
         "200":
           description: Success.
@@ -580,7 +579,7 @@ paths:
                           pinner:
                             type: object
 
-  /resource/SavePinResource/delete/:
+  /resource/PinResource/delete/:
     post:
       operationId: unsavePin
       summary: "Unsave (remove) a saved pin from a board — requires authenticated session"
@@ -619,19 +618,21 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
-              - pin_id
-              - board_id
+              - source_url
+              - data
               properties:
-                pin_id:
+                source_url:
                   type: string
-                  description: "ID of the pin to unsave"
-                board_id:
+                  default: /
+                  description: "Source URL path for context (e.g. / or /pin/{pin_id}/)"
+                data:
                   type: string
-                  description: "ID of the board to remove the pin from"
+                  description: 'JSON string wrapping options. The id field is the saved-pin (repin) id from savePin response, NOT the original pin_id. Example: {"options":{"id":"REPIN_ID","board_id":"BOARD"},"context":{}}'
+                  example: '{"options":{"id":"1149473504911636509","board_id":"549755714253"},"context":{}}'
       responses:
         "200":
           description: Success.
@@ -646,7 +647,7 @@ paths:
                       status:
                         type: string
 
-  /resource/BoardFollowResource/create/:
+  /resource/BoardFollowingResource/create/:
     post:
       operationId: followBoard
       summary: "Follow a board — requires authenticated session"
@@ -685,15 +686,21 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
-              - board_id
+              - source_url
+              - data
               properties:
-                board_id:
+                source_url:
                   type: string
-                  description: "ID of the board to follow. Get from getBoard"
+                  default: /
+                  description: "Source URL path for context (e.g. /username/board-slug/)"
+                data:
+                  type: string
+                  description: 'JSON string wrapping options. Example: {"options":{"board_id":"BOARD"},"context":{}}'
+                  example: '{"options":{"board_id":"549755714253"},"context":{}}'
       responses:
         "200":
           description: Success.
@@ -717,7 +724,7 @@ paths:
                           url:
                             type: string
 
-  /resource/BoardFollowResource/delete/:
+  /resource/BoardFollowingResource/delete/:
     post:
       operationId: unfollowBoard
       summary: "Unfollow a board — requires authenticated session"
@@ -756,15 +763,21 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
-              - board_id
+              - source_url
+              - data
               properties:
-                board_id:
+                source_url:
                   type: string
-                  description: "ID of the board to unfollow"
+                  default: /
+                  description: "Source URL path for context"
+                data:
+                  type: string
+                  description: 'JSON string wrapping options. Example: {"options":{"board_id":"BOARD"},"context":{}}'
+                  example: '{"options":{"board_id":"549755714253"},"context":{}}'
       responses:
         "200":
           description: Success.
