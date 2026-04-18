@@ -266,6 +266,7 @@ paths:
             - next_data
         extraction:
           type: page_global_data
+          page_url: /
           expression: |
             (() => {
               const el = document.getElementById('__NEXT_DATA__');
@@ -354,6 +355,7 @@ paths:
             - next_data
         extraction:
           type: page_global_data
+          page_url: /
           expression: |
             (() => {
               const el = document.getElementById('__NEXT_DATA__');
@@ -447,6 +449,7 @@ paths:
             - next_data
         extraction:
           type: page_global_data
+          page_url: /
           expression: |
             (() => {
               const el = document.getElementById('__NEXT_DATA__');
@@ -575,6 +578,7 @@ paths:
             - next_data
         extraction:
           type: page_global_data
+          page_url: /
           expression: |
             (() => {
               const el = document.getElementById('__NEXT_DATA__');
