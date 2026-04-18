@@ -96,10 +96,11 @@ openweb weibo exec listReposts '{"id": 5281762063682574, "page": 1, "count": 10}
 - XSRF tokens rotate on every response — runtime uses fresh tokens from browser context
 
 ## Transport
-- `page` — node transport blocked by anti-bot (returns 403)
-- Requires managed browser with open weibo.com tab
-- All API calls execute via `page.evaluate(fetch(...))` in browser context
-- Write ops are pure spec — server-level `cookie_session` + `cookie_to_header` CSRF cover what the adapter previously did. `repost` uses `application/json` body; the other 5 use `application/x-www-form-urlencoded`.
+- `adapter` (`adapters/weibo-web.ts`) — all ops route through `helpers.pageFetch` (page-context `fetch`)
+- Adapter is a thin shim: parameter validation + `page.evaluate(fetch(...))`; no transformation
+- Node transport is blocked by anti-bot (returns 403)
+- Requires managed browser with an open weibo.com tab
+- **Why not `browser_fetch`?** The runtime's `browser_fetch` executor uses an `about:blank` iframe to obtain a clean `fetch` reference, which sends `Origin: null` + `Sec-Fetch-Site: cross-site`. Weibo's CSRF rejects this with HTTP 403 (surfaces as `auth_expired` even with valid cookies). Page-context `fetch` preserves `Origin: https://weibo.com/`, so cookies + Origin both validate. See PROGRESS 2026-04-18 for the full root cause. If runtime gains a same-origin trampoline iframe, this adapter can be dropped.
 
 ## Known Issues
 - **Login required** — all ops need an active Weibo session (SUB cookie)

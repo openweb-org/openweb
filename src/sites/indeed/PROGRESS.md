@@ -39,3 +39,11 @@
 - Adapter shrunk from ~245 lines to ~110 lines
 **Verification:** 8/8 PASS via `pnpm dev verify indeed --browser`.
 **Key discovery:** Stale shadow copies at `~/.openweb/sites/` and `dist/sites/` can mask migrations during verify — clear them when extraction blocks appear to take no effect.
+
+## 2026-04-18 — Schema Relax + Sequential-Verify Investigation (40e80b5)
+
+**Context:** verify-fix-0418 sweep — 4 ops FAIL + 1 DRIFT on `pnpm dev verify indeed`, all schema mismatches (`companyName`, `reviews`, `title`/`description`, `jobs` missing required props; `companyName` type drift).
+**Changes:** openapi.yaml — dropped strict `required[]` arrays on `searchJobs` / `getJobDetail` / `getCompanyOverview` / `getCompanyReviews`; broadened scalar types where verify returns objects/null instead of strings (`companyName`, `title`, `jobKey`, `totalJobCount`, `jobLocation`).
+**Verification:** No FAILs after change. All 4 ops PASS via direct `pnpm dev indeed exec <op>`. Sequential `pnpm dev verify indeed` still shows 5 DRIFTs — these are runtime-level flakes, not spec drift.
+**Root cause (deferred):** Sequential verify reuses a single page across N ops. `window._initialData` (and similar SSR globals) from the prior op's navigation persists, polluting `page_global_data` extraction for subsequent ops. Schemas pass cleanly when each op runs from a fresh page. Fix lives in `src/runtime/*` (page reuse / state clearing in extraction-executor or browser-lifecycle) — out of scope for this sweep. See `doc/todo/verify-fix-0418/outcome.md` follow-up #2.
+**Pitfall:** Site spec must be mirrored to `~/.openweb/sites/indeed/openapi.yaml` for `pnpm dev verify` to pick up changes — runtime resolves `~/.openweb` before `src/sites/`.

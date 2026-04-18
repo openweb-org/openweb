@@ -53,3 +53,9 @@ searchFlights, getFlightCalendarPrices, getFlightComfort, getGeneralInfo, getHot
 **Context:** Flight and train response objects omit certain fields depending on route availability and carrier.
 **Changes:** openapi.yaml — removed strict required on flight/train response schemas.
 **Verification:** Verify pass; schemas now tolerate optional fields in live responses.
+
+## 2026-04-18 — searchPOI Schema Relax (347afb2)
+
+**Context:** verify-fix-0418 sweep — `searchPOI` failed with `data/isRecommend must be boolean`.
+**Changes:** openapi.yaml — broadened `searchPOI.data.isRecommend` from `boolean` (nullable) to `[boolean, integer, "null"]`. Upstream returns `0` / `1` for some POI categories.
+**Verification:** 9/9 PASS (`pnpm dev verify ctrip`).

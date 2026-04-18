@@ -51,3 +51,14 @@
 - `repost` uses `application/json` body; the other 5 use `application/x-www-form-urlencoded` — matching the adapter's postJson / postForm split.
 - Adapter file deleted (entire `adapters/` directory removed).
 **Verification:** `pnpm dev verify weibo` → 6/8 PASS (write ops skipped without `--write`, as expected); 2 read ops are pre-existing `auth_expired` (getFriendsFeed, getUserStatuses).
+
+## 2026-04-18 — L3 Adapter Restored (c8b0f6b)
+
+**Context:** verify-fix-0418 sweep — `pnpm dev verify weibo` showed 0/8 PASS, all classified as `auth_expired (401/403)` despite valid `SUB`/`XSRF-TOKEN`/`sessionid` cookies in the persistent browser.
+**Changes:**
+- Restored `src/sites/weibo/adapters/weibo-web.ts` as a thin `CustomRunner` over `helpers.pageFetch` for all 16 ops (`/ajax/*`).
+- Wired `x-openweb.adapter: { name: weibo-web, operation: <op> }` into every operation in `openapi.yaml`.
+**Verification:** 8/8 read ops PASS (`pnpm dev verify weibo`); write ops untested without `--write`.
+**Root cause:** Phase 3 routed weibo through the runtime's `browser_fetch` executor, which uses an `about:blank` iframe to obtain a clean `fetch` reference. Opaque-origin iframes emit `Origin: null` + `Sec-Fetch-Site: cross-site`; weibo's CSRF rejects this with HTTP 403, which the runtime classifies as `auth_expired`. `pageFetch` (page-context fetch from a logged-in `weibo.com` page) preserves `Origin: https://weibo.com/`, so cookies + Origin both validate.
+**Pitfalls encountered:** The runtime resolves site packages from `~/.openweb/sites/<site>/` BEFORE `src/sites/`, so spec edits must be mirrored to `~/.openweb` for `pnpm dev verify` to pick them up.
+**Follow-up:** A runtime-level fix (same-origin trampoline iframe in `browser_fetch`) would make this adapter unnecessary again — see `doc/todo/verify-fix-0418/outcome.md`.
