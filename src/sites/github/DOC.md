@@ -105,8 +105,29 @@ openweb github exec unwatchRepo '{"owner":"imoonkey","repo":"openweb-test"}'
 `node` — all endpoints use direct HTTP. No bot detection, no browser needed.
 
 ## Known Issues
-- Write ops require a logged-in browser session — run `openweb browser start` and log in first
-- `graphqlQuery` has `write` permission since arbitrary mutations are possible via the query string
-- Rate limit: 60 requests/hour unauthenticated, 5000/hour authenticated
-- `closeIssue` and `reopenIssue` both PATCH the same endpoint (`/repos/{owner}/{repo}/issues/{issue_number}`) — `reopenIssue` uses a virtual path key with `actual_path` override
-- `deleteComment` requires the numeric `comment_id` (from `createComment` response `.id`), not the issue number
+- Write ops (`closeIssue`, `reopenIssue`, `createIssue`, `createComment`,
+  `deleteComment`, `forkRepo`, `starRepo`, `unstarRepo`, `watchRepo`,
+  `unwatchRepo`) currently **do not work** via the `cookie_session` +
+  `meta_tag` csrf path declared on the `api.github.com` server. Two
+  upstream constraints block them:
+  1. `api.github.com` returns JSON, not HTML — there is no `csrf-token`
+     meta tag to read, so `meta_tag` csrf resolution always fails.
+  2. `api.github.com` does not accept `_gh_sess` web cookies for write
+     operations from non-github.com origins; the github.com web UI
+     uses an internal short-lived bearer token (not the session cookie)
+     when calling the REST API.
+  Path forward: rewrite write ops to target the rails-style endpoints
+  on `github.com` itself (e.g. `POST /{owner}/{repo}/star` with form
+  body + csrf from the github.com page), OR add a `personal_access_token`
+  auth primitive driven by an env var. Tracked separately from the
+  normalize-adapter milestone.
+- Read ops on public repos work without auth (rate-limited to 60 req/h);
+  authenticated read ops via cookies work too (5000 req/h).
+- `graphqlQuery` has `write` permission since arbitrary mutations are
+  possible via the query string. Same auth blocker as above for any
+  mutation use.
+- `closeIssue` and `reopenIssue` both PATCH the same endpoint
+  (`/repos/{owner}/{repo}/issues/{issue_number}`) — `reopenIssue` uses
+  a virtual path key with `actual_path` override.
+- `deleteComment` requires the numeric `comment_id` (from
+  `createComment` response `.id`), not the issue number.
