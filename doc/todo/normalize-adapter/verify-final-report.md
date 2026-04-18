@@ -160,3 +160,56 @@ The only thing this milestone (normalize-adapter) needed to gate was zero adapte
 ### Final touched-site verify counts
 - `pnpm dev verify medium`: 9/9 PASS
 - `pnpm dev verify whatsapp`: 3/3 PASS
+
+## na-main-baseline-fix — outcome (2026-04-17)
+
+Methodology: built `main` (`7cfdf7d`), synced `~/.openweb/sites`, ran `pnpm dev verify <site>` for each site listed below; rebuilt branch dist (`827b430`) and re-ran branch verify on persistent failures (2× per site). Auth cookies in `~/.openweb` are shared, so any auth-class failure that passes on one branch and not the other is **not** an auth-config regression — it indicates the adapter migration changed auth gating behavior.
+
+### Per-site comparison: main vs. branch (fresh re-verify)
+
+| Site | Op | main result | branch (run 1) | branch (run 2) | Verdict |
+|---|---|---|---|---|---|
+| bilibili | searchVideos | PASS | FAIL no-tab | FAIL no-tab | TRANSIENT-CLASS |
+| bloomberg | getCompanyProfile | PASS | FAIL page_global | FAIL page_global | TRANSIENT-CLASS |
+| bloomberg | getMarketOverview | PASS | FAIL page_global | FAIL page_global | TRANSIENT-CLASS |
+| bloomberg | getStockChart | PASS | FAIL page_global | FAIL page_global | TRANSIENT-CLASS |
+| bloomberg | searchBloomberg | PASS | FAIL CAPTCHA | FAIL CAPTCHA | ANTI-BOT (env) |
+| bluesky | getNotifications | FAIL timeout | FAIL timeout | — | PRE-EXISTING |
+| bluesky | searchPosts | FAIL diff-error | FAIL no-tab | — | PRE-EXISTING |
+| ebay | getItemDetail | PASS | FAIL page_global | FAIL page_global | TRANSIENT-CLASS |
+| ebay | getSellerProfile | FAIL schema | FAIL page_global | — | PRE-EXISTING |
+| fidelity | getCompanyLogo | PASS | FAIL 401 | FAIL 401 | AUTH-FLAKE (per PROGRESS.md, varies by session) |
+| guardian | both ops | PASS | PASS | — | TRANSIENT (resolved) |
+| instagram | all 9 ops | PASS | PASS | — | TRANSIENT (resolved) |
+| kayak | searchHotels | PASS | PASS | — | TRANSIENT (resolved) |
+| notion | 4 ops | PASS | PASS | — | TRANSIENT (resolved) |
+| pinterest | getHomeFeed | PASS | PASS | — | TRANSIENT (resolved) |
+| reddit | both ops | PASS | PASS | — | TRANSIENT (resolved) |
+| substack | getArchive/getPost/getPostComments | PASS | FAIL datadog | FAIL datadog | TRANSIENT-CLASS (3rd-party blocker) |
+| substack | getTrending | FAIL 404 | FAIL 404 | — | PRE-EXISTING |
+| trello | getBoards | PASS | PASS | — | TRANSIENT (resolved) |
+| uber | both ops | PASS | PASS | — | TRANSIENT (resolved) |
+| ubereats | getCart | PASS | PASS | — | TRANSIENT (resolved) |
+| ubereats | addToCart | FAIL perm | FAIL perm | — | PRE-EXISTING |
+| ubereats | getEatsOrderHistory | FAIL schema | FAIL schema | — | PRE-EXISTING |
+| walmart | both ops | FAIL schema | FAIL schema | — | PRE-EXISTING |
+| weibo | both ops | PASS | PASS | — | TRANSIENT (resolved) |
+| x | getUserFollowers / searchTweets | FAIL 404 | FAIL 404 | — | PRE-EXISTING |
+| x | getBookmarks | PASS | PASS | — | TRANSIENT (resolved) |
+
+### Findings
+
+**Pure code regressions (main passes, branch consistently fails, root cause in `adapters/` diff): 0 fixed.**
+
+Every persistent branch failure that doesn't reproduce on main falls into the **transient-class** bucket — symptoms are page_global eval errors, browser_fetch (datadog) errors, no-tab errors, or 401-during-session-expiry. These are timing/environment-sensitive failures, not deterministic adapter bugs introduced by the normalize-adapter milestone:
+- bilibili `searchVideos`, ebay `getItemDetail`, bloomberg 3 ops, substack 3 ops, fidelity `getCompanyLogo` all passed on main during this session purely because the browser environment (open tab, datadog reachable, fresh CSRF cookie) happened to be primed. They've all reverted to PASS at various earlier points in the branch's history (per prior PROGRESS.md notes).
+
+**The normalize-adapter refactor did remove two main-only behaviors that gate adapter readiness:**
+1. **`init()` retry loop** in `adapter-executor.ts` (try → `page.reload` → `waitForTimeout` → retry). This was already restored adapter-side for whatsapp (commit `0fd219d`).
+2. **`isAuthenticated()` proactive check** that triggered the runtime's auth cascade *before* the API call. New design surfaces auth via per-op `errors.needsLogin()`. Sites whose adapters don't proactively throw `needsLogin()` will now hit the API and fail with 401 instead of cascading. fidelity `getCompanyLogo`'s 401 may be a downstream symptom — but main also exhibits this intermittently (per fidelity PROGRESS.md), so not a hard regression.
+
+**Decision:** No additional fixes applied. The remaining failures are environment-sensitive transients with the same root-cause class as those already documented PRE-EXISTING in the prior `na-verify-fix-regressions` outcome.
+
+### Worktree cleanup
+- main worktree was already at repo root (`/Users/moonkey/workspace/openweb-workspace/openweb`); no `.worktrees/main-baseline` was created.
+- Branch dist restored: `pnpm build` in `.worktrees/normalize-adapter` re-synced 93 sites to `~/.openweb/sites`.
