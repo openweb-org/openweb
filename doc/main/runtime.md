@@ -281,6 +281,10 @@ page.evaluate(({ url, method, headers, body }) => {
 
 **Cross-origin cold-start retry:** Cross-origin `page.evaluate(fetch)` (e.g. `www.grubhub.com` → `api-gtm.grubhub.com`) can throw `TypeError: Failed to fetch` before bot-detection sensors have finished warming up. The executor catches this specific error, retries up to 2x (3 attempts total), and only then surfaces it as `retriable` `execution_failed`. Non-`TypeError` exceptions surface immediately.
 
+**Custom-domain redirect rewrite:** When the entry page redirects to a different origin (publication custom-domain pattern: `*.substack.com → www.<pub>.com`, `*.shopify.com → custom domain`), an absolute-URL fetch back to the spec's encoded host is cross-origin from the redirected page → CORS rejects it as `TypeError: Failed to fetch`. The executor rewrites the request URL to `pageOrigin + pathname + search` only when `targetOrigin === entryOrigin`. Deliberate cross-origin API hosts (e.g. `amp-api.podcasts.apple.com` from `podcasts.apple.com`) are untouched.
+
+**Iframe-isolated fetch:** The in-page fetch runs through a same-origin `about:blank` iframe to obtain an unwrapped `fetch` reference. Page scripts (DataDog RUM, Sentry, OneTrust) routinely monkey-patch `window.fetch` and the wrappers throw `TypeError: Failed to fetch` on absolute-URL + `credentials:'include'` calls. The iframe's window has a fresh fetch no page script has touched.
+
 -> See: `src/runtime/browser-fetch-executor.ts`
 
 ---

@@ -55,6 +55,8 @@ csrf:
   inject: { header: "X-CSRF-Token" }
 ```
 
+The token fetch runs **inside `page.evaluate(fetch)`** so any rotated cookies in the `Set-Cookie` response stay coherent with the browser jar. A node-side fetch would orphan the rotated cookies — the next API call would present the new CSRF token alongside stale cookies and 401. Only meaningful for `transport: page` ops; node-transport ops fall back to the legacy node fetch via injected `fetchImpl`.
+
 -> See: `src/runtime/primitives/api-response.ts`
 
 ---

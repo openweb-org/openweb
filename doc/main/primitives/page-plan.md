@@ -67,6 +67,8 @@ Operation fields override server fields field-by-field. Explicit operation value
 
 Otherwise it creates a new page and navigates. No user-facing `match` knob — this default covers the real cases. Add one later if a site needs stricter or looser matching.
 
+**Same-origin fuzzy fallback (`allow_origin_fallback`).** Internal flag set by callers (currently `extraction-executor`) when `entry_url` was synthesized from the operation path template — i.e., the user did not pin a `page_url`. After the strict reuse miss, `acquirePage` looks for any same-origin tab via `findPageForOrigin` before navigating. This stops extraction-only ops from forcing literal-path nav (often a SPA shell or CAPTCHA target) when an existing same-origin tab could have served the data. Sites with explicit `page_url` keep strict matching.
+
 **Capture is different.** `response_capture` always forces fresh navigation — reusing a loaded page would race the response listener (the interesting response may already have fired).
 
 ---

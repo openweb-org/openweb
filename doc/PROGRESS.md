@@ -1,3 +1,27 @@
+## 2026-04-18: na-main-baseline-fix — verify-fail sweep + forward-fix dissolution of adapter retreats
+
+**What changed:**
+- Wave 2 (per-site fixes): 9 sites coordinated via multmux. 8 verified PASS (bilibili 8/8 `1991eba`, fidelity 13/13 `25d7021`, walmart 3/3 `6ed987e`, ebay 3/3 `996e98f`, bluesky 10/10 no-fix, substack 4/4 `5c58e5e`, ubereats 5/5 default + 8/8 `--write` `b7f8e82`, x 11/11 `d2c6563`); bloomberg `6721ca6` initially CAPTCHA-blocked.
+- Wave 3 (forward-fixes — dissolve adapter retreats): 4 runtime improvements that let 3 of 4 wave-2 adapter retreats go away.
+  - `src/runtime/page-plan.ts` — added `allow_origin_fallback` flag wired by extraction-executor; restores same-origin tab reuse when no explicit `page_url`. Bloomberg now 7/7 verified. (`f38cab2`)
+  - `src/runtime/browser-fetch-executor.ts` — rewrites in-page fetch URL to `pageOrigin + pathname + search` on custom-domain redirects (substack, shopify pattern); also routes fetch through a same-origin `about:blank` iframe to dodge `window.fetch` monkey-patches (DataDog RUM, Sentry). Substack adapter deleted. (`3dc48b8`)
+  - `src/runtime/primitives/api-response.ts` — CSRF token fetch moved inside `page.evaluate(fetch)` so rotated cookies stay coherent with the browser jar; node-side fallback retained for `transport: node`. Fidelity adapter deleted, 13/13 cold. (`2f270f2` + `2f5ced8`)
+  - ubereats `getEatsOrderHistory` — no runtime change needed; `transport: page` already supported POSTs but adapter routing took precedence. Adapter routing dropped. (`294e9df`)
+
+**Why:**
+- Wave 2: project lead correction "all main-pass must pass on branch — no transient excuses". Per-site fixes restored adapter routing or relaxed schemas as needed.
+- Wave 3: the 4 wave-2 adapter retreats hid runtime gaps. Surfacing them as runtime fixes (1) makes the patterns reusable for future sites (custom-domain CORS will hit any publication-style site, CSRF cookie sync will hit any `api_response` site), (2) shrinks the permanent-custom adapter bucket back toward the milestone's design intent.
+
+**Key files:** `src/runtime/page-plan.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/primitives/api-response.ts`, `src/runtime/extraction-executor.ts`, deleted `src/sites/{substack,fidelity}/adapters/`, `src/sites/{bilibili,bloomberg,ebay,walmart,ubereats,x}/openapi.yaml`, `doc/todo/normalize-adapter/verify-final-report.md`.
+**Verification:** Per-site verify (each agent ran its own + spot-checks of 2-4 neighbors). Aggregate explicit verifies: bilibili 8/8, bloomberg 7/7, bluesky 10/10, ebay 3/3, fidelity 13/13 cold, instagram 12/12, medium 9/9, notion 4/4, substack 4/4, ubereats 5/5 (8/8 `--write`), walmart 3/3, x 11/11. No full `verify --all` re-sweep run yet.
+**Commit:** range `972af4b..425793c` (15 commits).
+**Next:** Optional follow-ups — (a) bilibili `searchVideos` still on adapter routing, blocked by `response_capture.forceFresh: true` short-circuiting the new fuzzy fallback; (b) `replay_safety: "unsafe_write"` silently treated as `safe_read` by `verify.ts:123` (alias or reject); (c) audit other Phase 3 inlined-extraction expressions for free-identifier landmines (ebay was one).
+**Blockers:** None.
+
+-> Full outcome tables: [doc/todo/normalize-adapter/verify-final-report.md](todo/normalize-adapter/verify-final-report.md) (wave-2 + wave-3 sections)
+
+---
+
 ## 2026-04-17: normalize-adapter milestone — COMPLETE
 
 **What changed:**
