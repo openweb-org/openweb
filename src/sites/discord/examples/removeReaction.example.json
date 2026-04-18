@@ -2,12 +2,13 @@
   "operation_id": "removeReaction",
   "method": "delete",
   "replay_safety": "unsafe_mutation",
+  "order": 2,
   "cases": [
     {
       "input": {
         "channelId": "1280234300012494862",
-        "messageId": "1280234300012494900",
-        "emoji": "%F0%9F%91%8D"
+        "messageId": "1495202167496114316",
+        "emoji": "👍"
       },
       "assertions": {
         "status": 204

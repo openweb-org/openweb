@@ -77,13 +77,13 @@ openweb discord exec searchMessages '{"guildId":"GUILD_ID","content":"search ter
 openweb discord exec sendMessage '{"channelId":"CHANNEL_ID","content":"Hello!"}'
 
 # React to a message with thumbs up
-openweb discord exec addReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID","emoji":"%F0%9F%91%8D"}'
+openweb discord exec addReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID","emoji":"👍"}'
 
 # Delete a message
 openweb discord exec deleteMessage '{"channelId":"CHANNEL_ID","messageId":"MSG_ID"}'
 
 # Remove own reaction from a message
-openweb discord exec removeReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID","emoji":"%F0%9F%91%8D"}'
+openweb discord exec removeReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID","emoji":"👍"}'
 
 # Create a new server
 openweb discord exec createServer '{"name":"My New Server"}'

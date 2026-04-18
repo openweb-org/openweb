@@ -1406,8 +1406,8 @@ paths:
         required: true
         schema:
           type: string
-        description: "URL-encoded emoji — Unicode (e.g. %F0%9F%91%8D) or custom (name:id)"
-        example: "%F0%9F%91%8D"
+        description: "Unicode emoji char (e.g. 👍) or custom format `name:id` — runtime URL-encodes"
+        example: "👍"
       responses:
         "204":
           description: Success (no content).
@@ -1440,8 +1440,8 @@ paths:
         required: true
         schema:
           type: string
-        description: "URL-encoded emoji — Unicode (e.g. %F0%9F%91%8D) or custom (name:id)"
-        example: "%F0%9F%91%8D"
+        description: "Unicode emoji char (e.g. 👍) or custom format `name:id` — runtime URL-encodes"
+        example: "👍"
       responses:
         "204":
           description: Success (no content).
