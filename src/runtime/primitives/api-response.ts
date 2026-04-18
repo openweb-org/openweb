@@ -1,6 +1,4 @@
-import { formatCookieString } from '../../lib/cookies.js'
 import { OpenWebError, getHttpFailure } from '../../lib/errors.js'
-import { fetchWithRedirects } from '../redirect.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
 
 export interface ApiResponseConfig {
@@ -15,58 +13,58 @@ export interface ApiResponseConfig {
 }
 
 export interface ApiResponseDeps {
-  readonly fetchImpl?: typeof fetch
   readonly ssrfValidator: (url: string) => Promise<void>
   readonly authHeaders?: Readonly<Record<string, string>>
-  readonly cookieString?: string
 }
 
 /**
- * Resolve api_response CSRF: call an API endpoint, extract a token from
- * the response, and inject it as a header.
+ * Resolve api_response CSRF: fetch a token endpoint *inside the browser
+ * context* via page.evaluate, so the response's Set-Cookie updates land in
+ * the browser's cookie jar. The follow-up API call (also via page.evaluate)
+ * then sees the freshly-rotated CSRF token and matching cookies in lock-step.
+ *
+ * Why: doing this fetch from node with cookies merely *copied* from the
+ * browser leaves the rotated cookies stranded — token + stale cookies → 401.
  */
 export async function resolveApiResponse(
   handle: BrowserHandle,
   config: ApiResponseConfig,
-  serverUrl: string,
+  _serverUrl: string,
   deps: ApiResponseDeps,
 ): Promise<ResolvedInjections> {
-  const { fetchImpl = fetch, ssrfValidator } = deps
+  await deps.ssrfValidator(config.endpoint)
 
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-  }
-
-  // Include auth headers from prior auth resolution
-  if (deps.authHeaders) {
-    Object.assign(headers, deps.authHeaders)
-  }
-
-  // Include cookies
-  if (deps.cookieString) {
-    headers.Cookie = deps.cookieString
-  } else {
-    // Get cookies from browser context
-    const cookies = await handle.context.cookies(config.endpoint)
-    if (cookies.length > 0) {
-      headers.Cookie = formatCookieString(cookies)
-    }
-  }
-
-  const response = await fetchWithRedirects(
-    config.endpoint,
-    config.method ?? 'GET',
-    headers,
-    undefined,
-    { fetchImpl, ssrfValidator },
+  const result = await handle.page.evaluate(
+    async (args: {
+      endpoint: string
+      method: string
+      headers: Record<string, string>
+    }) => {
+      try {
+        const resp = await fetch(args.endpoint, {
+          method: args.method,
+          headers: args.headers,
+          credentials: 'include',
+        })
+        const text = await resp.text()
+        return { ok: resp.ok, status: resp.status, text }
+      } catch (err) {
+        return { ok: false, status: 0, text: String(err) }
+      }
+    },
+    {
+      endpoint: config.endpoint,
+      method: config.method ?? 'GET',
+      headers: { Accept: 'application/json', ...(deps.authHeaders ?? {}) },
+    },
   )
 
-  if (!response.ok) {
-    const httpFailure = getHttpFailure(response.status)
+  if (!result.ok) {
+    const httpFailure = getHttpFailure(result.status || 502)
     throw new OpenWebError({
       error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
       code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
-      message: `CSRF endpoint ${config.endpoint} returned ${response.status}`,
+      message: `CSRF endpoint ${config.endpoint} returned ${result.status}`,
       action: httpFailure.failureClass === 'needs_login'
         ? 'Ensure you are logged in.'
         : 'Retry later or inspect the endpoint definition.',
@@ -77,7 +75,7 @@ export async function resolveApiResponse(
 
   let responseData: unknown
   try {
-    responseData = await response.json()
+    responseData = JSON.parse(result.text)
   } catch {
     throw new OpenWebError({
       error: 'execution_failed',
@@ -89,7 +87,6 @@ export async function resolveApiResponse(
     })
   }
 
-  // Extract value using dot-path
   const value = extractPath(responseData, config.extract)
   if (!value) {
     throw new OpenWebError({
@@ -113,10 +110,8 @@ export async function resolveApiResponse(
 import { registerResolver } from './registry.js'
 registerResolver('api_response', async (ctx, config) =>
   resolveApiResponse(ctx.handle, config as unknown as Parameters<typeof resolveApiResponse>[1], ctx.serverUrl, {
-    fetchImpl: ctx.deps.fetchImpl,
     ssrfValidator: ctx.deps.ssrfValidator,
     authHeaders: ctx.deps.authHeaders as Record<string, string> | undefined,
-    cookieString: ctx.deps.cookieString,
   }))
 
 function extractPath(data: unknown, path: string): string | undefined {

@@ -694,101 +694,79 @@ describe('resolveExchangeChain', () => {
 })
 
 describe('resolveApiResponse', () => {
-  it('fetches CSRF token from API endpoint', async () => {
+  function makeHandle(response: { ok: boolean; status: number; text: string }): {
+    handle: BrowserHandle
+    evaluate: ReturnType<typeof vi.fn>
+  } {
+    const evaluate = vi.fn(async () => response)
     const handle = {
-      page: {} as BrowserHandle['page'],
-      context: {
-        cookies: vi.fn(async () => []),
-      } as unknown as BrowserHandle['context'],
+      page: { evaluate } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
     }
+    return { handle, evaluate }
+  }
 
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ data: { modhash: 'abc123modhash' } }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    ) as unknown as typeof fetch
+  it('fetches CSRF token via page.evaluate so cookies stay browser-coherent', async () => {
+    const { handle, evaluate } = makeHandle({
+      ok: true,
+      status: 200,
+      text: JSON.stringify({ data: { modhash: 'abc123modhash' } }),
+    })
 
     const result = await resolveApiResponse(handle, {
       endpoint: 'https://oauth.reddit.com/api/me.json',
       extract: 'data.modhash',
       inject: { header: 'X-Modhash' },
-    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
+    }, 'https://oauth.reddit.com', { ssrfValidator: noopSsrf })
 
     expect(result.headers).toEqual({ 'X-Modhash': 'abc123modhash' })
+    const args = evaluate.mock.calls[0]?.[1] as { endpoint: string }
+    expect(args.endpoint).toBe('https://oauth.reddit.com/api/me.json')
   })
 
   it('passes auth headers when provided', async () => {
-    const handle = {
-      page: {} as BrowserHandle['page'],
-      context: {
-        cookies: vi.fn(async () => []),
-      } as unknown as BrowserHandle['context'],
-    }
-
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ token: 'csrf_tok' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    ) as unknown as typeof fetch
+    const { handle, evaluate } = makeHandle({
+      ok: true,
+      status: 200,
+      text: JSON.stringify({ token: 'csrf_tok' }),
+    })
 
     await resolveApiResponse(handle, {
       endpoint: 'https://example.com/csrf',
       extract: 'token',
       inject: { header: 'X-CSRF' },
     }, 'https://example.com', {
-      fetchImpl: fetchMock,
       ssrfValidator: noopSsrf,
       authHeaders: { Authorization: 'Bearer test_token' },
     })
 
-    // Verify fetch was called with auth headers
-    const calledHeaders = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].headers as Record<string, string>
-    expect(calledHeaders.Authorization).toBe('Bearer test_token')
+    const args = evaluate.mock.calls[0]?.[1] as { headers: Record<string, string> }
+    expect(args.headers.Authorization).toBe('Bearer test_token')
   })
 
   it('throws when endpoint returns error', async () => {
-    const handle = {
-      page: {} as BrowserHandle['page'],
-      context: {
-        cookies: vi.fn(async () => []),
-      } as unknown as BrowserHandle['context'],
-    }
-
-    const fetchMock = vi.fn(async () =>
-      new Response('Not Found', { status: 404 }),
-    ) as unknown as typeof fetch
+    const { handle } = makeHandle({ ok: false, status: 404, text: 'Not Found' })
 
     await expect(
       resolveApiResponse(handle, {
         endpoint: 'https://example.com/csrf',
         extract: 'token',
         inject: { header: 'X-CSRF' },
-      }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
+      }, 'https://example.com', { ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED', failureClass: 'fatal' },
     })
   })
 
   it('treats api_response rate limiting as retriable', async () => {
-    const handle = {
-      page: {} as BrowserHandle['page'],
-      context: {
-        cookies: vi.fn(async () => []),
-      } as unknown as BrowserHandle['context'],
-    }
-
-    const fetchMock = vi.fn(async () =>
-      new Response('Server Error', { status: 500 }),
-    ) as unknown as typeof fetch
+    const { handle } = makeHandle({ ok: false, status: 500, text: 'Server Error' })
 
     await expect(
       resolveApiResponse(handle, {
         endpoint: 'https://example.com/csrf',
         extract: 'token',
         inject: { header: 'X-CSRF' },
-      }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
+      }, 'https://example.com', { ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED', failureClass: 'retriable' },
     })
