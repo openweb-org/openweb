@@ -1,3 +1,21 @@
+## 2026-04-18 — Write-op verify: clapArticle fixed; unsaveArticle blocked
+
+**clapArticle:** Spec was missing `numClaps` query param. Adapter accepted it, but
+the param-validator rejected unknown keys. Added `numClaps` (1–50, default 1) to
+the operation parameters. Verified PASS via `verify medium --write --browser --ops clapArticle`.
+
+**unsaveArticle:** BLOCKED — upstream API removed `removeFromPredefinedCatalog`.
+Server now suggests `addToPredefinedCatalog`, but that mutation only accepts
+`PredefinedCatalogAddOperationInput` with variants `{preprend, append}` (no
+`remove` / `delete`). Probed candidate replacements:
+`removeItemsFromCatalog`, `removeFromCatalog`, `removeFromReadingList`,
+`unsavePost`, `removePredefinedCatalogItem`, `removeItemsFromPredefinedCatalog`,
+`deletePredefinedCatalogItems`, `predefinedCatalogItem*`, etc. — none exist.
+Introspection on `__type`/`__schema` is denied. To unblock: capture the live
+"remove from reading list" GraphQL request via the medium.com UI (click the
+remove menu item on a saved article) and replace `UNSAVE_ARTICLE_MUTATION` in
+`adapters/queries.ts` accordingly.
+
 ## 2026-04-14 — Transport Upgrade Probe: No __NEXT_DATA__, GraphQL works from node
 
 **Context:** Investigated `__NEXT_DATA__` extraction for transport upgrade.
