@@ -1,0 +1,18 @@
+{
+  "operation_id": "likeVideo",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
+  "cases": [
+    {
+      "input": {
+        "aid": 170001,
+        "like": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

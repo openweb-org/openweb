@@ -1,0 +1,17 @@
+{
+  "operation_id": "followUser",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
+  "cases": [
+    {
+      "input": {
+        "url_token": "excited-vczh"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

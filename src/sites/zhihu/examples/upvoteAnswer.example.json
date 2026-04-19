@@ -1,0 +1,18 @@
+{
+  "operation_id": "upvoteAnswer",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
+  "cases": [
+    {
+      "input": {
+        "answer_id": "3606498689",
+        "type": "up"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

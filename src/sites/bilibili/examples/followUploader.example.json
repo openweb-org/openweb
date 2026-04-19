@@ -1,0 +1,18 @@
+{
+  "operation_id": "followUploader",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
+  "cases": [
+    {
+      "input": {
+        "fid": 2,
+        "act": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
