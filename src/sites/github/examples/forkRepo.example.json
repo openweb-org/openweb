@@ -1,0 +1,17 @@
+{
+  "operation_id": "forkRepo",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 6,
+  "cases": [
+    {
+      "input": {
+        "owner": "octocat",
+        "repo": "Hello-World"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

@@ -50,6 +50,32 @@ async function navigateAndExtractRepo(page: Page, owner: string, repo: string, e
   return { nonce: ctx.nonce, repoId: ctx.repoId, unstarToken: ctx.unstarToken ?? ctx.starToken }
 }
 
+interface FormCtx {
+  readonly nonce: string
+  readonly authenticityToken: string
+  readonly action: string
+}
+
+/** Navigate to a github.com page and extract the first form's authenticity_token + action. */
+async function navigateAndExtractForm(page: Page, url: string, formActionMatch: RegExp, errors: Errors): Promise<FormCtx> {
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
+  const ctx = await page.evaluate(({ matchSrc }: { matchSrc: string }) => {
+    const re = new RegExp(matchSrc)
+    const forms = Array.from(document.querySelectorAll('form'))
+    const form = forms.find((f) => re.test(f.action))
+    return {
+      nonce: document.querySelector('meta[name="fetch-nonce"]')?.getAttribute('content') ?? '',
+      action: form?.action ?? '',
+      authenticityToken: (form?.querySelector('input[name="authenticity_token"]') as HTMLInputElement | null)?.value ?? '',
+      loggedIn: document.body.classList.contains('logged-in'),
+    }
+  }, { matchSrc: formActionMatch.source })
+  if (!ctx.loggedIn) throw errors.needsLogin()
+  if (!ctx.nonce) throw errors.fatal(`Could not extract fetch-nonce from ${url}`)
+  if (!ctx.authenticityToken || !ctx.action) throw errors.fatal(`Could not find form matching ${formActionMatch} on ${url}`)
+  return { nonce: ctx.nonce, authenticityToken: ctx.authenticityToken, action: ctx.action }
+}
+
 async function navigateAndExtractIssue(page: Page, owner: string, repo: string, num: number, errors: Errors): Promise<IssueCtx> {
   const url = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${num}`
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
@@ -243,6 +269,61 @@ const OPERATIONS: Record<string, Handler> = {
       ctx.nonce,
       helpers.errors,
     )
+  },
+
+  async createIssue(page, params, helpers) {
+    const owner = String(params.owner || '')
+    const repo = String(params.repo || '')
+    const title = String(params.title || '')
+    const body = String(params.body || '')
+    if (!owner || !repo || !title) throw helpers.errors.missingParam('owner|repo|title')
+    const newIssueUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/new`
+    await page.goto(newIssueUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
+    const titleInput = page.locator('input[aria-label="Add a title"]')
+    await titleInput.waitFor({ state: 'visible', timeout: 20_000 })
+    await titleInput.fill(title)
+    if (body) {
+      const bodyArea = page.locator('textarea[aria-label="Markdown value"]')
+      await bodyArea.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => {})
+      await bodyArea.fill(body).catch(() => {})
+    }
+    const submit = page.getByRole('button', { name: /^Create$/ }).or(page.locator('button:has-text("Create"):not(:has-text("saved"))'))
+    await submit.first().click({ timeout: 10_000 })
+    await page.waitForURL(/\/issues\/\d+/, { timeout: 20_000 })
+    const url = page.url()
+    const number = Number(url.match(/\/issues\/(\d+)/)?.[1] ?? 0)
+    if (!number) throw helpers.errors.fatal(`createIssue: no issue number in URL after submit (${url})`)
+    return { number, html_url: url, title }
+  },
+
+  async forkRepo(page, params, helpers) {
+    const owner = String(params.owner || '')
+    const repo = String(params.repo || '')
+    if (!owner || !repo) throw helpers.errors.missingParam('owner|repo')
+    // Idempotent: check if the current user already has a fork by name. If so, return early.
+    const meResp = await page.evaluate(async () => {
+      const r = await fetch('https://github.com/settings/profile', { credentials: 'include' })
+      const t = await r.text()
+      const m = t.match(/data-login="([^"]+)"|"login":"([^"]+)"/)
+      return m?.[1] ?? m?.[2] ?? null
+    })
+    if (meResp) {
+      const probe = await page.evaluate(async (url) => {
+        const r = await fetch(url, { credentials: 'include', method: 'HEAD' })
+        return r.status
+      }, `https://github.com/${meResp}/${repo}`)
+      if (probe === 200) return { full_name: `${meResp}/${repo}`, html_url: `https://github.com/${meResp}/${repo}`, source: `${owner}/${repo}`, already_existed: true }
+    }
+    const forkUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/fork`
+    await page.goto(forkUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
+    const submit = page.getByRole('button', { name: /^Create fork$/ })
+    await submit.first().waitFor({ state: 'visible', timeout: 20_000 })
+    await submit.first().click({ timeout: 10_000 })
+    await page.waitForURL((u) => !/\/fork$/.test(u.toString()), { timeout: 30_000 })
+    const finalUrl = page.url()
+    const m = finalUrl.match(/github\.com\/([^/]+)\/([^/?#]+)/)
+    if (!m) throw helpers.errors.fatal(`forkRepo: unexpected URL after fork: ${finalUrl}`)
+    return { full_name: `${m[1]}/${m[2]}`, html_url: finalUrl, source: `${owner}/${repo}` }
   },
 }
 

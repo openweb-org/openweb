@@ -1,0 +1,19 @@
+{
+  "operation_id": "createIssue",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 5,
+  "cases": [
+    {
+      "input": {
+        "owner": "imoonkey",
+        "repo": "openweb-test",
+        "title": "openweb-verify-test ${now}",
+        "body": "Automated issue from openweb verify --write. Safe to close. ${now}"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

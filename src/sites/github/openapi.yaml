@@ -166,8 +166,22 @@ paths:
     post:
       operationId: createIssue
       summary: Create an issue
+      servers:
+        - url: https://github.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
+            page_plan:
+              entry_url: https://github.com/{owner}/{repo}/issues/new
+              wait_until: domcontentloaded
+              warm: true
       x-openweb:
         permission: write
+        safety: caution
+        adapter:
+          name: github-web
+          operation: createIssue
         build:
           stable_id: gh0011
           tool_version: 1
@@ -927,8 +941,22 @@ paths:
     post:
       operationId: forkRepo
       summary: Fork a repository
+      servers:
+        - url: https://github.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
+            page_plan:
+              entry_url: https://github.com/{owner}/{repo}/fork
+              wait_until: domcontentloaded
+              warm: true
       x-openweb:
         permission: write
+        safety: caution
+        adapter:
+          name: github-web
+          operation: forkRepo
         build:
           stable_id: gh0010
           tool_version: 1
