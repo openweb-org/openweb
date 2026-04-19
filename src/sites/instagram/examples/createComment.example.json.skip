@@ -6,12 +6,13 @@
     {
       "input": {
         "id": "3865890235180097425",
-        "comment_text": "Great post!"
+        "comment_text": "test ${now}"
       },
       "assertions": {
         "status": 200,
         "response_schema_valid": true
       }
     }
-  ]
+  ],
+  "order": 110
 }

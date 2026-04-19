@@ -247,6 +247,51 @@ const OPERATIONS: Record<string, Handler> = {
     })
   },
 
+  async likePost(page, params, helpers) {
+    const id = String(params.id || '')
+    if (!id) throw helpers.errors.missingParam('id')
+    return postJson(helpers, page, `https://www.instagram.com/api/v1/web/likes/${id}/like/`, '')
+  },
+
+  async unlikePost(page, params, helpers) {
+    const id = String(params.id || '')
+    if (!id) throw helpers.errors.missingParam('id')
+    return postJson(helpers, page, `https://www.instagram.com/api/v1/web/likes/${id}/unlike/`, '')
+  },
+
+  async savePost(page, params, helpers) {
+    const id = String(params.id || '')
+    if (!id) throw helpers.errors.missingParam('id')
+    return postJson(helpers, page, `https://www.instagram.com/api/v1/web/save/${id}/save/`, '')
+  },
+
+  async unsavePost(page, params, helpers) {
+    const id = String(params.id || '')
+    if (!id) throw helpers.errors.missingParam('id')
+    return postJson(helpers, page, `https://www.instagram.com/api/v1/web/save/${id}/unsave/`, '')
+  },
+
+  async createComment(page, params, helpers) {
+    const id = String(params.id || '')
+    const text = String(params.comment_text || '')
+    if (!id) throw helpers.errors.missingParam('id')
+    if (!text) throw helpers.errors.missingParam('comment_text')
+    const body = `comment_text=${encodeURIComponent(text)}`
+    return postJson(helpers, page, `https://www.instagram.com/api/v1/web/comments/${id}/add/`, body)
+  },
+
+  async deleteComment(page, params, helpers) {
+    const mediaId = String(params.media_id || '')
+    const commentId = String(params.comment_id || '')
+    if (!mediaId) throw helpers.errors.missingParam('media_id')
+    if (!commentId) throw helpers.errors.missingParam('comment_id')
+    return postJson(
+      helpers, page,
+      `https://www.instagram.com/api/v1/web/comments/${mediaId}/${commentId}/delete/`,
+      '',
+    )
+  },
+
   async getReels(page, params, helpers) {
     const userId = String(params.id || '')
     if (!userId) throw helpers.errors.missingParam('id')

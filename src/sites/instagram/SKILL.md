@@ -63,13 +63,13 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 2. `getPostComments(id=items[].pk)` → `comments[].pk`
 3. `deleteComment(media_id=items[].pk, comment_id=comments[].pk)` → status
 
-### Block a user (BLOCKED — see Known Limitations)
+### Block a user
 1. `getUserProfile(username)` → `data.user.id`
-2. `blockUser(id=data.user.id)` — endpoint removed upstream
+2. `blockUser(id=data.user.id)` → friendship_status
 
-### Unblock a user (BLOCKED — see Known Limitations)
+### Unblock a user
 1. `getUserProfile(username)` → `data.user.id`
-2. `unblockUser(id=data.user.id)` — endpoint removed upstream
+2. `unblockUser(id=data.user.id)` → friendship_status
 
 ### Mute a user
 1. `getUserProfile(username)` → `data.user.id`
@@ -190,5 +190,5 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 ```
 
 ## Known Limitations
-- **`blockUser` / `unblockUser` BLOCKED (2026-04-18)** — both `/api/v1/web/friendships/{id}/{block,unblock}/` and `/api/v1/friendships/{block,unblock}/{id}/` now return SPA HTML 200 instead of JSON. The mobile-API route that fixed follow/unfollow/mute does not have a block variant. Needs fresh HAR capture from a real block-button click in the IG web UI (see `doc/todo/write-verify/handoff.md` §3.6).
-- **Write-op coverage:** 4 of 12 write ops verified PASS end-to-end (`followUser`, `unfollowUser`, `muteUser`, `unmuteUser`). The remainder (like/unlike, save/unsave, createComment/deleteComment, block/unblock) have spec/example coverage but were not exercised in the 2026-04-18 sweep — block/unblock are confirmed broken; the rest are presumed working pending re-test.
+- **`createComment` / `deleteComment` SKIPPED (2026-04-19)** — endpoints (`/api/v1/web/comments/{id}/add/` and `.../{media_id}/{comment_id}/delete/`) are wired and `createComment` returns valid `{id, status:"ok"}`, but Instagram's spam filter shadow-deletes test comments on high-profile accounts (e.g. `@instagram`) within seconds, causing the immediate `deleteComment` to 404. Repeated attempts trigger an account-level write-block. To re-verify: pick a low-traffic account/post (own or friend) where IG's filter is less aggressive. Examples renamed to `*.example.json.skip`. Adapter handlers remain in `instagram-api.ts`.
+- **Write-op coverage (2026-04-19):** 10 of 12 write ops verified PASS end-to-end (`likePost`, `unlikePost`, `savePost`, `unsavePost`, `followUser`, `unfollowUser`, `muteUser`, `unmuteUser`, `blockUser`, `unblockUser`). `createComment`/`deleteComment` blocked by IG spam filter (see above).

@@ -832,6 +832,9 @@ paths:
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: likePost
       parameters:
         - name: id
           in: path
@@ -872,6 +875,9 @@ paths:
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: unlikePost
       parameters:
         - name: id
           in: path
@@ -1008,6 +1014,9 @@ paths:
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: savePost
       parameters:
         - name: id
           in: path
@@ -1047,6 +1056,9 @@ paths:
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: unsavePost
       parameters:
         - name: id
           in: path
@@ -1086,6 +1098,9 @@ paths:
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: createComment
       parameters:
         - name: id
           in: path
@@ -1126,23 +1141,22 @@ paths:
               schema:
                 type: object
                 properties:
-                  comment:
+                  id:
+                    type: string
+                    description: Comment primary key
+                  from:
                     type: object
                     properties:
-                      pk:
+                      id:
                         type: string
-                        description: Comment primary key
-                      text:
+                      username:
                         type: string
-                      created_at:
-                        type: integer
-                      user:
-                        type: object
-                        properties:
-                          pk:
-                            type: string
-                          username:
-                            type: string
+                      full_name:
+                        type: string
+                  text:
+                    type: string
+                  created_time:
+                    type: integer
                   status:
                     type: string
                 required:
@@ -1154,6 +1168,9 @@ paths:
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: deleteComment
       parameters:
         - name: media_id
           in: path

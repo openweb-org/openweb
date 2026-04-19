@@ -1,4 +1,15 @@
+## 2026-04-19 — Write-Verify Continuation (10/12 PASS)
+
+**Context:** Picked up the 6 remaining write ops after the 2026-04-18 sweep (block/unblock landed via the polaris GraphQL helper from `32038d9`).
+**Changes:** Wired adapter handlers in `instagram-api.ts` for `likePost`, `unlikePost`, `savePost`, `unsavePost`, `createComment`, `deleteComment` — all reuse the existing `postJson` (cookie + csrftoken) flow already proven by `blockUser`. Added `adapter` bindings to each path in `openapi.yaml`. Added `order` (70-100) plus `${prev.createComment.id}` chain to example fixtures so create/delete pair self-cleans, with `comment_text: "test ${now}"` for uniqueness.
+**Verification:** like/unlike PASS, save/unsave PASS (each verified pair-by-pair with `pnpm dev verify instagram --write --browser --ops <pair>`).
+**Pitfall — `createComment` / `deleteComment` SKIPPED:** The endpoint pattern is correct (`createComment` returns valid `{id, status:"ok"}`), but Instagram's spam filter shadow-deletes test comments on `@instagram` within a few seconds, so the immediate `deleteComment` 404s. Repeated probes to discover the right URL (verified the spec'd path is correct via HTTP probing) tripped IG's account-level write-block, which then cascaded into "Response is not valid JSON" failures across all write ops in a single `verify --all` run. Pair-by-pair runs spaced minutes apart still PASS for like/save. Comments are now `*.example.json.skip` until a low-traffic test target (own post, friend's account) is available — adapter handlers stay in place.
+**Outcome:** instagram 10/12 write ops verified PASS.
+
+---
+
 ## 2026-04-18 — Write-Verify Campaign
+
 
 **Context:** First end-to-end exercise of write ops via `pnpm dev verify instagram --write`.
 **Changes (`401b5a5`):** Repaired `followUser`/`unfollowUser` by routing to the mobile-API path `/friendships/create/{id}/` (and `/destroy/{id}/`). The legacy `/web/friendships/{id}/follow/` route now returns the SPA HTML shell with HTTP 200, silently breaking JSON parsing.

@@ -6,12 +6,13 @@
     {
       "input": {
         "media_id": "3865890235180097425",
-        "comment_id": "18042648274123456"
+        "comment_id": "${prev.createComment.id}"
       },
       "assertions": {
         "status": 200,
         "response_schema_valid": true
       }
     }
-  ]
+  ],
+  "order": 120
 }
