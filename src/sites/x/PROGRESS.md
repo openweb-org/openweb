@@ -1,3 +1,17 @@
+## 2026-04-19 — Write-Verify Campaign: self-target fixture + pair ordering
+
+**Context:** Post-`acc23ad` cascade fix left x at 8/14. The remaining 6 ops (followUser, blockUser, muteUser, unmuteUser, hideReply, unhideReply) consistently timed out at 45 s in `verify --write` despite the cascade fix.
+**Changes:**
+- `src/sites/x/examples/{follow,block,mute,unfollow,unblock,unmute}User.example.json`: `userId 4211243893` → `2244994945` (@XDevelopers, stable third-party).
+- `src/sites/x/examples/{hide,unhide}Reply.example.json`: `tweet_id 2042768913184792832` → `2045740947703562740` — a real reply created via the `reply` op against MoonkeyX's pinned tweet (the parent owner is the authenticated user, so PUT `/i/api/2/tweets/{id}/hidden` is permitted).
+- All 8 example files: added `order: 1..8` to interleave each create immediately before its destroy. Prevents cross-pair contamination (e.g. `blockUser` auto-unfollowing the target before the follow pair completes).
+**Verification:** Standalone `pnpm dev x exec` now confirms all 6 user-graph ops return 200 with the new `userId`. Aggregate `pnpm dev verify x --write --browser` still returns 2/8 PASS for this set — verify-framework cascade keeps killing+restarting Chrome between ops, leaving stale state (port-bound errors, queryId cache lost). Remaining gap is in the verify framework, not the site fixtures.
+**Key discovery:** The original `userId 4211243893` was the logged-in account itself (@iamoonkey). Twitter returns 403 with `code 158/147/271 — "you can't follow/block/mute yourself"`. The runtime maps any 401/403 to `needs_login` → `handleLoginRequired()` opens a system browser and polls for login until the per-op 45 s budget expires. The destroy variants (unfollow/unblock/unmute) returned 200 no-op even on self, masking the misdiagnosis. Lesson: **never use the test account's own ID as a fixture for write ops where the verb is reflexive-restricted.**
+**Pitfalls encountered:**
+- Multiple Chromes split-brain on port 9222 mid-session (untracked PID owning the port, tracked PID dead) — `pnpm dev browser stop && start` cleanly resolves; `kill <pid>` then rewriting `~/.openweb/browser.{pid,port,profile}` is fragile because verify keeps cleaning up the state files.
+- Twitter's anti-abuse rate limiter throttles after ~10 cycles of follow/unfollow on a single test account in <5 min, then surfaces as 429 and even read-op queryId failures.
+- adapter `.ts` edits don't reach runtime when the bundled `.js` (built via `node scripts/build-adapters.js`) is stale-newer; `loadAdapter()` prefers `.ts` only when `process.argv[1]?.endsWith('.ts')`. Re-run `node scripts/build-adapters.js` after debug instrumentation OR confirm `.ts`-preference path before adding logging.
+
 ## 2026-04-18 — Write-Verify: page_plan + runtime cascade unlock
 
 **Context:** First end-to-end `verify --write` sweep across all 33 sites with write ops. x reported `No browser context available` on every op (0/14 PASS) regardless of fixture quality.
