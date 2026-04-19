@@ -11,7 +11,11 @@ servers:
       transport: node
   - url: https://carts.target.com
     x-openweb:
-      transport: node
+      transport: page
+      page_plan:
+        entry_url: https://www.target.com/cart
+        wait_until: domcontentloaded
+        warm: true
 paths:
   /redsky_aggregations/v1/web/plp_search_v2:
     get:
@@ -630,12 +634,16 @@ paths:
                                           type: string
 
   /web_checkouts/v1/cart_items:
-    servers:
-      - url: https://carts.target.com
-        x-openweb:
-          transport: node
     post:
       operationId: addToCart
+      servers:
+        - url: https://carts.target.com
+          x-openweb:
+            transport: page
+            page_plan:
+              entry_url: https://www.target.com/cart
+              wait_until: domcontentloaded
+              warm: true
       summary: Add a product to the shopping cart by TCIN — returns cart_id, quantity, pricing, fulfillment
       x-openweb:
         permission: write
@@ -762,12 +770,16 @@ paths:
                         description: Pickup SLA in minutes.
 
   /web_checkouts/v1/cart_items/{cart_item_id}:
-    servers:
-      - url: https://carts.target.com
-        x-openweb:
-          transport: node
     delete:
       operationId: removeFromCart
+      servers:
+        - url: https://carts.target.com
+          x-openweb:
+            transport: page
+            page_plan:
+              entry_url: https://www.target.com/cart
+              wait_until: domcontentloaded
+              warm: true
       summary: Remove item from cart by cart_item_id — reverses addToCart
       x-openweb:
         permission: write
@@ -815,14 +827,18 @@ paths:
                 type: object
                 required:
                   - cart_id
-                  - removed_cart_item_id
                 properties:
                   cart_id:
                     type: string
                     description: Cart identifier.
-                  total_cart_item_quantity:
-                    type: integer
-                    description: Total items remaining in cart.
-                  removed_cart_item_id:
+                  cart_state:
                     type: string
-                    description: The cart_item_id that was removed.
+                    description: Cart state (e.g. PENDING, EMPTY).
+                  summary:
+                    type: object
+                    description: Cart totals after removal.
+                    properties:
+                      items_quantity:
+                        type: integer
+                      grand_total:
+                        type: number

@@ -1,0 +1,27 @@
+{
+  "operation_id": "addToCart",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
+  "cases": [
+    {
+      "input": {
+        "cart_item": {
+          "tcin": "10805587",
+          "quantity": 1,
+          "item_channel_id": "10"
+        },
+        "fulfillment": {
+          "type": "PICKUP",
+          "location_id": 2281
+        },
+        "field_groups": "CART,CART_ITEMS,SUMMARY",
+        "key": "9f36aeafbe60771e321a7cc95a78140772ab3e96"
+      },
+      "assertions": {
+        "status": 201,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
