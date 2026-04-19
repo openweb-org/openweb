@@ -163,3 +163,6 @@ openweb x exec getUserLikes '{"userId": "4398626122", "count": 20}'
 - `getBookmarks` and `getNotifications` only return the authenticated user's data
 - `getBookmarks` uses the `Bookmarks` GraphQL operation whose queryId lives in a lazy-loaded webpack chunk (not in main.js); the adapter discovers it by navigating to `/i/bookmarks` and capturing the API request URL on first call
 - `getTrending` → use `getExplorePage`; `getThread` → use `getTweetDetail`
+
+### Verify quirk (write ops)
+- `pnpm dev verify x --write --browser` may report `No browser context available` for every op when no `https://x.com/*` tab is open in the managed Chrome at start. Cause: a runtime cascade (`handleLoginRequired` → `refreshProfile`) kills + restarts Chrome before `page_plan.entry_url` can open the tab, leaving the verify-owned `Browser` handle stale. Workaround: open `https://x.com/home` in the managed Chrome (port 9222) **before** running verify. With a pre-warmed tab the same op set passes (e.g. `likeTweet,unlikeTweet,createBookmark,deleteBookmark` → 4/4). Tracked in `/tmp/write-fix-runtime-x.md`.

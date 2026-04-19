@@ -10,6 +10,10 @@ servers:
 - url: https://x.com
   x-openweb:
     transport: page
+    page_plan:
+      entry_url: https://x.com/home
+      wait_until: domcontentloaded
+      warm: true
 paths:
   /internal/getHomeTimeline:
     get:
