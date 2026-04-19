@@ -5,8 +5,8 @@
   "cases": [
     {
       "input": {
-        "source_url": "/",
-        "data": "{\"options\":{\"board_id\":\"549755813932144212\"},\"context\":{}}"
+        "source_url": "/marthastewart/baking-and-dessert-recipes-and-ideas/",
+        "data": "{\"options\":{\"url\":\"/v3/boards/32088284783993002/follow/\"},\"context\":{}}"
       },
       "assertions": {
         "status": 200,

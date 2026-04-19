@@ -7,7 +7,7 @@
     {
       "input": {
         "source_url": "/",
-        "data": "{\"options\":{\"id\":\"${prev.savePin.resource_response.data.id}\",\"board_id\":\"1076605338497936421\"},\"context\":{}}"
+        "data": "{\"options\":{\"id\":\"${prev.savePin.resource_response.data.id}\",\"board_id\":\"${prev.savePin.resource_response.data.board.id}\"},\"context\":{}}"
       },
       "assertions": {
         "status": 200,

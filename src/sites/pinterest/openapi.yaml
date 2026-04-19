@@ -647,15 +647,15 @@ paths:
                       status:
                         type: string
 
-  /resource/BoardFollowingResource/create/:
+  /resource/ApiResource/update/:
     post:
       operationId: followBoard
-      summary: "Follow a board — requires authenticated session"
+      summary: "Follow a board — requires authenticated session. Pinterest deprecated /resource/BoardFollowingResource/; the modern client wraps a v3 REST call (/v3/boards/{board_id}/follow/) inside ApiResource/update/."
       x-openweb:
         permission: write
         safety: caution
         build:
-          stable_id: pinterest_followBoard_v1
+          stable_id: pinterest_followBoard_v2
           tool_version: 2
       parameters:
       - name: x-requested-with
@@ -676,7 +676,7 @@ paths:
         schema:
           type: string
           default: /
-        description: "Source URL for Pinterest tracking"
+        description: "Source URL for Pinterest tracking (typically the board's URL path)"
       - name: accept
         in: header
         required: true
@@ -699,8 +699,8 @@ paths:
                   description: "Source URL path for context (e.g. /username/board-slug/)"
                 data:
                   type: string
-                  description: 'JSON string wrapping options. Example: {"options":{"board_id":"BOARD"},"context":{}}'
-                  example: '{"options":{"board_id":"549755714253"},"context":{}}'
+                  description: 'JSON string wrapping the wrapped v3 REST URL. Example: {"options":{"url":"/v3/boards/<BOARD_ID>/follow/"},"context":{}}'
+                  example: '{"options":{"url":"/v3/boards/32088284783993002/follow/"},"context":{}}'
       responses:
         "200":
           description: Success.
@@ -714,25 +714,16 @@ paths:
                     properties:
                       status:
                         type: string
-                      data:
-                        type: object
-                        properties:
-                          id:
-                            type: string
-                          name:
-                            type: string
-                          url:
-                            type: string
 
-  /resource/BoardFollowingResource/delete/:
+  /resource/ApiResource/delete/:
     post:
       operationId: unfollowBoard
-      summary: "Unfollow a board — requires authenticated session"
+      summary: "Unfollow a board — requires authenticated session. Pinterest deprecated /resource/BoardFollowingResource/; modern client wraps a v3 REST call (/v3/boards/{board_id}/follow/) inside ApiResource/delete/."
       x-openweb:
         permission: write
         safety: caution
         build:
-          stable_id: pinterest_unfollowBoard_v1
+          stable_id: pinterest_unfollowBoard_v2
           tool_version: 2
       parameters:
       - name: x-requested-with
@@ -753,7 +744,7 @@ paths:
         schema:
           type: string
           default: /
-        description: "Source URL for Pinterest tracking"
+        description: "Source URL for Pinterest tracking (typically the board's URL path)"
       - name: accept
         in: header
         required: true
@@ -776,8 +767,8 @@ paths:
                   description: "Source URL path for context"
                 data:
                   type: string
-                  description: 'JSON string wrapping options. Example: {"options":{"board_id":"BOARD"},"context":{}}'
-                  example: '{"options":{"board_id":"549755714253"},"context":{}}'
+                  description: 'JSON string wrapping the wrapped v3 REST URL. Example: {"options":{"url":"/v3/boards/<BOARD_ID>/follow/"},"context":{}}'
+                  example: '{"options":{"url":"/v3/boards/32088284783993002/follow/"},"context":{}}'
       responses:
         "200":
           description: Success.
