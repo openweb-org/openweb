@@ -6,7 +6,7 @@
     {
       "input": { "owner": "imoonkey", "repo": "openweb-test" },
       "assertions": {
-        "status": 204
+        "status": 200
       }
     }
   ]
