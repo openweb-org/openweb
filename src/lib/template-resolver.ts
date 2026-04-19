@@ -77,11 +77,15 @@ function lookup(expr: string, template: string, store: ResponseStore): unknown {
   const trimmed = expr.trim()
   if (!trimmed) throw new TemplateError('bad_syntax', template, 'empty placeholder')
 
+  // Built-in helpers (no namespace prefix). Useful for fixtures that need
+  // unique values per run (e.g. `createTweet` text — Twitter rejects duplicates).
+  if (trimmed === 'now') return Date.now()
+
   // Normalize foo[0].bar → foo.0.bar
   const normalized = trimmed.replace(/\[(\d+)\]/g, '.$1')
   const parts = normalized.split('.').filter((p) => p.length > 0)
   if (parts.length < 3 || parts[0] !== 'prev') {
-    throw new TemplateError('bad_syntax', template, 'expected ${prev.<opId>.<path>}')
+    throw new TemplateError('bad_syntax', template, 'expected ${prev.<opId>.<path>} or ${now}')
   }
 
   const opId = parts[1] ?? ''

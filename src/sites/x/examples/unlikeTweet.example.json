@@ -2,10 +2,11 @@
   "operation_id": "unlikeTweet",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 12,
   "cases": [
     {
       "input": {
-        "tweet_id": "2042768913184792832"
+        "tweet_id": "${prev.createTweet.create_tweet.tweet_results.result.rest_id}"
       },
       "assertions": {
         "status": 200,

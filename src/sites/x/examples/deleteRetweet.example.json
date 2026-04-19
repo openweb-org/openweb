@@ -2,10 +2,11 @@
   "operation_id": "deleteRetweet",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 16,
   "cases": [
     {
       "input": {
-        "source_tweet_id": "2042768913184792832"
+        "source_tweet_id": "${prev.createTweet.create_tweet.tweet_results.result.rest_id}"
       },
       "assertions": {
         "status": 200,

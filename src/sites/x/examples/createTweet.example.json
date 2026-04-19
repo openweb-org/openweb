@@ -2,10 +2,11 @@
   "operation_id": "createTweet",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 10,
   "cases": [
     {
       "input": {
-        "text": "Hello from OpenWeb!"
+        "text": "OpenWeb verify ping ${now}"
       },
       "assertions": {
         "status": 200,
