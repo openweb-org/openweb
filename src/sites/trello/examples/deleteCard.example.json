@@ -1,8 +1,9 @@
 {
   "operation_id": "deleteCard",
   "replay_safety": "unsafe_mutation",
+  "order": 2,
   "cases": [{
-    "input": { "cardId": "PLACEHOLDER" },
+    "input": { "cardId": "${prev.createCard.id}" },
     "assertions": { "status": 200 }
   }]
 }

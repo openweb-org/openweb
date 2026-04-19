@@ -1,0 +1,14 @@
+{
+  "operation_id": "createCard",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
+  "cases": [
+    {
+      "input": {
+        "idList": "5c0aa3b58ee467041b6acf76",
+        "name": "openweb-verify ${now}"
+      },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
