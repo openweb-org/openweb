@@ -2,7 +2,7 @@
   "operation_id": "archiveCard",
   "replay_safety": "unsafe_mutation",
   "cases": [{
-    "input": { "cardId": "PLACEHOLDER" },
+    "input": { "cardId": "69e424d26687c39768f18bc5" },
     "assertions": { "status": 200, "response_schema_valid": true }
   }]
 }
