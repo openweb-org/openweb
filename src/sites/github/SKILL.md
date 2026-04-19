@@ -46,15 +46,15 @@ GitHub REST + GraphQL API — code hosting platform (developer tools archetype).
 | listPullRequests | repository PRs | owner ← getRepo, repo ← getRepo | number, title, state, user.login, head.ref, base.ref | paginated |
 | listContributors | repository contributors | owner ← getRepo, repo ← getRepo | login, contributions | paginated |
 | createIssue | create an issue | owner ← getRepo, repo ← getRepo, title, body | number, html_url | write, CAUTION |
-| closeIssue | close an issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION. **BLOCKED — pending rewrite to github.com web endpoints** |
-| reopenIssue | reopen a closed issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION — reverse of closeIssue. **BLOCKED — pending rewrite** |
+| closeIssue | close an issue | owner, repo, issue_number ← listIssues | data (GraphQL response) | write, CAUTION. Routes through github.com `/_graphql` |
+| reopenIssue | reopen a closed issue | owner, repo, issue_number ← listIssues | data (GraphQL response) | write, CAUTION — reverse of closeIssue. Routes through github.com `/_graphql` |
 | createComment | comment on issue/PR | owner, repo, issue_number ← listIssues, body | id, body, html_url | write, CAUTION |
 | deleteComment | delete a comment | owner, repo, comment_id ← createComment | — (204) | write, CAUTION — reverse of createComment |
 | forkRepo | fork a repository | owner ← getRepo, repo ← getRepo | full_name | write, CAUTION |
-| starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE. **BLOCKED — pending rewrite to github.com web endpoints** |
-| unstarRepo | unstar a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of starRepo. **BLOCKED — pending rewrite** |
-| watchRepo | watch a repository | owner ← getRepo, repo ← getRepo | subscribed, ignored | write, CAUTION. **BLOCKED — pending rewrite to github.com web endpoints** |
-| unwatchRepo | unwatch a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of watchRepo. **BLOCKED — pending rewrite** |
+| starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE. (api.github.com — currently rejected by cookie_session, see DOC.md) |
+| unstarRepo | unstar a repository | owner ← getRepo, repo ← getRepo | count (watcher count) | write, CAUTION — reverse of starRepo. Routes through github.com rails endpoint |
+| watchRepo | watch a repository | owner ← getRepo, repo ← getRepo | count (watcher count) | write, CAUTION. Routes through github.com `/notifications/subscribe` |
+| unwatchRepo | unwatch a repository | owner ← getRepo, repo ← getRepo | count (watcher count) | write, CAUTION — reverse of watchRepo. Routes through github.com `/notifications/subscribe` |
 | graphqlQuery | execute GraphQL | query, variables | data | write (unrestricted mutations possible) |
 
 ## Quick Start
@@ -89,6 +89,6 @@ openweb github exec unwatchRepo '{"owner":"imoonkey","repo":"openweb-test"}'
 
 ## Known Limitations
 
-- **`closeIssue`, `reopenIssue`, `starRepo`, `unstarRepo`, `watchRepo`, `unwatchRepo` — BLOCKED, pending rewrite to github.com web endpoints.** These ops currently target `api.github.com`, which does not authenticate the user's `_gh_sess` cookie for writes (the github.com web UI calls api.github.com with a short-lived internal bearer token, not the session cookie). All openweb sites use cookie-based browser auth — no Bearer/PAT primitives — so the fix is to retarget these ops at the rails-style github.com web endpoints (e.g. `POST /{owner}/{repo}/star` with `X-CSRF-Token` from `<meta name="csrf-token">` on the github.com page), the same approach used for instagram, x, reddit, etc. Rewrite work is staged on the `w-github-web-rewrite` agent, paused on a user action (sign in to github.com in the managed Chrome at `localhost:9222`). See DOC.md and `doc/todo/write-verify/handoff.md` §3.1.
-- `createIssue`, `createComment`, `deleteComment`, `forkRepo`, `graphqlQuery` likely share the same auth-architecture mismatch and will need the same rewrite.
+- **`closeIssue`, `reopenIssue`, `watchRepo`, `unwatchRepo`, `unstarRepo` route through github.com web UI** (transport: page) instead of api.github.com REST. They use the user's `_gh_sess` browser cookie + page-scraped `X-Fetch-Nonce` + per-form `authenticity_token`. Verify: 5/5 PASS (2026-04-19). The persisted-query hashes for close/reopen are hardcoded and **will drift** with GitHub web releases — re-capture from a real click via DevTools `_graphql` request when they break.
+- **`starRepo`, `createIssue`, `createComment`, `deleteComment`, `forkRepo`, `graphqlQuery` still target api.github.com** and remain affected by the cookie-session/Bearer mismatch. Same web-rewrite pattern applies (see `adapters/github-web.ts`).
 - Read ops on public repos work without auth (rate-limited to 60 req/h); authenticated read ops via cookies work too (5000 req/h).

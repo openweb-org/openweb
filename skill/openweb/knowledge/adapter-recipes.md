@@ -365,3 +365,40 @@ await page.waitForSelector('.content-loaded', { timeout: 10_000 })
 **Stability ranking** (most to least stable): Node HTML Parse > Response Interception > Toggle-Param > SPA Workaround > Webpack Module Walk.
 
 Choose the simplest pattern that works. Combine patterns when needed — e.g., SPA workaround + response interception for sites that need both fresh navigation and API capture.
+
+---
+
+## Appendix: GitHub-style Verified-Fetch Nonce (CSRF)
+
+Some sites have moved past the global `<meta name="csrf-token">` pattern in favor of a per-page **fetch nonce** + **verified-fetch flag**. GitHub is the reference example (2026-04). When you find a site with no global csrf-token meta but mutations still authenticate, check for this pattern.
+
+**Signals:**
+- No `<meta name="csrf-token">` on the page
+- Has `<meta name="fetch-nonce">` (or similar named nonce meta)
+- Mutation requests carry an extra header like `GitHub-Verified-Fetch: true` or `<Site>-Verified-Fetch: true`
+- Mutations 403 without those headers, even with valid cookies
+
+**Recipe:**
+
+```typescript
+const ctx = await page.evaluate(() => ({
+  nonce: document.querySelector('meta[name="fetch-nonce"]')?.getAttribute('content') ?? '',
+}))
+await page.evaluate(async ({ url, body, nonce }) => {
+  return fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-Fetch-Nonce': nonce,                // per-page nonce
+      'GitHub-Verified-Fetch': 'true',       // attestation flag
+    },
+    body,
+  })
+}, { url, body, nonce: ctx.nonce })
+```
+
+**Combined with rails per-form `authenticity_token`:** some endpoints (e.g. github star/unstar) want BOTH the nonce header AND a per-form `authenticity_token` scraped from `form[action$="/<action>"] input[name="authenticity_token"]`. Other endpoints on the same site (e.g. github `/notifications/subscribe`) want only the nonce header. Capture the real request via DevTools to know which combination applies.
+
+**Combined with persisted-query GraphQL:** the same nonce envelope works for private GraphQL endpoints. GitHub's `/_graphql` (note the underscore — not the public `/graphql`) uses body shape `{persistedQueryName, query: <md5-hash>, variables}` instead of the standard `{operationName, extensions.persistedQuery.sha256Hash, variables}`. Persisted-query hashes drift with web releases — hardcode + plan to re-capture from a real DevTools click when verify breaks.
