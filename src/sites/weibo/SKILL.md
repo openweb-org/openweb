@@ -16,25 +16,23 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 3. `getUserStatuses(uid, page)` → `list[].mid`, `list[].user.id`
 4. `getPost(id=mid)` → full post detail
 
-### Read home feed and interact (verified write ops)
-1. `getHotFeed(group_id, containerid, extparam)` → pick post → `statuses[].mid` (numeric long)
-2. `likePost(id ← statuses[].mid)` → `ok`, `attitude` (set like)
-3. `unlikePost(id ← statuses[].mid)` → `ok` (reverse the like)
-4. `repost(id ← statuses[].mid, reason)` → `ok`, `statuses` (publish a quote-repost)
+### Read home feed and interact (verified write ops, paired)
+1. `getHotFeed(group_id, containerid, extparam)` → pick post → `statuses[].mid` (numeric long), `statuses[].user.id`
+2. `likePost(id ← statuses[].mid)` → `ok`, `attitude`
+3. `unlikePost(id ← statuses[].mid)` → `ok` (reverses likePost)
+4. `bookmarkPost(id ← statuses[].mid)` → `ok`, `favorited_time`
+5. `unbookmarkPost(id ← statuses[].mid)` → `ok` (reverses bookmarkPost; note upstream typo `destory`)
+6. `repost(id ← statuses[].mid, reason)` → `ok`, `statuses` (publish a quote-repost)
 
 > **`mid` format matters.** Write ops require the **numeric long-integer `mid`**
 > (e.g. `5289345339621625`) from feed responses, **not** the alphanumeric
-> `mblogid` (e.g. `Qyj0ifs0m`) used by `getPost`. setLike/destroyLike accept
+> `mblogid` (e.g. `Qyj0ifs0m`) used by `getPost`. setLike/destoryFavorites accept
 > only the long integer.
 
-### Follow a user from a post (currently BLOCKED — see Known Limitations)
-1. `getPost(id)` → `user.id`, `user.screen_name`
-2. `followUser(friend_uid=user.id)` — endpoint returns 404 upstream
-
-### Undo actions (partial — see Known Limitations)
-1. `unlikePost(id ← feed mid)` → `ok` ✅
-2. `unfollowUser(friend_uid=user.id)` — endpoint returns 404 upstream
-3. `unbookmarkPost(id=mid)` — endpoint returns 404 upstream
+### Follow / unfollow a user from a post
+1. `getPost(id)` or feed → `user.id`
+2. `followUser(friend_uid ← user.id)` → returns target user object
+3. `unfollowUser(uid ← user.id)` → reverses followUser (note: param is `uid`, not `friend_uid`; endpoint typo `destory`)
 
 ## Operations
 
@@ -49,13 +47,13 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 | getPost | post detail | id ← feed/statuses mid | text_raw, reposts_count, comments_count, attitudes_count, user.id, pic_infos | |
 | getLongtext | full text for truncated post | id ← getPost (when isLongText=true) | longTextContent, longTextContent_raw | |
 | listReposts | post reposts | id ← getPost id (numeric) | data[], total_number | page-based |
-| likePost | like a post | id ← feed/getPost mid | ok, attitude | SAFE: reversible |
-| repost | repost/retweet | id ← feed/getPost mid, reason | ok, statuses | SAFE: reversible (adapter) |
-| followUser | follow a user | friend_uid ← getPost user.id | ok, data (user) | SAFE: reversible (adapter) |
-| bookmarkPost | bookmark a post | id ← feed/getPost mid | ok, favorited_time | SAFE: reversible (adapter) |
-| unlikePost | unlike a post | id ← feed/getPost mid | ok | CAUTION: reverses likePost (adapter) |
-| unfollowUser | unfollow a user | friend_uid ← getPost user.id | ok | CAUTION: reverses followUser (adapter) |
-| unbookmarkPost | remove bookmark | id ← feed/getPost mid | ok | CAUTION: reverses bookmarkPost (adapter) |
+| likePost | like a post | id ← feed/getPost mid (numeric long) | ok, attitude | SAFE: reversible via unlikePost |
+| repost | repost/retweet | id ← feed mid, reason | ok, statuses | SAFE: reversible via deletePost (not exposed) |
+| followUser | follow a user | friend_uid ← user.id | id, screen_name, ok | SAFE: reversible via unfollowUser |
+| bookmarkPost | bookmark a post | id ← feed mid | status (post obj) | SAFE: reversible via unbookmarkPost |
+| unlikePost | unlike a post | id ← feed mid | ok | CAUTION: reverses likePost |
+| unfollowUser | unfollow a user | uid ← user.id | id, screen_name, ok | CAUTION: param is `uid` not `friend_uid`; endpoint typo `/friendships/destory` |
+| unbookmarkPost | remove bookmark | id ← feed mid | status (post obj, favorited:false) | CAUTION: endpoint typo `/statuses/destoryFavorites` |
 
 ## Quick Start
 
@@ -85,11 +83,19 @@ openweb weibo exec listReposts '{"id": 5281762063682574, "page": 1, "count": 10}
 openweb weibo exec likePost   '{"id": "5289345339621625"}'
 openweb weibo exec unlikePost '{"id": "5289345339621625"}'
 
+# Bookmark / unbookmark (note "destory" typo on the unbookmark endpoint)
+openweb weibo exec bookmarkPost   '{"id": "5288272024575643"}'
+openweb weibo exec unbookmarkPost '{"id": "5288272024575643"}'
+
+# Follow / unfollow (note: unfollow uses `uid`, follow uses `friend_uid`)
+openweb weibo exec followUser   '{"friend_uid": "6859786766"}'
+openweb weibo exec unfollowUser '{"uid": "6859786766"}'
+
 # Quote-repost
 openweb weibo exec repost '{"id": "5289345339621625", "reason": "interesting"}'
 ```
 
 ## Known Limitations
 - **Login required** — every op needs a logged-in `weibo.com` browser tab (SUB cookie).
-- **Numeric long `mid` for write ops** — likePost/unlikePost/repost reject the alphanumeric `mblogid`. Read `mid` from feed responses (`getFriendsFeed.statuses[].mid`, `getHotFeed.statuses[].mid`), not from `getPost`.
-- **BLOCKED ops (upstream endpoint drift, 2026-04-18):** `bookmarkPost`, `unbookmarkPost`, `followUser`, `unfollowUser`. The `/ajax/statuses/destroyFavorites` and `/ajax/friendships/destroy` endpoints now return HTTP 404 (renamed/moved upstream). Specs and adapter routes are kept in `openapi.yaml` but example fixtures were dropped — fresh HAR capture is required to repoint these to the current endpoints (see `doc/todo/write-verify/handoff.md` §3.7).
+- **Numeric long `mid` for write ops** — likePost/unlikePost/bookmarkPost/unbookmarkPost/repost reject the alphanumeric `mblogid`. Read `mid` from feed responses (`getFriendsFeed.statuses[].mid`, `getHotFeed.statuses[].mid`), not from `getPost`.
+- **Upstream typos: `destory` (not `destroy`)** — `unbookmarkPost` POSTs to `/ajax/statuses/destoryFavorites` and `unfollowUser` POSTs to `/ajax/friendships/destory`. Both spellings are wrong (Weibo's typo); using the "correct" `destroy` returns HTML 404. Param name is also asymmetric — followUser takes `friend_uid`, unfollowUser takes `uid`.

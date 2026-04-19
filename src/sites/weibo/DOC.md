@@ -16,21 +16,15 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 3. `getUserStatuses(uid, page)` → paginated post list → `mid`
 4. `getPost(id=mid)` → full post detail
 
-### Read home feed and interact
-1. `getFriendsFeed(list_id)` → home feed posts → `mid`
-2. `getPost(id=mid)` → full detail
-3. `likePost(id=mid)` → like the post
-4. `repost(id=mid, reason)` → repost with comment
-5. `bookmarkPost(id=mid)` → save to favorites
+### Read home feed and interact (paired writes)
+1. `getHotFeed(group_id, containerid, extparam)` → pick post → `mid` (numeric long)
+2. `likePost(id=mid)` ⇄ `unlikePost(id=mid)`
+3. `bookmarkPost(id=mid)` ⇄ `unbookmarkPost(id=mid)`
+4. `repost(id=mid, reason)` (no inverse exposed)
 
-### Undo actions
-1. `unlikePost(id=mid)` → remove like from post
-2. `unfollowUser(friend_uid=user.id)` → unfollow user
-3. `unbookmarkPost(id=mid)` → remove bookmark
-
-### Follow a user from a post
-1. `getPost(id)` → post detail → `user.id`
-2. `followUser(friend_uid=user.id)` → follow the author
+### Follow / unfollow a user
+1. Feed or `getPost` → `user.id`
+2. `followUser(friend_uid=user.id)` ⇄ `unfollowUser(uid=user.id)` — note asymmetric param names
 
 ## Operations
 
@@ -47,11 +41,11 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 | listReposts | post reposts | id ← getPost id (numeric) | data[], total_number | page-based |
 | likePost | like a post | id ← getPost mid | ok, attitude | SAFE: reversible |
 | repost | repost/retweet | id ← getPost mid, reason | ok, statuses | SAFE: reversible |
-| followUser | follow a user | friend_uid ← getPost user.id | ok, data (user) | SAFE: reversible |
-| bookmarkPost | bookmark a post | id ← getPost mid | ok, favorited_time | SAFE: reversible |
+| followUser | follow a user | friend_uid ← getPost user.id | id, screen_name, ok | SAFE: reversible via unfollowUser |
+| bookmarkPost | bookmark a post | id ← getPost mid | status (post obj, favorited:true) | SAFE: reversible |
 | unlikePost | unlike a post | id ← getPost mid | ok | CAUTION: reverses likePost |
-| unfollowUser | unfollow a user | friend_uid ← getPost user.id | ok | CAUTION: reverses followUser |
-| unbookmarkPost | remove bookmark | id ← getPost mid | ok | CAUTION: reverses bookmarkPost |
+| unfollowUser | unfollow a user | uid ← user.id | id, screen_name, ok | CAUTION: param `uid` (not `friend_uid`); endpoint typo `destory` |
+| unbookmarkPost | remove bookmark | id ← getPost mid | status (post obj, favorited:false) | CAUTION: endpoint typo `destoryFavorites` |
 
 ## Quick Start
 
@@ -111,4 +105,5 @@ openweb weibo exec listReposts '{"id": 5281762063682574, "page": 1, "count": 10}
 - **listComments missing** — comments endpoint (`/ajax/comment/buildComments`) not yet compiled; DOC workflows reference it but op not in spec
 - **Write ops are form-encoded, not JSON** — `/ajax/statuses/setLike`, `/ajax/statuses/destroyLike`, `/ajax/favorites/create`, `/ajax/friendships/create` all reject `application/json` ("parameter (id) value invalid"). The spec sends `application/x-www-form-urlencoded` for every write op except `repost` (which uses JSON). New write ops should mirror this convention unless HAR proves otherwise.
 - **Write ops want numeric long `mid`, not `mblogid`** — `setLike` and friends accept only the long-integer `mid` (e.g. `5289345339621625`) from feed responses. The alphanumeric `mblogid` (e.g. `Qyj0ifs0m`) used by `getPost` is rejected. This is per-endpoint upstream behavior; the runtime cannot translate between forms.
-- **Upstream endpoint drift (2026-04-18)** — `unbookmarkPost` (`/ajax/statuses/destroyFavorites`) and `unfollowUser` (`/ajax/friendships/destroy`) now return HTTP 404. Their pair-mates `bookmarkPost`, `followUser` were also dropped from CI examples for symmetry (no inverse → would leak permanent state). Endpoints likely renamed (probed `/ajax/favorites/destroy`, `/ajax/profile/cancelFollow` — also 404). Re-capture from a real bookmark/unfollow click in `weibo.com` and repoint per `skill/openweb/add-site/capture.md`.
+- **Upstream typo: `destory` (not `destroy`)** — `unbookmarkPost` POSTs to `/ajax/statuses/destoryFavorites` and `unfollowUser` POSTs to `/ajax/friendships/destory`. Both endpoint names are misspelled upstream; the "correct" `destroy` spelling returns HTML 404. Discovered (2026-04-19) by greping the loaded `weibo-pro-next/index-*.js` bundle for `/ajax/` paths after probing 8 reasonable variants returned 404. Param names are also asymmetric across the create/destory pair: followUser takes `friend_uid`, unfollowUser takes `uid`; bookmark and unbookmark both take `id` (the post mid).
+- **JS-bundle endpoint discovery** — when probing alleged renames returns nothing, fetch each `<script src>` from a logged-in page and grep the source for `/ajax/[\w/]+` (especially around action verbs: destroy, cancel, remove, unfollow). Cheap, deterministic, and reveals the actual paths the SPA calls — including typos and dead/legacy routes.

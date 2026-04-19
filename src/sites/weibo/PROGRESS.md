@@ -1,4 +1,24 @@
-## 2026-04-18 — Write-Verify Campaign
+## 2026-04-19 — Write-Op Verify Campaign (4 ops restored, 7/7 PASS)
+
+**Context:** Resume `0dbc7f8` follow-up. Four write ops (`bookmarkPost`, `unbookmarkPost`, `followUser`, `unfollowUser`) were left at 0/4 PASS because `/ajax/statuses/destroyFavorites` and `/ajax/friendships/destroy` returned HTTP 404 and reasonable rename variants (`/ajax/favorites/destroy`, `/ajax/profile/cancelFollow`, etc.) also 404'd.
+**Changes (`5f744cd`, `2d60bc6`, `4cc213f`, `01ec37d`):**
+- `bookmarkPost`, `followUser`: example.json restored (endpoints `/ajax/statuses/createFavorites` and `/ajax/friendships/create` were never broken — they were dropped only for pair symmetry when the inverses were 404'ing).
+- `unbookmarkPost`: openapi path `/ajax/statuses/destroyFavorites` → `/ajax/statuses/destoryFavorites` + example.json. Body unchanged (`id={mid}`).
+- `unfollowUser`: openapi path `/ajax/friendships/destroy` → `/ajax/friendships/destory` + body param `friend_uid` → `uid` + example.json.
+- All examples reuse the same target inside each pair (`order: 1` create, `order: 2` destroy) so verify is state-neutral.
+
+**Verification:** `pnpm dev verify weibo --write --browser` → **15/15 PASS** (8 read + 7 write). Per-pair runs also PASS.
+
+**Key discovery:** Upstream **typo** in the renamed endpoints — Weibo shipped `destory` (not `destroy`) for both routes. Found by fetching every `<script src>` on the post-detail page and greping for `/ajax/[\w/]+` matching `destroy|cancel|remove|fav|follow`. The bundle `h5.sinaimg.cn/m/weibo-pro-next/assets/index-*.js` listed `/ajax/statuses/destoryFavorites` and `/ajax/friendships/destory` directly. Probing `uid=` vs `friend_uid=` for the friendships endpoint quickly identified the asymmetric param.
+
+**Pitfalls encountered:**
+- The previous handoff said the 4 ops were *removed* from openapi.yaml; in fact only the example fixtures were dropped — the spec entries were still present (with the wrong, "correctly" spelled endpoint paths). Always verify what was actually changed before re-implementing.
+- Heavy weibo SPA pages (home feed, user profile) crashed the browser tab during scripted CDP automation; navigating to `https://weibo.com/robots.txt` for endpoint probes (cookies still flow same-origin) is fast and crash-free.
+- Reasonable spelling guesses (`destroyFavorites`, `cancelFavorites`, `unfavorite`, `favorites/destroy`) all returned the SPA 404 HTML page. JS-bundle grep is far cheaper than enumerating variants once you've exhausted 4-5 plausible names.
+
+---
+
+
 
 **Context:** First end-to-end exercise of write ops via `pnpm dev verify weibo --write`.
 **Changes (`0dbc7f8`):**
