@@ -74,6 +74,49 @@ function findCallApi(): ((...args: unknown[]) => Promise<unknown>) | null {
 const FIND_GET_GLOBAL_SRC = findGetGlobal.toString()
 const FIND_CALL_API_SRC = findCallApi.toString()
 
+/**
+ * Locate Telegram Web A's getActions(): a 0-arg function returning a Proxy
+ * that dispatches `openChat`/`loadFullUser`/etc. through addActionHandler
+ * (populates BOTH teact global AND the GramJS Worker entity cache).
+ *
+ * Strategy: scan modules whose source mentions `addActionHandler`; for each,
+ * call every 0-arg exported function and check whether the returned object
+ * exposes a callable `openChat` property (Proxy traps make own-key
+ * enumeration empty, but property access still returns a function).
+ */
+function findGetActions(): (() => Record<string, (arg?: unknown) => unknown>) | null {
+  const w = window as Record<string, unknown>
+  const wp = (w.webpackChunktelegram_t ?? w.webpackChunkwebk) as unknown[] | undefined
+  if (!wp || !Array.isArray(wp)) return null
+  let require: Record<string, unknown> | null = null
+  wp.push([[Symbol()], {}, (r: Record<string, unknown>) => { require = r }])
+  wp.pop()
+  if (!require || !(require as Record<string, unknown>).m) return null
+  const moduleMap = (require as Record<string, unknown>).m as Record<string, unknown>
+  for (const id of Object.keys(moduleMap)) {
+    let src: string
+    try { src = (moduleMap[id] as () => void).toString() } catch { continue }
+    if (!src.includes('addActionHandler')) continue
+    try {
+      const mod = (require as (id: string) => Record<string, unknown>)(id)
+      if (!mod || typeof mod !== 'object') continue
+      for (const key of Object.keys(mod)) {
+        const fn = (mod as Record<string, unknown>)[key]
+        if (typeof fn !== 'function' || (fn as () => void).length !== 0) continue
+        try {
+          const r = (fn as () => Record<string, unknown>)()
+          if (r && typeof r === 'object' && typeof (r as Record<string, unknown>).openChat === 'function') {
+            return fn as () => Record<string, (arg?: unknown) => unknown>
+          }
+        } catch { /* may throw */ }
+      }
+    } catch { /* may throw */ }
+  }
+  return null
+}
+
+const FIND_GET_ACTIONS_SRC = findGetActions.toString()
+
 // ── Shared helpers for page.evaluate ──────────────────────────────
 
 /** Bootstraps getGlobal + callApi inside page.evaluate and resolves chatId */
@@ -540,9 +583,11 @@ const runner: CustomRunner = {
     // Note: previously tried to lazy-load missing chats by setting
     // window.location.hash = '#<chatId>'. Per commit cd0a9ea, "TG Web A
     // ignores post-boot hash changes", so that approach silently no-ops.
-    // For Saved Messages (chatId='me'), resolveCtx synthesizes the chat
-    // from users.byId. For other chats not in state, the user must have
-    // opened them at least once in the current session.
+    // Instead, when the requested chat isn't in chats.byId, dispatch
+    // actions.openChat({ id }) — TG's own action handler loads the dialog
+    // into BOTH the teact global AND the GramJS Worker entity cache (which
+    // is what callApi needs to build InputPeer).
+    await ensureChatsLoaded(page, params)
 
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)
@@ -551,3 +596,41 @@ const runner: CustomRunner = {
 }
 
 export default runner
+
+/**
+ * For each chatId in params, if chats.byId[id] is missing, dispatch
+ * actions.openChat({ id }) to make TG load the dialog (teact global +
+ * Worker entity cache). Waits up to 5s per chat for hydration; never
+ * throws — handlers will surface a clear error downstream if missing.
+ */
+async function ensureChatsLoaded(page: Page, params: Readonly<Record<string, unknown>>): Promise<void> {
+  const raw: string[] = []
+  for (const k of ['chatId', 'fromChatId', 'toChatId']) {
+    const v = params[k]
+    if (typeof v === 'string' && v && !v.startsWith('+')) raw.push(v)
+  }
+  if (!raw.length) return
+
+  await page.evaluate(async (args: { globalSrc: string; actionsSrc: string; chatIds: string[] }) => {
+    const getGlobal = new Function(`return (${args.globalSrc})()`)() as (() => Record<string, unknown>) | null
+    if (!getGlobal) return
+    const getActions = new Function(`return (${args.actionsSrc})()`)() as (() => Record<string, (a?: unknown) => unknown>) | null
+    if (!getActions) return
+    const actions = getActions()
+    const g = getGlobal() as { currentUserId?: string; chats?: { byId?: Record<string, unknown> } }
+
+    for (const cid of args.chatIds) {
+      const id = cid === 'me' ? g.currentUserId : cid
+      if (!id) continue
+      if (g.chats?.byId?.[id]) continue
+      try { actions.openChat({ id, shouldReplaceHistory: false }) } catch { /* dispatcher may throw */ }
+      const deadline = Date.now() + 5000
+      while (Date.now() < deadline) {
+        const fresh = getGlobal() as { chats?: { byId?: Record<string, unknown> } }
+        if (fresh.chats?.byId?.[id]) break
+        await new Promise((r) => setTimeout(r, 200))
+      }
+    }
+  }, { globalSrc: FIND_GET_GLOBAL_SRC, actionsSrc: FIND_GET_ACTIONS_SRC, chatIds: raw })
+}
+
