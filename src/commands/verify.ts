@@ -1,5 +1,3 @@
-import type { Browser } from 'patchright'
-
 import { OpenWebError } from '../lib/errors.js'
 import { listSites } from '../lib/site-resolver.js'
 import {
@@ -11,7 +9,7 @@ import {
   verifySite,
   writeVerifyReport,
 } from '../lifecycle/verify.js'
-import { type BrowserHandle, ensureBrowser, touchLastUsed } from '../runtime/browser-lifecycle.js'
+import { ensureBrowser, touchLastUsed } from '../runtime/browser-lifecycle.js'
 
 function statusIcon(status: SiteOverallStatus): string {
   switch (status) {
@@ -54,19 +52,23 @@ export interface VerifyCommandOptions {
 }
 
 export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
-  let handle: BrowserHandle | undefined
-  let browser: Browser | undefined
   let keepAlive: ReturnType<typeof setInterval> | undefined
   if (opts.browser) {
-    handle = await ensureBrowser()
-    browser = handle.browser
+    // Start the managed browser so verify ops can connect to it via CDP.
+    // We intentionally do NOT inject this Browser handle into deps — refreshProfile()
+    // (tier-3 of the auth cascade) kills + restarts Chrome on a new PID/port, which
+    // would invalidate any pre-acquired handle and break every subsequent op with
+    // "No browser context available." Each op calls ensureBrowser() itself and
+    // re-reads the current port file, so it always sees the live Chrome.
+    const handle = await ensureBrowser()
+    await handle.release()
     keepAlive = setInterval(() => touchLastUsed().catch(() => {}), 60_000)
   }
 
   const permissionsConfig = opts.write
     ? { defaults: { read: 'allow' as const, write: 'allow' as const, delete: 'allow' as const, transact: 'deny' as const } }
     : undefined
-  const deps = browser || permissionsConfig ? { ...browser && { browser }, ...permissionsConfig && { permissionsConfig } } : undefined
+  const deps = permissionsConfig ? { permissionsConfig } : undefined
   const verifyOpts: VerifyOptions | undefined = (opts.write || opts.ops)
     ? { includeWrite: opts.write, ops: opts.ops }
     : undefined
@@ -158,8 +160,5 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
     })
   } finally {
     if (keepAlive) clearInterval(keepAlive)
-    if (handle) {
-      await handle.release()
-    }
   }
 }
