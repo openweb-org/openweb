@@ -548,29 +548,37 @@ async function waitForState(page: Page, timeoutMs: number): Promise<'ready' | 'u
 const runner: CustomRunner = {
   name: 'telegram-protocol',
   description: 'Telegram Web — reads via webpack state, writes via GramJS callApi',
+  warmTimeoutMs: 30_000,
 
-  async run(ctx: PreparedContext): Promise<unknown> {
-    const { page, operation, params, helpers } = ctx
-    if (!page) throw helpers.errors.fatal('telegram-protocol requires a page (transport: page)')
-
-    // SPA-readiness gate (was init() pre-32a698a; load-bearing for IndexedDB hydration).
-    // page.goto fires `load` before Telegram's webpack bundle parses + IndexedDB
-    // session boots. Without this, run() races the SPA and sees QR-login fallback.
-    if (page.url().includes('web.telegram.org')) {
-      await page.waitForFunction(() => {
+  /**
+   * SPA-readiness gate (was init() pre-32a698a; load-bearing for IndexedDB hydration).
+   * page.goto fires `load` before Telegram's webpack bundle parses + IndexedDB
+   * session boots. Without this, run() races the SPA and sees QR-login fallback.
+   * Polled by warm-session (15 s default, overridden to 30 s above).
+   */
+  async warmReady(page: Page): Promise<boolean> {
+    if (!page.url().includes('web.telegram.org')) return true
+    return page
+      .evaluate((fnSrc: string) => {
         const w = window as Record<string, unknown>
-        return Array.isArray(w.webpackChunktelegram_t) || Array.isArray(w.webpackChunkwebk)
-      }, { timeout: 30_000 }).catch(() => {})
-      await page.waitForFunction((fnSrc: string) => {
+        const hasChunks = Array.isArray(w.webpackChunktelegram_t) || Array.isArray(w.webpackChunkwebk)
+        if (!hasChunks) return false
         try {
           const findFn = new Function(`return (${fnSrc})()`) as () => (() => Record<string, unknown>) | null
           const getGlobal = findFn()
           if (!getGlobal) return false
           const state = getGlobal() as { currentUserId?: string } | null
           return !!state && state.currentUserId != null
-        } catch { return false }
-      }, FIND_GET_GLOBAL_SRC, { timeout: 30_000 }).catch(() => {})
-    }
+        } catch {
+          return false
+        }
+      }, FIND_GET_GLOBAL_SRC)
+      .catch(() => false)
+  },
+
+  async run(ctx: PreparedContext): Promise<unknown> {
+    const { page, operation, params, helpers } = ctx
+    if (!page) throw helpers.errors.fatal('telegram-protocol requires a page (transport: page)')
 
     // "Many logins" conflict check — Telegram shows this when the same
     // session is open in multiple tabs; webpack state is unavailable.
