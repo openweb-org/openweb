@@ -1,3 +1,15 @@
+## 2026-04-18 — Write-Verify Campaign
+
+**Context:** First end-to-end exercise of write ops via `pnpm dev verify instagram --write`.
+**Changes (`401b5a5`):** Repaired `followUser`/`unfollowUser` by routing to the mobile-API path `/friendships/create/{id}/` (and `/destroy/{id}/`). The legacy `/web/friendships/{id}/follow/` route now returns the SPA HTML shell with HTTP 200, silently breaking JSON parsing.
+**Verification:** 4/12 write ops PASS (`followUser`, `unfollowUser`, `muteUser`, `unmuteUser`).
+**Key discovery:** When an Instagram web endpoint returns 200 + HTML, the JSON contract is gone — check the mobile-API equivalent before declaring the feature removed.
+**Pitfalls encountered:**
+- `blockUser`/`unblockUser` — both web and mobile paths now return SPA HTML 200. No working endpoint found through probing common variants. BLOCKED pending fresh HAR.
+- The remaining 6 write ops (like/unlike, save/unsave, createComment/deleteComment) were not exercised in this sweep — they have spec/example coverage but PASS status is presumed, not verified.
+
+---
+
 ## 2026-04-09: Polish instagram site package (enhanced 4→8 ops)
 
 **What changed:**

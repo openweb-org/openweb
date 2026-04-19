@@ -192,6 +192,18 @@ paths:
 - **`schema.const`**: fixed headers (Client-Id) and body fields (operationName, hash) are invisible to callers
 - **Path-differentiated GraphQL** (e.g. `/graphql/{operationName}`): use real paths, no `actual_path` needed
 
+## Mutation Field Renames
+
+Upstream GraphQL schemas churn — mutation fields get renamed, parameter shapes change, dedicated mutations get folded into generic ones (e.g., Medium's `removeFromPredefinedCatalog` → `editCatalogItems(operations: [{delete: {itemId}}])`).
+
+- **Detection signals:** A previously-working mutation returns "field not found" or 400. Introspection is usually disabled.
+- **Impact:** Site package looks "broken" but the underlying feature still works through a renamed operation.
+- **Action:**
+  1. Capture fresh HAR from the live UI clicking the same affordance.
+  2. Search the captured GraphQL payload for the new mutation name.
+  3. **Fragment names leak the new operation** — outgoing payloads include fragment identifiers like `editCatalogItemsMutation_postViewerEdge`, which name the new mutation even when the wire payload is otherwise opaque. This is the fastest discovery path when introspection is denied.
+  4. If the new mutation requires a different ID shape (e.g. `catalogItemId` instead of `postId`), you may need an adapter pre-step (a read mutation/query that maps the old ID to the new one).
+
 ## Common Pitfalls
 
 1. **Assuming one POST = one operation** -- check for batched queries

@@ -1,5 +1,18 @@
 # YouTube — Progress
 
+## 2026-04-18 — Write-Verify Campaign
+
+**Context:** First end-to-end exercise of write ops via `pnpm dev verify youtube --write`.
+**Changes (`8cfebff`):**
+- Routed `subscribeChannel` and `unsubscribeChannel` through the `youtube-innertube` adapter so both pick up `sapisidhash` signing. Pre-fix, `subscribeChannel` was a direct InnerTube POST missing the auth binding — it silently 200-no-op'd while `unsubscribeChannel` (correctly 401'd) exposed the asymmetry.
+- Switched verification fixture to MKBHD channel `UCBJycsmduvYEL83R_U4JriQ` (cannot subscribe to own channel — YouTube returns "you may not subscribe to yourself" HTTP 400).
+
+**Verification:** 4/4 write ops PASS (`subscribeChannel`, `unsubscribeChannel`, `likeVideo`, `unlikeVideo`).
+**Key discovery:** Silent-success on the do-side of a write/undo pair is a recurring YouTube failure mode. The undo-side is the canary — its 401 is what unmasks an unauthenticated do-side. Pair-test write ops always.
+**Pitfalls encountered:** "Verify the create succeeded" using a 200 status alone is misleading on InnerTube — it returns 200 with no body content even when no state changed. Inverse-op test is the only reliable signal.
+
+---
+
 ## 2026-04-17 — Adapter Refactor
 
 **Context:** Phase 5C normalization — migrate `youtube-innertube` adapter from the legacy `CodeAdapter` shape to the unified `CustomRunner` interface so all site adapters share one entry point.

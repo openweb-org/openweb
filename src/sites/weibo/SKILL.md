@@ -16,22 +16,25 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 3. `getUserStatuses(uid, page)` → `list[].mid`, `list[].user.id`
 4. `getPost(id=mid)` → full post detail
 
-### Read home feed and interact
-1. `getFriendsFeed(list_id)` → `statuses[].mid`, `statuses[].user.id`
-2. `getPost(id=mid)` → full detail with `text_raw`, `attitudes_count`
-3. `likePost(id=mid)` → like the post
-4. `repost(id=mid, reason)` → repost with comment
-5. `bookmarkPost(id=mid)` → save to favorites
+### Read home feed and interact (verified write ops)
+1. `getHotFeed(group_id, containerid, extparam)` → pick post → `statuses[].mid` (numeric long)
+2. `likePost(id ← statuses[].mid)` → `ok`, `attitude` (set like)
+3. `unlikePost(id ← statuses[].mid)` → `ok` (reverse the like)
+4. `repost(id ← statuses[].mid, reason)` → `ok`, `statuses` (publish a quote-repost)
 
-### Undo actions
-1. `getFriendsFeed` / `getUserStatuses` / `getPost` → `mid`, `user.id`
-2. `unlikePost(id=mid)` → remove like from post
-3. `unfollowUser(friend_uid=user.id)` → unfollow user
-4. `unbookmarkPost(id=mid)` → remove bookmark
+> **`mid` format matters.** Write ops require the **numeric long-integer `mid`**
+> (e.g. `5289345339621625`) from feed responses, **not** the alphanumeric
+> `mblogid` (e.g. `Qyj0ifs0m`) used by `getPost`. setLike/destroyLike accept
+> only the long integer.
 
-### Follow a user from a post
+### Follow a user from a post (currently BLOCKED — see Known Limitations)
 1. `getPost(id)` → `user.id`, `user.screen_name`
-2. `followUser(friend_uid=user.id)` → follow the author
+2. `followUser(friend_uid=user.id)` — endpoint returns 404 upstream
+
+### Undo actions (partial — see Known Limitations)
+1. `unlikePost(id ← feed mid)` → `ok` ✅
+2. `unfollowUser(friend_uid=user.id)` — endpoint returns 404 upstream
+3. `unbookmarkPost(id=mid)` — endpoint returns 404 upstream
 
 ## Operations
 
@@ -77,4 +80,16 @@ openweb weibo exec getPost '{"id": "Qyj0ifs0m"}'
 
 # Get reposts of a post
 openweb weibo exec listReposts '{"id": 5281762063682574, "page": 1, "count": 10}'
+
+# Like / unlike a post (numeric long mid, not mblogid)
+openweb weibo exec likePost   '{"id": "5289345339621625"}'
+openweb weibo exec unlikePost '{"id": "5289345339621625"}'
+
+# Quote-repost
+openweb weibo exec repost '{"id": "5289345339621625", "reason": "interesting"}'
 ```
+
+## Known Limitations
+- **Login required** — every op needs a logged-in `weibo.com` browser tab (SUB cookie).
+- **Numeric long `mid` for write ops** — likePost/unlikePost/repost reject the alphanumeric `mblogid`. Read `mid` from feed responses (`getFriendsFeed.statuses[].mid`, `getHotFeed.statuses[].mid`), not from `getPost`.
+- **BLOCKED ops (upstream endpoint drift, 2026-04-18):** `bookmarkPost`, `unbookmarkPost`, `followUser`, `unfollowUser`. The `/ajax/statuses/destroyFavorites` and `/ajax/friendships/destroy` endpoints now return HTTP 404 (renamed/moved upstream). Specs and adapter routes are kept in `openapi.yaml` but example fixtures were dropped — fresh HAR capture is required to repoint these to the current endpoints (see `doc/todo/write-verify/handoff.md` §3.7).

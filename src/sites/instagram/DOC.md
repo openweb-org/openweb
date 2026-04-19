@@ -207,3 +207,5 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 - `getReels` uses POST to `/api/v1/clips/user/` internally (adapter handles this)
 - `getNotifications` requires POST (GET returns 500) — routed through adapter
 - Adapter 401/403 errors are classified as `needs_login` (retriable), enabling the auth cascade to refresh credentials
+- **Web vs mobile API drift (2026-04-18)** — the `/web/friendships/{id}/follow/` and `/web/friendships/{id}/unfollow/` endpoints started returning the SPA HTML shell (200 with HTML body) instead of JSON, silently breaking follow/unfollow. Repaired by routing through the **mobile-API** path `/friendships/create/{id}/` and `/friendships/destroy/{id}/`. Pattern: when an IG web endpoint returns 200 with HTML, check the mobile-API equivalent before assuming the feature is gone.
+- **`blockUser` / `unblockUser` BLOCKED (2026-04-18)** — both web and mobile-API paths now return SPA HTML 200. No working endpoint discovered through probing. Needs fresh HAR capture from a real block click in IG web UI. Tracked in `doc/todo/write-verify/handoff.md` §3.6.

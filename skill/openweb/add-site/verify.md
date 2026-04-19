@@ -176,6 +176,21 @@ If curation merged with an existing package:
 - Existing auth config preserved (unless explicitly replaced)
 - No duplicate operations (same path + method)
 
+### Write/Undo Pair Asymmetry — Silent-Success Canary
+
+For sites where writes return opaque-200 envelopes (YouTube InnerTube, many GraphQL mutations, IG mobile-API), HTTP status alone can't distinguish "succeeded" from "silently no-op'd". The reliable signal is **pairing the write with its inverse**:
+
+- A `do` op (`subscribeChannel`, `followUser`, `savePin`) running unauthenticated may HTTP-200 with empty body — looks fine in isolation.
+- The paired `undo` op (`unsubscribeChannel`, `unfollowUser`, `unsavePin`) correctly 401s, because there's no state to undo.
+- The asymmetry — do passes, undo fails — is the **only** evidence the do-side never wrote anything.
+
+**Action when verifying write ops:**
+1. Always include both directions of a pair in `--ops` lists.
+2. If one side passes and the other fails, suspect missing auth on the passing side, not a fixture problem on the failing side.
+3. For an op without a natural inverse (`createPost`, `sendMessage`), follow the do-op with a confirming read (`getPost`, `listMessages`) and assert the new id appears.
+
+This pattern surfaced YouTube's missing `sapisidhash` binding on `subscribeChannel` in the 2026-04-18 sweep (`8cfebff`). The `do` side had been silently broken for an unknown duration.
+
 ---
 
 ## Doc Verify

@@ -126,3 +126,5 @@ Not needed for basic site usage.
 - Trending browse (`FEtrending`) may return 400 on some regions
 - Large response payloads (100KB+) with deeply nested renderer structures
 - All InnerTube endpoints are POST — verify uses `replay_safety` to determine which ops to include
+- **Sub/unsub asymmetry hides auth bugs (2026-04-18)**: Pre-fix, `subscribeChannel` was wired as a direct InnerTube POST without the `sapisidhash` adapter binding. Unauthenticated subscribe **silently no-ops** (HTTP 200, empty success), so the failure was invisible until the inverse `unsubscribeChannel` correctly returned 401 — a sub-without-corresponding-state. **Lesson:** for paired write/undo ops, *always* test the inverse — silent-success on the do-side is a common YouTube failure mode, and the undo-side is the canary.
+- **"You may not subscribe to yourself" (HTTP 400)**: `subscribeChannel` rejects your own channel. Verification fixtures must target a third-party channel (current: MKBHD `UCBJycsmduvYEL83R_U4JriQ`).

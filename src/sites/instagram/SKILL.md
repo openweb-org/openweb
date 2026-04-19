@@ -63,13 +63,13 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 2. `getPostComments(id=items[].pk)` → `comments[].pk`
 3. `deleteComment(media_id=items[].pk, comment_id=comments[].pk)` → status
 
-### Block a user
+### Block a user (BLOCKED — see Known Limitations)
 1. `getUserProfile(username)` → `data.user.id`
-2. `blockUser(id=data.user.id)` → friendship_status (blocking)
+2. `blockUser(id=data.user.id)` — endpoint removed upstream
 
-### Unblock a user
+### Unblock a user (BLOCKED — see Known Limitations)
 1. `getUserProfile(username)` → `data.user.id`
-2. `unblockUser(id=data.user.id)` → friendship_status
+2. `unblockUser(id=data.user.id)` — endpoint removed upstream
 
 ### Mute a user
 1. `getUserProfile(username)` → `data.user.id`
@@ -188,3 +188,7 @@ openweb instagram exec getNotifications '{}'
 # Search users
 openweb instagram exec searchUsers '{"query":"nasa"}'
 ```
+
+## Known Limitations
+- **`blockUser` / `unblockUser` BLOCKED (2026-04-18)** — both `/api/v1/web/friendships/{id}/{block,unblock}/` and `/api/v1/friendships/{block,unblock}/{id}/` now return SPA HTML 200 instead of JSON. The mobile-API route that fixed follow/unfollow/mute does not have a block variant. Needs fresh HAR capture from a real block-button click in the IG web UI (see `doc/todo/write-verify/handoff.md` §3.6).
+- **Write-op coverage:** 4 of 12 write ops verified PASS end-to-end (`followUser`, `unfollowUser`, `muteUser`, `unmuteUser`). The remainder (like/unlike, save/unsave, createComment/deleteComment, block/unblock) have spec/example coverage but were not exercised in the 2026-04-18 sweep — block/unblock are confirmed broken; the rest are presumed working pending re-test.

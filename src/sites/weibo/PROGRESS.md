@@ -1,3 +1,20 @@
+## 2026-04-18 — Write-Verify Campaign
+
+**Context:** First end-to-end exercise of write ops via `pnpm dev verify weibo --write`.
+**Changes (`0dbc7f8`):**
+- `likePost`: switched `application/json` → `application/x-www-form-urlencoded`. `/ajax/statuses/setLike` rejects JSON with "parameter (id) value invalid".
+- Refreshed example fixtures: write ops now use **numeric long `mid`** (e.g. `5289345339621625`) instead of alphanumeric `mblogid` (e.g. `Qyj0ifs0m`). setLike requires the long form.
+- Paired likePost/unlikePost (order:1/2) so unlike runs against state set by like.
+- Added missing `repost` example.
+- Relaxed `retweeted_status` sub-schema (drop required[id,idstr,mid] + user.required) — real responses vary.
+- **Removed examples** for `unbookmarkPost`, `unfollowUser`, `bookmarkPost`, `followUser`: `/ajax/statuses/destroyFavorites` and `/ajax/friendships/destroy` now return HTTP 404 upstream. Pair-mates dropped for symmetry to avoid leaking permanent state.
+
+**Verification:** 3/7 write ops PASS (`likePost`, `unlikePost`, `repost`). 4 BLOCKED on upstream HAR re-capture.
+**Key discovery:** Weibo's `/ajax/*` write endpoints follow a **form-encoded + numeric-long-id convention** — the JSON-body assumption from compile-time defaulting is wrong for this site family. Documented in DOC.md Known Issues for future ops.
+**Pitfalls encountered:** When verifying a 404, distinguish *renamed endpoint* (need fresh HAR) from *resource gone* (op should be removed entirely). For weibo here it's the former — endpoints exist in the UI, just at unknown paths.
+
+---
+
 ## 2026-04-18: Drop weibo-web adapter — runtime now preserves Origin in browser_fetch
 
 **What changed:**

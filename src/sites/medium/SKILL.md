@@ -23,10 +23,10 @@ Blogging and publishing platform. Content platform archetype. Search articles, b
 2. Lists contain posts with `postId` → `getArticle(postId)`
 
 ### Engage with content (requires login)
-1. `getTagFeed(tagSlug)` → posts with `postId`
-2. `clapArticle(postId)` → `clapCount`, `viewerClapCount`
-3. `saveArticle(postId)` → `catalogItemId`
-4. `unsaveArticle(postId)` → removes bookmark
+1. `getTagFeed(tagSlug)` → `posts[].postId`
+2. `clapArticle(postId ← posts[].postId, numClaps?)` → `clapCount`, `viewerClapCount` (numClaps 1–50, default 1)
+3. `saveArticle(postId ← posts[].postId)` → `catalogItemId`
+4. `unsaveArticle(postId ← posts[].postId)` → adapter resolves `postId → catalogItemId` via `getPredefinedCatalog().itemsConnection`, then issues delete
 
 ### Follow a writer (requires login)
 1. `getTagWriters(tagSlug)` → writers with `userId`

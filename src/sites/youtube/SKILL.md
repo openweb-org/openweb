@@ -21,9 +21,11 @@ Video content platform. InnerTube JSON API on `www.youtube.com`.
 2. `getTranscript(params)` → timestamped transcript lines
 
 ### Subscribe / unsubscribe a channel
-1. `searchVideos(query)` or `browseContent(browseId)` → `channelId` (`UC...`)
-2. `subscribeChannel(channelIds: [channelId])` → confirmation
+1. `searchVideos(query)` or `browseContent(browseId)` → channel result → `channelId` (`UC...`)
+2. `subscribeChannel(channelIds: [channelId ← searchVideos])` → confirmation
 3. `unsubscribeChannel(channelIds: [channelId])` → reverses subscription
+
+> **You cannot subscribe to your own channel.** YouTube returns HTTP 400 ("you may not subscribe to yourself"). Pick a non-owned channel for verification (e.g. MKBHD `UCBJycsmduvYEL83R_U4JriQ`).
 
 ### Comment on a video
 1. `searchVideos(query)` → `videoId`
