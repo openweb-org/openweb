@@ -33,6 +33,12 @@ Telegram — messaging platform. L3 adapter reads via webpack `getGlobal()`, wri
 1. `getChats` → find chat with user → note `senderId` from messages
 2. `getUserInfo(userId)` → full profile (username, status, premium)
 
+### Saved Messages write-verify prerequisite
+Telegram's "Saved Messages" chat is the canonical safe target for verify, but `editMessage`/`forwardMessages`/`pinMessage`/`unpinMessage` resolve `messageId: "latest"` to "the most recent **outgoing** message in the chat". A brand-new account has no outgoing messages in Saved Messages.
+
+1. In the Telegram Web A/K tab, open Saved Messages and send any text (e.g. "test").
+2. `markAsRead`, `editMessage`, `forwardMessages`, `pinMessage`, `unpinMessage` against `chatId: "me"` now resolve cleanly with `messageId: "latest"`.
+
 ### Mark a chat as read
 1. `getChats` → pick chat → `chatId`
 2. `markAsRead(chatId)` → marked read
@@ -51,11 +57,11 @@ Telegram — messaging platform. L3 adapter reads via webpack `getGlobal()`, wri
 | getMe | current user info | — | id, firstName, username | no params |
 | getContacts | list contacts | — | id, firstName, phoneNumber, status | reads from cached contacts |
 | sendMessage | send text to chat | chatId ← getChats, text | success, chatId, text | callApi write |
-| deleteMessage | delete a message | chatId ← getChats, messageId ← getMessages | success, chatId, messageId | callApi write, supports "latest" |
-| editMessage | edit message text | chatId, messageId ← getMessages, text | success, chatId, messageId, text | callApi write |
-| forwardMessages | forward messages | fromChatId, toChatId ← getChats, messageIds ← getMessages | success, fromChatId, toChatId | callApi write |
-| pinMessage | pin a message | chatId, messageId ← getMessages, silent? | success, chatId, messageId | callApi write |
-| unpinMessage | unpin a message | chatId, messageId | success, chatId, messageId | callApi write, reverse of pinMessage |
+| deleteMessage | delete a message | chatId ← getChats, messageId ← getMessages | success, chatId, messageId | callApi write; supports `messageId: "latest"` (most recent outgoing — chat must have one) |
+| editMessage | edit message text | chatId ← getChats, messageId ← getMessages, text | success, chatId, messageId, text | callApi write; `latest` requires an outgoing message in the chat |
+| forwardMessages | forward messages | fromChatId ← getChats, toChatId ← getChats, messageIds ← getMessages | success, fromChatId, toChatId | callApi write |
+| pinMessage | pin a message | chatId ← getChats, messageId ← getMessages, silent? | success, chatId, messageId | callApi write; `latest` requires an outgoing message in the chat |
+| unpinMessage | unpin a message | chatId ← getChats, messageId ← getMessages (or paired pinMessage) | success, chatId, messageId | callApi write, reverse of pinMessage |
 | markAsRead | mark chat as read | chatId ← getChats | success, chatId | callApi write |
 
 ## Quick Start

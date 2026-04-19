@@ -89,6 +89,16 @@ Custom JS in the browser page context when no spec primitive fits — signing, m
 - **Transport:** CustomRunner with `run(ctx: PreparedContext)`; PagePlan + auth/CSRF/signing resolved by the runtime before `run`
 - **Gotcha:** Slowest pattern and fragile. Never add `page.goto` / `page.on('response')` / `__NEXT_DATA__` parsing here — those have shared primitives now (see the `scripts/adapter-pattern-report.ts` guardrail).
 
+## SPA Hydration Gate
+
+For SPA-style sites whose `CustomRunner` reads from in-memory state (webpack-cached store, IndexedDB-hydrated session, Worker entity cache), the runner MUST gate `run()` on full hydration before walking modules or dispatching actions. A "page loaded" signal from PagePlan is not enough — webpack chunks may still be registering and the store may be mid-hydration.
+
+- **Detection signals:** Site is an SPA (Vue/React/teact/Angular), data lives in `getGlobal()` / Vuex / Redux store rather than HTML, webpack module IDs are mangled per deploy, ops dispatch into a Web Worker.
+- **Impact:** Without a hydration gate, the runner sees an empty webpack registry, an undefined store, or an unprimed Worker — silent undefined returns or "not found" errors that look like fixture/auth bugs but are races.
+- **Action:** First statement in `run()` is `page.waitForFunction(() => …)` polling for two signals: (1) the webpack chunk array your finders depend on is non-empty, AND (2) a session/identity field in the store is defined (e.g. `getGlobal().currentUserId`, `store.state.user.id`). Optionally dispatch a Worker-priming action (e.g. `actions.openChat`) for ops whose target entity must be in the Worker cache.
+- **Migration warning:** Do NOT delete an existing `init()` lifecycle hook during a `CodeAdapter` → `CustomRunner` migration without running `verify --write` first. The hook is often load-bearing for SPA hydration even when it looks like a trivial precheck.
+- **Example:** Telegram (`src/sites/telegram/adapters/telegram-protocol.ts`) — gates on `webpackChunktelegram_t` registration AND `getGlobal()?.currentUserId`, then dispatches `actions.openChat({ id: currentUserId })` to prime the GramJS Worker's entity cache for Saved Messages.
+
 ## LD+JSON Structured Data
 
 Hotel/travel and e-commerce sites often embed structured data using schema.org vocabularies.

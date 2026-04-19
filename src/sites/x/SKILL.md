@@ -66,20 +66,20 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 | createTweet | post a tweet | text | rest_id | write, CAUTION |
 | deleteTweet | delete your tweet | tweet_id ← createTweet rest_id / getHomeTimeline | — | write, CAUTION |
 | reply | reply to tweet | tweet_id ← getHomeTimeline / getTweetDetail, text | rest_id | write, CAUTION |
-| likeTweet | like a tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write |
-| unlikeTweet | unlike a tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write |
-| createBookmark | bookmark tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write |
-| deleteBookmark | remove bookmark | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write |
-| createRetweet | retweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | retweet rest_id | write |
-| deleteRetweet | undo retweet | source_tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write |
-| followUser | follow user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
-| unfollowUser | unfollow user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
-| blockUser | block user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
-| unblockUser | unblock user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
-| muteUser | mute user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
-| unmuteUser | unmute user | userId ← getUserByScreenName rest_id | user object | write, CAUTION |
-| hideReply | hide reply | tweet_id ← getTweetDetail reply entries | hidden: true | write, CAUTION |
-| unhideReply | unhide reply | tweet_id ← getTweetDetail reply entries | hidden: false | write, CAUTION |
+| likeTweet | like a tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write — verified PASS |
+| unlikeTweet | unlike a tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail (or paired likeTweet) | — | write — verified PASS |
+| createBookmark | bookmark tweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | — | write — verified PASS |
+| deleteBookmark | remove bookmark | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail (or paired createBookmark) | — | write — verified PASS |
+| createRetweet | retweet | tweet_id ← getHomeTimeline / searchTweets / getTweetDetail | retweet rest_id | write — verified PASS |
+| deleteRetweet | undo retweet | source_tweet_id ← getHomeTimeline / searchTweets / getTweetDetail (or paired createRetweet) | — | write — verified PASS |
+| followUser | follow user | userId ← getUserByScreenName rest_id | user object | write, CAUTION — pair-order sensitive (see Known Limitations) |
+| unfollowUser | unfollow user | userId ← getUserByScreenName rest_id (or paired followUser) | user object | write — verified PASS |
+| blockUser | block user | userId ← getUserByScreenName rest_id | user object | write, CAUTION — pair-order sensitive (see Known Limitations) |
+| unblockUser | unblock user | userId ← getUserByScreenName rest_id (or paired blockUser) | user object | write — verified PASS |
+| muteUser | mute user | userId ← getUserByScreenName rest_id | user object | write, CAUTION — page-lifecycle issue (see Known Limitations) |
+| unmuteUser | unmute user | userId ← getUserByScreenName rest_id (or paired muteUser) | user object | write, CAUTION — page-lifecycle issue (see Known Limitations) |
+| hideReply | hide reply | tweet_id ← getTweetDetail reply entries | hidden: true | write, CAUTION — needs real reply context |
+| unhideReply | unhide reply | tweet_id ← getTweetDetail reply entries | hidden: false | write, CAUTION — needs real reply context |
 | sendDM | send DM | recipientId ← getUserByScreenName rest_id, text | messageId, DM event | write, CAUTION, approved contacts |
 | deleteDM | delete DM | messageId ← sendDM | — | write, CAUTION |
 
@@ -122,3 +122,9 @@ openweb x exec getBookmarks '{"count": 20}'
 # Get user's liked tweets
 openweb x exec getUserLikes '{"userId": "4398626122", "count": 20}'
 ```
+
+## Known Limitations
+
+- **Open `https://x.com/home` in the managed Chrome (port 9222) before running write ops.** The site declares `page_plan.entry_url=https://x.com/home` with `warm: true`, but a runtime cascade can leave verify holding a stale browser handle if no x.com tab is already open at start. Pre-warming the tab also ensures cookies, ct0 CSRF, and the webpack signing module are hydrated. With a pre-warmed tab, the bookmark/like/retweet/unblock/unfollow ops verify cleanly.
+- **Verified write ops (8/14 PASS):** `likeTweet`, `unlikeTweet`, `createBookmark`, `deleteBookmark`, `createRetweet`, `deleteRetweet`, `unblockUser`, `unfollowUser`.
+- **Write ops still flaky (6/14):** `followUser`, `blockUser`, `muteUser`, `unmuteUser`, `hideReply`, `unhideReply`. Hypotheses: pair-order asymmetry (the inverse op runs first and primes page state that the create op needs), navigation-driven page lifecycle closing the tab (mute), and missing reply-context fixtures (hide/unhide). Use these with a pre-loaded target profile/reply tab and expect retries.

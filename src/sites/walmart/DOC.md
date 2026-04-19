@@ -85,8 +85,20 @@ openweb walmart exec removeFromCart '{"usItemId": "5113175776"}'
   - Product offerId from SSR `__NEXT_DATA__` via in-page fetch
   - Cart data from GraphQL response
 
+## Adapter Patterns
+- **Orchestra GraphQL headers** — `/orchestra/cartxo/graphql/*` and `/orchestra/home/graphql/*` calls require Walmart's "Glass" client identity headers in addition to the standard Apollo headers; without them PerimeterX returns HTTP 418 ("I'm a teapot") at the edge before the request ever reaches the GraphQL gateway:
+  - `x-o-bu: WALMART-US`
+  - `x-o-mart: B2C`
+  - `x-o-platform: rweb`
+  - `x-o-platform-version: us-web-1.x.x`
+  - `WM_MP: true`
+  - Plus the persisted-query envelope fields the adapter already sets (`x-apollo-operation-name`, `x-o-gql-query`, `wm_qos.correlation_id`).
+  Apply on every orchestra call (MergeAndGetCart, updateItems). With these headers the failure mode shifts from 418 (anti-bot block, request shape rejected) to 429 (rate limit, request shape accepted) — a useful health signal.
+- **Idempotent removeFromCart via updateItems(qty=1) seeding** — the `updateItems` mutation accepts `quantity: 0` to remove an item, but Walmart's gateway 400s when the item is not already in the cart. The adapter therefore calls `updateItems(quantity=1)` first to seed the line, then `updateItems(quantity=0)` to remove it. This makes removeFromCart safe to call with any `usItemId` without a preceding addToCart, which matters for verify pair execution and for retries after partial failures.
+
 ## Known Issues
 - **PerimeterX bot detection** blocks all CDP-connected browsers for full page navigations (headless and non-headless). Navigating to any walmart.com URL in the managed browser redirects to `/blocked?url=...` ("Robot or human?" challenge). Initial page load typically succeeds; subsequent full navigations are blocked. SPA navigation and in-page fetch() calls work.
+- **Orchestra rate limit on cart writes** — even with the correct orchestra headers (see Adapter Patterns), repeated addToCart/removeFromCart calls from the same client identity hit HTTP 429 from PerimeterX's rate limiter. Cooldown is ≥1 h before the same client can retry. The 418→429 transition is the proof that the request shape is now accepted; the 429 is environmental, not a code defect.
 - **addToCart/removeFromCart require open walmart.com page** — the adapter needs a browser tab on walmart.com. Open one manually before using cart ops.
 - **Persisted query hashes** — the GraphQL mutation hashes are derived from query text and are stable across Walmart deploys, but could change if Walmart modifies the query schema.
 - **Search results cause persistent verify DRIFT** — different products returned each call, with varying field structures. Schema validation passes; only the fingerprint hash changes. Expected behavior for dynamic endpoints.
