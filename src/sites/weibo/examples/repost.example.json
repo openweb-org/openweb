@@ -1,11 +1,12 @@
 {
-  "operation_id": "unfollowUser",
+  "operation_id": "repost",
   "method": "post",
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
       "input": {
-        "friend_uid": "1926909715"
+        "id": "5289345339621625",
+        "reason": "转发微博"
       },
       "assertions": {
         "status": 200,

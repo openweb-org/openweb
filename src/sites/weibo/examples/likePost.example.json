@@ -1,10 +1,12 @@
 {
   "operation_id": "likePost",
   "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
   "cases": [
     {
       "input": {
-        "id": "Qyj0ifs0m"
+        "id": "5289345339621625"
       },
       "assertions": {
         "status": 200,

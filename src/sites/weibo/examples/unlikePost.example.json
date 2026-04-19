@@ -2,10 +2,11 @@
   "operation_id": "unlikePost",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 2,
   "cases": [
     {
       "input": {
-        "id": "QA7PCauMY"
+        "id": "5289345339621625"
       },
       "assertions": {
         "status": 200,

@@ -1585,7 +1585,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -1767,10 +1767,6 @@ paths:
                       retweeted_status:
                         type: object
                         description: "Reposted/quoted post (cycle-broken: does not nest further)."
-                        required:
-                        - id
-                        - idstr
-                        - mid
                         properties:
                           id:
                             type: integer
@@ -1792,10 +1788,6 @@ paths:
                             type: string
                           user:
                             type: object
-                            required:
-                            - id
-                            - idstr
-                            - screen_name
                             properties:
                               id:
                                 type: integer
