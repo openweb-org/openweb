@@ -2,13 +2,12 @@
   "operation_id": "removeFromCart",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 2,
   "cases": [
     {
       "input": {
-        "removeCartItemInput": {
-          "orderCartId": "cart-uuid",
-          "orderItemId": "order-item-id"
-        }
+        "cartId": "${prev.addToCart.addCartItemV2.id}",
+        "itemId": "${prev.addToCart.addCartItemV2.orders.0.orderItems.0.id}"
       },
       "assertions": {
         "status": 200,

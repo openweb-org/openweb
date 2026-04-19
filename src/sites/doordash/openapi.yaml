@@ -700,6 +700,10 @@ paths:
                   required:
                     - storeId
                     - itemId
+                    - itemName
+                    - currency
+                    - unitPrice
+                    - menuId
                   properties:
                     storeId:
                       type: string
@@ -707,6 +711,18 @@ paths:
                     itemId:
                       type: string
                       description: Menu item ID (from getRestaurantMenu items[].id).
+                    itemName:
+                      type: string
+                      description: Item display name (from getRestaurantMenu items[].name).
+                    currency:
+                      type: string
+                      description: ISO currency code (e.g. "USD").
+                    unitPrice:
+                      type: integer
+                      description: Item unit price in minor currency units (cents).
+                    menuId:
+                      type: string
+                      description: Menu ID containing the item (from getRestaurantMenu menuBook.id or itemLists[].id).
                     quantity:
                       type: integer
                       default: 1
@@ -721,6 +737,7 @@ paths:
                     cartId:
                       type: string
                       default: ''
+                      description: Existing cart ID to append to. Empty string starts a new cart.
                     isBundle:
                       type: boolean
                       default: false
@@ -769,12 +786,11 @@ paths:
                         type: object
                         required:
                           - id
-                          - name
                         properties:
                           id:
                             type: string
                           name:
-                            type: string
+                            type: [string, 'null']
                           slug:
                             type: string
                       orders:
@@ -800,9 +816,9 @@ paths:
                                   quantity:
                                     type: integer
                                   singlePrice:
-                                    type: integer
+                                    type: [integer, 'null']
                                   priceDisplayString:
-                                    type: string
+                                    type: [string, 'null']
                                   item:
                                     type: object
                                     required:
@@ -816,7 +832,7 @@ paths:
                                       imageUrl:
                                         type: string
                                       price:
-                                        type: integer
+                                        type: [integer, 'null']
 
   /graphql/removeCartItem:
     post:
@@ -845,7 +861,8 @@ paths:
             schema:
               type: object
               required:
-                - removeCartItemInput
+                - cartId
+                - itemId
               properties:
                 operationName:
                   type: string
@@ -853,8 +870,8 @@ paths:
                 query:
                   type: string
                   const: |-
-                    mutation removeCartItem($removeCartItemInput: RemoveCartItemInput!) {
-                      removeCartItemV2(removeCartItemInput: $removeCartItemInput) {
+                    mutation removeCartItem($cartId: ID!, $itemId: ID!) {
+                      removeCartItemV2(cartId: $cartId, itemId: $itemId) {
                         id
                         subtotal
                         currencyCode
@@ -872,18 +889,12 @@ paths:
                         }
                       }
                     }
-                removeCartItemInput:
-                  type: object
-                  required:
-                    - orderCartId
-                    - orderItemId
-                  properties:
-                    orderCartId:
-                      type: string
-                      description: Cart UUID (from addToCart response id).
-                    orderItemId:
-                      type: string
-                      description: Order item ID to remove (from addToCart response orders[].orderItems[].id).
+                cartId:
+                  type: string
+                  description: Cart UUID (from addToCart response id).
+                itemId:
+                  type: string
+                  description: Order item ID to remove (from addToCart response orders[].orderItems[].id).
       responses:
         '200':
           description: Updated cart after removal.
@@ -898,32 +909,30 @@ paths:
                     type: object
                     required:
                       - id
-                      - orders
                     properties:
                       id:
                         type: string
                         description: Cart UUID.
                       subtotal:
-                        type: integer
-                        description: Cart subtotal in cents.
+                        type: [integer, 'null']
+                        description: Cart subtotal in cents. Null if cart is now empty.
                       currencyCode:
-                        type: string
+                        type: [string, 'null']
                       fulfillmentType:
-                        type: string
+                        type: [string, 'null']
                       restaurant:
-                        type: object
+                        type: [object, 'null']
                         required:
                           - id
-                          - name
                         properties:
                           id:
                             type: string
                           name:
-                            type: string
+                            type: [string, 'null']
                           slug:
                             type: string
                       orders:
-                        type: array
+                        type: [array, 'null']
                         items:
                           type: object
                           required:
@@ -945,9 +954,9 @@ paths:
                                   quantity:
                                     type: integer
                                   singlePrice:
-                                    type: integer
+                                    type: [integer, 'null']
                                   priceDisplayString:
-                                    type: string
+                                    type: [string, 'null']
                                   item:
                                     type: object
                                     required:
@@ -961,4 +970,4 @@ paths:
                                       imageUrl:
                                         type: string
                                       price:
-                                        type: integer
+                                        type: [integer, 'null']

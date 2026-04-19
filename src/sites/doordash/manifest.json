@@ -16,10 +16,10 @@
     "l3_count": 4,
     "ws_count": 0
   },
-  "last_verified": "2026-04-02T21:47:31.593Z",
+  "last_verified": "2026-04-19T05:31:59.522Z",
   "fingerprint": {
     "response_shape_hash": "getOrderHistory:b4f753ff1628da89,getRestaurantMenu:7f7ed13012118f69,searchRestaurants:8554fd8d7cc8803d",
-    "last_validated": "2026-04-02T21:47:31.594Z"
+    "last_validated": "2026-04-19T05:31:59.522Z"
   },
   "quarantined": false
 }

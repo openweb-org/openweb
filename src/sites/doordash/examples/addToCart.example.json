@@ -1,0 +1,24 @@
+{
+  "operation_id": "addToCart",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
+  "cases": [
+    {
+      "input": {
+        "addCartItemInput": {
+          "storeId": "245613",
+          "itemId": "23864478062",
+          "itemName": "12 Inch Plain Cheese Pizza",
+          "currency": "USD",
+          "unitPrice": 1440,
+          "menuId": "57979746",
+          "quantity": 1
+        }
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
