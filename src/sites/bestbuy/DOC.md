@@ -1,76 +1,32 @@
-# Best Buy
-
-## Overview
-E-commerce — electronics retailer. Three read APIs for product search, details, and pricing, plus write APIs for add-to-cart and remove-from-cart.
-
-## Workflows
-
-### Search and compare products
-1. `searchProducts(query)` → suggestion terms, categories, and `skuId` list
-2. `getProductDetails(skuids ← searchProducts)` → name, image, rating, review count
-3. `getProductPricing(skus ← searchProducts)` → current/regular price, savings, availability
-
-### Search and add to cart
-1. `searchProducts(query)` → `skuId` list
-2. `getProductPricing(skus ← searchProducts)` → confirm price and availability
-3. `addToCart(skuId ← searchProducts)` → cart count, subtotal, `lineId`
-
-### Remove from cart
-1. `addToCart(skuId)` → `lineId` in summaryItems
-2. `removeFromCart(lineId ← addToCart)` → updated cart count, subtotal
-
-## Operations
-
-| Operation | Intent | Key Input | Key Output | Notes |
-|-----------|--------|-----------|------------|-------|
-| searchProducts | search by keyword | query | terms, categories, skuId[] | entry point |
-| getProductDetails | product info by SKU | skuids ← searchProducts | name, image, rating, reviewCount | comma-separated SKUs |
-| getProductPricing | pricing by SKU | skus ← searchProducts | currentPrice, regularPrice, savings, availability | comma-separated SKUs |
-| addToCart | add product to cart | skuId ← searchProducts | cartCount, subtotal, lineId | write / caution |
-| removeFromCart | remove product from cart | lineId ← addToCart | cartCount, subtotal | write / caution, reverse of addToCart |
-
-## Quick Start
-
-```bash
-# Search for products
-openweb bestbuy exec searchProducts '{"query":"laptop","count":5}'
-
-# Get product details for specific SKUs
-openweb bestbuy exec getProductDetails '{"skuids":"6638906,6612975"}'
-
-# Get pricing for specific SKUs
-openweb bestbuy exec getProductPricing '{"skus":"6614950"}'
-
-# Add to cart (returns lineId for removal)
-openweb bestbuy exec addToCart '{"items":[{"skuId":"6614950"}]}'
-
-# Remove from cart
-openweb bestbuy exec removeFromCart '{"items":[{"lineId":"<lineId-from-addToCart>"}]}'
-```
-
----
-
-## Site Internals
+# Best Buy — Internals
 
 ## API Architecture
-- REST, same-origin on `www.bestbuy.com`
-- `searchProducts` is the typeahead/suggestion API — returns top ~9 products per term with SKU IDs
-- `priceBlocks` is the canonical pricing API with rich data (offers, open-box, protection plans) for up to ~10 SKUs per call
-- `x-client-id: Search-Web-View` header required on suggest endpoints (has default in spec)
-- Cart APIs (`addToCart`, `removeFromCart`) are under `/cart/api/v1/` — JSON request/response, keyed by `skuId` (add) and `lineId` (remove)
+- REST, same-origin on `www.bestbuy.com`. No GraphQL on the read paths exercised here (the SPA does use `gateway/graphql` for cart-page reviews/recommendations, not for our ops).
+- `searchProducts` → `/suggest/v1/fragment/suggest/www` typeahead. Returns top ~9 SKUs per term.
+- `getProductDetails` → `/suggest/v1/fragment/products/www` companion endpoint to suggest; takes comma-separated `skuids`.
+- `getProductPricing` → `/api/3.0/priceBlocks` — canonical pricing with offers, open-box, protection plans.
+- `addToCart` → `POST /cart/api/v1/addToCart` with `{ items: [{ skuId }] }`. Response includes `summaryItems[].lineId` (e.g. `5a61wnug5bb3l-4q4q3qg3lmiml`) — server-generated, single-use, opaque.
+- `removeFromCart` → `DELETE /cart/item/{lineId}`. **No JSON body.** Response is the full cart order snapshot (`{ order: { id, cartItemCount, lineItems[], orderSkus[], ... } }`), not the slim `{ cartCount, cartSubTotal, summaryItems[] }` that `addToCart` returns.
 
 ## Auth
-- cookie_session (Akamai-managed session cookies)
-- No user login required for public data
-- Cookies set automatically when browsing bestbuy.com
+- `cookie_session` (Akamai-managed cookies set automatically when browsing bestbuy.com).
+- No user login needed for read ops. Cart write ops work for both anonymous and signed-in carts; the cart is keyed off the Akamai session cookie.
+- No CSRF token required on the cart endpoints — Akamai bot scoring is the only gate.
 
 ## Transport
-- **page** — required due to Akamai bot protection
-- Direct HTTP (curl, node fetch) blocked with HTTP/2 protocol errors
-- Homepage or search page is sufficient as the open page
+- **`page` (browser_fetch)** for everything. Direct HTTP (curl, node fetch) is blocked by Akamai with HTTP/2 protocol errors; `page.evaluate(fetch)` against an open `bestbuy.com` tab passes the bot check.
+- Homepage or any product/cart page is sufficient as the open page.
+
+## Extraction
+- Direct JSON for all 5 ops. No SSR scraping; no `__NEXT_DATA__`.
 
 ## Known Issues
-- **Akamai bot protection**: All requests must go through page transport. Direct HTTP is blocked.
-- **SKU format**: Some newer SKUs (e.g. 12009400) return 404 on priceBlocks — may be virtual/bundle SKUs. Older 7-digit SKUs (e.g. 6614950) work reliably.
-- **Compiler incompatible**: `pnpm dev compile` filters out all captured traffic — manual fixture creation required.
-- **removeFromCart requires lineId**: The `lineId` is only available from `addToCart` response. Must add item first, then use the returned `lineId` to remove.
+- **Akamai bot protection** — must run through `transport: page`. Direct HTTP is blocked.
+- **Spec'd-but-nonexistent cart endpoints return SPA HTML 200, not 404.** A POST to `/cart/api/v1/removeFromCart` (the original speculative spec), `/cart/api/v1/cart/items/delete`, `/cart/api/v1/deleteItems`, `/cart/api/v1/delete`, etc. all respond `200 text/html` with the SPA shell. Easy false-positive: a status-only verifier sees `200` and PASSes a route that does nothing. Always assert `content-type: application/json` AND a body field from the schema. The real cart-mutation router only accepts `DELETE /cart/item/{lineId}` and a few sibling DELETE routes.
+- **`addToCart` may return `ITEM_NOT_SELLABLE` (HTTP 400)** for SKUs that are not online-purchasable — observed for AAA batteries `6452872` and similar store-pickup-only items. Sellable test SKU: HDMI cable `6472356`.
+- **Compiler incompatible** — `pnpm dev compile` filters out all captured traffic ("No filtered samples after analyzer filtering stage"). Manual fixture creation required.
+- **`lineId` is server-generated and single-use.** Verify must chain via `${prev.addToCart.summaryItems.0.lineId}`; the resolver is in `src/lib/template-resolver.ts`.
+
+## Probe Results
+- Discovery method (2026-04-19): CDP-driven add via `page.evaluate(fetch('/cart/api/v1/addToCart', ...))` then UI click on the cart-row "Remove" button. Network listener captured the resulting `DELETE /cart/item/{lineId}` call. Direct fetch confirmation showed the same DELETE round-tripping a JSON cart-order snapshot.
+- All POST variants of "remove" (matching the original spec path and obvious sibling shapes) returned `200 text/html` SPA shell — not a real route.
