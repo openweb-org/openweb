@@ -118,6 +118,27 @@ Key properties of a complete write workflow:
 2. `addComment(parent=item.id, text)`
 ```
 
+#### Self-creating chained fixtures
+
+When a write op needs an ID that isn't externally stable (e.g. a tweet you
+own, a cart-item generated server-side), don't hand-pin a fixture — chain
+the op behind a create op in the same example file using
+`${prev.<opId>.<jsonpath>}`. For text fields that the upstream rejects on
+duplicates, use the `${now}` template helper for per-run uniqueness. See
+`src/lib/template-resolver.ts` for both helpers.
+
+Canonical example — **x write-op cascade**:
+
+1. `createTweet` (order:1) — text uses `${now}` so Twitter's
+   duplicate-status (187) check never fires across runs.
+2. `likeTweet`, `createBookmark`, `createRetweet`, `reply` (order:2-9) —
+   each `tweetId` is `${prev.createTweet.create_tweet.tweet_results.result.rest_id}`.
+3. `deleteTweet` (order:20) — cleans up the parent.
+
+Result: every run is hermetic. No fixture rot, no manual ID refresh, no
+shared-state pollution. Apply this pattern whenever the create op's
+permission is `write` and the inverse op exists in the same site.
+
 ### Column guide for Operations table
 
 - **Operation**: operationId from openapi.yaml
