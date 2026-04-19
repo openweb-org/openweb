@@ -10,11 +10,11 @@ import type { CustomRunner } from '../../../types/adapter.js'
  * Reviews: page.evaluate BV widget state (BazaarVoice)
  * Warehouses: GET ecom-api.costco.com/core/warehouse-locator/v1/salesLocations.json
  * Delivery: GET ecom-api.costco.com/ebusiness/order/v1/delivery/options
- * Cart: POST www.costco.com/AjaxManageShoppingCartCmd (requires auth)
- *
- * PerimeterX intercepts window.fetch/XHR on costco.com, so we use
- * Playwright's page.request API which bypasses page JS interception
- * while inheriting browser cookies.
+ * Cart: POST www.costco.com/AjaxManageShoppingCartCmd (PDP add) +
+ *       /AjaxModularManageShoppingCartCmd (cart-page remove) +
+ *       /order-quantity-update (cart-page qty change). All require login session
+ *       and must run via DOM-context fetch (page.evaluate) — Akamai Bot Manager
+ *       returns 403 for Playwright APIRequestContext (page.request.fetch).
  */
 
 type Errors = {
@@ -29,7 +29,6 @@ const SEARCH_TYPEAHEAD_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/s
 const PRODUCT_GRAPHQL_URL = 'https://ecom-api.costco.com/ebusiness/product/v1/products/graphql'
 const WAREHOUSE_LOCATOR_URL = 'https://ecom-api.costco.com/core/warehouse-locator/v1/salesLocations.json'
 const DELIVERY_OPTIONS_URL = 'https://ecom-api.costco.com/ebusiness/order/v1/delivery/options'
-const CART_URL = 'https://www.costco.com/AjaxManageShoppingCartCmd'
 const SEARCH_CLIENT_ID = '168287ea-1201-45f6-9b45-5bbea49f8ee7'
 const PRODUCT_CLIENT_ID = '4900eb1f-0c10-4bd9-99c3-c59e6c1ecebf'
 const WAREHOUSE_CLIENT_ID = '7c71124c-7bf1-44db-bc9d-498584cd66e5'
@@ -843,33 +842,52 @@ async function compareProducts(page: Page, params: Record<string, unknown>, erro
 
 /* ---------- cart operations ---------- */
 
-async function cartRequest(page: Page, queryParams: Record<string, string>, errors: Errors): Promise<unknown> {
-  const qs = new URLSearchParams({
-    ajaxFlag: 'true',
-    ...queryParams,
-  })
+/**
+ * Cart write ops require DOM-context fetch (page.evaluate). Costco's Akamai Bot
+ * Manager blocks Playwright's APIRequestContext (page.request.fetch) with HTTP
+ * 403 even with valid session cookies — the request signature is detectable as
+ * non-browser. DOM fetch carries page origin, sec-fetch-* headers, and runs
+ * inside the JS engine that solved the Akamai sensor challenge.
+ *
+ * Endpoints differ between PDP-add vs cart-page edits:
+ * - PDP add → /AjaxManageShoppingCartCmd, JWT authToken from sessionStorage
+ * - Cart edit → /AjaxModularManageShoppingCartCmd or /order-quantity-update,
+ *   WCS authToken (userId,signature) scraped from cart page hidden input
+ */
 
-  const url = `${CART_URL}?${qs.toString()}`
+const PDP_URL = (item: string) => `https://www.costco.com/.product.${item}.html`
+const CART_VIEW_URL = 'https://www.costco.com/CheckoutCartView'
+const ADD_CART_URL = 'https://www.costco.com/AjaxManageShoppingCartCmd'
+const CART_REMOVE_URL = 'https://www.costco.com/AjaxModularManageShoppingCartCmd?checkoutPage=cart'
+const CART_UPDATE_URL = 'https://www.costco.com/order-quantity-update?checkoutPage=cart'
 
-  const resp = await page.request.fetch(url, {
-    method: 'POST',
-    headers: {
-      Accept: '*/*',
-      Referer: 'https://www.costco.com/',
-      'Content-Type': 'text/plain;charset=UTF-8',
+type CartContext = {
+  authToken: string  // WCS userId,signature token
+  orderId: string
+  orderItemId: string
+  catalogEntryId: string
+}
+
+async function ensureOnPage(page: Page, urlPrefix: string, fallback: string): Promise<void> {
+  if (!page.url().startsWith(urlPrefix)) {
+    await page.goto(fallback, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
+    await new Promise((r) => setTimeout(r, 2000))
+  }
+}
+
+async function postFormDom(page: Page, url: string, body: string): Promise<{ status: number; text: string }> {
+  return page.evaluate(
+    async (args) => {
+      const r = await fetch(args.url, {
+        method: 'POST',
+        headers: { Accept: '*/*', 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: args.body,
+        credentials: 'include',
+      })
+      return { status: r.status, text: await r.text() }
     },
-  })
-
-  if (!resp.ok()) {
-    throw errors.httpError(resp.status())
-  }
-
-  const text = await resp.text()
-  try {
-    return JSON.parse(text)
-  } catch {
-    return { success: resp.ok(), body: text.substring(0, 500) }
-  }
+    { url, body },
+  )
 }
 
 async function addToCart(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
@@ -877,28 +895,103 @@ async function addToCart(page: Page, params: Record<string, unknown>, errors: Er
   if (!itemNumber) throw errors.missingParam('itemNumber')
   const quantity = Number(params.quantity ?? 1)
 
-  return cartRequest(page, {
-    checkOmsInventory: 'true',
-    isPdpPage: 'true',
-    isRestrictedPostalCode: 'false',
-    partNumber: itemNumber,
-    actionType: 'add',
-    quantity: String(quantity),
-    isShipRestrictionStore: 'true',
-    productPartnumber: itemNumber,
-    isFsaChdItem: 'false',
-  }, errors)
+  await ensureOnPage(page, 'https://www.costco.com/p/', PDP_URL(itemNumber))
+
+  const ctx = await page.evaluate(() => {
+    let authToken = ''
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i)
+      if (k?.startsWith('authToken_')) { authToken = sessionStorage.getItem(k) ?? ''; break }
+    }
+    let sku = ''
+    for (const s of Array.from(document.querySelectorAll('script[type="application/ld+json"]'))) {
+      try {
+        const j = JSON.parse(s.textContent ?? '') as { sku?: string }
+        if (j?.sku) { sku = String(j.sku); break }
+      } catch { /* ignore */ }
+    }
+    if (!sku) {
+      const m = document.documentElement.outerHTML.match(/"sku"\s*:\s*"(\d+)"/)
+      if (m?.[1]) sku = m[1]
+    }
+    return { authToken, sku }
+  })
+
+  if (!ctx.authToken) throw errors.wrap(new Error('costco addToCart: missing JWT authToken — user not logged in'))
+  if (!ctx.sku) throw errors.wrap(new Error(`costco addToCart: could not extract SKU from PDP for item ${itemNumber}`))
+
+  const qs = new URLSearchParams({
+    ajaxFlag: 'true', checkOmsInventory: 'true', isPdpPage: 'true', isRestrictedPostalCode: 'false',
+    partNumber: itemNumber, actionType: 'add', quantity: String(quantity), isShipRestrictionStore: 'true',
+    quantity_1: String(quantity), is_mod_pdp: 'true', productPartnumber: itemNumber, isFsaChdItem: 'false',
+    authToken: ctx.authToken, addedItem: ctx.sku, itemNumber: ctx.sku,
+    backURL: 'https://www.costco.com/CheckoutCartView?orderId=', contractIdentifier: 'Regional',
+    eddInstallationServicesJSON: '[]',
+  })
+  const url = `${ADD_CART_URL}?${qs.toString()}`
+  const resp = await page.evaluate(async (u) => {
+    const r = await fetch(u, { method: 'POST', headers: { Accept: '*/*', 'Content-Type': 'text/plain;charset=UTF-8' }, credentials: 'include' })
+    return { status: r.status, text: await r.text() }
+  }, url)
+
+  if (resp.status !== 200) throw errors.httpError(resp.status)
+  const body = JSON.parse(resp.text) as Record<string, unknown>
+  if (body.errorCode) throw errors.wrap(new Error(`costco addToCart: ${body.errorCode} ${body.errorMessage ?? ''}`))
+  return body
+}
+
+async function fetchCartContext(page: Page, orderItemId: string, errors: Errors): Promise<CartContext> {
+  await ensureOnPage(page, 'https://www.costco.com/CheckoutCart', CART_VIEW_URL)
+  const ctx = await page.evaluate((oid: string) => {
+    const inputs = Array.from(document.querySelectorAll('input[type=hidden]')) as HTMLInputElement[]
+    const get = (name: string) => inputs.find((i) => i.name === name)?.value ?? ''
+    const authToken = get('authToken')
+    const orderId = get('orderId')
+    // Find catalogEntryId_N matching the orderItemId. Cart hidden inputs include orderItem_N pairs.
+    let catalogEntryId = ''
+    let foundIndex = ''
+    for (const i of inputs) {
+      if (/^orderItem_\d+$/.test(i.name) && i.value === oid) {
+        foundIndex = i.name.replace('orderItem_', '')
+        break
+      }
+    }
+    if (foundIndex) catalogEntryId = get(`catalogEntryId_${foundIndex}`)
+    if (!catalogEntryId) {
+      // Fallback: first catalogEntryId_N if there's exactly one item matching at hidden orderItemId
+      const directOid = get('orderItemId')
+      if (directOid === oid || !directOid) catalogEntryId = get('catalogEntryId_1')
+    }
+    return { authToken, orderId, catalogEntryId, orderItemId: oid }
+  }, orderItemId)
+  if (!ctx.authToken) throw errors.wrap(new Error('costco: WCS authToken not found on cart page (not logged in?)'))
+  if (!ctx.orderId) throw errors.wrap(new Error('costco: orderId not found on cart page (cart empty?)'))
+  if (!ctx.catalogEntryId) throw errors.wrap(new Error(`costco: catalogEntryId not found for orderItemId=${orderItemId} (item not in cart?)`))
+  return ctx
 }
 
 async function removeFromCart(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const orderItemId = String(params.orderItemId ?? '')
   if (!orderItemId) throw errors.missingParam('orderItemId')
 
-  return cartRequest(page, {
-    orderItemId,
-    actionType: 'remove',
-    quantity: '0',
-  }, errors)
+  const ctx = await fetchCartContext(page, orderItemId, errors)
+  const body = new URLSearchParams({
+    ajaxFlag: 'true', isRestrictedPostalCode: 'false', actionType: 'delete',
+    orderId: ctx.orderId, orderItemId, catEntryId: ctx.catalogEntryId,
+    isPharmacy: 'false', prescriptionId: '0', lastItemInCart: 'costcoItem',
+  }).toString()
+  const resp = await postFormDom(page, CART_REMOVE_URL, body)
+  if (resp.status !== 200) throw errors.httpError(resp.status)
+  try {
+    const j = JSON.parse(resp.text) as Record<string, unknown>
+    if (j.errorMessageKey || j.errorCode) {
+      throw errors.wrap(new Error(`costco removeFromCart: ${j.errorMessageKey ?? j.errorCode} ${j.errorMessage ?? ''}`))
+    }
+    return { success: true, ...j }
+  } catch (e) {
+    if ((e as Error).message?.startsWith('costco removeFromCart')) throw e
+    return { success: true }
+  }
 }
 
 async function updateCartQuantity(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
@@ -906,11 +999,28 @@ async function updateCartQuantity(page: Page, params: Record<string, unknown>, e
   if (!orderItemId) throw errors.missingParam('orderItemId')
   const quantity = Number(params.quantity ?? 1)
 
-  return cartRequest(page, {
-    orderItemId,
-    actionType: 'update',
-    quantity: String(quantity),
-  }, errors)
+  const ctx = await fetchCartContext(page, orderItemId, errors)
+  const body = new URLSearchParams({
+    fromPage: 'shoppingCart', storeId: '10301', langId: '-1', orderId: ctx.orderId,
+    catalogId: '10701', calculationUsage: '-1,-2,-3,-4,-5,-6,-7', multiAddressShipping: 'false',
+    authToken: ctx.authToken, shipmodeIdBD: '', selDeliveryDate: '', invokeOrderPrepare: 'false',
+    actionType: 'update', ajaxFlag: 'true', requesttype: 'ajax',
+    isPharmacy: 'false', prescriptionId: '',
+    dependentChildItem_1: 'false', catalogEntryId_1: ctx.catalogEntryId,
+    quantity_1: String(quantity), orderItem_1: orderItemId,
+  }).toString()
+  const resp = await postFormDom(page, CART_UPDATE_URL, body)
+  if (resp.status !== 200) throw errors.httpError(resp.status)
+  try {
+    const j = JSON.parse(resp.text) as Record<string, unknown>
+    if (j.errorMessageKey || j.errorCode) {
+      throw errors.wrap(new Error(`costco updateCartQuantity: ${j.errorMessageKey ?? j.errorCode} ${j.errorMessage ?? ''}`))
+    }
+    return { success: true, ...j }
+  } catch (e) {
+    if ((e as Error).message?.startsWith('costco updateCartQuantity')) throw e
+    return { success: true }
+  }
 }
 
 /* ---------- adapter export ---------- */

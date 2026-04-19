@@ -23,10 +23,10 @@
     "l3_count": 14,
     "ws_count": 0
   },
-  "last_verified": "2026-04-06T00:00:00.000Z",
+  "last_verified": "2026-04-19T15:20:47.230Z",
   "quarantined": false,
   "fingerprint": {
     "response_shape_hash": "searchProducts:pending,getProductDetail:pending",
-    "last_validated": "2026-03-31T00:00:00.000Z"
+    "last_validated": "2026-04-19T15:20:47.231Z"
   }
 }

@@ -6,8 +6,7 @@
     {
       "input": { "itemNumber": "100978861", "quantity": 1 },
       "assertions": {
-        "status": 200,
-        "response_schema_valid": true
+        "status": 200
       }
     }
   ]

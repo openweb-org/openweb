@@ -947,6 +947,9 @@ paths:
         adapter:
           name: costco-api
           operation: addToCart
+        page_plan:
+          entry_url: https://www.costco.com/.product.{itemNumber}.html
+          wait_until: domcontentloaded
       parameters:
         - name: itemNumber
           in: query
@@ -969,15 +972,23 @@ paths:
               schema:
                 type: object
                 required:
-                  - success
+                  - orderItemId
                 properties:
-                  success:
-                    type: boolean
                   orderItemId:
-                    type:
-                      - string
-                      - 'null'
+                    type: integer
                     description: Order item ID for the added item (use with removeFromCart / updateCartQuantity).
+                  orderId:
+                    type: string
+                  addedItem:
+                    type: array
+                    items:
+                      type: string
+                  productBeanId:
+                    type: string
+                  storeId:
+                    type: string
+                  catalogId:
+                    type: string
   /internal/removeFromCart:
     post:
       operationId: removeFromCart
@@ -993,12 +1004,17 @@ paths:
         adapter:
           name: costco-api
           operation: removeFromCart
+        page_plan:
+          entry_url: https://www.costco.com/CheckoutCartView
+          wait_until: domcontentloaded
       parameters:
         - name: orderItemId
           in: query
           required: true
           schema:
-            type: string
+            type:
+              - string
+              - integer
           description: Order item ID (from cart response after addToCart).
       responses:
         '200':
@@ -1027,12 +1043,17 @@ paths:
         adapter:
           name: costco-api
           operation: updateCartQuantity
+        page_plan:
+          entry_url: https://www.costco.com/CheckoutCartView
+          wait_until: domcontentloaded
       parameters:
         - name: orderItemId
           in: query
           required: true
           schema:
-            type: string
+            type:
+              - string
+              - integer
           description: Order item ID (from cart response after addToCart).
         - name: quantity
           in: query

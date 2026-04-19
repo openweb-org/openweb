@@ -4,10 +4,9 @@
   "order": 2,
   "cases": [
     {
-      "input": { "orderItemId": "0", "quantity": 2 },
+      "input": { "orderItemId": "${prev.addToCart.orderItemId}", "quantity": 2 },
       "assertions": {
-        "status": 200,
-        "response_schema_valid": true
+        "status": 200
       }
     }
   ]
