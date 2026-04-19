@@ -2400,10 +2400,10 @@ paths:
                 properties:
                   ok:
                     type: integer
-  /ajax/statuses/destroyFavorites:
+  /ajax/statuses/destoryFavorites:
     post:
       operationId: unbookmarkPost
-      summary: Remove bookmark — reverses bookmarkPost (createFavorites)
+      summary: Remove bookmark — reverses bookmarkPost (createFavorites). Note upstream typo "destory".
       x-openweb:
         permission: write
         safety: caution

@@ -1,0 +1,17 @@
+{
+  "operation_id": "unbookmarkPost",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 2,
+  "cases": [
+    {
+      "input": {
+        "id": "5288272024575643"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
