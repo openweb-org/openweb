@@ -100,7 +100,15 @@ function resolveCtx(globalSrc: string, apiSrc: string, chatId: string) {
     peerId = found.id
   }
 
-  const chat = global.chats?.byId?.[peerId]
+  let chat = global.chats?.byId?.[peerId]
+  if (!chat && peerId === global.currentUserId) {
+    // Saved Messages — chat may not be in chats.byId if user has never opened
+    // it. Synthesize a self-chat from users.byId[currentUserId] so callApi can
+    // build InputPeerSelf. TG Web A ignores post-boot hash navigation, so we
+    // can't lazy-load the chat by visiting its URL.
+    const u = global.users?.byId?.[peerId]
+    if (u) chat = { ...(u as Record<string, unknown>), id: peerId, type: 'chatTypePrivate' }
+  }
   if (!chat) throw new Error(`Chat ${peerId} not found in state`)
 
   return { getGlobal, callApi, global, chat, peerId }
@@ -317,59 +325,108 @@ async function deleteMessage(page: Page, params: Readonly<Record<string, unknown
 
 async function editMessage(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
-  const messageId = Number(params.messageId)
+  const rawMessageId = params.messageId
   const text = String(params.text ?? '')
   if (!chatId) throw errors.missingParam('chatId')
-  if (!messageId) throw errors.missingParam('messageId')
+  if (rawMessageId == null) throw errors.missingParam('messageId')
   if (!text) throw errors.missingParam('text')
-  return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: number; text: string }) => {
+  return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: string; text: string }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
-    const { callApi, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
-    await callApi('editMessage', { chat, message: { chatId: peerId, id: args.messageId }, text: args.text })
-    return { success: true, chatId: peerId, messageId: args.messageId, text: args.text }
-  }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId, text })
+    const { callApi, global, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
+    let messageId: number
+    if (args.messageId === 'latest') {
+      const chatMsgs = global.messages?.byChatId?.[peerId]?.byId ?? {}
+      const outgoing = Object.values(chatMsgs).filter((m: { isOutgoing?: boolean }) => m.isOutgoing).sort((a: { id: number }, b: { id: number }) => b.id - a.id)
+      if (!outgoing.length) throw new Error('No outgoing messages found')
+      messageId = (outgoing[0] as { id: number }).id
+    } else {
+      messageId = Number(args.messageId)
+      if (!messageId) throw new Error('messageId must be a number or "latest"')
+    }
+    await callApi('editMessage', { chat, message: { chatId: peerId, id: messageId }, text: args.text })
+    return { success: true, chatId: peerId, messageId, text: args.text }
+  }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId: String(rawMessageId), text })
 }
 
 async function forwardMessages(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const fromChatId = String(params.fromChatId)
   const toChatId = String(params.toChatId)
-  const messageIds = (params.messageIds as number[]) ?? []
+  const rawMessageIds = (params.messageIds as Array<number | string>) ?? []
   if (!fromChatId) throw errors.missingParam('fromChatId')
   if (!toChatId) throw errors.missingParam('toChatId')
-  if (!messageIds.length) throw errors.missingParam('messageIds')
-  return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; fromChatId: string; toChatId: string; messageIds: number[] }) => {
+  if (!rawMessageIds.length) throw errors.missingParam('messageIds')
+  return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; fromChatId: string; toChatId: string; rawMessageIds: Array<number | string> }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const from = resolveCtx(args.globalSrc, args.apiSrc, args.fromChatId)
-    const to = resolveCtx(args.globalSrc, args.apiSrc, args.toChatId)
-    await from.callApi('forwardMessages', { fromChat: from.chat, toChat: to.chat, messages: args.messageIds.map(id => ({ id, chatId: from.peerId })) })
-    return { success: true, fromChatId: from.peerId, toChatId: to.peerId, messageIds: args.messageIds }
-  }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, fromChatId, toChatId, messageIds })
+    const toPeerIdRaw = args.toChatId === 'me' ? (from.global.currentUserId ?? '') : args.toChatId
+    const toChat = from.global.chats?.byId?.[toPeerIdRaw]
+    if (!toChat) throw new Error(`Chat ${args.toChatId} not found in state`)
+    const messageIds: number[] = args.rawMessageIds.map((raw) => {
+      if (raw === 'latest') {
+        const chatMsgs = from.global.messages?.byChatId?.[from.peerId]?.byId ?? {}
+        const outgoing = Object.values(chatMsgs).filter((m: { isOutgoing?: boolean }) => m.isOutgoing).sort((a: { id: number }, b: { id: number }) => b.id - a.id)
+        if (!outgoing.length) throw new Error('No outgoing messages found')
+        return (outgoing[0] as { id: number }).id
+      }
+      const n = Number(raw)
+      if (!n) throw new Error('messageIds must be numbers or "latest"')
+      return n
+    })
+    await from.callApi('forwardMessages', { fromChat: from.chat, toChat, messages: messageIds.map(id => ({ id, chatId: from.peerId })) })
+    return { success: true, fromChatId: from.peerId, toChatId: toPeerIdRaw, messageIds }
+  }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, fromChatId, toChatId, rawMessageIds })
 }
 
 async function pinMessage(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
-  const messageId = Number(params.messageId)
+  const rawMessageId = params.messageId
   if (!chatId) throw errors.missingParam('chatId')
-  if (!messageId) throw errors.missingParam('messageId')
-  return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: number; silent: boolean }) => {
+  if (rawMessageId == null) throw errors.missingParam('messageId')
+  return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: string; silent: boolean }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
-    const { callApi, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
-    await callApi('pinMessage', { chat, messageId: args.messageId, isUnpin: false, isOneSide: args.silent })
-    return { success: true, chatId: peerId, messageId: args.messageId }
-  }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId, silent: !!params.silent })
+    const { callApi, global, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
+    let messageId: number
+    if (args.messageId === 'latest') {
+      const chatMsgs = global.messages?.byChatId?.[peerId]?.byId ?? {}
+      const outgoing = Object.values(chatMsgs).filter((m: { isOutgoing?: boolean }) => m.isOutgoing).sort((a: { id: number }, b: { id: number }) => b.id - a.id)
+      if (!outgoing.length) throw new Error('No outgoing messages found')
+      messageId = (outgoing[0] as { id: number }).id
+    } else {
+      messageId = Number(args.messageId)
+      if (!messageId) throw new Error('messageId must be a number or "latest"')
+    }
+    await callApi('pinMessage', { chat, messageId, isUnpin: false, isOneSide: args.silent })
+    return { success: true, chatId: peerId, messageId }
+  }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId: String(rawMessageId), silent: !!params.silent })
 }
 
 async function unpinMessage(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
   const chatId = String(params.chatId)
-  const messageId = Number(params.messageId)
+  const rawMessageId = params.messageId
   if (!chatId) throw errors.missingParam('chatId')
-  if (!messageId) throw errors.missingParam('messageId')
-  return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: number }) => {
+  if (rawMessageId == null) throw errors.missingParam('messageId')
+  return page.evaluate(async (args: { globalSrc: string; apiSrc: string; ctxSrc: string; chatId: string; messageId: string }) => {
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
-    const { callApi, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
-    await callApi('pinMessage', { chat, messageId: args.messageId, isUnpin: true })
-    return { success: true, chatId: peerId, messageId: args.messageId }
-  }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId })
+    const { callApi, global, chat, peerId } = resolveCtx(args.globalSrc, args.apiSrc, args.chatId)
+    let messageId: number
+    if (args.messageId === 'latest') {
+      // For unpin, prefer the currently pinned message if known
+      const pinnedIds = (global.messages?.byChatId?.[peerId] as { pinnedIds?: number[] } | undefined)?.pinnedIds ?? []
+      if (pinnedIds.length) {
+        messageId = pinnedIds[pinnedIds.length - 1] as number
+      } else {
+        const chatMsgs = global.messages?.byChatId?.[peerId]?.byId ?? {}
+        const outgoing = Object.values(chatMsgs).filter((m: { isOutgoing?: boolean }) => m.isOutgoing).sort((a: { id: number }, b: { id: number }) => b.id - a.id)
+        if (!outgoing.length) throw new Error('No outgoing messages found')
+        messageId = (outgoing[0] as { id: number }).id
+      }
+    } else {
+      messageId = Number(args.messageId)
+      if (!messageId) throw new Error('messageId must be a number or "latest"')
+    }
+    await callApi('pinMessage', { chat, messageId, isUnpin: true })
+    return { success: true, chatId: peerId, messageId }
+  }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, chatId, messageId: String(rawMessageId) })
 }
 
 async function markAsRead(page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) {
@@ -403,6 +460,37 @@ const OPERATIONS: Record<string, Handler> = {
   markAsRead: (page, params, h) => markAsRead(page, params, h.errors),
 }
 
+/**
+ * Wait until Telegram's webpack state is populated:
+ *   1. webpack chunk array exists
+ *   2. getGlobal() resolves (a module exposes a chats/users-shaped state)
+ *   3. currentUserId is set (i.e. session is authenticated)
+ *   4. chats.byId has at least one entry (chat list hydrated)
+ *
+ * Telegram Web hydrates its teact global asynchronously after the SPA boots
+ * (especially on first navigation in a fresh tab). The pre-shim adapter's
+ * runtime-level init+retry handled this; with CustomRunner we wait inline.
+ */
+async function waitForState(page: Page, timeoutMs: number): Promise<'ready' | 'unauthenticated' | 'no_chats' | 'no_global'> {
+  const deadline = Date.now() + timeoutMs
+  let last: 'ready' | 'unauthenticated' | 'no_chats' | 'no_global' = 'no_global'
+  while (Date.now() < deadline) {
+    last = await page.evaluate((fnSrc: string) => {
+      const findFn = new Function(`return (${fnSrc})()`) as () => (() => Record<string, unknown>) | null
+      const getGlobal = findFn()
+      if (!getGlobal) return 'no_global' as const
+      const g = getGlobal() as { currentUserId?: string; chats?: { byId?: Record<string, unknown> } }
+      if (!g?.currentUserId) return 'unauthenticated' as const
+      const chatCount = Object.keys(g.chats?.byId ?? {}).length
+      if (chatCount === 0) return 'no_chats' as const
+      return 'ready' as const
+    }, FIND_GET_GLOBAL_SRC)
+    if (last === 'ready') return last
+    await page.waitForTimeout(500)
+  }
+  return last
+}
+
 const runner: CustomRunner = {
   name: 'telegram-protocol',
   description: 'Telegram Web — reads via webpack state, writes via GramJS callApi',
@@ -411,10 +499,50 @@ const runner: CustomRunner = {
     const { page, operation, params, helpers } = ctx
     if (!page) throw helpers.errors.fatal('telegram-protocol requires a page (transport: page)')
 
+    // SPA-readiness gate (was init() pre-32a698a; load-bearing for IndexedDB hydration).
+    // page.goto fires `load` before Telegram's webpack bundle parses + IndexedDB
+    // session boots. Without this, run() races the SPA and sees QR-login fallback.
+    if (page.url().includes('web.telegram.org')) {
+      await page.waitForFunction(() => {
+        const w = window as Record<string, unknown>
+        return Array.isArray(w.webpackChunktelegram_t) || Array.isArray(w.webpackChunkwebk)
+      }, { timeout: 30_000 }).catch(() => {})
+      await page.waitForFunction((fnSrc: string) => {
+        try {
+          const findFn = new Function(`return (${fnSrc})()`) as () => (() => Record<string, unknown>) | null
+          const getGlobal = findFn()
+          if (!getGlobal) return false
+          const state = getGlobal() as { currentUserId?: string } | null
+          return !!state && state.currentUserId != null
+        } catch { return false }
+      }, FIND_GET_GLOBAL_SRC, { timeout: 30_000 }).catch(() => {})
+    }
+
     // "Many logins" conflict check — Telegram shows this when the same
     // session is open in multiple tabs; webpack state is unavailable.
     const conflict = await page.evaluate(() => document.body?.innerText?.includes('Many logins') ?? false)
     if (conflict) throw helpers.errors.fatal('Telegram "Many logins" conflict — close other tabs')
+
+    // Wait for teact state hydration. Reload + retry once if state never
+    // populates within the first window — matches the legacy runtime's
+    // init-retry semantics that were lost during the CustomRunner migration.
+    let state = await waitForState(page, 12000)
+    if (state !== 'ready') {
+      await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})
+      await page.waitForTimeout(2000)
+      state = await waitForState(page, 12000)
+    }
+    if (state === 'no_global') throw helpers.errors.retriable('Telegram webpack state not found — page not ready')
+    if (state === 'unauthenticated') throw helpers.errors.fatal('Telegram session not authenticated — log in via web.telegram.org/a/')
+    // 'no_chats' is acceptable for ops that don't require chats.byId (e.g. getMe)
+    // — handlers will surface a clear error if they need a chat that isn't loaded.
+
+    // Note: previously tried to lazy-load missing chats by setting
+    // window.location.hash = '#<chatId>'. Per commit cd0a9ea, "TG Web A
+    // ignores post-boot hash changes", so that approach silently no-ops.
+    // For Saved Messages (chatId='me'), resolveCtx synthesizes the chat
+    // from users.byId. For other chats not in state, the user must have
+    // opened them at least once in the current session.
 
     const handler = OPERATIONS[operation]
     if (!handler) throw helpers.errors.unknownOp(operation)

@@ -1,9 +1,10 @@
 {
-  "operation_id": "sendMessage",
+  "operation_id": "pinMessage",
   "replay_safety": "unsafe_mutation",
+  "order": 4,
   "cases": [
     {
-      "input": { "chatId": "me", "text": "openweb verify test" },
+      "input": { "chatId": "me", "messageId": "latest", "silent": true },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

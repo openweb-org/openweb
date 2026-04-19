@@ -5,7 +5,7 @@ info:
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://web.telegram.org
+  - url: https://web.telegram.org/a/
     x-openweb:
       transport: page
 paths:
@@ -436,7 +436,11 @@ paths:
                 chatId:
                   type: string
                 messageId:
-                  type: integer
+                  oneOf:
+                    - type: integer
+                    - type: string
+                      enum: [latest]
+                  description: Message ID, or "latest" for most recent outgoing message
                 text:
                   type: string
               required: [chatId, messageId, text]
@@ -486,7 +490,10 @@ paths:
                 messageIds:
                   type: array
                   items:
-                    type: integer
+                    oneOf:
+                      - type: integer
+                      - type: string
+                        enum: [latest]
               required: [fromChatId, toChatId, messageIds]
       responses:
         '200':
@@ -532,7 +539,11 @@ paths:
                 chatId:
                   type: string
                 messageId:
-                  type: integer
+                  oneOf:
+                    - type: integer
+                    - type: string
+                      enum: [latest]
+                  description: Message ID, or "latest" for most recent outgoing message
                 silent:
                   type: boolean
                   default: false
@@ -578,7 +589,11 @@ paths:
                 chatId:
                   type: string
                 messageId:
-                  type: integer
+                  oneOf:
+                    - type: integer
+                    - type: string
+                      enum: [latest]
+                  description: Message ID, or "latest" for most recent pinned/outgoing message
               required: [chatId, messageId]
       responses:
         '200':

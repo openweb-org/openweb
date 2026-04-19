@@ -1,9 +1,10 @@
 {
-  "operation_id": "sendMessage",
+  "operation_id": "editMessage",
   "replay_safety": "unsafe_mutation",
+  "order": 2,
   "cases": [
     {
-      "input": { "chatId": "me", "text": "openweb verify test" },
+      "input": { "chatId": "me", "messageId": "latest", "text": "openweb verify edit" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true
