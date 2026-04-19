@@ -20,6 +20,7 @@ How major bot detection systems work, their impact on transport and capture stra
 - **Transport impact:** Node transport almost never works. Must use `page` transport with real browser.
 - **Capture strategy:** Record in a real browser session. The `_abck` cookie refreshes frequently -- keep capture sessions short.
 - **Adapter pattern:** For Akamai-protected sites, content is often SSR HTML (not JSON APIs). Use adapter transport with `page.goto()` + DOM extraction via `page.evaluate()` string expressions. Avoid TypeScript function callbacks in `page.evaluate()` -- tsx transpilation injects `__name` helpers that fail in the browser context.
+- **APIRequestContext also fails on write paths:** Even with `page` transport and a logged-in session, `page.request.fetch()` (Playwright APIRequestContext) can return `403` from `AkamaiGHost` while the same request from `page.evaluate(fetch(..., {credentials: 'include'}))` returns `200`. APIRequestContext shares cookies but its TLS / HTTP-2 fingerprint is detectable as non-browser; DOM fetch carries page origin + sec-fetch-* headers and runs inside the JS engine that solved the sensor challenge. **Action:** for Akamai-protected mutation endpoints, default to `pageFetch` / `page.evaluate(fetch())` instead of `page.request.fetch()`. Confirmed on costco.com cart endpoints (2026-04-19); cookies including `_abck`, `bm_sz`, `WC_AUTHENTICATION_*`, `JSESSIONID` were present in both cases, so the signal is the request fingerprint, not the session.
 
 ### PerimeterX (HUMAN Security)
 

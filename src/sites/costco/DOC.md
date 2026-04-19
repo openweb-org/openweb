@@ -93,11 +93,28 @@ openweb costco exec compareProducts '{"itemNumbers": ["100978861", "4000373324"]
 - **Cart operations require login** — browser must have session cookies and JWT auth token
 
 ## Transport
-- **page** transport with `page.request.fetch()` — bypasses PerimeterX client-side fetch interception while inheriting browser cookies
+- **page** transport with `page.request.fetch()` for read ops (search, product, warehouse, reviews) — bypasses PerimeterX-style client-side fetch interception while inheriting browser cookies
+- **Cart write ops use DOM-context fetch (`page.evaluate(fetch())`)**, NOT `page.request.fetch()` — Costco's Akamai Bot Manager returns HTTP 403 for Playwright APIRequestContext even with valid session cookies. DOM fetch carries page origin, sec-fetch-* headers, and runs inside the JS engine that solved the Akamai sensor challenge, so it's allowed through. See Known Issues.
+- Each write op declares `page_plan.entry_url` (PDP for add, `/CheckoutCartView` for remove/update) so the runtime pre-navigates and the adapter can scrape page-bound state (JWT/SKU/catalogEntryId) before POST.
 - Must have browser on `costco.com` for the adapter to initialize
 - **Reviews exception**: uses `page.goto()` + `page.evaluate` to navigate to product page and extract BV widget data from `window.BV` global
 - **Warehouse details exception**: uses `page.goto()` to navigate to `costco.com/w/-/{warehouseId}` and extracts JSON-LD `LocalBusiness` structured data
 - **Search suggestions**: uses typeahead search (`POST /search?searchType=typeahead`) — the original `/suggest` endpoint is blocked by Apigee X (403)
+
+## Adapter Patterns
+
+### Cart endpoints differ between PDP-add and cart-page edits
+
+| Op | URL | Auth token | Required scraped fields |
+|---|---|---|---|
+| addToCart | `/AjaxManageShoppingCartCmd?ajaxFlag=true&...` | JWT from sessionStorage `authToken_<userHash>` | SKU from PDP JSON-LD `Product.sku` (different from URL `itemNumber` — `itemNumber` is the parent catalog id, SKU is the variant) |
+| removeFromCart | `/AjaxModularManageShoppingCartCmd?checkoutPage=cart` | WCS `userId,signature` from cart-page hidden input `name=authToken` | `orderId`, `catalogEntryId_N` from cart-page hidden inputs (matched to `orderItem_N=<orderItemId>`) |
+| updateCartQuantity | `/order-quantity-update?checkoutPage=cart` | WCS authToken (same source as remove) | `orderId`, `catalogEntryId_N` (same as remove) |
+
+The two authToken formats are NOT interchangeable. PDP add demands the B2C JWT; cart edits reject it and demand the WCS short token. Both are present in a logged-in browser but in different surfaces.
+
+### `productBeanId` ≠ `catalogEntryId`
+addToCart's response contains `productBeanId` (e.g. `2908797`); the cart page's `catalogEntryId_1` for the same line is `2908798` — off by one. Don't try to derive one from the other; scrape `catalogEntryId_N` from the cart page each time.
 
 ## Extraction
 - Direct JSON responses for search, product, warehouse — no SSR extraction needed
@@ -110,7 +127,8 @@ openweb costco exec compareProducts '{"itemNumbers": ["100978861", "4000373324"]
 - Reviews: `window.BV.rating_summary.apiData[productId]` → summary stats from BazaarVoice internal cache
 
 ## Known Issues
-- **PerimeterX**: present on `www.costco.com`, intercepts `window.fetch` and `XMLHttpRequest` in `page.evaluate`. Workaround: `page.request.fetch()`.
+- **Akamai Bot Manager blocks `page.request.fetch()` on cart endpoints (HTTP 403).** Cookies and Akamai sensor cookies (`_abck`, `bm_sz`, `ak_bmsc`) are present, but Playwright's APIRequestContext fingerprint is detectable as non-browser. Fix: cart adapter uses `page.evaluate(fetch())` from DOM context. Read endpoints (gdx-api, ecom-api subdomains) are not behind Akamai and continue to use `page.request.fetch()`.
+- **PerimeterX**: present on `www.costco.com`, intercepts `window.fetch` and `XMLHttpRequest` in `page.evaluate` for some non-cart paths. Read adapters work around it via `page.request.fetch()`.
 - **BazaarVoice auth**: BV BFD API returns 401 from `page.request.fetch()`. Reviews extracted from BV widget's cached state instead.
 - **Reviews limited to summary**: full review text not available — only aggregates (count, average, distribution, recommendation %).
 - **getProductReviews navigates**: uses `page.goto()` — changes current page URL, may affect subsequent operations.
@@ -118,6 +136,10 @@ openweb costco exec compareProducts '{"itemNumbers": ["100978861", "4000373324"]
 - **Suggest API blocked**: `gdx-api.costco.com/catalog/search/api/v1/suggest` returns 403 from Apigee X gateway. `searchSuggestions` uses the typeahead search endpoint instead, returning product titles as suggestions.
 - **Price $0**: some items return `price: 0` — these are "display price in cart only" items, not actually free.
 - **Compiler limitation**: search and product APIs are POST with request bodies → compiler auto-skips them. Manual fixture + L3 adapter required.
-- **Cart write ops not live-verified — two stacked blockers.**
-  1. *Missing example fixtures (fixed in `43471cd`).* `addToCart`, `removeFromCart`, and `updateCartQuantity` shipped without `examples/*.example.json` files, so `verify --write` reported `0/0 ops` (the `--ops` filter matched nothing because there was nothing to load). This was NOT an `a61232b` (CustomRunner shim migration) regression — the examples were never present. **Pattern for future agents:** when a write-op verify reports `0/0 ops setup-fail`, check `src/sites/<site>/examples/` for the `*.example.json` file BEFORE assuming an adapter or runtime regression.
-  2. *Cross-op chain (open architectural gap).* Even with fixtures in place, live replay needs a real `orderItemId` returned by `addToCart` to be templated into `removeFromCart` / `updateCartQuantity` inputs. `verify.ts` treats each example as a closed input — there is no `${prev.<opId>.<field>}` syntax. Agents can chain the workflow manually and it works end-to-end; only static verify is blocked. See `doc/todo/write-verify/handoff.md` §4.1.
+- **`orderItemId` returned as integer.** addToCart's response gives `orderItemId: <number>`. The OpenAPI param schema for `removeFromCart` / `updateCartQuantity` is `type: [string, integer]` to accept both forms when chained via `${prev.addToCart.orderItemId}` templating.
+- **Cart edits are page-bound.** `removeFromCart` / `updateCartQuantity` only work for items currently in the user's live cart on the managed Chrome — they scrape `orderId` and `catalogEntryId_N` from `/CheckoutCartView` each call.
+
+## Probe Results
+
+- **APIRequestContext vs DOM fetch on Akamai endpoints (2026-04-19):** Probed `/AjaxManageShoppingCartCmd` from both `page.request.fetch()` and `page.evaluate(fetch())` with the same cookies, same browser, same params — the former returned 403 from `AkamaiGHost`, the latter returned 200. Cookies including `_abck`, `bm_sz`, `WC_AUTHENTICATION_<userId>`, `JSESSIONID`, `mSign=1` were present in both cases. Confirms the Akamai signal is request fingerprint, not session.
+- **Real cart POSTs captured by listening on `page.on('request')` while clicking the cart UI:** PDP add hits `/AjaxManageShoppingCartCmd` with full WCS param set + JWT; cart-page remove hits `/AjaxModularManageShoppingCartCmd?checkoutPage=cart`; cart-page quantity change hits `/order-quantity-update?checkoutPage=cart`. Three different endpoints, two authToken formats.
