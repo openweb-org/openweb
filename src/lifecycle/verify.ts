@@ -5,6 +5,7 @@ import { type AsyncApiSpec, loadAsyncApi } from '../lib/asyncapi.js'
 import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
+import { parseRetryAfter } from '../runtime/http-retry.js'
 import { type ResponseStore, TemplateError, createResponseStore, resolveTemplates } from '../lib/template-resolver.js'
 import { pathExists, resolveSiteRoot, listSites } from '../lib/site-resolver.js'
 import { listOperations, loadOpenApi, findOperation, getResponseSchema } from '../lib/spec-loader.js'
@@ -43,6 +44,8 @@ export interface OperationVerifyResult {
   readonly driftType?: DriftType
   readonly detail?: string
   readonly drifts?: readonly DriftResult[]
+  /** Retry-After hint (ms) propagated from a 429 transient error, used to throttle subsequent ops. */
+  readonly retryAfterMs?: number
 }
 
 export interface SiteVerifyResult {
@@ -298,9 +301,19 @@ export async function verifySite(
       operations.push(result)
     }
 
-    // Rate-limit delay between operations to avoid 429s on sites like yahoo-finance
+    // Rate-limit delay between operations.
+    // - read ops: 1.5s (yahoo-finance baseline).
+    // - write/delete/transact: 30s default — Spotify community evidence shows /me/* trips at 5-10 calls/short window.
+    // - 429 with Retry-After: honor the server's hint (capped 60s) instead of the static delay.
     if (operations.length > 0) {
-      await new Promise((r) => setTimeout(r, 1_500))
+      const last = operations[operations.length - 1]
+      const perm = permissionMap.get(testFile.operation_id)
+      const isWrite = perm === 'write' || perm === 'delete' || perm === 'transact'
+      const retryAfter = last && 'retryAfterMs' in last ? last.retryAfterMs : undefined
+      const delayMs = retryAfter !== undefined
+        ? Math.min(retryAfter, 60_000)
+        : isWrite ? 30_000 : 1_500
+      await new Promise((r) => setTimeout(r, delayMs))
     }
   }
 
@@ -471,6 +484,7 @@ async function verifyOperation(
         status: 'FAIL',
         driftType: 'error',
         detail: `transient error: ${formatErrorMessage(error)}`,
+        retryAfterMs: error instanceof OpenWebError ? parseRetryAfter(error.payload.retryAfter) : undefined,
       }
     }
     return {
