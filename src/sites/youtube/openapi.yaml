@@ -572,7 +572,10 @@ paths:
           tool_version: 2
           verified: true
           signals:
-            - status-match
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: subscribeChannel
       parameters:
         - name: key
           in: query
@@ -644,7 +647,10 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: unsubscribeChannel
       parameters:
         - name: key
           in: query

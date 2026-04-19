@@ -499,6 +499,28 @@ const unlikeVideo: Handler = async (page, params, helpers) => {
   return innertubeAuthPost(helpers, page, 'like/removelike', { context, target: { videoId } }, config)
 }
 
+// --- subscribeChannel / unsubscribeChannel ---
+function extractChannelIds(params: Readonly<Record<string, unknown>>, errors: Errors): string[] {
+  const raw = params.channelIds
+  const ids = Array.isArray(raw) ? raw.map(String).filter(Boolean) : []
+  if (!ids.length) throw errors.missingParam('channelIds')
+  return ids
+}
+
+const subscribeChannel: Handler = async (page, params, helpers) => {
+  const channelIds = extractChannelIds(params, helpers.errors)
+  const config = await getYtConfig(page)
+  const context = makeContext(config.clientVersion)
+  return innertubeAuthPost(helpers, page, 'subscription/subscribe', { context, channelIds }, config)
+}
+
+const unsubscribeChannel: Handler = async (page, params, helpers) => {
+  const channelIds = extractChannelIds(params, helpers.errors)
+  const config = await getYtConfig(page)
+  const context = makeContext(config.clientVersion)
+  return innertubeAuthPost(helpers, page, 'subscription/unsubscribe', { context, channelIds }, config)
+}
+
 const OPERATIONS: Record<string, Handler> = {
   getComments,
   getPlaylist,
@@ -507,6 +529,8 @@ const OPERATIONS: Record<string, Handler> = {
   getTranscript,
   likeVideo,
   unlikeVideo,
+  subscribeChannel,
+  unsubscribeChannel,
 }
 
 const runner: CustomRunner = {
