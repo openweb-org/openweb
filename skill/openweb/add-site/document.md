@@ -138,6 +138,34 @@ enough.
 **Optional:** Known Limitations — include when there are user-visible
 constraints worth documenting.
 
+### Documenting skipped ops
+
+If an op ships with `examples/<op>.example.json.skip` (renamed from
+`.example.json`), it is intentionally excluded from `verify` and won't
+appear in PASS/FAIL counts. Document each one in **Known Limitations**
+with the reason and the unblocker. Common reasons:
+
+- Upstream renamed an internal mutation/queryId — needs a fresh capture
+  from the live page (e.g. x `deleteDM`: `DMMessageDeleteMutation` no
+  longer in Twitter's bundles).
+- Op needs externally-produced state we can't synthesize in a chain
+  (e.g. x `hideReply`/`unhideReply`: Twitter blocks hiding self-replies,
+  so the op needs a 2nd account replying to our test tweet).
+- Op produces side-effects on shared state with no rollback path
+  (e.g. ops that consume one-shot tokens or post to public channels).
+
+Format:
+
+```markdown
+## Known Limitations
+- `deleteDM` — skipped (`.example.json.skip`); Twitter renamed
+  `DMMessageDeleteMutation`. Unblock: capture new queryId + opName from
+  a live DM-delete in managed Chrome, update the adapter map.
+- `hideReply` / `unhideReply` — skipped; Twitter blocks hiding own
+  replies on own thread. Unblock: have a 2nd account reply to a test
+  tweet, then point fixture at that reply ID.
+```
+
 ---
 
 ## DOC.md — Per-Site Developer Doc
@@ -225,6 +253,26 @@ Example:
 **Verification:** 4/4 PASS
 **Key discovery:** Introspection disabled, but error messages expose schema
 **Pitfalls encountered:** ratings histogram only in __NEXT_DATA__, not GraphQL
+```
+
+Fixture-refresh example (chained write ops):
+
+```markdown
+## 2026-04-19 — Fixture Chain Rewrite
+
+**Context:** 10 of 19 write ops failing in aggregate verify due to dead
+fixture IDs (deleted upstream tweets, renamed mutations, duplicate-status
+on createTweet).
+**Changes:** Rewrote 9 example.json files to chain via
+`${prev.createTweet.create_tweet.tweet_results.result.rest_id}`. Each run
+creates a fresh parent tweet (text uses new `${now}` template helper for
+uniqueness), then like/bookmark/retweet/reply reuse that ID; deleteTweet
+cleans up at order:20. 3 ops moved to `.example.json.skip` (see
+SKILL.md Known Limitations).
+**Verification:** 16/16 PASS in scope (was 9/19).
+**Key discovery:** Twitter's duplicate-status (187) check has a multi-day
+rolling window — static text in createTweet eventually collides; `${now}`
+sidesteps it cleanly.
 ```
 
 ### When to write
@@ -348,5 +396,6 @@ Before marking the Document step complete:
 - [ ] Quick Start has copy-paste commands
 - [ ] DOC.md written with all required sections (Auth, Transport, Known Issues)
 - [ ] PROGRESS.md has at least one entry using the entry template
+- [ ] Skipped ops (any `examples/*.example.json.skip`) are documented in SKILL.md Known Limitations with reason + unblocker
 - [ ] Knowledge update: scope decision made (site-specific / general / both / nothing new)
 - [ ] If general knowledge: persistence test passed, written to correct knowledge file
