@@ -2,10 +2,11 @@
   "operation_id": "followUser",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 1,
   "cases": [
     {
       "input": {
-        "userId": "4211243893"
+        "userId": "2244994945"
       },
       "assertions": {
         "status": 200,

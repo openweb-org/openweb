@@ -2,10 +2,11 @@
   "operation_id": "unhideReply",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 8,
   "cases": [
     {
       "input": {
-        "tweet_id": "2042768913184792832"
+        "tweet_id": "2045740947703562740"
       },
       "assertions": {
         "status": 200,
