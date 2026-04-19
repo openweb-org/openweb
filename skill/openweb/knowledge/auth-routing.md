@@ -46,3 +46,26 @@ Does the site need auth at all?
 ```
 
 For detailed detection, config, and gotchas per primitive -> [auth-primitives.md](auth-primitives.md)
+
+## Body-Wrapped Auth Errors (`auth_check`)
+
+Some sites return HTTP 200 with an application-level "unauthenticated" payload (no 401/403). Without help, the runtime treats the body as a schema/value drift instead of `needs_login`, so the auth cascade never fires.
+
+Declare the shape under `x-openweb.auth_check` on the server entry (or override per-op). Rules are OR'd; any match throws `needs_login` between body parse and schema validation.
+
+```yaml
+servers:
+  - url: https://xueqiu.com
+    x-openweb:
+      transport: node
+      auth: { type: cookie_session }
+      auth_check:
+        - path: error_code
+          equals: "60201"           # canonical xueqiu "invalid user id"
+        - path: message
+          contains: "login"          # case-insensitive substring fallback
+```
+
+Rule shape: `{ path?: dotted, equals?: string|number, contains?: string }`. Omit `path` to match against the body itself (bare-string error bodies). Op-level `auth_check: false` disables server-level rules for that op.
+
+When to add: the site's "logged-out read" returns HTTP 200 with a stable error code or message. Capture the no-cookie response, identify the discriminating field, encode it as a single rule.
