@@ -5,6 +5,7 @@ import { type AsyncApiSpec, loadAsyncApi } from '../lib/asyncapi.js'
 import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
+import { type ResponseStore, TemplateError, createResponseStore, resolveTemplates } from '../lib/template-resolver.js'
 import { pathExists, resolveSiteRoot, listSites } from '../lib/site-resolver.js'
 import { listOperations, loadOpenApi, findOperation, getResponseSchema } from '../lib/spec-loader.js'
 import { ensureBrowser } from '../runtime/browser-lifecycle.js'
@@ -199,6 +200,7 @@ export async function verifySite(
 
   const operations: OperationVerifyResult[] = []
   const opTimeoutMs = options?.operationTimeoutMs ?? DEFAULT_OP_TIMEOUT_MS
+  const responseStore = createResponseStore()
 
   // Track login attempts per site — after the first needs_login failure,
   // skip the login cascade for remaining ops to avoid infinite login loops.
@@ -286,6 +288,7 @@ export async function verifySite(
           testFile.operation_id,
           testCase,
           openapi,
+          responseStore,
           effectiveDeps,
         ),
         testFile.operation_id,
@@ -378,10 +381,25 @@ async function verifyOperation(
   operationId: string,
   testCase: HttpTestCase,
   openapi: import('../lib/spec-loader.js').OpenApiSpec | undefined,
+  responseStore: ResponseStore,
   deps?: ExecuteDependencies,
 ): Promise<OperationVerifyResult> {
+  let resolvedInput: Record<string, unknown>
   try {
-    const result = await executeOperation(site, operationId, testCase.input, deps)
+    resolvedInput = resolveTemplates(testCase.input, responseStore) as Record<string, unknown>
+  } catch (error) {
+    if (error instanceof TemplateError) {
+      return {
+        operationId,
+        status: 'FAIL',
+        driftType: 'error',
+        detail: `template ${error.kind}: ${error.message}`,
+      }
+    }
+    throw error
+  }
+  try {
+    const result = await executeOperation(site, operationId, resolvedInput, deps)
     const statusPass = result.status === testCase.assertions.status
     const schemaPass = testCase.assertions.response_schema_valid === undefined
       || result.responseSchemaValid === testCase.assertions.response_schema_valid
@@ -420,6 +438,7 @@ async function verifyOperation(
       }
     }
 
+    responseStore.set(operationId, result.body)
     return { operationId, status: 'PASS' }
   } catch (error) {
     if (isAuthDrift(error)) {
