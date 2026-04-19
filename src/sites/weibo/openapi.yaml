@@ -2368,10 +2368,10 @@ paths:
                 properties:
                   ok:
                     type: integer
-  /ajax/friendships/destroy:
+  /ajax/friendships/destory:
     post:
       operationId: unfollowUser
-      summary: Unfollow a user — reverses followUser (friendships/create)
+      summary: Unfollow a user — reverses followUser (friendships/create). Note upstream typo "destory".
       x-openweb:
         permission: write
         safety: caution
@@ -2385,9 +2385,9 @@ paths:
             schema:
               type: object
               required:
-              - friend_uid
+              - uid
               properties:
-                friend_uid:
+                uid:
                   type: string
                   description: User ID (numeric) to unfollow.
       responses:

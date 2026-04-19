@@ -1,0 +1,17 @@
+{
+  "operation_id": "unfollowUser",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "order": 2,
+  "cases": [
+    {
+      "input": {
+        "uid": "6859786766"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
