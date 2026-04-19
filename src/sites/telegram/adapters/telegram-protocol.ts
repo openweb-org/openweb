@@ -402,11 +402,16 @@ async function forwardMessages(page: Page, params: Readonly<Record<string, unkno
     const resolveCtx = new Function(`return (${args.ctxSrc})`)() as typeof import('./telegram-protocol').resolveCtx
     const from = resolveCtx(args.globalSrc, args.apiSrc, args.fromChatId)
     const toPeerIdRaw = args.toChatId === 'me' ? (from.global.currentUserId ?? '') : args.toChatId
-    const toChat = from.global.chats?.byId?.[toPeerIdRaw]
+    let toChat = from.global.chats?.byId?.[toPeerIdRaw]
+    if (!toChat && toPeerIdRaw === from.global.currentUserId) {
+      // Saved Messages — synthesize self-chat from users.byId (mirrors resolveCtx fallback)
+      const u = from.global.users?.byId?.[toPeerIdRaw] as Record<string, unknown> | undefined
+      if (u) toChat = { ...u, id: toPeerIdRaw, type: 'chatTypePrivate' }
+    }
     if (!toChat) throw new Error(`Chat ${args.toChatId} not found in state`)
+    const chatMsgs = from.global.messages?.byChatId?.[from.peerId]?.byId ?? {}
     const messageIds: number[] = args.rawMessageIds.map((raw) => {
       if (raw === 'latest') {
-        const chatMsgs = from.global.messages?.byChatId?.[from.peerId]?.byId ?? {}
         const outgoing = Object.values(chatMsgs).filter((m: { isOutgoing?: boolean }) => m.isOutgoing).sort((a: { id: number }, b: { id: number }) => b.id - a.id)
         if (!outgoing.length) throw new Error('No outgoing messages found')
         return (outgoing[0] as { id: number }).id
@@ -415,7 +420,13 @@ async function forwardMessages(page: Page, params: Readonly<Record<string, unkno
       if (!n) throw new Error('messageIds must be numbers or "latest"')
       return n
     })
-    await from.callApi('forwardMessages', { fromChat: from.chat, toChat, messages: messageIds.map(id => ({ id, chatId: from.peerId })) })
+    const messages = messageIds.map(id => chatMsgs[id]).filter(Boolean)
+    if (messages.length !== messageIds.length) throw new Error(`Some messages not loaded: ${messageIds.join(',')}`)
+    try {
+      await from.callApi('forwardMessages', { fromChat: from.chat, toChat, messages })
+    } catch (e) {
+      throw new Error(`forwardMessages callApi failed: ${(e as { message?: string })?.message ?? JSON.stringify(e)}`)
+    }
     return { success: true, fromChatId: from.peerId, toChatId: toPeerIdRaw, messageIds }
   }, { globalSrc: FIND_GET_GLOBAL_SRC, apiSrc: FIND_CALL_API_SRC, ctxSrc: RESOLVE_CTX_SRC, fromChatId, toChatId, rawMessageIds })
 }
