@@ -58,4 +58,13 @@ export interface CustomRunner {
   readonly name: string
   readonly description: string
   run(ctx: PreparedContext): Promise<unknown>
+  /** Optional per-site readiness predicate. The runtime polls this during
+   *  warm-up (after navigation, before run()) until it returns true or
+   *  `warmTimeoutMs` elapses. Use for SPAs whose hydration the runtime
+   *  can't detect via cookies (Telegram webpack chunks + Worker entity
+   *  cache, IndexedDB-backed session). Errors are swallowed — warm-up is
+   *  best-effort. */
+  warmReady?(page: Page): Promise<boolean>
+  /** Max time to poll `warmReady` (default 15000ms). */
+  warmTimeoutMs?: number
 }

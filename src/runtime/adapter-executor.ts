@@ -138,7 +138,11 @@ export async function executeAdapter(
 
   if (page) {
     await ensurePagePolyfills(page)
-    await warmSession(page, page.url())
+    const warmReady = runner.warmReady?.bind(runner)
+    await warmSession(page, page.url(), {
+      waitFor: warmReady,
+      waitForTimeoutMs: runner.warmTimeoutMs,
+    })
   }
 
   const ctx: PreparedContext = {

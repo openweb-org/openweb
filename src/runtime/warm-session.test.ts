@@ -200,6 +200,53 @@ describe('warmSession — WeakSet caching', () => {
   })
 })
 
+describe('warmSession — waitFor predicate', () => {
+  it('resolves once predicate returns true', async () => {
+    const page = createMockPage({ url: 'https://web.telegram.org/' })
+    let calls = 0
+    const waitFor = vi.fn(async () => {
+      calls += 1
+      return calls >= 3
+    })
+
+    const promise = warmSession(page, 'https://web.telegram.org/', { waitFor })
+    await vi.advanceTimersByTimeAsync(5_000)
+    await promise
+
+    expect(waitFor).toHaveBeenCalled()
+    expect(calls).toBeGreaterThanOrEqual(3)
+  })
+
+  it('proceeds without throwing when predicate never becomes true', async () => {
+    const page = createMockPage({ url: 'https://web.telegram.org/' })
+    const waitFor = vi.fn(async () => false)
+
+    const promise = warmSession(page, 'https://web.telegram.org/', {
+      waitFor,
+      waitForTimeoutMs: 1_000,
+    })
+    await vi.advanceTimersByTimeAsync(5_000)
+
+    await expect(promise).resolves.toBeUndefined()
+    expect(waitFor).toHaveBeenCalled()
+  })
+
+  it('swallows predicate errors and proceeds', async () => {
+    const page = createMockPage({ url: 'https://web.telegram.org/' })
+    const waitFor = vi.fn(async () => {
+      throw new Error('boom')
+    })
+
+    const promise = warmSession(page, 'https://web.telegram.org/', {
+      waitFor,
+      waitForTimeoutMs: 500,
+    })
+    await vi.advanceTimersByTimeAsync(2_000)
+
+    await expect(promise).resolves.toBeUndefined()
+  })
+})
+
 describe('warmSession — timeout behavior', () => {
   it('does not throw on timeout — warm-up is best-effort', async () => {
     const page = createMockPage({ url: 'about:blank' })

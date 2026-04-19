@@ -14,6 +14,13 @@ export interface WarmSessionOptions {
    *  warm delay, clear cookies and re-navigate up to this many times. 0
    *  disables. Default 3. */
   botRetries?: number
+  /** Per-site readiness predicate. Polled (500 ms interval) after navigation
+   *  until it returns true or `waitForTimeoutMs` elapses. Use for SPAs whose
+   *  hydration the runtime can't detect via cookies (Telegram webpack chunks,
+   *  Akamai _abck, etc.). Errors are swallowed — warm-up is best-effort. */
+  waitFor?: (page: Page) => Promise<boolean>
+  /** Max time to poll `waitFor` (default 15000ms) */
+  waitForTimeoutMs?: number
 }
 
 // ── Warm-state cache ─────────────────────────────
@@ -28,6 +35,8 @@ const COOKIE_POLL_INTERVAL_MS = 500
 const FIXED_DELAY_MS = 3_000
 const DEFAULT_BOT_RETRIES = 3
 const BOT_RETRY_BASE_DELAY_MS = 1_000
+const DEFAULT_WAIT_FOR_TIMEOUT_MS = 15_000
+const WAIT_FOR_POLL_INTERVAL_MS = 500
 
 // ── Implementation ───────────────────────────────
 
@@ -38,6 +47,12 @@ const BOT_RETRY_BASE_DELAY_MS = 1_000
  * sensor scripts (Akamai sensor.js, DataDome JS, etc.) to generate valid
  * session cookies. After warmSession() returns, the page is ready for
  * `page.evaluate(fetch(...))`.
+ *
+ * Per-site readiness extension: pass `waitFor` (predicate) for SPAs whose
+ * hydration the runtime can't detect via cookies (Telegram webpack chunks,
+ * GramJS Worker, IndexedDB-backed session). Adapters declare this on their
+ * `CustomRunner` (see `warmReady` in src/types/adapter.ts) and the
+ * adapter-executor wires it through.
  *
  * If a PerimeterX block / CAPTCHA is detected after the warm delay, clears
  * cookies and re-navigates up to `botRetries` times with backoff. Mirrors
@@ -70,6 +85,10 @@ export async function warmSession(
     await page.context().clearCookies().catch(() => {})
     await new Promise((r) => setTimeout(r, BOT_RETRY_BASE_DELAY_MS * (attempt + 1)))
     await navigateAndSettle(page, url, timeoutMs, cookie)
+  }
+
+  if (opts?.waitFor) {
+    await pollPredicate(page, opts.waitFor, opts.waitForTimeoutMs ?? DEFAULT_WAIT_FOR_TIMEOUT_MS)
   }
 
   warmedPages.add(page)
@@ -133,6 +152,26 @@ async function pollCookieStabilization(
   }
 
   logger.debug(`warm-session: cookie '${cookieName}' did not stabilize within ${timeoutMs}ms, proceeding anyway`)
+}
+
+// ── Predicate polling ────────────────────────────
+
+async function pollPredicate(
+  page: Page,
+  predicate: (page: Page) => Promise<boolean>,
+  timeoutMs: number,
+): Promise<void> {
+  logger.debug(`warm-session: polling waitFor predicate (timeout ${timeoutMs}ms)`)
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const ready = await predicate(page).catch(() => false)
+    if (ready) {
+      logger.debug(`warm-session: waitFor predicate satisfied in ${Date.now() - start}ms`)
+      return
+    }
+    await new Promise((r) => setTimeout(r, WAIT_FOR_POLL_INTERVAL_MS))
+  }
+  logger.debug(`warm-session: waitFor predicate did not become true within ${timeoutMs}ms, proceeding anyway`)
 }
 
 // ── Test helper ──────────────────────────────────
