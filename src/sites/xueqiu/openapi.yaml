@@ -12,6 +12,9 @@ servers:
       transport: node
       auth:
         type: cookie_session
+      auth_check:
+        - path: error_code
+          equals: "60201"
 paths:
   /query/v1/search/web/stock.json:
     get:
