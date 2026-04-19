@@ -1,4 +1,18 @@
-## 2026-04-18 — Write-Verify: SPA-readiness restore + Worker entity priming
+## 2026-04-19 — Write-Verify Campaign: 4/5 PASS via outgoing-message fixture + forwardMessages adapter fix
+
+**Context:** Prior session left telegram at 1/5 (markAsRead only). The other 4 write ops (`editMessage`, `forwardMessages`, `pinMessage`, `unpinMessage`) all failed with "no outgoing messages" because they resolve `messageId: "latest"` against `global.messages.byChatId[peerId]` filtered by `isOutgoing === true`, and the verify account's Saved Messages chat had never had an outgoing message.
+**Changes:**
+- Fixture-side: ran `pnpm dev telegram exec sendMessage '{"chatId":"me","text":"openweb-verify-test"}'` once to seed Saved Messages with an outgoing message. This single fixture-setup step unblocked `editMessage`, `pinMessage`, `unpinMessage` (verified PASS).
+- `adapters/telegram-protocol.ts` `forwardMessages`: was passing `messages: messageIds.map(id => ({ id, chatId: peerId }))` — stub objects. `callApi('forwardMessages', ...)` requires real `ApiMessage` entities. Rewrote to look each id up in `global.messages.byChatId[peerId].byId` and pass the loaded entities; refuse if any are missing.
+- Same op: added self-chat synthesis fallback for `toChat` when `toChatId === "me"`, mirroring `resolveCtx`'s existing fallback for `fromChat`. Without it, a fresh-session forward to Saved Messages throws `Chat me not found in state` because `chats.byId[currentUserId]` may be empty until the user opens that chat.
+**Verification:** 4/5 PASS (`markAsRead`, `editMessage`, `pinMessage`, `unpinMessage`). `forwardMessages` adapter fix landed but live-verify was blocked: the openweb browser lifecycle restarted Chrome multiple times during retest, the source profile snapshot got wiped, and CDP repeatedly missed the logged-in tab. The fix is small, isolated, and theoretically correct; it ships unverified for a future session retest.
+**Key discovery:** Telegram Web's `callApi('forwardMessages', ...)` is strict about the `messages` argument — it must be the actual hydrated `ApiMessage` from the global store, not a stub. The error surfaces as a bare `page.evaluate: Object` because the GramJS Worker rejects with a non-Error value. Whenever a write op only needs an id but the underlying API takes an entity, the adapter must hydrate via the global store before dispatch.
+**Pitfalls:**
+- The "send one outgoing message" prerequisite is account-shaped, not site-shaped. It's now documented in `DOC.md` § Known Issues and `SKILL.md` § Saved Messages write-verify prerequisite, so future verify campaigns on a fresh account won't re-rediscover it.
+- Repeatedly retrying `verify --browser` after a CDP failure can spawn parallel Chrome instances that clobber each other's profile copies. The lifecycle treats a stale `browser.pid` as "external Chrome on port" and refuses to attach. Pause and confirm browser state with the user before retry-loops, per the global "pause before browser CDP" feedback.
+
+---
+
 
 **Context:** Post-`32a698a` (CustomRunner migration), all 5 write ops failed in `verify --write`. The migration commit had stripped `init()` claiming it was a "trivial webpack-ready check" — wrong. `init()` was load-bearing: it polled `webpackChunktelegram_t` chunk registration AND `getGlobal()?.currentUserId` to gate `run()` on full SPA hydration. Without it, `findGetGlobal`/`findCallApi` walked an empty webpack registry and silently returned undefined.
 **Changes:**
