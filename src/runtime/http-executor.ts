@@ -34,6 +34,7 @@ import { interpolateEntryUrl } from './page-plan.js'
 import { resolveAuth } from './primitives/index.js'
 import { fetchWithRedirects } from './redirect.js'
 import { buildHeaderParams, buildGraphqlGetApqQuery, buildRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
+import { applyAuthCheck } from './auth-check.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
 import {
   type AutoNavigateResult,
@@ -484,6 +485,9 @@ export async function executeOperation(
 
   const schema = getResponseSchema(operationRef.operation)
   let responseSchemaValid = true
+  // Per-site auth_check: catches HTTP-200 bodies wrapping app-level "unauthenticated"
+  // errors, so the auth cascade can recover instead of failing schema validation.
+  applyAuthCheck(body, spec, operationRef.operation)
   if (schema) {
     const ajv = new Ajv({ strict: false, allErrors: true })
     const validate = ajv.compile(schema)
