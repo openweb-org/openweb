@@ -228,6 +228,22 @@ const OPERATIONS: Record<string, Handler> = {
       helpers.errors,
     )
   },
+
+  async starRepo(page, params, helpers) {
+    const owner = String(params.owner || '')
+    const repo = String(params.repo || '')
+    if (!owner || !repo) throw helpers.errors.missingParam('owner|repo')
+    const ctx = await navigateAndExtractRepo(page, owner, repo, helpers.errors)
+    if (!ctx.unstarToken) throw helpers.errors.fatal('No authenticity_token found in star/unstar form (repo page may not be loaded)')
+    const url = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/star`
+    return postMultipart(
+      page,
+      url,
+      { authenticity_token: ctx.unstarToken, context: 'repository' },
+      ctx.nonce,
+      helpers.errors,
+    )
+  },
 }
 
 const runner: CustomRunner = {

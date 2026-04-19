@@ -981,8 +981,22 @@ paths:
     put:
       operationId: starRepo
       summary: Star a repository
+      servers:
+        - url: https://github.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
+            page_plan:
+              entry_url: https://github.com/{owner}/{repo}
+              wait_until: domcontentloaded
+              warm: true
       x-openweb:
         permission: write
+        safety: caution
+        adapter:
+          name: github-web
+          operation: starRepo
         build:
           stable_id: gh0003
           tool_version: 1

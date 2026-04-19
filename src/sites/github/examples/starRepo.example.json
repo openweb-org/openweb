@@ -1,0 +1,17 @@
+{
+  "operation_id": "starRepo",
+  "method": "put",
+  "replay_safety": "unsafe_mutation",
+  "order": 1,
+  "cases": [
+    {
+      "input": {
+        "owner": "imoonkey",
+        "repo": "openweb-test"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}
