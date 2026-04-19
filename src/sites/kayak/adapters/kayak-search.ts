@@ -23,29 +23,15 @@ type ErrorHelpers = {
 /* ---------- Akamai warm-up ---------- */
 
 /**
- * Ensure Akamai Bot Manager `_abck` cookie exists before making requests.
- * The framework's warmSession runs with a 3s fixed delay which is often
- * insufficient for Akamai sensor scripts. This polls for the actual cookie.
+ * Navigate to kayak.com homepage if the page isn't already there. The Akamai
+ * `_abck` cookie wait now lives in `runner.warmReady` (see bottom of file) —
+ * the runtime polls it during warmSession() before run() starts.
  */
-async function ensureAkamaiCookie(page: Page): Promise<void> {
+async function ensureOnKayakHome(page: Page): Promise<void> {
   const url = 'https://www.kayak.com'
-  const cookies = await page.context().cookies(url)
-  const hasAbck = cookies.some(c => c.name === '_abck')
-
-  // Navigate to homepage if not already on kayak.com or if on error page
   const currentUrl = page.url()
   if (!currentUrl.includes('kayak.com') || currentUrl.includes('chrome-error')) {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
-  }
-
-  if (hasAbck) return
-
-  // Poll for _abck cookie stabilization (up to 8s)
-  const start = Date.now()
-  while (Date.now() - start < 8_000) {
-    const fresh = await page.context().cookies(url)
-    if (fresh.some(c => c.name === '_abck')) return
-    await new Promise(r => setTimeout(r, 500))
   }
 }
 
@@ -154,7 +140,7 @@ async function searchHotels(
   if (rooms > 1) url += `/${rooms}rooms`
   url += `?sort=${sort}`
 
-  await ensureAkamaiCookie(page)
+  await ensureOnKayakHome(page)
 
   // Navigation may timeout on load event (ad-heavy page), but DOM renders earlier
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
@@ -244,6 +230,15 @@ const OPERATIONS: Record<
 const adapter: CustomRunner = {
   name: 'kayak-search',
   description: 'Kayak search — flights, hotels, cars via poll interception',
+  warmTimeoutMs: 8_000,
+
+  /** Akamai Bot Manager `_abck` cookie must exist before making requests.
+   *  Polled during warmSession() — when not on kayak.com yet, returns false
+   *  until the page navigates (handler does that via ensureOnKayakHome). */
+  async warmReady(page: Page): Promise<boolean> {
+    const cookies = await page.context().cookies('https://www.kayak.com')
+    return cookies.some((c) => c.name === '_abck')
+  },
 
   async run(ctx) {
     const { page, operation, params, helpers } = ctx
