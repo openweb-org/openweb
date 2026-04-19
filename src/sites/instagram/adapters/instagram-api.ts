@@ -101,6 +101,71 @@ async function postFriendship(
   return postJson(helpers, page, url, '')
 }
 
+interface PolarisGraphQLArgs {
+  friendlyName: string
+  docId: string
+  variables: Record<string, unknown>
+  rootField?: string
+}
+
+async function polarisGraphQL(
+  helpers: AdapterHelpers,
+  page: Page,
+  args: PolarisGraphQLArgs,
+): Promise<unknown> {
+  const { errors } = helpers
+  const tokens = await page.evaluate(() => {
+    const html = document.documentElement.outerHTML
+    const dtsg = html.match(/"DTSGInitialData"[^}]*"token":"([^"]+)"/)?.[1]
+      || html.match(/"token":"(NA[A-Za-z0-9_-]{20,})"/)?.[1]
+      || null
+    const lsd = html.match(/"LSD",\[\],\{"token":"([^"]+)"/)?.[1] || null
+    const av = html.match(/"actorID":"(\d+)"/)?.[1]
+      || document.cookie.match(/ds_user_id=([^;]+)/)?.[1]
+      || null
+    return { dtsg, lsd, av }
+  })
+  if (!tokens.dtsg || !tokens.lsd || !tokens.av) {
+    throw errors.needsLogin()
+  }
+  const body = new URLSearchParams({
+    av: tokens.av,
+    __a: '1',
+    __user: '0',
+    fb_dtsg: tokens.dtsg,
+    lsd: tokens.lsd,
+    jazoest: '26000',
+    fb_api_caller_class: 'RelayModern',
+    fb_api_req_friendly_name: args.friendlyName,
+    variables: JSON.stringify(args.variables),
+    server_timestamps: 'true',
+    doc_id: args.docId,
+  }).toString()
+  const csrf = await getCsrfToken(page)
+  const headers: Record<string, string> = {
+    'content-type': 'application/x-www-form-urlencoded',
+    'x-fb-friendly-name': args.friendlyName,
+    'x-fb-lsd': tokens.lsd,
+    'x-ig-app-id': '936619743392459',
+    'x-asbd-id': '359341',
+  }
+  if (csrf) headers['x-csrftoken'] = csrf
+  if (args.rootField) headers['x-root-field-name'] = args.rootField
+
+  const result = await helpers.pageFetch(page, {
+    url: 'https://www.instagram.com/graphql/query',
+    method: 'POST',
+    headers,
+    body,
+    credentials: 'include',
+  })
+  if (result.status === 401 || result.status === 403) throw errors.needsLogin()
+  if (result.status >= 400) throw errors.retriable(`Instagram returned HTTP ${result.status}`)
+  let data: unknown
+  try { data = JSON.parse(result.text) } catch { throw errors.fatal('Response is not valid JSON') }
+  return guardAuthExpired(data, errors)
+}
+
 type Handler = (page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers) => Promise<unknown>
 
 const OPERATIONS: Record<string, Handler> = {
@@ -159,6 +224,27 @@ const OPERATIONS: Record<string, Handler> = {
       'https://www.instagram.com/api/v1/friendships/unmute_posts_or_story_from_follow/',
       `target_posts_author_id=${userId}&target_reel_author_id=${userId}`,
     )
+  },
+
+  async blockUser(page, params, helpers) {
+    const userId = String(params.id || '')
+    if (!userId) throw helpers.errors.missingParam('id')
+    return postJson(
+      helpers, page,
+      `https://www.instagram.com/api/v1/web/friendships/${userId}/block/`,
+      '',
+    )
+  },
+
+  async unblockUser(page, params, helpers) {
+    const userId = String(params.id || '')
+    if (!userId) throw helpers.errors.missingParam('id')
+    return polarisGraphQL(helpers, page, {
+      friendlyName: 'usePolarisUnblockMutation',
+      docId: '10028948420505007',
+      variables: { target_user_id: userId },
+      rootField: 'xdt_unblock',
+    })
   },
 
   async getReels(page, params, helpers) {

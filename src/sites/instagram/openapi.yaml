@@ -1200,6 +1200,9 @@ paths:
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: blockUser
       parameters:
         - name: id
           in: path
@@ -1244,6 +1247,9 @@ paths:
       x-openweb:
         permission: write
         safety: caution
+        adapter:
+          name: instagram-api
+          operation: unblockUser
       parameters:
         - name: id
           in: path
