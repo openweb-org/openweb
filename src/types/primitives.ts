@@ -115,3 +115,18 @@ export type ExtractionPrimitive =
       readonly match_url: string
       readonly unwrap?: string
     }
+
+// ── Auth Check ──────────────────────────────────────
+/** Body-shape pattern that signals "unauthenticated despite HTTP 200".
+ *  Either `equals` (strict, with string/number coercion) or `contains`
+ *  (case-insensitive substring on stringified value) must be set.
+ *  Omit `path` to match against the body itself (e.g. bare-string bodies). */
+export interface AuthCheckRule {
+  readonly path?: string
+  readonly equals?: string | number
+  readonly contains?: string
+}
+
+/** Server- or operation-level rules (OR semantics). When any rule matches
+ *  the parsed response body, the runtime synthesizes a `needs_login` failure. */
+export type AuthCheckPrimitive = readonly AuthCheckRule[]

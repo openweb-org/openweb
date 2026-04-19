@@ -1,4 +1,5 @@
 import type {
+  AuthCheckPrimitive,
   AuthPrimitive,
   CsrfPrimitive,
   ExtractionPrimitive,
@@ -51,6 +52,10 @@ export interface XOpenWebServer {
   readonly auth?: AuthPrimitive
   readonly csrf?: CsrfPrimitive & { readonly scope?: readonly string[] }
   readonly signing?: SigningPrimitive
+  /** Body-shape patterns that signal "unauthenticated despite HTTP 200".
+   *  Applied between body parse/unwrap and schema validation. Any matching
+   *  rule synthesizes a `needs_login` failure so the auth cascade can recover. */
+  readonly auth_check?: AuthCheckPrimitive
   /** Constant headers merged into every node-transport request to this server.
    *  Useful for per-site User-Agent overrides, API keys, etc. */
   readonly headers?: Readonly<Record<string, string>>
@@ -81,6 +86,8 @@ export interface XOpenWebOperation {
   readonly auth?: AuthPrimitive | false
   readonly csrf?: (CsrfPrimitive & { readonly scope?: readonly string[] }) | false
   readonly signing?: SigningPrimitive | false
+  /** Override or disable server-level auth_check rules. `false` disables. */
+  readonly auth_check?: AuthCheckPrimitive | false
   readonly pagination?: PaginationPrimitive
   readonly extraction?: ExtractionPrimitive
   readonly adapter?: AdapterRef | false

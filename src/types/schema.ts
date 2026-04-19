@@ -47,6 +47,21 @@ export const permissionSchema = {
   enum: ['read', 'write', 'delete', 'transact'],
 } as const
 
+export const authCheckRuleSchema = {
+  type: 'object',
+  properties: {
+    path: { type: 'string' },
+    equals: { type: ['string', 'number'] },
+    contains: { type: 'string' },
+  },
+  additionalProperties: false,
+} as const
+
+export const authCheckSchema = {
+  type: 'array',
+  items: authCheckRuleSchema,
+} as const
+
 // ── Server-level x-openweb ─────────────────────────
 
 export const xOpenWebServerSchema = {
@@ -57,6 +72,7 @@ export const xOpenWebServerSchema = {
     auth: authPrimitiveSchema,
     csrf: csrfWithScopeSchema,
     signing: signingPrimitiveSchema,
+    auth_check: authCheckSchema,
     headers: { type: 'object', additionalProperties: { type: 'string' } },
     page_plan: pagePlanSchema,
     adapter: adapterRefSchema,
@@ -93,6 +109,7 @@ export const xOpenWebOperationSchema = {
     auth: { oneOf: [authPrimitiveSchema, { const: false }] },
     csrf: { oneOf: [csrfWithScopeSchema, { const: false }] },
     signing: { oneOf: [signingPrimitiveSchema, { const: false }] },
+    auth_check: { oneOf: [authCheckSchema, { const: false }] },
     pagination: paginationPrimitiveSchema,
     extraction: extractionPrimitiveSchema,
     adapter: { oneOf: [adapterRefSchema, { const: false }] },
