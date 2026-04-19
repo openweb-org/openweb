@@ -95,15 +95,36 @@ Write operations use POST to `/resource/{ResourceName}/create/` or `/resource/{R
 
 Key resources:
 - `BaseSearchResource` — pin/board/user search
-- `PinResource` — pin details
+- `PinResource` — pin details + unsave (`/delete/`)
 - `BoardResource` — board details
 - `UserResource` — user profile
 - `AdvancedTypeaheadResource` — search suggestions
-- `RepinResource` — save (repin) a pin to a board
-- `SavePinResource` — unsave a pin from a board
-- `BoardFollowResource` — follow/unfollow a board
+- `RepinResource` — save (repin) a pin to a board (`/create/`)
+- `ApiResource` — **generic v3 wrapper** (see "ApiResource wrapper pattern" below). Used for follow/unfollow board (deprecated `BoardFollowResource`), batched user/profile fetches, and most internal Pinterest client traffic.
 - `UserHomefeedResource` — personalized home feed
 - `NewsHubResource` — notification feed
+
+### ApiResource wrapper pattern
+
+Pinterest's modern web client routes most internal v3 REST calls through a
+single generic resource: `POST /resource/ApiResource/{create,update,delete,get}/`.
+The wrapper takes form-encoded `source_url` + `data`, where `data` is a JSON
+string with the wrapped REST URL nested under `options.url`:
+
+```
+POST /resource/ApiResource/update/
+source_url=/<board-page-path>/
+data={"options":{"url":"/v3/boards/<BOARD_ID>/follow/"},"context":{}}
+```
+
+The verb in the wrapper path (`create`/`update`/`delete`) maps to the v3
+endpoint's HTTP method on the server side. For board follow:
+- `update/` = follow
+- `delete/` = unfollow
+
+When a deprecated `*Resource` returns `{"error":{"code":20,"message":"unsupported method create"}}`,
+that resource has been retired and the action has been folded into ApiResource.
+Capture a live click on the action to discover the wrapped v3 URL.
 
 ## Auth
 - **Type:** cookie_session (browser session cookies)
@@ -120,6 +141,7 @@ Key resources:
 - **searchPins DRIFT:** Search results are heterogeneous (promoted vs organic pins have different field sets), causing the response shape hash to vary between runs. Verify may report DRIFT for searchPins even when data is correct.
 - **x-app-version:** Pinterest's JavaScript includes an `x-app-version` header (commit hash) that changes per deployment. Currently not required for API access, but if requests start failing, this header may need to be added.
 - **Write ops best-effort:** Write operations depend on valid session state and CSRF tokens. Pinterest may reject writes if the session is stale or bot detection triggers.
-- **Write ops are form-encoded (2026-04-18 verify)**: `POST /resource/{ResourceName}/{create,delete}/` uses form-encoded body with two fields — `source_url` and `data` (JSON-string of `{"options":{...},"context":{}}`). Same envelope as read ops, just with `create/delete` verbs and POST + CSRF.
-- **`unsavePin` cross-op chain gap (2026-04-18)**: `PinResource/delete/` requires the saved-pin record `id` returned by `savePin` (NOT the original `pin_id`). Verify currently has no `${prev.<opId>.<json-path>}` templating to feed `savePin.id → unsavePin.id`. Tracked architecturally in `doc/todo/write-verify/handoff.md` §4.1 — one runtime change unlocks ~8-12 ops across 5+ sites (pinterest, doordash, target, costco, x).
-- **`followBoard` / `unfollowBoard` BLOCKED (2026-04-18)**: Pinterest retired `BoardFollowResource`. The current follow flow is a GraphQL persisted-query (`/_/_/graphql/...`) with a rotating `doc_id` hash. Future direction: capture a fresh follow click in HAR, extract the `doc_id` + variables shape, and add the GraphQL POST as a new resource family. Until then, both endpoints return either 404 or SPA HTML 200.
+- **Write ops are form-encoded (2026-04-18 verify)**: `POST /resource/{ResourceName}/{create,update,delete}/` uses form-encoded body with two fields — `source_url` and `data` (JSON-string of `{"options":{...},"context":{}}`). Same envelope as read ops, just with `create`/`update`/`delete` verbs and POST + CSRF.
+- **`unsavePin` requires the saved-pin record id (RESOLVED 2026-04-19)**: `PinResource/delete/` takes the id returned in `savePin`'s `resource_response.data.id`, not the original `pin_id`. The verify cross-op templating runtime now lets `example.json` reference `${prev.savePin.resource_response.data.id}` and `${prev.savePin.resource_response.data.board.id}`.
+- **`followBoard` / `unfollowBoard` re-pointed (RESOLVED 2026-04-19)**: `BoardFollowingResource` returns `{"error":{"code":20,"message":"unsupported method create"}}`. The modern client wraps the v3 REST endpoint inside ApiResource: `POST /resource/ApiResource/{update,delete}/` with `data={"options":{"url":"/v3/boards/{id}/follow/"}}`. Discovered via live HAR — the Follow button is hidden inside the board's "More actions" 3-dot menu, not at the top of the board page.
+- **Self-owned content can't be followed/saved**: Pinterest hides the Follow button on boards/users you own. When capturing or testing, pick a public account different from the logged-in user (e.g. `marthastewart`, `realsimple`).
