@@ -30,12 +30,6 @@ Chinese finance and social investing platform. Stock quotes, order book, industr
 ### Track watchlist
 1. `getWatchlist(pid)` → user's followed stocks with live prices (requires login)
 
-### Manage watchlist
-1. `searchStocks(q)` → find stock `code`
-2. `addToWatchlist(symbol, pid)` → add stock to watchlist (requires login)
-3. `getWatchlist(pid)` → confirm stock was added
-4. `removeFromWatchlist(symbol, pid)` → remove stock from watchlist
-
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -47,8 +41,6 @@ Chinese finance and social investing platform. Stock quotes, order book, industr
 | getStockFinancials | financial indicators | symbol, type (Q1-Q4/all), count | avg_roe, basic_eps, total_revenue, net_profit, gross_margin | CN A-share stocks |
 | getStockComments | stock discussion feed | symbol, count, sort, source | posts with description, author, reply_count, fav_count | paginated |
 | getWatchlist | user's stock watchlist | pid (-1 for default) | symbol, name, current, percent, market_capital | requires login |
-| addToWatchlist | add stock to watchlist | symbol, pid | success, error_code | requires login, write |
-| removeFromWatchlist | remove stock from watchlist | symbol, pid | success, error_code | requires login, write |
 | getHotEvents | trending market events | count (optional) | tag, hot, status_count, content | entry point |
 | getTimeline | hot discussion feed | since_id, max_id, size | posts with title, description, author, timestamps | paginated via next_max_id |
 | getIndustryStocks | industry peer stocks | code ← searchStocks.code | symbol, name, current, percentage, pe_ttm, marketCapital | |
@@ -76,12 +68,6 @@ openweb xueqiu exec getStockComments '{"symbol":"SH600519","count":10,"sort":"ti
 
 # Get user's watchlist (requires login)
 openweb xueqiu exec getWatchlist '{"pid":-1,"category":1,"size":100}'
-
-# Add stock to watchlist (requires login)
-openweb xueqiu exec addToWatchlist '{"symbol":"SH600519","pid":-1}'
-
-# Remove stock from watchlist (requires login)
-openweb xueqiu exec removeFromWatchlist '{"symbol":"SH600519","pid":-1}'
 
 # Get hot market events
 openweb xueqiu exec getHotEvents '{"count":10}'
