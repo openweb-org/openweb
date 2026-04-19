@@ -26,7 +26,7 @@ Food delivery marketplace — search restaurants, browse menus, view order histo
 | getRestaurantMenu | get store detail + full menu | storeId ← searchRestaurants | storeHeader, menuBook, itemLists (id, name, displayPrice) | optional: menuId, fulfillmentType |
 | getOrderHistory | list past orders | limit, offset | orders (store, items, grandTotal, timestamps) | paginated; requires auth |
 | addToCart | add menu item to cart | storeId ← searchRestaurants, itemId ← getRestaurantMenu | success, cartId, subtotal, items | write op; optional: quantity, specialInstructions |
-| removeFromCart | remove item from cart | orderCartId ← addToCart, orderItemId ← addToCart | updated cart, remaining items | write op; reverse of addToCart |
+| removeFromCart | remove item from cart | orderCartId ← addToCart, orderItemId ← addToCart | updated cart, remaining items | write op; reverse of addToCart. Static `verify --write` cannot replay this — see Known Issues |
 
 ## Quick Start
 
@@ -78,3 +78,4 @@ openweb doordash exec removeFromCart '{"orderCartId": "cart-uuid", "orderItemId"
 - Search results include non-store items (grocery suggestions) — use `resultType` to filter
 - No bot detection observed for authenticated sessions
 - removeFromCart requires `orderCartId` and `orderItemId` from a prior addToCart response — these are ephemeral cart identifiers
+- **`removeFromCart` write-verify blocker (cross-op chain).** The example fixture has the correct param shape since `d25786b` (input wrapped under `removeCartItemInput` to match the schema-declared body property; previously the example sent the two fields flat and tripped param validation). However, live `verify --write` still cannot succeed: it would need to call `addToCart` first, read the server-generated `cart_item_id` from the response, then template that value into `removeFromCart`'s input. `verify.ts` treats each example as a closed input — there is no `${prev.<opId>.<field>}` syntax. Agents can run the workflow manually (chain the two calls, pass the returned id), so the workflow is documented in SKILL.md and works for end users; only static verify is blocked. Resolution path: cross-op response templating in `verify.ts` (open architectural gap, see `doc/todo/write-verify/handoff.md` §4.1).

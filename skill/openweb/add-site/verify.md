@@ -191,6 +191,18 @@ For sites where writes return opaque-200 envelopes (YouTube InnerTube, many Grap
 
 This pattern surfaced YouTube's missing `sapisidhash` binding on `subscribeChannel` in the 2026-04-18 sweep (`8cfebff`). The `do` side had been silently broken for an unknown duration.
 
+### Cross-Op Response Templating — A Closed-Input Limitation
+
+Verify treats each example's `input` as a **closed input**: there is currently no syntax to feed a server-generated value (cart-item-id, message-id, saved-pin-id, subscription-id) from one op's response into a later op's input. This blocks any create→destroy paired write where the destroy op needs an id returned by the create op.
+
+- **Detection signal:** the destroy op (`removeFromCart`, `unsavePin`, `deleteComment`) requires an opaque server-generated id whose only source is the create op's response body.
+- **Affected sites observed:** doordash `removeFromCart`, costco `removeFromCart` + `updateCartQuantity`, target `removeFromCart`, pinterest `unsavePin`, x several pair-creates — likely 8–12 ops total across 5+ sites.
+- **Current workarounds** (pick one when documenting a site):
+  1. **Pre-seed a stable fixture** in the user account (e.g., trello's `openweb-verify-archiveCard-fixture` card in `cbfa285`) so the destroy op always has a known-real id to operate on.
+  2. **Document the workflow** for agent-level use — agents can chain `addToCart` → read response → `removeFromCart` manually even though static verify cannot. Mark the destroy op in SKILL.md Operations notes with "Static `verify --write` cannot replay this — agents chain manually".
+  3. **Wait for cross-op response templating** — proposed `${prev.<opId>.<json-path>}` syntax in example.json `input` would let verify substitute previous op responses (sequenced by `order`). One architectural change unlocks ~8–12 ops. See `doc/todo/write-verify/handoff.md` §4.1.
+- **Action:** when adding a new write op whose required id is server-generated, do NOT claim "verified" if you can only run the create side. Document the gap in the site's DOC.md Known Issues + SKILL.md Known Limitations and use a pre-seeded fixture if one is feasible.
+
 ---
 
 ## Doc Verify

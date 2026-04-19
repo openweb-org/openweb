@@ -44,3 +44,10 @@
 **Context:** browseCategory filter objects sometimes omit fields depending on category type.
 **Changes:** openapi.yaml — removed required on browseCategory filters response schema.
 **Verification:** Verify pass; schema accepts the variable filter shapes returned by the API.
+
+## 2026-04-19 — Write-op verify investigation
+
+**Context:** First end-to-end `verify --write` sweep across the site catalog. `addToCart`, `removeFromCart`, `updateCartQuantity` reported `0/0 ops setup-fail` — the `--ops` filter matched nothing because there were no example fixture files to load. Initial hypothesis was an `a61232b` CustomRunner-migration regression; investigation showed the examples were simply never shipped.
+**Changes:** `43471cd` adds three `examples/*.example.json` fixtures (addToCart, removeFromCart, updateCartQuantity), each tagged `replay_safety: "unsafe_mutation"` so they only run under `--write`. DOC.md Known Issues + SKILL.md Known Limitations updated to record the two stacked blockers (missing fixtures + cross-op chain).
+**Verification:** 0/3 partial — fixture loading gate now passes; live replay still blocked on (a) authenticated Costco session in the managed browser, and (b) cross-op chain for `removeFromCart`/`updateCartQuantity`. The CustomRunner adapter (post-`a61232b`) is correct; ops are gated by site auth + the architectural cross-op gap, not by an adapter regression.
+**Key discovery:** The `0/0 ops setup-fail` pattern is a real footgun. Before this campaign, `verify --all` skipped writes by default, so missing example.json files went unnoticed for months. **Future agents:** when a write op reports `0/0 ops`, list `src/sites/<site>/examples/` first — the fixture is probably just absent. Same cross-op chain limitation applies as for doordash/target — see `doc/todo/write-verify/handoff.md` §4.1.

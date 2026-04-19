@@ -46,15 +46,15 @@ GitHub REST + GraphQL API — code hosting platform (developer tools archetype).
 | listPullRequests | repository PRs | owner ← getRepo, repo ← getRepo | number, title, state, user.login, head.ref, base.ref | paginated |
 | listContributors | repository contributors | owner ← getRepo, repo ← getRepo | login, contributions | paginated |
 | createIssue | create an issue | owner ← getRepo, repo ← getRepo, title, body | number, html_url | write, CAUTION |
-| closeIssue | close an issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION |
-| reopenIssue | reopen a closed issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION — reverse of closeIssue |
+| closeIssue | close an issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION. **BLOCKED — pending rewrite to github.com web endpoints** |
+| reopenIssue | reopen a closed issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION — reverse of closeIssue. **BLOCKED — pending rewrite** |
 | createComment | comment on issue/PR | owner, repo, issue_number ← listIssues, body | id, body, html_url | write, CAUTION |
 | deleteComment | delete a comment | owner, repo, comment_id ← createComment | — (204) | write, CAUTION — reverse of createComment |
 | forkRepo | fork a repository | owner ← getRepo, repo ← getRepo | full_name | write, CAUTION |
-| starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE |
-| unstarRepo | unstar a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of starRepo |
-| watchRepo | watch a repository | owner ← getRepo, repo ← getRepo | subscribed, ignored | write, CAUTION |
-| unwatchRepo | unwatch a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of watchRepo |
+| starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE. **BLOCKED — pending rewrite to github.com web endpoints** |
+| unstarRepo | unstar a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of starRepo. **BLOCKED — pending rewrite** |
+| watchRepo | watch a repository | owner ← getRepo, repo ← getRepo | subscribed, ignored | write, CAUTION. **BLOCKED — pending rewrite to github.com web endpoints** |
+| unwatchRepo | unwatch a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of watchRepo. **BLOCKED — pending rewrite** |
 | graphqlQuery | execute GraphQL | query, variables | data | write (unrestricted mutations possible) |
 
 ## Quick Start
@@ -86,3 +86,9 @@ openweb github exec unstarRepo '{"owner":"imoonkey","repo":"openweb-test"}'
 openweb github exec watchRepo '{"owner":"imoonkey","repo":"openweb-test"}'
 openweb github exec unwatchRepo '{"owner":"imoonkey","repo":"openweb-test"}'
 ```
+
+## Known Limitations
+
+- **`closeIssue`, `reopenIssue`, `starRepo`, `unstarRepo`, `watchRepo`, `unwatchRepo` — BLOCKED, pending rewrite to github.com web endpoints.** These ops currently target `api.github.com`, which does not authenticate the user's `_gh_sess` cookie for writes (the github.com web UI calls api.github.com with a short-lived internal bearer token, not the session cookie). All openweb sites use cookie-based browser auth — no Bearer/PAT primitives — so the fix is to retarget these ops at the rails-style github.com web endpoints (e.g. `POST /{owner}/{repo}/star` with `X-CSRF-Token` from `<meta name="csrf-token">` on the github.com page), the same approach used for instagram, x, reddit, etc. Rewrite work is staged on the `w-github-web-rewrite` agent, paused on a user action (sign in to github.com in the managed Chrome at `localhost:9222`). See DOC.md and `doc/todo/write-verify/handoff.md` §3.1.
+- `createIssue`, `createComment`, `deleteComment`, `forkRepo`, `graphqlQuery` likely share the same auth-architecture mismatch and will need the same rewrite.
+- Read ops on public repos work without auth (rate-limited to 60 req/h); authenticated read ops via cookies work too (5000 req/h).

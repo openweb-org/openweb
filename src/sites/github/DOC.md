@@ -45,15 +45,15 @@ GitHub REST + GraphQL API — code hosting platform (developer tools archetype).
 | listPullRequests | repository PRs | owner ← getRepo, repo ← getRepo | number, title, state, user.login, head.ref, base.ref | paginated |
 | listContributors | repository contributors | owner ← getRepo, repo ← getRepo | login, contributions | paginated |
 | createIssue | create an issue | owner ← getRepo, repo ← getRepo, title, body | number, html_url | write, CAUTION |
-| closeIssue | close an issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION |
-| reopenIssue | reopen a closed issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION — reverse of closeIssue |
+| closeIssue | close an issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION. **BLOCKED — pending rewrite to github.com web endpoints** |
+| reopenIssue | reopen a closed issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION — reverse of closeIssue. **BLOCKED — pending rewrite** |
 | createComment | comment on issue/PR | owner, repo, issue_number ← listIssues, body | id, body, html_url | write, CAUTION |
 | deleteComment | delete a comment | owner, repo, comment_id ← createComment | — (204) | write, CAUTION — reverse of createComment |
 | forkRepo | fork a repository | owner ← getRepo, repo ← getRepo | full_name | write, CAUTION |
-| starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE |
-| unstarRepo | unstar a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of starRepo |
-| watchRepo | watch a repository | owner ← getRepo, repo ← getRepo | subscribed, ignored | write, CAUTION |
-| unwatchRepo | unwatch a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of watchRepo |
+| starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE. **BLOCKED — pending rewrite to github.com web endpoints** |
+| unstarRepo | unstar a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of starRepo. **BLOCKED — pending rewrite** |
+| watchRepo | watch a repository | owner ← getRepo, repo ← getRepo | subscribed, ignored | write, CAUTION. **BLOCKED — pending rewrite to github.com web endpoints** |
+| unwatchRepo | unwatch a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of watchRepo. **BLOCKED — pending rewrite** |
 | graphqlQuery | execute GraphQL | query, variables | data | write (unrestricted mutations possible) |
 
 ## Quick Start
@@ -105,29 +105,30 @@ openweb github exec unwatchRepo '{"owner":"imoonkey","repo":"openweb-test"}'
 `node` — all endpoints use direct HTTP. No bot detection, no browser needed.
 
 ## Known Issues
-- Write ops (`closeIssue`, `reopenIssue`, `createIssue`, `createComment`,
-  `deleteComment`, `forkRepo`, `starRepo`, `unstarRepo`, `watchRepo`,
-  `unwatchRepo`) currently **do not work** via the `cookie_session` +
-  `meta_tag` csrf path declared on the `api.github.com` server. Two
-  upstream constraints block them:
-  1. `api.github.com` returns JSON, not HTML — there is no `csrf-token`
-     meta tag to read, so `meta_tag` csrf resolution always fails.
-  2. `api.github.com` does not accept `_gh_sess` web cookies for write
-     operations from non-github.com origins; the github.com web UI
-     uses an internal short-lived bearer token (not the session cookie)
-     when calling the REST API.
-  Path forward: rewrite write ops to target the rails-style endpoints
-  on `github.com` itself (e.g. `POST /{owner}/{repo}/star` with form
-  body + csrf from the github.com page), OR add a `personal_access_token`
-  auth primitive driven by an env var. Tracked separately from the
-  normalize-adapter milestone.
-- Read ops on public repos work without auth (rate-limited to 60 req/h);
-  authenticated read ops via cookies work too (5000 req/h).
-- `graphqlQuery` has `write` permission since arbitrary mutations are
-  possible via the query string. Same auth blocker as above for any
-  mutation use.
-- `closeIssue` and `reopenIssue` both PATCH the same endpoint
-  (`/repos/{owner}/{repo}/issues/{issue_number}`) — `reopenIssue` uses
-  a virtual path key with `actual_path` override.
-- `deleteComment` requires the numeric `comment_id` (from
-  `createComment` response `.id`), not the issue number.
+
+### Auth-architecture mismatch — write ops blocked on api.github.com
+
+`closeIssue`, `reopenIssue`, `createIssue`, `createComment`, `deleteComment`, `forkRepo`, `starRepo`, `unstarRepo`, `watchRepo`, `unwatchRepo` (and `graphqlQuery` for any mutation) all currently target `api.github.com` with `auth: cookie_session` + `csrf: meta_tag`. End-to-end this cannot work, for two upstream reasons:
+
+1. `api.github.com` returns JSON, not HTML — there is no `<meta name="csrf-token">` to read, so `meta_tag` CSRF resolution always fails.
+2. `api.github.com` does not accept the user's `_gh_sess` web cookie for writes from a non-github.com origin. The github.com web UI calls api.github.com using a short-lived **internal bearer token** synthesized server-side, NOT the session cookie that the browser holds.
+
+**Project constraint:** all openweb sites authenticate via browser cookies (`cookie_session` family). There are no Bearer / Personal Access Token primitives, and adding them would break the uniform auth model. So the fix is **not** to add a PAT primitive — it is to **rewrite the write ops against the github.com web UI**.
+
+**Planned rewrite (the github.com web path):**
+- POST against rails-style endpoints on `github.com` itself (e.g. `POST https://github.com/{owner}/{repo}/star`, `POST https://github.com/{owner}/{repo}/subscription`, `POST https://github.com/{owner}/{repo}/issues/{n}/close`).
+- Form-encoded body, `X-CSRF-Token` header read from `<meta name="csrf-token">` on the github.com page (the `_gh_sess` cookie + this token is exactly what the github.com web UI sends).
+- Same architectural pattern used by instagram, x, reddit, weibo write ops.
+
+**Status:** docs-only commit `be3a0a5` documented the blocker but did not rewrite. The `w-github-web-rewrite` agent has the loop staged (probe script left at `probe-gh.mjs` in the project root) and is **paused on a user action**: managed Chrome at `localhost:9222` is not signed in to github.com, so the agent cannot capture HAR for the rails endpoints. Once the user signs in, the agent (or a re-spawn with the same prompt at `/tmp/prompt-github.txt`) can resume. See `doc/todo/write-verify/handoff.md` §3.1 and §5 item 1.
+
+**History (the flip-flop in commits `bf66525` → `723c3dc`).** On 2026-03-31 someone removed server-level `auth: cookie_session` and `csrf: meta_tag` (correct for the public read ops on api.github.com) — `bf66525`. 19 minutes later it was restored — `723c3dc`. Both edits were made without end-to-end write verification, because writes were always permission-gated and `verify --all` never exercised them. The 2026-04-18 write-verify campaign was the first run that actually tried to send a github write op end-to-end, which is when the auth-architecture mismatch surfaced. The current cookie_session/csrf config is left in place (despite being known-broken for writes against api.github.com) so that the auth-cascade behaviour — token cache, login prompt — continues to work for the eventual rewrite, where it will be correct.
+
+**Layered blocker now removed.** Earlier sweeps were also tripping over a runtime cascade where `handleLoginRequired() → refreshProfile()` killed the managed Chrome and left `verify.ts` holding a stale `Browser` handle, so all subsequent ops failed instantly with "no browser context available". Fixed in `acc23ad` (`fix(runtime): don't inject pre-acquired Browser handle into verify deps`) — each op now re-reads the browser via `ensureBrowser()`. github writes still don't pass post-`acc23ad`, but failures now reach the auth attempt instead of crashing earlier — which is what surfaced the api.github.com cookie-mismatch as the true blocker.
+
+### Other notes
+
+- Read ops on public repos work without auth (rate-limited to 60 req/h); authenticated read ops via cookies work too (5000 req/h).
+- `graphqlQuery` carries `write` permission since arbitrary mutations are possible via the query string. Subject to the same api.github.com auth mismatch.
+- `closeIssue` and `reopenIssue` both PATCH the same endpoint (`/repos/{owner}/{repo}/issues/{issue_number}`) — `reopenIssue` uses a virtual path key with `actual_path` override.
+- `deleteComment` requires the numeric `comment_id` (from `createComment` response `.id`), not the issue number.

@@ -46,8 +46,8 @@ E-commerce warehouse club. Product search, detail, reviews, warehouse locator, d
 | getWarehouseDetails | full warehouse info | warehouseId ← findWarehouses | hours, services[].name/hours, has* booleans | |
 | checkWarehouseStock | in-store availability | itemNumber ← searchProducts, warehouseNumber ← findWarehouses | inWarehouse, onlineOnly, price | |
 | addToCart | add to cart | itemNumber ← searchProducts | orderItemId | write, requires login |
-| removeFromCart | remove from cart | orderItemId ← addToCart | success | write, requires login |
-| updateCartQuantity | change cart qty | orderItemId ← addToCart, quantity | success | write, requires login |
+| removeFromCart | remove from cart | orderItemId ← addToCart | success | write, requires login. Static `verify --write` blocked on cross-op chain |
+| updateCartQuantity | change cart qty | orderItemId ← addToCart, quantity | success | write, requires login. Static `verify --write` blocked on cross-op chain |
 
 ## Quick Start
 
@@ -73,3 +73,7 @@ openweb costco exec browseCategory '{"category": "Electronics"}'
 # Compare products side by side
 openweb costco exec compareProducts '{"itemNumbers": ["100978861", "4000373324"]}'
 ```
+
+## Known Limitations
+
+- **Cart write ops not live-verified** (`addToCart`, `removeFromCart`, `updateCartQuantity`): example fixtures shipped in `43471cd` so `verify --write` picks them up, but live replay still requires (a) an authenticated Costco session in the managed browser, and (b) for `removeFromCart`/`updateCartQuantity`, a server-generated `orderItemId` from a fresh `addToCart` call. Static verify cannot pass that id across ops. Agents can chain the workflow manually (`addToCart` → read `orderItemId` → `updateCartQuantity`/`removeFromCart`) and it works end-to-end. See `doc/todo/write-verify/handoff.md` §4.1.

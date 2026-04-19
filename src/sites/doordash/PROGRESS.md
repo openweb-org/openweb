@@ -26,3 +26,10 @@
 **Context:** Login session discovery failed when the auth cascade couldn't find valid cookies on certain session states.
 **Changes:** Fixed auth cascade in `openapi.yaml` so cookie_session discovery correctly identifies logged-in sessions via `dd_session_id`/`ddweb_token`.
 **Verification:** Auth cascade now reliably detects login state; operations that require auth no longer fail on valid sessions.
+
+## 2026-04-19 — Write-op verify investigation
+
+**Context:** First end-to-end `verify --write` sweep across the site catalog. `removeFromCart` failed param validation before any network call ("Unknown parameter(s): orderCartId, orderItemId") — the example was passing the two fields flat at the top level, but the schema declares them nested under a `removeCartItemInput` body property.
+**Changes:** `d25786b` wraps the example input under `removeCartItemInput` so param validation passes. DOC.md Known Issues + SKILL.md Known Limitations updated to record that even with the correct shape, live verify still cannot replay the op (cross-op chain limitation).
+**Verification:** 0/1 partial — param shape gate now passes, but live replay against placeholder `cart-uuid`/`order-item-id` fails downstream as expected (the live mutation needs a real cart-item-id from a prior `addToCart` call).
+**Key discovery:** `removeFromCart` is the canonical example of the cross-op response templating gap — verify treats each example as a closed input, so there is no way to feed a server-generated id from one op's response into a later op's input. Pattern affects 5+ sites (doordash, costco, target, pinterest unsavePin, x several pair-creates). Agents can chain manually; static verify cannot. Resolution requires `${prev.<opId>.<field>}` syntax in `verify.ts` — tracked as architectural ticket in `doc/todo/write-verify/handoff.md` §4.1.

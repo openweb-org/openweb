@@ -46,8 +46,8 @@ E-commerce warehouse club. Product search, detail, reviews, warehouse locator, d
 | getWarehouseDetails | full warehouse info | warehouseId ← findWarehouses | hours, services[].name/hours, has* booleans | |
 | checkWarehouseStock | in-store availability | itemNumber ← searchProducts, warehouseNumber ← findWarehouses | inWarehouse, onlineOnly, price | |
 | addToCart | add to cart | itemNumber ← searchProducts | orderItemId | write, requires login |
-| removeFromCart | remove from cart | orderItemId ← addToCart | success | write, requires login |
-| updateCartQuantity | change cart qty | orderItemId ← addToCart, quantity | success | write, requires login |
+| removeFromCart | remove from cart | orderItemId ← addToCart | success | write, requires login. Static `verify --write` blocked on cross-op chain |
+| updateCartQuantity | change cart qty | orderItemId ← addToCart, quantity | success | write, requires login. Static `verify --write` blocked on cross-op chain |
 
 ## Quick Start
 
@@ -118,3 +118,6 @@ openweb costco exec compareProducts '{"itemNumbers": ["100978861", "4000373324"]
 - **Suggest API blocked**: `gdx-api.costco.com/catalog/search/api/v1/suggest` returns 403 from Apigee X gateway. `searchSuggestions` uses the typeahead search endpoint instead, returning product titles as suggestions.
 - **Price $0**: some items return `price: 0` — these are "display price in cart only" items, not actually free.
 - **Compiler limitation**: search and product APIs are POST with request bodies → compiler auto-skips them. Manual fixture + L3 adapter required.
+- **Cart write ops not live-verified — two stacked blockers.**
+  1. *Missing example fixtures (fixed in `43471cd`).* `addToCart`, `removeFromCart`, and `updateCartQuantity` shipped without `examples/*.example.json` files, so `verify --write` reported `0/0 ops` (the `--ops` filter matched nothing because there was nothing to load). This was NOT an `a61232b` (CustomRunner shim migration) regression — the examples were never present. **Pattern for future agents:** when a write-op verify reports `0/0 ops setup-fail`, check `src/sites/<site>/examples/` for the `*.example.json` file BEFORE assuming an adapter or runtime regression.
+  2. *Cross-op chain (open architectural gap).* Even with fixtures in place, live replay needs a real `orderItemId` returned by `addToCart` to be templated into `removeFromCart` / `updateCartQuantity` inputs. `verify.ts` treats each example as a closed input — there is no `${prev.<opId>.<field>}` syntax. Agents can chain the workflow manually and it works end-to-end; only static verify is blocked. See `doc/todo/write-verify/handoff.md` §4.1.
