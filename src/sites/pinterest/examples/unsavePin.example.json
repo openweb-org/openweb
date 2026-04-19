@@ -2,11 +2,12 @@
   "operation_id": "unsavePin",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 2,
   "cases": [
     {
       "input": {
         "source_url": "/",
-        "data": "{\"options\":{\"id\":\"1149473504911636509\",\"board_id\":\"1076605338497936421\"},\"context\":{}}"
+        "data": "{\"options\":{\"id\":\"${prev.savePin.resource_response.data.id}\",\"board_id\":\"1076605338497936421\"},\"context\":{}}"
       },
       "assertions": {
         "status": 200,
