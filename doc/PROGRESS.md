@@ -1,3 +1,27 @@
+## 2026-04-18: write-verify campaign — first end-to-end sweep of write ops
+
+**What changed:**
+- 16 site fix commits + 1 runtime cascade fix (`acc23ad`) + 2 telegram commits (`cedf7db`, `defc044`).
+- Sites fully fixed (15): amazon, bilibili, bluesky, hackernews, todoist, tiktok, ubereats, zhihu (first-pass) + discord (`149541b`), gitlab (`4e740e4`), reddit (`b8d1055`), whatsapp (`0a05cf8`), trello (`cbfa285`), medium (`97fcf36`+`43a2f2b`), youtube (`8cfebff`).
+- Sites partial: x (0/14→8/14 via `acc23ad`+`ce51384`), walmart (`72f783b`, rate-limited), weibo (3/7 via `0dbc7f8`), instagram (4/12 via `401b5a5`), pinterest (1/4 via `829629e`), telegram (1/5 via `cedf7db`+`defc044`), doordash (`d25786b` param-only), costco (`43471cd` examples-only).
+- Sites blocked needing user/HAR/architectural work: github, bestbuy, target, xueqiu (BLOCKED); spotify (TRANSIENT 429); xiaohongshu (SKIP — account banned).
+- Runtime change: `commands/verify.ts` no longer pre-acquires `Browser` handle — each op calls `ensureBrowser()` fresh, so `handleLoginRequired() → refreshProfile()` cascades no longer leave verify holding a stale handle. Net unlock: x went 0→8 PASS instantly.
+
+**Why:**
+- Pre-campaign: `verify --all` skipped write ops (`x-openweb.permission ∈ {write,delete,transact}`) by default, so most write ops had never been exercised end-to-end despite being declared.
+- Post normalize-adapter milestone, suspected `a61232b` (CustomRunner shim) regressions in the 33 migrated adapters needed a focused write-only sweep.
+- Findings: only **one true CustomRunner regression** (telegram — `32a698a` deleted load-bearing `init()` SPA-readiness wait). Most "0/0 ops" failures were missing `example.json` files (never written because verify-write never ran). Other failures were upstream API drift, stale fixture IDs, missing anti-bot headers, and the runtime cascade bug.
+
+**Key files:** `src/runtime/`, `commands/verify.ts`, `src/sites/{discord,gitlab,reddit,whatsapp,trello,medium,youtube,instagram,pinterest,doordash,costco,walmart,weibo,x,telegram,github}/`, new `doc/todo/write-verify/handoff.md`.
+**Verification:** Per-site `pnpm dev verify <site> --write --browser --ops <ids>`. Spot-check reads regression-free (amazon, reddit). Full read-side `verify --all` not re-run yet.
+**Commit:** range `d25786b..defc044` (~17 commits).
+**Next:** Per-site SKILL/DOC/PROGRESS updates for the 16 touched sites (delegated). User-action follow-ups — log into github.com/xueqiu.com in managed Chrome, send Saved Messages text in telegram, retry walmart/spotify after rate-limit cooldown. Architectural — design `${prev.<opId>.<field>}` cross-op response templating (unblocks ~5 destroy-after-create ops). Recapture wave for upstream-renamed endpoints (weibo×4, instagram block/unblock, pinterest follow/unfollowBoard).
+**Blockers:** Cross-op templating gap, github needs github.com web-endpoint rewrite (cookie_session compatible) instead of api.github.com (Bearer-only).
+
+-> Full handoff: [doc/todo/write-verify/handoff.md](todo/write-verify/handoff.md)
+
+---
+
 ## 2026-04-18: na-main-baseline-fix — verify-fail sweep + forward-fix dissolution of adapter retreats
 
 **What changed:**
