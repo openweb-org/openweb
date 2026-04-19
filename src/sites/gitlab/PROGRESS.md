@@ -1,3 +1,9 @@
+## 2026-04-18 — Write-op verify fix
+**Context:** Write-verify campaign exposed that `starProject` and `unstarProject` had no `example.json` fixtures — `verify --write --ops` filter found no matches and returned "0/0 ops" (silent skip, falsely green). Separately, `unstarProject` was documented with a 200 response status but the live API actually returns 201.
+**Changes:** Added `examples/starProject.example.json` and `examples/unstarProject.example.json` against a real `projectId`. Corrected `unstarProject` response status 200 → 201 in `openapi.yaml`. (commit 4e740e4)
+**Verification:** 2/2 PASS — starProject, unstarProject.
+**Key discovery:** "0/0 ops" in a verify run is a silent failure mode, not a pass — when an example file is missing, the runner has nothing to dispatch and the site appears clean. Both write ops on every site need fixtures, even idempotent ones.
+
 ## 2026-03-31: Curate — transport, 14th op, summaries, DOC.md
 
 **What changed:**

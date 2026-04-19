@@ -119,6 +119,11 @@ Not needed for basic site usage.
 - `node` — all endpoints use direct HTTP; cookies extracted from browser automatically when needed for auth
 
 ## Known Issues
+- `unstarProject` returns **HTTP 201** (not 200) on success — confirmed against the live API. The spec reflects this; if you write a custom client, don't assert 200.
+- `starProject` / `unstarProject` are idempotent at the GitLab API level (re-starring an already-starred project returns the same response), so verify can replay safely.
+- Mutating ops require the `meta_tag` CSRF token (`X-CSRF-Token`); the runtime resolves this from the page DOM when cookies are present.
+
+## Known Issues
 - Write operations (starProject, unstarProject, createIssue, closeIssue, createComment, deleteComment) require an active login session
 - All write ops require CSRF token (automatically resolved from meta tag)
 - `searchGroups` search parameter returns empty results without authentication; use `getGroup` with a known `groupId` instead

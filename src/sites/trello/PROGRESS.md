@@ -23,3 +23,9 @@
 **Verification:** Still 0/1 PASS — but now reports `needs_login` with the correct remediation. Cannot pass without a real Atlassian Cloud login in the persistent browser; not fixable from code.
 **Root cause:** Trello's `cloud.session.token` (Atlassian SSO) cookie expired or was never set in this profile. Likely the persistent browser profile was rotated or the user logged out at some point during the verify sweep.
 **Key files:** `src/sites/trello/openapi.yaml`, `src/sites/trello/adapters/trello-api.ts`.
+
+## 2026-04-18 — Write-op verify fix
+**Context:** `archiveCard.example.json` shipped with a `PLACEHOLDER` literal as the `cardId`. Trello's API rejects it with HTTP 400 in `verify --write`. Once the trello session was restored (separate fix above), the underlying ID issue surfaced.
+**Changes:** Created a fresh test card (`openweb-verify-archiveCard-fixture`) in the user's "Hour of AI" board and pinned its real ID into `examples/archiveCard.example.json`. Archive is reversible in the Trello UI, so the card can be re-used across verify runs by un-archiving between cycles. Documented the test-card convention in DOC.md → Known Issues. (commit cbfa285)
+**Verification:** 1/1 PASS — archiveCard.
+**Key discovery:** Write-op fixtures for irreversible-or-state-mutating endpoints need a maintained test object, not a placeholder. Documenting the test-object convention (which board, which card name, how to refresh) makes the fixture reproducible by the next maintainer.

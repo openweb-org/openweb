@@ -21,3 +21,9 @@
 **Verification:** 3/3 ops PASS (commit d2dbba9).
 **Key discovery:** Per-run cost trade-off — `ensureReady` now runs on every `run()` call instead of once at init. Cost is two short `page.evaluate` calls (cheap), and the change eliminates a race where ops dispatched before the Metro module system finished loading.
 **Key files:** `src/sites/whatsapp/adapters/whatsapp-modules.ts`
+
+## 2026-04-18 — Write-op verify fix
+**Context:** `markAsRead` was defined in `openapi.yaml` and has a read→write workflow in SKILL.md, but the cc14753 write-ops commit shipped only the `deleteMessage` example fixture — `markAsRead` had none. Verify silently skipped it ("0/0 ops" because the `--ops markAsRead` filter found no matching example file → empty operations array → site-level FAIL). Same root cause as costco: missing fixture, not a runtime/adapter bug.
+**Changes:** Added `examples/markAsRead.example.json` with `read: true` (idempotent toggle — safe to replay against an already-read chat). Adapter and openapi unchanged. (commit 0a05cf8)
+**Verification:** 1/1 PASS — `pnpm dev verify whatsapp --write --browser --ops markAsRead`.
+**Key discovery:** When seeding a new write op into a site, the example fixture is part of the deliverable — without it, `verify --write` reports green but never actually exercises the op.

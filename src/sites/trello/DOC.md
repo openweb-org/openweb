@@ -76,3 +76,4 @@ openweb trello exec deleteCard '{"cardId": "CARD_ID"}'
 - Board/list/card IDs are opaque strings — always obtain from a prior operation.
 - `createCard`, `deleteCard`, and `archiveCard` are write operations with `safety: caution` — they modify real data in the user's workspace.
 - `deleteCard` is irreversible. Prefer `archiveCard` for recoverable removal.
+- **Test-card pattern for write-op fixtures:** `archiveCard` / `deleteCard` examples must reference a real card ID — placeholders return HTTP 400. Maintain a dedicated test card in a personal board (current convention: a card named `openweb-verify-archiveCard-fixture` in the user's "Hour of AI" board) and refresh the fixture's `cardId` whenever the card is purged. Archive is reversible from the Trello UI, so the same card can be re-used across runs by un-archiving between verifications.

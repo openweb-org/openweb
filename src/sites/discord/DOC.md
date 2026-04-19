@@ -118,3 +118,5 @@ Not needed for basic site usage.
 - Bot detection: Low — browser-only SPA, no commercial bot detection
 - Rate limiting: Discord enforces per-route rate limits with `Retry-After` headers
 - webpack_module_walk auth cannot be auto-detected by compiler — must be manually configured
+- **Emoji URL-encoding pitfall (addReaction / removeReaction):** the `emoji` param is interpolated into the path and the runtime calls `encodeURIComponent` on it. Always pass the **raw** Unicode character (e.g. `"👍"`), never a pre-encoded string (`"%F0%9F%91%8D"`) — pre-encoded values get double-encoded into `%25F0%25...` and Discord returns 400. Custom emoji use the form `name:id` (e.g. `"thumbsup:123456"`) — also raw, no encoding.
+- **Stale `messageId` in fixtures:** reaction fixtures referencing a hard-coded message decay (404) when the message is deleted. Refresh from a live `getChannelMessages` call against a long-lived channel like `#welcome` if verify regresses.

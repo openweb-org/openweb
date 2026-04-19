@@ -1,3 +1,9 @@
+## 2026-04-18 — Write-op verify fix
+**Context:** addReaction / removeReaction were failing in `verify --write`: (a) hard-coded `messageId` in the fixtures pointed at a deleted message (404), and (b) the `emoji` example was pre-URL-encoded (`"%F0%9F%91%8D"`) which the runtime then `encodeURIComponent`-ed again → `"%25F0%259F%2591%258D"` → Discord 400.
+**Changes:** Refreshed `messageId` from a live `getChannelMessages` call against `#welcome`; replaced encoded emoji with raw `"👍"`; added `order=1/2` so addReaction precedes removeReaction; updated `openapi.yaml` / SKILL.md / DOC.md `emoji` description to specify raw input. Code unchanged. (commit 149541b)
+**Verification:** 2/2 PASS — addReaction, removeReaction.
+**Key discovery:** Path-interpolated string params that already contain `%XX` sequences double-encode silently. The fix is at the fixture/spec layer (always raw), not at the runtime — encoding once is the right runtime behavior.
+
 ## 2026-04-09: Polish — enhanced 10→12 ops
 
 **What changed:**
