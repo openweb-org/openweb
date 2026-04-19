@@ -276,7 +276,7 @@ paths:
         build:
           stable_id: bb0004
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - status-match
       requestBody:
@@ -354,64 +354,78 @@ paths:
                     type: boolean
                   category:
                     type: string
-  /cart/api/v1/removeFromCart:
-    post:
+  /cart/item/{lineId}:
+    delete:
       operationId: removeFromCart
-      summary: Remove a product from the shopping cart by line ID — returns updated cartCount, subtotal
+      summary: Remove a cart line item by line ID — returns the updated cart order
       x-openweb:
         permission: write
         safety: caution
         build:
           stable_id: bb0005
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - status-match
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - items
-              properties:
-                items:
-                  type: array
-                  items:
-                    type: object
-                    required:
-                      - lineId
-                    properties:
-                      lineId:
-                        type: string
-                        description: Cart line identifier from addToCart response (e.g. "d87e4f1a-...").
+      parameters:
+        - name: lineId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Cart line identifier returned by addToCart (e.g. "5a61wnug5bb3l-4q4q3qg3lmiml").
       responses:
         '200':
-          description: Item removed from cart successfully.
+          description: Item removed; returns the cart order snapshot.
           content:
             application/json:
               schema:
                 type: object
                 required:
-                  - cartCount
+                  - order
                 properties:
-                  cartCount:
-                    type: integer
-                    description: Total number of items remaining in cart.
-                  cartSubTotal:
-                    type: number
-                    description: Updated cart subtotal in dollars.
-                  summaryItems:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        skuId:
+                  order:
+                    type: object
+                    required:
+                      - id
+                      - cartItemCount
+                      - lineItems
+                    properties:
+                      id:
+                        type: string
+                        description: Cart order identifier (basket id).
+                      cartItemCount:
+                        type: string
+                        description: Total items remaining in cart (string-encoded integer).
+                      lineItems:
+                        type: array
+                        items:
+                          type: object
+                      orderSkus:
+                        type: array
+                        items:
                           type: string
-                        lineId:
-                          type: string
-                        quantity:
-                          type: integer
-                        price:
-                          type: number
+                      authStatus:
+                        type: string
+                        description: "R = recognized customer, A = anonymous."
+                      emptyCartState:
+                        type: object
+                        properties:
+                          signedIn:
+                            type: boolean
+                      orderSummary:
+                        type: object
+                        properties:
+                          totalSavings:
+                            type: string
+                          tradeInTotal:
+                            type: string
+                      preferences:
+                        type: object
+                        properties:
+                          orderTotal:
+                            type: string
+                          basketId:
+                            type: string
+                          skuId:
+                            type: string

@@ -1,12 +1,12 @@
 {
-  "operation_id": "removeFromCart",
-  "method": "delete",
+  "operation_id": "addToCart",
+  "method": "post",
   "replay_safety": "unsafe_mutation",
-  "order": 2,
+  "order": 1,
   "cases": [
     {
       "input": {
-        "lineId": "${prev.addToCart.summaryItems.0.lineId}"
+        "items": [{ "skuId": "6472356" }]
       },
       "assertions": {
         "status": 200,
