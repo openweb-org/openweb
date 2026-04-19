@@ -33,3 +33,25 @@
 **Changes:** `d25786b` wraps the example input under `removeCartItemInput` so param validation passes. DOC.md Known Issues + SKILL.md Known Limitations updated to record that even with the correct shape, live verify still cannot replay the op (cross-op chain limitation).
 **Verification:** 0/1 partial — param shape gate now passes, but live replay against placeholder `cart-uuid`/`order-item-id` fails downstream as expected (the live mutation needs a real cart-item-id from a prior `addToCart` call).
 **Key discovery:** `removeFromCart` is the canonical example of the cross-op response templating gap — verify treats each example as a closed input, so there is no way to feed a server-generated id from one op's response into a later op's input. Pattern affects 5+ sites (doordash, costco, target, pinterest unsavePin, x several pair-creates). Agents can chain manually; static verify cannot. Resolution requires `${prev.<opId>.<field>}` syntax in `verify.ts` — tracked as architectural ticket in `doc/todo/write-verify/handoff.md` §4.1.
+
+## 2026-04-19 — Write-Op Verify Campaign (2/2 PASS)
+
+**Context:** After cross-op templating landed (`9b495b3` resolver, `7be28ad` verify wire), unblocked the addToCart→removeFromCart chain. Discovered the existing spec was wrong in two ways once a real request actually went out.
+
+**Changes (`850a7cc`):**
+- Added `addToCart.example.json` with all six server-required fields. Response chained into removeFromCart via `${prev.addToCart.addCartItemV2.id}` and `…orders.0.orderItems.0.id`.
+- Widened `addCartItemInput` schema: `itemName`, `currency`, `unitPrice` (Int! cents), `menuId` are upstream-required (not just `storeId`/`itemId` as the legacy spec claimed).
+- Rewrote `removeCartItemV2` mutation: real signature is `(cartId: ID!, itemId: ID!)` — no `RemoveCartItemInput` wrapper exists in the schema. Replaced query const + body schema accordingly.
+- Marked nullable fields on responses where upstream returns `null`: `restaurant.name`, `orderItems[].{singlePrice,priceDisplayString}`, `item.price` (newly-added items), and `removeCartItemV2.{subtotal,currencyCode,fulfillmentType,restaurant,orders}` (cart now empty).
+
+**Verification:** `pnpm dev verify doordash --write --browser` → 5/5 PASS (3 reads + addToCart + removeFromCart). Pair runs against the live cart on each invocation; no fixture decay.
+
+**Key discoveries:**
+- Spec drift hidden by permission gates. The previous "0/1 partial" status only verified param shape — the live mutation was never replayed, so the wrong field name (`removeCartItemInput` wrapper) and the missing `addCartItemInput` fields went undetected for a year.
+- GraphQL "Did you mean…" hints in `extensions.code = GRAPHQL_VALIDATION_FAILED` are the fastest way to discover real schema drift — server suggested `MoveCartItemsInput`/`UpdateCartItemInput` when we sent `RemoveCartItemInput`.
+- Empty-cart response is sparse: spec must mark cart-summary fields `[type, 'null']` or removeFromCart drifts the moment the test cart hits zero items.
+
+**Pitfalls:**
+- `~/.openweb/sites/doordash` is a *copy* of `src/sites/doordash` (not a symlink), populated by `registry install` or first-load. Edits to `src/` aren't seen by verify until that copy is refreshed (or symlinked) — multi-worker contention also re-creates the dir mid-session. Symlinking `~/.openweb/sites/doordash → src/sites/doordash` is the fastest dev loop while iterating on a spec.
+- Ran behind several sibling `w-fix-*` workers also touching managed Chrome — port 9222 PID flips frequently. Verify failure mode "Port 9222 is already bound by external process" is a coordination artifact, not a site bug; restart the browser and retry.
+

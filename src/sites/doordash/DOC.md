@@ -1,81 +1,35 @@
-# DoorDash
+# DoorDash — Internals
 
-## Overview
-Food delivery marketplace — search restaurants, browse menus, view order history, manage cart.
-
-## Workflows
-
-### Search and browse menu
-1. `searchRestaurants(query)` → pick restaurant → `storeId`
-2. `getRestaurantMenu(storeId)` → browse categories and items
-
-### Add to cart then remove
-1. `searchRestaurants(query)` → `storeId`
-2. `getRestaurantMenu(storeId)` → pick item → `itemId`
-3. `addToCart(storeId, itemId)` → cart confirmation → `cartId`, `orderItemId`
-4. `removeFromCart(orderCartId, orderItemId)` → updated cart
-
-### Review past orders
-1. `getOrderHistory(limit)` → order list with items, totals, timestamps
-
-## Operations
-
-| Operation | Intent | Key Input | Key Output | Notes |
-|-----------|--------|-----------|------------|-------|
-| searchRestaurants | search restaurants by keyword | query | name, storeId, categories, imageUrl | entry point; includes non-store results (check resultType) |
-| getRestaurantMenu | get store detail + full menu | storeId ← searchRestaurants | storeHeader, menuBook, itemLists (id, name, displayPrice) | optional: menuId, fulfillmentType |
-| getOrderHistory | list past orders | limit, offset | orders (store, items, grandTotal, timestamps) | paginated; requires auth |
-| addToCart | add menu item to cart | storeId ← searchRestaurants, itemId ← getRestaurantMenu | success, cartId, subtotal, items | write op; optional: quantity, specialInstructions |
-| removeFromCart | remove item from cart | orderCartId ← addToCart, orderItemId ← addToCart | updated cart, remaining items | write op; reverse of addToCart. Static `verify --write` cannot replay this — see Known Issues |
-
-## Quick Start
-
-```bash
-# Search for restaurants
-openweb doordash exec searchRestaurants '{"query": "pizza"}'
-
-# Get a restaurant's menu
-openweb doordash exec getRestaurantMenu '{"storeId": "245613"}'
-
-# View recent orders
-openweb doordash exec getOrderHistory '{"limit": 5}'
-
-# Add item to cart
-openweb doordash exec addToCart '{"storeId": "245613", "itemId": "12345", "quantity": 1}'
-
-# Remove item from cart (use cartId and orderItemId from addToCart response)
-openweb doordash exec removeFromCart '{"orderCartId": "cart-uuid", "orderItemId": "order-item-id"}'
-```
-
----
-
-## Site Internals
-
-### API Architecture
+## API Architecture
 - **GraphQL** gateway at `https://www.doordash.com/graphql/<operationName>?operation=<operationName>`
-- All requests are POST with JSON body `{ operationName, variables, query }`
+- All requests POST with JSON body `{ operationName, variables, query }`
 - Full query strings sent per-request (no persisted query hashes)
 - Responses can be large: storepageFeed ~230KB, getConsumerOrdersWithDetails ~86KB
-- Compiler cannot auto-compile (all POST with body → auto-skipped) — requires manual L3 adapter
+- Compiler cannot auto-compile (all POST with body → auto-skipped) — requires manual L3 declarative spec
 
-### Auth
+## Auth
 - **cookie_session** — user must be logged in via managed browser
 - Auth cookies: `dd_session_id`, `ddweb_token`
-- Auth cascade fix: login session discovery now correctly resolves cookie presence across session states
 - No CSRF header injection needed (reads and writes work with cookies only)
 
-### Transport
-- **page** (L3 adapter) — `page.evaluate(fetch(..., { credentials: 'include' }))` leverages browser cookies
+## Transport
+- **page** (browser fetch via `wrap: variables`, `unwrap: data`) — runs `fetch(..., { credentials: 'include' })` from a doordash.com page so cookies are attached automatically
 - Any DoorDash page must be open (`doordash.com/*`)
 
-### Extraction
-- Direct JSON from GraphQL responses
+## Extraction
+- Direct JSON from GraphQL `data.<rootField>` (declarative `unwrap: data`)
 - Search adapter normalizes nested `FacetV2` structure, parses `custom` JSON for `store_id`
 - Menu and order data returned as-is from GraphQL
 
-### Known Issues
-- `formattedAddress` in order history is often null
-- Search results include non-store items (grocery suggestions) — use `resultType` to filter
-- No bot detection observed for authenticated sessions
-- removeFromCart requires `orderCartId` and `orderItemId` from a prior addToCart response — these are ephemeral cart identifiers
-- **`removeFromCart` write-verify blocker (cross-op chain).** The example fixture has the correct param shape since `d25786b` (input wrapped under `removeCartItemInput` to match the schema-declared body property; previously the example sent the two fields flat and tripped param validation). However, live `verify --write` still cannot succeed: it would need to call `addToCart` first, read the server-generated `cart_item_id` from the response, then template that value into `removeFromCart`'s input. `verify.ts` treats each example as a closed input — there is no `${prev.<opId>.<field>}` syntax. Agents can run the workflow manually (chain the two calls, pass the returned id), so the workflow is documented in SKILL.md and works for end users; only static verify is blocked. Resolution path: cross-op response templating in `verify.ts` (open architectural gap, see `doc/todo/write-verify/handoff.md` §4.1).
+## Known Issues
+- `formattedAddress` in order history is often null.
+- Search results include non-store items (grocery suggestions) — use `resultType` to filter.
+- No bot detection observed for authenticated sessions.
+- **`addCartItemInput` is wide.** Upstream `AddCartItemInput` requires `storeId`, `itemId`, `itemName`, `currency`, `unitPrice` (Int! cents), and `menuId` — five of those don't appear in the legacy "client docs" view of the schema but are enforced server-side. Missing any returns `BAD_USER_INPUT` per field. All five are obtainable from `getRestaurantMenu` (item id/name, displayPrice → cents, currency from store, `menuBook.id`).
+- **`removeCartItemV2` takes positional args, not a wrapper.** Mutation signature is `removeCartItemV2(cartId: ID!, itemId: ID!)`. The previous `RemoveCartItemInput` wrapper does not exist in the schema (server suggests `MoveCartItemsInput`/`UpdateCartItemInput` as nearest matches). Pre-2026-04-19 spec was wrong; rewriting against the real signature unblocked verify.
+- **Empty-cart response is sparse.** When the removed item was the last in the cart, `removeCartItemV2` returns the cart UUID but `subtotal/currencyCode/fulfillmentType/restaurant/orders` are all `null`. Spec marks these `[type, 'null']` so verify doesn't drift.
+- **Pair verify uses cross-op templating.** `removeFromCart` example references `${prev.addToCart.addCartItemV2.id}` and `${prev.addToCart.addCartItemV2.orders.0.orderItems.0.id}` so the destroy op acts on a freshly-created cart_item per run. See `doc/todo/write-verify/design/cross-op-templating.md`.
+
+## Probe Results
+- 5/5 ops PASS as of 2026-04-19 (`850a7cc`).
+- `addToCart` `restaurant.name` and `orderItems[0].{singlePrice,priceDisplayString,item.price}` returned `null` for first-add-to-empty-cart cases — relaxed to `[type, 'null']` to match observed responses without losing the schema for populated carts.

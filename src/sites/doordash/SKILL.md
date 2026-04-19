@@ -7,13 +7,13 @@ Food delivery marketplace — search restaurants, browse menus, view order histo
 
 ### Search and browse menu
 1. `searchRestaurants(query)` → pick restaurant → `storeId`
-2. `getRestaurantMenu(storeId)` → browse categories and items
+2. `getRestaurantMenu(storeId)` → browse categories → pick item → `itemId`, `name`, `displayPrice`, `menuBook.id`
 
-### Add to cart then remove
+### Add to cart, then remove
 1. `searchRestaurants(query)` → `storeId`
-2. `getRestaurantMenu(storeId)` → pick item → `itemId`
-3. `addToCart(storeId, itemId)` → cart confirmation → `cartId`, `orderItemId`
-4. `removeFromCart(orderCartId, orderItemId)` → updated cart
+2. `getRestaurantMenu(storeId)` → pick item → `itemId`, `name` (→ `itemName`), `displayPrice` (→ `unitPrice` in cents), `menuBook.id` (→ `menuId`)
+3. `addToCart(storeId, itemId, itemName, currency='USD', unitPrice, menuId, quantity)` → `addCartItemV2.id` (→ `cartId`), `addCartItemV2.orders[0].orderItems[0].id` (→ `itemId` for remove)
+4. `removeFromCart(cartId, itemId)` → updated cart (subtotal/orders are `null` when cart becomes empty)
 
 ### Review past orders
 1. `getOrderHistory(limit)` → order list with items, totals, timestamps
@@ -23,14 +23,10 @@ Food delivery marketplace — search restaurants, browse menus, view order histo
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchRestaurants | search restaurants by keyword | query | name, storeId, categories, imageUrl | entry point; includes non-store results (check resultType) |
-| getRestaurantMenu | get store detail + full menu | storeId ← searchRestaurants | storeHeader, menuBook, itemLists (id, name, displayPrice) | optional: menuId, fulfillmentType |
+| getRestaurantMenu | get store detail + full menu | storeId ← searchRestaurants | storeHeader, menuBook (id → menuId), itemLists (id, name, displayPrice) | optional: menuId, fulfillmentType |
 | getOrderHistory | list past orders | limit, offset | orders (store, items, grandTotal, timestamps) | paginated; requires auth |
-| addToCart | add menu item to cart | storeId ← searchRestaurants, itemId ← getRestaurantMenu | success, cartId, subtotal, items | write op; optional: quantity, specialInstructions |
-| removeFromCart | remove item from cart | orderCartId ← addToCart, orderItemId ← addToCart | updated cart, remaining items | write op; reverse of addToCart. Static `verify --write` cannot replay this — see Known Limitations |
-
-## Known Limitations
-
-- **`removeFromCart` not live-verified**: Param shape is correct (input wrapped under `removeCartItemInput`), but `verify --write` cannot pass the server-generated `cart_item_id` from `addToCart` into `removeFromCart`'s input. Agents can chain the two ops manually (call `addToCart`, read `cartId`/`orderItemId` from the response, pass into `removeFromCart`), which works end-to-end. Static replay is blocked on the cross-op response templating gap (see `doc/todo/write-verify/handoff.md` §4.1).
+| addToCart | add menu item to cart | storeId ← searchRestaurants; itemId, itemName, unitPrice (cents), menuId ← getRestaurantMenu; currency='USD' | addCartItemV2.id (cartId), addCartItemV2.orders[0].orderItems[0].id | write op; all six input fields are server-required |
+| removeFromCart | remove item from cart | cartId, itemId ← addToCart | removeCartItemV2 (subtotal/orders null if cart now empty) | write op; mutation takes `cartId`/`itemId` directly — no `RemoveCartItemInput` wrapper |
 
 ## Quick Start
 
@@ -38,15 +34,22 @@ Food delivery marketplace — search restaurants, browse menus, view order histo
 # Search for restaurants
 openweb doordash exec searchRestaurants '{"query": "pizza"}'
 
-# Get a restaurant's menu
+# Get a restaurant's menu (returns itemId, name, displayPrice, menuBook.id)
 openweb doordash exec getRestaurantMenu '{"storeId": "245613"}'
 
 # View recent orders
 openweb doordash exec getOrderHistory '{"limit": 5}'
 
-# Add item to cart
-openweb doordash exec addToCart '{"storeId": "245613", "itemId": "12345", "quantity": 1}'
+# Add item to cart — all six fields required by upstream
+openweb doordash exec addToCart '{"addCartItemInput": {"storeId": "245613", "itemId": "23864478062", "itemName": "12 Inch Plain Cheese Pizza", "currency": "USD", "unitPrice": 1440, "menuId": "57979746", "quantity": 1}}'
 
-# Remove item from cart (use cartId and orderItemId from addToCart response)
-openweb doordash exec removeFromCart '{"orderCartId": "cart-uuid", "orderItemId": "order-item-id"}'
+# Remove item from cart (cartId + itemId from addToCart response)
+openweb doordash exec removeFromCart '{"cartId": "<addCartItemV2.id>", "itemId": "<addCartItemV2.orders[0].orderItems[0].id>"}'
 ```
+
+## Known Limitations
+
+- `addCartItemInput` requires six fields (storeId, itemId, itemName, currency, unitPrice in cents, menuId) — partial input returns `BAD_USER_INPUT`. All values come from `getRestaurantMenu`; `currency` is `"USD"` for US accounts.
+- `removeFromCart` returns nulls for subtotal/currencyCode/fulfillmentType/restaurant/orders when the removed item was the last one in the cart (cart UUID still returned).
+- `formattedAddress` in order history is often null.
+- Search results include non-store items (grocery suggestions) — filter via `resultType`.
