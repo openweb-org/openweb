@@ -6,7 +6,7 @@
     {
       "input": {
         "videoId": "KDmbehLBphg",
-        "text": "The bit about catching the deploy regression before it hit prod is exactly the workflow I've been trying to build into my own setup — appreciate you walking through the actual debugging path instead of skipping to the fix."
+        "text": "[verify ${now}] The bit about catching the deploy regression before it hit prod is exactly the workflow I've been trying to build into my own setup — appreciate you walking through the actual debugging path instead of skipping to the fix."
       },
       "assertions": {
         "status": 200,

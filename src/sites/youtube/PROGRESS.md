@@ -20,12 +20,17 @@
 **Verification (`pnpm dev verify youtube --browser --write --ops likeVideo,addComment,deleteComment`):**
 - ✓ `likeVideo`: PASS
 - ✓ `addComment`: PASS
-- ⚠ `deleteComment`: pattern works (kebab → menu → delete → confirm flow exercised correctly), residual blocker is **YT spam-filter shadowban**, confirmed via live probe (commit `f920599`):
-  - `addComment` returns HTTP 200 + a `commentId`, but the comment never appears in the public comments thread on the video page.
-  - `lc=<freshCommentId>` deep-link returns the regular page title ("Coding Vlog Ep. 6 - Deploying a New Feature - YouTube") instead of "Comment from @imooooonkey…" — YT's URL handler doesn't recognize the freshly-posted ID at all.
-  - DOM scan after navigation shows zero `@imooooonkey` comments among the rendered threads; older `@imooooonkey` comments from prior runs that *did* survive the filter (`UgwVTfLIp_qKWKUc3k94AaABAg`) DO surface via `lc=` and DO have the canonical anchor — proving the deleteComment UI flow works on visible comments.
-  - This is the same diagnosis originally proposed in `doc/todo/write-verify/handoff5.md` §3.1 (and twice retracted in favor of request-shape / cookie-scope hypotheses, both wrong). Probe-confirmed this round.
-- **Recovery path** (out of adapter scope): use a YouTube account whose comments aren't spam-filtered, or wait for the filter to relax (typically days–weeks).
+- ✓ `deleteComment`: PASS
+
+**Final fixes that closed the chain (after the original commit):**
+1. **Canonical `commentId` source.** `actionResults[0].key` is `undefined` on this endpoint shape — the canonical source is `body.frameworkUpdates.entityBatchUpdate.mutations[].payload.commentEntityPayload.properties.commentId` (the same field `getComments` already extracts), and it matches the DOM's `<a href="...&lc=<id>">` anchor exactly. Probe-confirmed by intercepting a real `/create_comment` response and cross-referencing the DOM render.
+2. **Fixture text rotation.** YouTube silently spam-filters duplicate-text comments after a few repeats. Fixture rewritten to prepend `[verify ${now}]` (template-resolver supports `${now}` → `Date.now()` for exactly this case — see `src/lib/template-resolver.ts`). Without this, repeated runs return HTTP 200 with a non-routable commentId and the comment never appears in the public thread.
+3. **`scrollIntoView('ytd-comments')` instead of `scrollTo(0, 700)`.** The fixed-pixel scroll is layout-dependent (overshoots/undershoots depending on viewport, comment-section position, ad presence). `scrollIntoView` is layout-independent and triggers full hydration in one step.
+4. **Own-comment menu uses `ytd-menu-navigation-item-renderer`** (Edit / Delete), not `ytd-menu-service-item-renderer` (Report on others' comments). Both selectors are now matched in the menu wait + click.
+5. **Real Playwright `.click()` on the menu items + confirm button.** A JS `(el).click()` from `page.evaluate` does not trigger YT's polymer dialog handler — the confirm dialog never opens. Probe-confirmed: same DOM, same target, JS click → no dialog; Playwright click on the inner `<a>` → dialog appears. Switched both the Delete menu-item click and the confirm-button click to `evaluateHandle` + Playwright `.click()`.
+6. **`state: 'attached'` on every popup wait.** YT renders popups with `max-height: 0px` initially (visibility checks fail) — `attached` matches as soon as the element is in the DOM.
+
+**Pattern summary:** `dispatch-events + passive intercept` works for YT writes when (a) the click is dispatched as a real Chrome UI event via Playwright `.click()` (not JS `.click()`), (b) menu/popup waits use `state: 'attached'`, (c) the `commentId` is read from the canonical entity-payload field, and (d) fixture text is uniqueified per run to avoid duplicate-detection spam-filtering.
 
 **Architectural decision:** Read-only multi-step ops (`getComments`, `getPlaylist`) keep using `innertubeAuthPost` / `pageFetch` — Chrome's anti-abuse does not gate those. Only mutation ops require the dispatch-events path.
 

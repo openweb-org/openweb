@@ -439,42 +439,39 @@ const addComment: Handler = async (page, params, helpers) => {
       }
     }
 
-    // Wait for the SERVER-CONFIRMED render in the DOM, then read the canonical
-    // commentId from the comment's `lc=` anchor href. The SPA renders the new
-    // comment optimistically with a client-side id, then swaps in the
-    // server-assigned id once /create_comment confirms — so reading from the
-    // anchor a beat after the response gives the id that lc=<id> can actually
-    // resolve. (Tried `actionResults[0].key` and `properties.commentId` from the
-    // response; both produced ids that lc= deep-link did not recognize.)
+    // Canonical commentId source: the response's
+    // frameworkUpdates.entityBatchUpdate.mutations[].payload.commentEntityPayload.properties.commentId
+    // — proved via probe to match the DOM's `<a href="...&lc=<id>">` anchor
+    // exactly (this is the URL form that lc= deep-link recognizes). Earlier
+    // attempts at `actionResults[0].key` failed because that field is undefined
+    // on this endpoint shape.
     let commentId = ''
-    const start = Date.now()
-    while (!commentId && Date.now() - start < 15_000) {
-      commentId = await page.evaluate((needle) => {
-        const threads = Array.from(document.querySelectorAll('ytd-comment-thread-renderer'))
-        for (const t of threads) {
-          const content = t.querySelector('#content-text')?.textContent?.trim() || ''
-          if (!content.includes(needle)) continue
-          const anchor = t.querySelector('a[href*="lc="]')
-          const m = (anchor?.getAttribute('href') || '').match(/[?&]lc=([^&]+)/)
-          if (m) return m[1]
-        }
-        return ''
-      }, text.slice(0, 80))
-      if (!commentId) await page.waitForTimeout(500)
-    }
-    // Last-resort fallback: read whatever commentId the response carries (may
-    // be client-optimistic, may not chain to deleteComment but won't strand
-    // callers who only need an opaque handle).
-    if (!commentId) {
-      const mutations = dig(body, 'frameworkUpdates', 'entityBatchUpdate', 'mutations') as Array<Record<string, unknown>> | undefined
-      if (Array.isArray(mutations)) {
-        for (const m of mutations) {
-          const props = dig(m, 'payload', 'commentEntityPayload', 'properties') as Record<string, unknown> | undefined
-          if (props?.commentId) { commentId = String(props.commentId); break }
-        }
+    const mutations = dig(body, 'frameworkUpdates', 'entityBatchUpdate', 'mutations') as Array<Record<string, unknown>> | undefined
+    if (Array.isArray(mutations)) {
+      for (const m of mutations) {
+        const props = dig(m, 'payload', 'commentEntityPayload', 'properties') as Record<string, unknown> | undefined
+        if (props?.commentId) { commentId = String(props.commentId); break }
       }
     }
-    if (!commentId) throw errors.retriable('Could not extract commentId — comment did not render in DOM and response had no entity payload')
+    // Fallback: read from the SPA's optimistic DOM render (anchor href).
+    if (!commentId) {
+      const start = Date.now()
+      while (!commentId && Date.now() - start < 5_000) {
+        commentId = await page.evaluate((needle) => {
+          const threads = Array.from(document.querySelectorAll('ytd-comment-thread-renderer'))
+          for (const t of threads) {
+            const content = t.querySelector('#content-text')?.textContent?.trim() || ''
+            if (!content.includes(needle)) continue
+            const anchor = t.querySelector('a[href*="lc="]')
+            const m = (anchor?.getAttribute('href') || '').match(/[?&]lc=([^&]+)/)
+            if (m) return m[1]
+          }
+          return ''
+        }, text.slice(0, 80))
+        if (!commentId) await page.waitForTimeout(500)
+      }
+    }
+    if (!commentId) throw errors.retriable('Could not extract commentId from create_comment response or DOM')
     return { videoId, commentId, text, author: '' }
   } finally {
     cap.off()
@@ -537,33 +534,39 @@ const deleteComment: Handler = async (page, params, helpers) => {
     if (!kebab) throw errors.retriable('Kebab menu button not found on comment')
     await kebab.click()
 
+    // Own-comment menu uses `ytd-menu-navigation-item-renderer` (Edit / Delete);
+    // others'-comment menu uses `ytd-menu-service-item-renderer` (Report). The
+    // popup renders with max-height: 0 initially so visibility checks fail —
+    // use state: 'attached'.
     await page.waitForSelector(
-      'ytd-menu-popup-renderer ytd-menu-service-item-renderer, tp-yt-paper-listbox ytd-menu-service-item-renderer',
-      { timeout: 5_000 },
+      'ytd-menu-popup-renderer ytd-menu-navigation-item-renderer, ytd-menu-popup-renderer ytd-menu-service-item-renderer',
+      { timeout: 5_000, state: 'attached' },
     )
-    const clickedDelete = await page.evaluate(() => {
-      const items = Array.from(document.querySelectorAll(
-        'ytd-menu-popup-renderer ytd-menu-service-item-renderer, tp-yt-paper-listbox ytd-menu-service-item-renderer',
-      ))
+    // Use Playwright's real click on the inner <a> element — JS .click() on
+    // the wrapper renderer does not trigger YT's polymer handler (the confirm
+    // dialog never opens). Probed and verified.
+    const delHandle = await page.evaluateHandle(() => {
+      const items = Array.from(document.querySelectorAll('ytd-menu-popup-renderer ytd-menu-navigation-item-renderer, ytd-menu-popup-renderer ytd-menu-service-item-renderer'))
       const del = items.find(i => /^\s*delete\s*$/i.test((i.textContent || '').trim()))
-      if (!del) return false
-      ;(del as HTMLElement).click()
-      return true
+      return del?.querySelector('a') || del || null
     })
-    if (!clickedDelete) throw errors.retriable('Delete menu item not found')
+    const delEl = delHandle.asElement()
+    if (!delEl) throw errors.retriable('Delete menu item not found')
+    await delEl.click()
 
-    await page.waitForSelector('yt-confirm-dialog-renderer, tp-yt-paper-dialog', { timeout: 5_000 })
-    const clickedConfirm = await page.evaluate(() => {
+    await page.waitForSelector('yt-confirm-dialog-renderer, tp-yt-paper-dialog', { timeout: 5_000, state: 'attached' })
+    // Use Playwright click on the confirm button (same reason as Delete item:
+    // JS .click() doesn't trigger YT's polymer handler reliably).
+    const confirmHandle = await page.evaluateHandle(() => {
       const candidates = [
         ...document.querySelectorAll('yt-confirm-dialog-renderer #confirm-button button'),
         ...document.querySelectorAll('tp-yt-paper-dialog button'),
       ]
-      const btn = (candidates.find(b => /delete/i.test((b.textContent || '').trim())) || candidates[0]) as HTMLElement | undefined
-      if (!btn) return false
-      btn.click()
-      return true
+      return (candidates.find(b => /delete/i.test((b.textContent || '').trim())) || candidates[0]) || null
     })
-    if (!clickedConfirm) throw errors.retriable('Confirm-delete button not found')
+    const confirmEl = confirmHandle.asElement()
+    if (!confirmEl) throw errors.retriable('Confirm-delete button not found')
+    await confirmEl.click()
 
     const body = await cap.wait(15_000)
     if (!body) throw errors.retriable('No /perform_comment_action response within timeout')
