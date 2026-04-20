@@ -25,10 +25,6 @@ Real-time messaging platform. Archetype: Messaging.
 2. `deleteMessage(channelId, messageId)` → 204
 3. `removeReaction(channelId, messageId, emoji)` → 204
 
-### Create a server & channel
-1. `createServer(name)` → server with ID → `guildId`
-2. `createChannel(guildId, name, type?)` → channel with ID → `channelId`
-
 ### Inspect a server
 1. `listGuilds` → pick guild → `guildId`
 2. `getGuildInfo(guildId)` → server details, member count, features
@@ -52,8 +48,6 @@ Real-time messaging platform. Archetype: Messaging.
 | addReaction | react to message | channelId, messageId ← getChannelMessages, emoji | 204 no content | write op |
 | deleteMessage | delete a message | channelId, messageId ← getChannelMessages | 204 no content | write op, reverses sendMessage |
 | removeReaction | remove own reaction | channelId, messageId ← getChannelMessages, emoji | 204 no content | write op, reverses addReaction |
-| createServer | create a server | name | id, name, owner_id, roles, channels | write op |
-| createChannel | create a channel | guildId ← listGuilds, name, type? | id, type, name, guild_id, position | write op |
 
 ## Quick Start
 
@@ -84,10 +78,8 @@ openweb discord exec deleteMessage '{"channelId":"CHANNEL_ID","messageId":"MSG_I
 
 # Remove own reaction from a message
 openweb discord exec removeReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID","emoji":"👍"}'
-
-# Create a new server
-openweb discord exec createServer '{"name":"My New Server"}'
-
-# Create a text channel in a server
-openweb discord exec createChannel '{"guildId":"GUILD_ID","name":"general-chat"}'
 ```
+
+## Known Limitations
+
+- `createServer` / `createChannel` — **not supported** (removed from spec, 2026-04-20). Discord requires an `X-Super-Properties` header (base64 client-fingerprint blob) on create-entity endpoints; the page transport does not inject it and there is no discord adapter to synthesize one. All other writes (`sendMessage`, `deleteMessage`, `addReaction`, `removeReaction`) work via the same `webpack_module_walk` Authorization header. Unblock: capture a live super-properties value from the SPA bundle and add it as a constant header (or build a discord adapter).
