@@ -2,11 +2,11 @@
   "operation_id": "hideReply",
   "method": "post",
   "replay_safety": "unsafe_mutation",
-  "order": 1,
+  "order": 18,
   "cases": [
     {
       "input": {
-        "tweet_id": "2046061970021847164"
+        "tweet_id": "${prev.reply.create_tweet.tweet_results.result.rest_id}"
       },
       "assertions": {
         "status": 200,

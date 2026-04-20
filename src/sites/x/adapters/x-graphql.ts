@@ -642,16 +642,14 @@ const OPERATIONS: Record<string, Handler> = {
     const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
-    return executeRest(page, 'PUT', `/i/api/2/tweets/${tweet_id}/hidden`,
-      'application/json', JSON.stringify({ hidden: true }), errors)
+    return executeGraphqlPost(page, 'ModerateTweet', { tweetId: tweet_id }, {}, errors)
   },
 
   unhideReply: async (page, params, helpers) => {
     const { errors } = helpers
     const tweet_id = String(params.tweet_id ?? '')
     if (!tweet_id) throw errors.missingParam('tweet_id')
-    return executeRest(page, 'PUT', `/i/api/2/tweets/${tweet_id}/hidden`,
-      'application/json', JSON.stringify({ hidden: false }), errors)
+    return executeGraphqlPost(page, 'UnmoderateTweet', { tweetId: tweet_id }, {}, errors)
   },
 
   sendDM: async (page, params, helpers) => {

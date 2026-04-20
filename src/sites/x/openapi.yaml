@@ -1089,9 +1089,6 @@ paths:
             application/json:
               schema:
                 type: object
-                properties:
-                  hidden:
-                    type: boolean
 
   /internal/unhideReply:
     post:
@@ -1126,9 +1123,6 @@ paths:
             application/json:
               schema:
                 type: object
-                properties:
-                  hidden:
-                    type: boolean
 
   /internal/sendDM:
     post:
