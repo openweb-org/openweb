@@ -56,12 +56,14 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 
 ### Comment on a post
 1. `getFeed(id, count)` or `getUserPosts(username, count)` → `items[].pk`
-2. `createComment(id=items[].pk, comment_text)` → created comment with `pk`, text, user
+2. `createComment(id=items[].pk, comment_text)` → response `id` (the new comment's pk)
 
 ### Delete a comment
-1. `getFeed(id, count)` or `getUserPosts(username, count)` → `items[].pk`
-2. `getPostComments(id=items[].pk)` → `comments[].pk`
-3. `deleteComment(media_id=items[].pk, comment_id=comments[].pk)` → status
+1. Either chain off `createComment` → `id`, or
+   `getPostComments(id=items[].pk)` → `comments[].pk`
+2. `deleteComment(media_id=items[].pk, comment_id=createComment.id | comments[].pk)` → `{status: "ok"}`
+
+> Verify fixtures pair these as `order:1` / `order:2` with `comment_id=${prev.createComment.id}`. Use a low-traffic target post (the verify fixture targets @wangxinyu926) — `@instagram` and other high-profile accounts trigger spam-filter shadow-deletes. Comment text must be substantive and on-topic (no `"test"` placeholders) since IG comments are public.
 
 ### Block a user
 1. `getUserProfile(username)` → `data.user.id`
@@ -114,8 +116,8 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 | unfollowUser | unfollow a user | id (user ID) ← getUserProfile data.user.id | friendship_status | write; CSRF |
 | savePost | bookmark a post | id (numeric PK) ← getFeed items[].pk | status | write; CSRF |
 | unsavePost | remove bookmark | id (numeric PK) ← getFeed items[].pk | status | write; CSRF |
-| createComment | add comment | id (numeric PK), comment_text | comment with pk, text, user | write; CSRF; requestBody |
-| deleteComment | remove comment | media_id, comment_id ← getPostComments comments[].pk | status | write; CSRF |
+| createComment | add comment | id (numeric PK), comment_text | response `id` (new comment pk), text, from.id, from.username | write; CSRF; chains into deleteComment |
+| deleteComment | remove comment | media_id, comment_id ← createComment.id or getPostComments comments[].pk | `{status: "ok"}` | write; CSRF; URL is `/api/v1/web/comments/{media}/delete/{comment}/` |
 | blockUser | block a user | id (user ID) ← getUserProfile data.user.id | friendship_status | write; CSRF |
 | unblockUser | unblock a user | id (user ID) ← getUserProfile data.user.id | friendship_status | write; CSRF |
 | muteUser | mute a user | id (user ID) ← getUserProfile data.user.id | status | write; CSRF; adapter |
@@ -190,5 +192,4 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 ```
 
 ## Known Limitations
-- **`createComment` / `deleteComment` SKIPPED (2026-04-19)** — endpoints (`/api/v1/web/comments/{id}/add/` and `.../{media_id}/{comment_id}/delete/`) are wired and `createComment` returns valid `{id, status:"ok"}`, but Instagram's spam filter shadow-deletes test comments on high-profile accounts (e.g. `@instagram`) within seconds, causing the immediate `deleteComment` to 404. Repeated attempts trigger an account-level write-block. To re-verify: pick a low-traffic account/post (own or friend) where IG's filter is less aggressive. Examples renamed to `*.example.json.skip`. Adapter handlers remain in `instagram-api.ts`.
-- **Write-op coverage (2026-04-19):** 10 of 12 write ops verified PASS end-to-end (`likePost`, `unlikePost`, `savePost`, `unsavePost`, `followUser`, `unfollowUser`, `muteUser`, `unmuteUser`, `blockUser`, `unblockUser`). `createComment`/`deleteComment` blocked by IG spam filter (see above).
+- **Write-op coverage (2026-04-19):** all 12 write ops verified PASS end-to-end (`likePost`, `unlikePost`, `savePost`, `unsavePost`, `followUser`, `unfollowUser`, `muteUser`, `unmuteUser`, `blockUser`, `unblockUser`, `createComment`, `deleteComment`). `createComment`/`deleteComment` chain via `${prev.createComment.id}` against a low-traffic target post — high-profile accounts (e.g. `@instagram`) trigger spam-filter shadow-deletes that 404 the immediate delete.

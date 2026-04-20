@@ -1,3 +1,13 @@
+## 2026-04-19 — createComment/deleteComment Recovery (12/12 PASS)
+
+**Context:** From handoff2 §1, `createComment`/`deleteComment` (`*.example.json.skip`) initially looked like upstream endpoint drift — `createComment` returned `{id, status:"ok"}` but the paired `deleteComment` 404'd consistently.
+**Changes:** (1) Re-targeted fixture from `@instagram` (spam-filter) to `@wangxinyu926`'s recent adidas post `3877961230447408478`; (2) chained `createComment(order:1) → deleteComment(order:2)` via `${prev.createComment.id}` with on-topic comment text per `feedback_hn_comment_text` rule; (3) fixed adapter URL parameter order — endpoint is `/api/v1/web/comments/{media_id}/delete/{comment_id}/`, not `/{media_id}/{comment_id}/delete/`; (4) removed `.skip` suffix on both example files.
+**Verification:** `pnpm dev verify instagram --ops createComment,deleteComment --write --browser` → 2/2 PASS as a chained pair (commit `8efd496`). Total IG write-op coverage: 12/12.
+**Key discovery:** "Upstream drift" was actually a URL parameter-order bug. The fastest probe path when an API endpoint looks broken is `page.on('request')` on the live CDP-attached browser plus a single user click in the real UI — capturing the actual XHR revealed `delete` belonged *between* the two IDs, not after them. Pure URL-permutation probing without UI capture is much slower and leads down dead ends.
+**Pitfalls encountered:** Spent multiple probe cycles on `/api/v1/media/{media}/comment/{comment}/delete/` and `/bulk_delete/` variants — these are mobile-API endpoints (`i.instagram.com`) that redirect to `/accounts/login` when called from a www session, which masks as a "200 with HTML" success. Lesson: a 200 that returns HTML to a JSON request is a redirect, not a success — check `r.url` to detect the auth-wall.
+
+---
+
 ## 2026-04-19 — Write-Verify Continuation (10/12 PASS)
 
 **Context:** Picked up the 6 remaining write ops after the 2026-04-18 sweep (block/unblock landed via the polaris GraphQL helper from `32038d9`).
