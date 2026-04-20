@@ -10,6 +10,11 @@ servers:
   - url: https://www.bloomberg.com
     x-openweb:
       transport: page
+      page_plan:
+        warm: true
+        nav_timeout_ms: 60000
+        wait_until: domcontentloaded
+        settle_ms: 4000
 paths:
   /:
     get:
@@ -257,6 +262,7 @@ paths:
       summary: Search Bloomberg for news, quotes, and people — headline, abstract, url, publishedAt, type
       x-openweb:
         permission: read
+        verify_status: requires_interactive_solve
         build:
           verified: true
           stable_id: bb0010
@@ -345,6 +351,7 @@ paths:
       summary: Get company profile — name, description, sector, market cap, employees, headquarters
       x-openweb:
         permission: read
+        verify_status: requires_interactive_solve
         build:
           verified: true
           stable_id: bb0011
@@ -438,6 +445,7 @@ paths:
       summary: Get stock quote and price chart — price, change, open/high/low, 1Y and 5Y price history
       x-openweb:
         permission: read
+        verify_status: requires_interactive_solve
         build:
           verified: true
           stable_id: bb0012
@@ -566,6 +574,7 @@ paths:
       summary: Get market overview — indices, bonds, commodities, currencies with prices and changes
       x-openweb:
         permission: read
+        verify_status: requires_interactive_solve
         build:
           verified: true
           stable_id: bb0013
