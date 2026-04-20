@@ -95,7 +95,7 @@ Read references/troubleshooting.md
 
 ## File Map
 
-All paths relative to `skill/openweb/`.
+All paths relative to `skills/openweb/`.
 
 ### add-site/ (workflow — load in sequence)
 

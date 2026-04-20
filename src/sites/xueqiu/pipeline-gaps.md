@@ -3,7 +3,7 @@
 ## Doc gaps
 
 **Problem:** The chinese-web archetype stated "All Sites Use Page Transport" as an absolute rule. Xueqiu's search, quote, order book, and industry APIs all work fine via node transport with cookie_session. Only the timeline endpoint needs page transport.
-**Root cause:** `skill/openweb/references/knowledge/archetypes/chinese-web.md` — blanket statement without exceptions.
+**Root cause:** `skills/openweb/references/knowledge/archetypes/chinese-web.md` — blanket statement without exceptions.
 **Suggested fix:** Updated to "Most Sites Use Page Transport" with Xueqiu as a named exception. Future Chinese site discoveries should test node transport first before defaulting to page.
 
 ## Code gaps

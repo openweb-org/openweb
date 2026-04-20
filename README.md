@@ -63,7 +63,7 @@ Works with [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex
 - OpenWeb: Access any website through /openweb
 ```
 
-See [`skill/openweb/SKILL.md`](skill/openweb/SKILL.md) for what the skill provides.
+See [`skills/openweb/SKILL.md`](skills/openweb/SKILL.md) for what the skill provides.
 
 ## Usage
 
@@ -87,8 +87,8 @@ openweb <site> <op> '{...}'                # execute
 
 A managed browser auto-starts when needed. Auth-required sites may open your default browser for login.
 
-Full CLI reference: [`skill/openweb/references/cli.md`](skill/openweb/references/cli.md)
-Troubleshooting: [`skill/openweb/references/troubleshooting.md`](skill/openweb/references/troubleshooting.md)
+Full CLI reference: [`skills/openweb/references/cli.md`](skills/openweb/references/cli.md)
+Troubleshooting: [`skills/openweb/references/troubleshooting.md`](skills/openweb/references/troubleshooting.md)
 
 ## How It Works
 
@@ -122,7 +122,7 @@ Frame intents → Probe site stack → Route per family → Capture & compile (i
 
 The probe step front-loads transport and data-source discovery — the agent learns whether to use direct HTTP, browser fetch, SSR extraction, or adapter/intercept *before* committing to capture. Each step involves agent judgment: choosing the right auth pattern, deciding if coverage is sufficient, curating operation names, and running independent verification. The knowledge base grows with every site added.
 
-See [`skill/openweb/add-site/guide.md`](skill/openweb/add-site/guide.md) for the full workflow.
+See [`skills/openweb/add-site/guide.md`](skills/openweb/add-site/guide.md) for the full workflow.
 
 ## Sites
 

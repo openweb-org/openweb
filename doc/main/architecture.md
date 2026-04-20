@@ -43,7 +43,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 
 ```
                     ┌──────────────┐
-                    │ Agent Skill  │  skill/openweb/SKILL.md
+                    │ Agent Skill  │  skills/openweb/SKILL.md
                     └──────┬───────┘
                            │ natural language → CLI command
                     ┌──────────────┐
@@ -93,10 +93,10 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | **Browser** | Patchright (Playwright fork) for CDP stealth; headless with UA + blink-features override | `src/runtime/browser-lifecycle.ts` | Auto-managed, patchright (session) |
 | **Compiler** | Captures behavior, analyzes patterns, curates plan, emits skill packages (OpenAPI + AsyncAPI), verifies | `src/compiler/` | Pipeline v2: 5-phase (capture → analyze → curate → generate → verify) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), no content filtering, body-size-gate only | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17), unfiltered (v2) |
-| **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | 2 process docs + 2 deep refs + 7 knowledge files |
+| **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skills/openweb/references/` | 2 process docs + 2 deep refs + 7 knowledge files |
 | **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete — npm binary `openweb` (M33) |
 | **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `$OPENWEB_HOME/sites/` (installed) | 55 sites with DOC.md + PROGRESS.md |
-| **Agent skill** | CLI wrapper for Claude/Codex agents | `skill/openweb/SKILL.md` | 5-intent router (M38) |
+| **Agent skill** | CLI wrapper for Claude/Codex agents | `skills/openweb/SKILL.md` | 5-intent router (M38) |
 
 ---
 

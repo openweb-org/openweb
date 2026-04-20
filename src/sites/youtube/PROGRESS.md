@@ -4,7 +4,7 @@
 
 **Context:** All prior request-shape fixes (Stages 5d/5g) brought the JS-fetched request byte-for-byte close to the SPA's, but Chrome's anti-abuse layer still 401'd `like/like`, `comment/create_comment`, `subscription/*`. Empirically reproduced: even capturing a live `x-browser-validation` token from a SPA-clicked request and replaying it via `page.evaluate(fetch)` with identical cookies, identical Authorization, identical `sec-fetch-mode: same-origin` returns 401 a second later — so the gating signal is not in any header we can read or set from JS (likely TLS fingerprint or HTTP/2 frame metadata bound to the UI-stack request origin).
 
-**Fix:** Rewrote `likeVideo`, `unlikeVideo`, `addComment`, `deleteComment` to follow the **dispatch-events + passive intercept** pattern documented in `skill/openweb/knowledge/bot-detection.md` § Dispatch-Events Pattern, modeled directly on `src/sites/chatgpt/adapters/chatgpt-web.ts` (which solves the same class of problem for chatgpt's Sentinel + PoW).
+**Fix:** Rewrote `likeVideo`, `unlikeVideo`, `addComment`, `deleteComment` to follow the **dispatch-events + passive intercept** pattern documented in `skills/openweb/knowledge/bot-detection.md` § Dispatch-Events Pattern, modeled directly on `src/sites/chatgpt/adapters/chatgpt-web.ts` (which solves the same class of problem for chatgpt's Sentinel + PoW).
 
 - Listener registered via `page.on('response', …)` **before** any click, so early responses are not lost.
 - The actual click is dispatched as a real Chrome UI event (`button.click()` from `page.evaluate`, `page.click()`, or `page.keyboard.type` for the contenteditable composer).

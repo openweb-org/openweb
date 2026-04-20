@@ -39,14 +39,14 @@ doc/main/
 │
 └── security.md            # SSRF protection, redirect safety, error model
 
-skill/openweb/                     # Agent-facing operator guide (separate deliverable)
+skills/openweb/                     # Agent-facing operator guide (separate deliverable)
 ├── SKILL.md               # Router: 3 routes (use / add-expand-upgrade / fix)
 ├── add-site/              # Contributor workflow (10-step: probe-first)
 ├── references/            # Lookup: CLI, x-openweb schema, troubleshooting
 └── knowledge/             # Pattern library: archetypes, auth, bot-detection, transport-upgrade, adapter-recipes
 ```
 
-The project ships two deliverables: **code** (`src/`) and **skill** (`skill/openweb/`). The skill is the agent-facing interface — it defines how agents discover, use, and extend OpenWeb. These docs (`doc/main/`) describe the internals; the skill docs describe the operator workflow. Both derive from source code and must stay accurate with it.
+The project ships two deliverables: **code** (`src/`) and **skill** (`skills/openweb/`). The skill is the agent-facing interface — it defines how agents discover, use, and extend OpenWeb. These docs (`doc/main/`) describe the internals; the skill docs describe the operator workflow. Both derive from source code and must stay accurate with it.
 
 -> See [Skill Documentation](#skill-documentation) for the boundary between these two doc sets.
 
@@ -198,11 +198,11 @@ src/
 
 ## Skill Documentation
 
-`skill/openweb/` is the **agent-facing operator guide** — a shipped deliverable like `src/`. It tells agents how to use OpenWeb, add sites, and troubleshoot. `doc/main/` is the **developer-facing architecture docs** — it explains how the system works internally.
+`skills/openweb/` is the **agent-facing operator guide** — a shipped deliverable like `src/`. It tells agents how to use OpenWeb, add sites, and troubleshoot. `doc/main/` is the **developer-facing architecture docs** — it explains how the system works internally.
 
 ### Design Boundary
 
-The skill defines *what* agents should do (workflow, decisions, patterns). The code + doc/main define *how* the system works (runtime, types, security). When an agent needs exact runtime semantics (e.g., how the executor dispatches, how SSRF validation works), those details live here in doc/main. When an agent needs to know which auth pattern to choose or how to curate a spec, that lives in skill/. The skill may reference concepts explained here (e.g., "transport", "primitive"), but the skill docs are self-contained — they do not load doc/main files.
+The skill defines *what* agents should do (workflow, decisions, patterns). The code + doc/main define *how* the system works (runtime, types, security). When an agent needs exact runtime semantics (e.g., how the executor dispatches, how SSRF validation works), those details live here in doc/main. When an agent needs to know which auth pattern to choose or how to curate a spec, that lives in skills/ The skill may reference concepts explained here (e.g., "transport", "primitive"), but the skill docs are self-contained — they do not load doc/main files.
 
 Both derive from source code as the single source of truth. They stay aligned indirectly: both accurate with code means both consistent with each other.
 
@@ -212,7 +212,7 @@ These principles govern all skill doc authoring and maintenance:
 
 1. **Token efficiency** — progressive disclosure. Agent reads minimum tokens per task. Each file loaded only when needed.
 2. **Workflow-driven** — folder/file structure follows user intents, not internal modules.
-3. **Self-contained** — skill/ does not reference doc/main files. Both derive from source code independently.
+3. **Self-contained** — skills/does not reference doc/main files. Both derive from source code independently.
 4. **End-user audience** — consumer path (exec) is fast. Contributor path (add site) is guided.
 5. **Load discipline** — one workflow doc at a time. No broad preloads.
 6. **Size budgets** — SKILL.md: <=5K. Workflow/step docs: 3-8K. Knowledge docs: 2-6K. Hard cap: ~8K; split when exceeded.
@@ -221,7 +221,7 @@ These principles govern all skill doc authoring and maintenance:
 ### Structure
 
 ```
-skill/openweb/
+skills/openweb/
 ├── SKILL.md                   # Router: 3 routes (use / add-expand-upgrade / fix)
 ├── add-site/                  # Contributor workflow (10-step: probe-first)
 │   ├── guide.md               # Unified flow entry (probe → route → build) + mode hint
@@ -241,12 +241,12 @@ Three loading patterns: `add-site/` is sequential workflow, `references/` is ind
 
 ### Alignment Rules
 
-- **Terminology must match.** If doc/main says `exchange_chain`, skill/ says `exchange_chain`.
+- **Terminology must match.** If doc/main says `exchange_chain`, skills/says `exchange_chain`.
 - **When they disagree**, check source code — code is the ultimate truth. Fix whichever is wrong.
-- **Sync trigger:** changes to doc/main that affect operator-facing behavior must be checked against skill/.
+- **Sync trigger:** changes to doc/main that affect operator-facing behavior must be checked against skills/
 - **Known drift areas:** token cache behavior, browser lifecycle, transport vs adapter semantics, x-openweb field names, verify behavior.
 
--> See: [skill/openweb/SKILL.md](../../skill/openweb/SKILL.md) for the skill entry point.
+-> See: [skills/openweb/SKILL.md](../../skills/openweb/SKILL.md) for the skill entry point.
 
 ---
 

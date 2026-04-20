@@ -3,7 +3,7 @@
 **What changed:**
 - 17 commits (9 feat/fix + 8 docs) closing out handoff2 plan. Resolved 11/17 ops PASS, 1 dropped from spec, 5 still env-blocked.
 - New per-site work: chatgpt `chatgpt-web` adapter (`bda0d62`) using dispatch-events + passive intercept to bypass Sentinel + SHA3-512 PoW gate; HN `unvoteStory` + `deleteComment` ops added with HMAC scraping (`febd3b3`); bilibili `listFavoriteFolders` read op added so writes chain via `${prev.listFavoriteFolders.data.list.0.id}` (`6431f65`); IG create/deleteComment URL param-order fix (`8efd496` — was misdiagnosed as endpoint drift, fixed by capturing live XHR via one-click delete); x `deleteDM` removed from spec; x hide/unhideReply un-skipped with permanent fixture id `2046061970021847164`.
-- Central infrastructure: `skill/openweb/knowledge/bot-detection.md` extended with the dispatch-events + passive intercept pattern as a general anti-bot bypass approach (b56af0d). Pattern: focus input element, dispatch synthetic keyboard events, let the SPA's own JS solve client-side gates, intercept response.
+- Central infrastructure: `skills/openweb/knowledge/bot-detection.md` extended with the dispatch-events + passive intercept pattern as a general anti-bot bypass approach (b56af0d). Pattern: focus input element, dispatch synthetic keyboard events, let the SPA's own JS solve client-side gates, intercept response.
 - Per-site SKILL.md/DOC.md/PROGRESS.md updated for every touched site (chatgpt, HN, whatsapp, bilibili, x, IG).
 
 **Why:**
@@ -11,7 +11,7 @@
 - Reframe corrections: handoff2 §5.1 hypothesis that walmart/spotify 429 was anti-bot fingerprint (not real quota) was tested and disproven — `transport: page` was already configured for both, same 429 fires from live page context. Real per-account quota; needs 24h drain + VPN.
 - Reusable lessons surfaced: (a) "upstream endpoint drift" 404s can be parameter-order bugs solvable by one-click XHR capture; (b) lazy-loaded webpack chunks for low-value ops without external test partners (x deleteDM) aren't worth probing — drop instead of `.skip`; (c) public-text fixtures (HN/Reddit/X/IG comments) need substantive on-topic copy not "test xxx" placeholders.
 
-**Key files:** `src/sites/{chatgpt,hackernews,whatsapp,bilibili,x,instagram}/`, `skill/openweb/knowledge/bot-detection.md`, new `doc/todo/write-verify/handoff3.md`.
+**Key files:** `src/sites/{chatgpt,hackernews,whatsapp,bilibili,x,instagram}/`, `skills/openweb/knowledge/bot-detection.md`, new `doc/todo/write-verify/handoff3.md`.
 **Verification:** Per-site `pnpm dev verify <site> --browser --write` for each touched op (logs in worker capture history). HN site full sweep 18/18 PASS. No full `verify --all` re-sweep run.
 **Commit:** range `41021c4..c85872b` (17 commits).
 **Next:** User-action only — drain walmart/spotify 24h cooldown + retry on VPN. Optional code follow-ups: chatgpt SSE buffering via CDP `Network.dataReceived` (currently `response_text` empty but schema-valid); `src/lib/errors.ts` `getHttpFailure(403) → needs_login` should distinguish app-level 403 (Sentinel/PoW/quota) from auth-403 by body-content classifier so verify fails fast on the former; whatsapp `sendTextMsgToChat` could return messageId so `deleteMessage` chains.
@@ -81,7 +81,7 @@
 
 **Why:**
 - Move common lifecycle, request, and extraction behavior from per-site adapters into shared runtime + spec infrastructure. Track migration per **operation**, not per site. Keep a small permanent custom bucket — but make every adapter that survives a thin "unique behavior only" runner, not a mini runtime.
-- Established the **raw-API principle** + three hard rules (no chain in CustomRunner, no response reshape in runtime, no unsafe-mode flags on shared primitives for permanent-custom-bucket sites). Documented verbatim in `skill/openweb/knowledge/adapter-recipes.md` and `doc/main/adapters.md`. Cancelled four would-be runtime tasks on this principle (`na-rt-multicall-composition`, `na-rt-response-transform`, `na-rt-array-reducers`, `na-rt-tiktok-signed-capture`).
+- Established the **raw-API principle** + three hard rules (no chain in CustomRunner, no response reshape in runtime, no unsafe-mode flags on shared primitives for permanent-custom-bucket sites). Documented verbatim in `skills/openweb/knowledge/adapter-recipes.md` and `doc/main/adapters.md`. Cancelled four would-be runtime tasks on this principle (`na-rt-multicall-composition`, `na-rt-response-transform`, `na-rt-array-reducers`, `na-rt-tiktok-signed-capture`).
 
 **Key files:** `src/types/adapter.ts`, `src/runtime/page-plan.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/primitives/{response-capture,script-json-parse,...}.ts`, `src/lib/{adapter-helpers,spec-loader,url-builder}.ts`, `scripts/adapter-{inventory,pattern-report,pattern-baseline.json}.{ts,json}`, `src/sites/**/adapters/*.ts` (15 permanent-custom + 33 mechanical migrations + 11 deletions), `doc/todo/normalize-adapter/impl_summary.md`.
 **Verification:** `pnpm build` clean (93 sites packaged); `pnpm test` 1020/1020 PASS; `grep 'async execute(' src/sites/**/adapters/` → 0 matches; `grep -rn CodeAdapter dist/sites --include="*.js"` → 0 matches; `pnpm dev verify --all` → 75/93 PASS, 0 adapter-export errors.
@@ -146,7 +146,7 @@
 - `src/sites/airbnb/PROGRESS.md`: noted pre-existing run-export blocker on the 3 non-migrated ops (searchListings, getListingDetail, getHostProfile) for future debug.
 - `src/runtime/primitives/script-json.ts`: replaced `forEach` with `for...of` (pre-existing noForEach lint from b44999f).
 - `scripts/adapter-pattern-baseline.json`: refreshed (grubhub entry removed after adapter deletion).
-- `skill/openweb/references/x-openweb.md`, `doc/main/meta-spec.md`: documented template-source URL exclusion rule.
+- `skills/openweb/references/x-openweb.md`, `doc/main/meta-spec.md`: documented template-source URL exclusion rule.
 
 **Why:**
 - All 5 primary runtime gaps landed earlier this week. The sites scoped into this ticket were partially migrated and needed the final spec-level changes. Grubhub unblocked by 9cce6d1 (TypeError retry); booking unblocked by b44999f (script_json type_filter); hackernews reads were spec-migrated in 599a227 but the URL-builder still emitted the template-source `id` as a query arg — Algolia responded 400 on the unknown key.
@@ -272,12 +272,12 @@
 - Added `scripts/adapter-pattern-report.ts` — per-site counts of low-level page primitives (`page.goto`, `page.evaluate(fetch`, `page.on('response')`, `querySelector*`, `__NEXT_DATA__`) in `src/sites/*/adapters/*.ts`. Supports `--json`, `--check`, `--write-baseline`.
 - Froze current counts in `scripts/adapter-pattern-baseline.json` (46 sites with non-zero counts). Permanent custom bucket (13 hard + 3 partial) baked into the script.
 - Added vitest guard `src/lib/adapter-patterns.test.ts`: fails CI when any site exceeds its baseline, stale baseline entries are detected, or the allowlist becomes empty/duplicated. Normalization ratchets downward only.
-- Synced docs: `doc/main/README.md` (Guardrails section + response_capture / script_json(extended) concepts), `doc/main/primitives/README.md` (taxonomy + response_capture primitive), `skill/openweb/references/x-openweb.md` (page_plan block, response_capture row, graphql_hash, CustomRunner adapter contract), `skill/openweb/knowledge/extraction.md` (decision flow, response_capture section, CustomRunner last-resort note).
+- Synced docs: `doc/main/README.md` (Guardrails section + response_capture / script_json(extended) concepts), `doc/main/primitives/README.md` (taxonomy + response_capture primitive), `skills/openweb/references/x-openweb.md` (page_plan block, response_capture row, graphql_hash, CustomRunner adapter contract), `skills/openweb/knowledge/extraction.md` (decision flow, response_capture section, CustomRunner last-resort note).
 
 **Why:**
 - normalize-adapter v2 collapsed per-site lifecycle/extraction/capture into shared runtime primitives (PagePlan, `script_json` extensions, `response_capture`, CustomRunner). Without a guardrail, the next site-adding sprint would silently regress — adapters would re-introduce `page.goto` / `querySelector` even though spec primitives now cover those cases. A baseline ratchet is strictly better than a hard allowlist here because many normalized sites still carry residual low-level code during the long-tail migration.
 
-**Key files:** `scripts/adapter-pattern-report.ts`, `scripts/adapter-pattern-baseline.json`, `src/lib/adapter-patterns.test.ts`, `doc/main/README.md`, `doc/main/primitives/README.md`, `skill/openweb/references/x-openweb.md`, `skill/openweb/knowledge/extraction.md`
+**Key files:** `scripts/adapter-pattern-report.ts`, `scripts/adapter-pattern-baseline.json`, `src/lib/adapter-patterns.test.ts`, `doc/main/README.md`, `doc/main/primitives/README.md`, `skills/openweb/references/x-openweb.md`, `skills/openweb/knowledge/extraction.md`
 **Verification:** `pnpm tsx scripts/adapter-pattern-report.ts --check` → exit 0. `pnpm vitest run src/lib/adapter-patterns.test.ts` → 3 tests pass.
 **Commit:** a890f81
 **Next:** `na-guardrails` done; remaining backlog in `doc/todo/normalize-adapter/impl_summary.md` § What's Next.
@@ -369,7 +369,7 @@
 - **New spec primitives:** `script_json.strip_comments` + node-execution path (shared parser); `response_capture` extraction type (listener-before-nav invariant, first-match latch with race fix); `graphql_hash` for Apollo APQ; `ssrExtract` / `jsonLdExtract` / `domExtract` adapter helpers that delegate to the same resolvers extraction-executor uses.
 - **Adapter contract collapsed:** `CodeAdapter` → `CustomRunner`. Single `run(ctx: PreparedContext)` entry. `init()` / `isAuthenticated()` removed from the contract — runtime handles PagePlan + auth-primitive resolution upfront. 15 permanent-custom sites migrated; interface deleted in 41850f2.
 - **Migrations:** Phase 3 pure-spec deleted 10 adapter files (substack, fidelity, weibo, ebay, douban, yelp, etsy, boss, goodrx, zhihu); Phase 3 extraction trimmed/helper-refactored 8 more; Phase 4 migrated goodrx end-to-end.
-- **Docs:** `doc/todo/normalize-adapter/impl_summary.md` + 5 phase handoff docs + refreshed inventory. `doc/main/adapters.md` rewritten for CustomRunner; `doc/main/primitives/page-plan.md` added; stale `CodeAdapter` / `init()` / `isAuthenticated()` references swept from `doc/main/{README,runtime,architecture,meta-spec}.md`, `doc/dev/adding-sites.md`, `skill/openweb/add-site/curate-runtime.md`, and `skill/openweb/knowledge/adapter-recipes.md`.
+- **Docs:** `doc/todo/normalize-adapter/impl_summary.md` + 5 phase handoff docs + refreshed inventory. `doc/main/adapters.md` rewritten for CustomRunner; `doc/main/primitives/page-plan.md` added; stale `CodeAdapter` / `init()` / `isAuthenticated()` references swept from `doc/main/{README,runtime,architecture,meta-spec}.md`, `doc/dev/adding-sites.md`, `skills/openweb/add-site/curate-runtime.md`, and `skills/openweb/knowledge/adapter-recipes.md`.
 
 **Why:**
 - Every adapter was a mini-runtime: hand-rolled `page.goto` / `waitForSelector` / cookie warmup / auth probing, duplicated 60 times. Moving lifecycle into the runtime (PagePlan + auth-primitive resolution) removes the duplication and makes every remaining adapter thin.
@@ -447,7 +447,7 @@
   - ebay: Radware StormCaster blocks node after 3-4 requests
   - yelp: DataDome blocks all search endpoints
 
-**Key files:** 80+ src/sites/*/SKILL.md, skill/openweb/add-site/document.md, skill/openweb/add-site/guide.md, 8 site adapter/openapi upgrades
+**Key files:** 80+ src/sites/*/SKILL.md, skills/openweb/add-site/document.md, skills/openweb/add-site/guide.md, 8 site adapter/openapi upgrades
 **Verification:** All upgraded sites verify PASS
 **Commits:** 35a98d6..7abc048
 **Next:** npm publish (npm-publish-final task)
@@ -593,7 +593,7 @@
 - Uber Rides was entirely missing from the catalog. User workflow requires location search → fare estimate → ride history.
 - Verify alphabetical ordering caused false failures when write ops had dependencies.
 
-**Key files:** `src/lifecycle/verify.ts`, `src/sites/ubereats/` (new), `src/sites/uber/` (rides), `skill/openweb/add-site/verify.md`
+**Key files:** `src/lifecycle/verify.ts`, `src/sites/ubereats/` (new), `src/sites/uber/` (rides), `skills/openweb/add-site/verify.md`
 **Verification:** ubereats 8/8 PASS, uber 3/3 PASS. Verify tests 19/19 PASS.
 **Commit:** `098bd6f`..`bc85cd7` (3 commits)
 **Next:** None
@@ -637,7 +637,7 @@
 **Why:**
 - Ship quality baseline: every site verifiable with meaningful data, complete docs, no dead code
 
-**Key files:** 222 files changed across all src/sites/, skill/openweb/add-site/
+**Key files:** 222 files changed across all src/sites/, skills/openweb/add-site/
 **Verification:** Build clean, lint clean, 92 sites packaged
 **Commit:** `019cd0f`
 
@@ -660,7 +660,7 @@
 - 5+ adapters independently implemented response interception and node HTML parsing — needed shared helpers
 - Knowledge docs contained stale site-specific claims that misled agents
 
-**Key files:** `src/lib/adapter-helpers.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/http-executor.ts`, `src/types/validator.ts`, `skill/openweb/knowledge/{transport-upgrade,adapter-recipes,archetypes}.md`
+**Key files:** `src/lib/adapter-helpers.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/http-executor.ts`, `src/types/validator.ts`, `skills/openweb/knowledge/{transport-upgrade,adapter-recipes,archetypes}.md`
 **Verification:** `pnpm build` passes. `pnpm lint` 0 errors. 22/22 validator tests pass. IMDb 3 ops + RT 3 ops have `transport:node`. Two Codex review rounds — all findings resolved.
 **Design:** `doc/todo/infra-improvements/final/design_aligned.md`
 **Commit:** ff1a454..dbfd667 (5 commits)
@@ -2260,7 +2260,7 @@
 **Next:** WS controlPatterns design (doc/todo/ws-controlpatterns/)
 **Blockers:** None
 
-## 2026-04-08: Probe-first guide redesign — skill/openweb/add-site/ rewritten
+## 2026-04-08: Probe-first guide redesign — skills/openweb/add-site/ rewritten
 
 **What changed:**
 - Redesigned add-site workflow: 8-step linear flow → 10-step probe-first flow with conditional routing
@@ -2269,7 +2269,7 @@
 - Adapter/intercept promoted to first-class lane, not late escalation
 - Capture is conditional with 4 granularities (none/micro/targeted/broad)
 - Failure-based repair loops replace generic re-capture loops
-- New file: `skill/openweb/add-site/probe.md` — full CDP probe protocol
+- New file: `skills/openweb/add-site/probe.md` — full CDP probe protocol
 - Intercept pattern (interceptApi template + real examples) moved from guide to curate-runtime.md
 
 **Why:**
@@ -2277,12 +2277,12 @@
 - Design produced via double-design (Claude + Codex, 5 alignment rounds)
 
 **Key files:**
-- `skill/openweb/add-site/guide.md` — major restructure (234→445 lines)
-- `skill/openweb/add-site/probe.md` — new (217 lines)
-- `skill/openweb/add-site/capture.md` — +Capture Granularity section
-- `skill/openweb/add-site/review.md` — +Conditional Step, +Probe Cross-Check, failure loops
-- `skill/openweb/add-site/curate-runtime.md` — +probe-first note, +extraction priority, +intercept pattern
-- `skill/openweb/add-site/verify.md` — failure-based loops, node transport trust
+- `skills/openweb/add-site/guide.md` — major restructure (234→445 lines)
+- `skills/openweb/add-site/probe.md` — new (217 lines)
+- `skills/openweb/add-site/capture.md` — +Capture Granularity section
+- `skills/openweb/add-site/review.md` — +Conditional Step, +Probe Cross-Check, failure loops
+- `skills/openweb/add-site/curate-runtime.md` — +probe-first note, +extraction priority, +intercept pattern
+- `skills/openweb/add-site/verify.md` — failure-based loops, node transport trust
 - `doc/todo/flexible-discover/` — design doc, CN version, review, plan
 
 **Verification:** pnpm build (61 sites), pnpm test (835/835 pass), independent agent review ACCEPT
@@ -2304,7 +2304,7 @@
 - ctrip calendar API no longer exists on international version; domestic version uses incompatible endpoint
 - homedepot Akamai Bot Manager validates sensor data per-request, blocking programmatic fetch. Intercept pattern bypasses this by letting the site's own JS make the request.
 
-**Key files:** `src/sites/tripadvisor/adapters/tripadvisor.ts`, `src/sites/ctrip/openapi.yaml`, `src/sites/indeed/openapi.yaml`, `src/sites/homedepot/adapters/homedepot-web.ts`, `skill/openweb/knowledge/bot-detection.md`
+**Key files:** `src/sites/tripadvisor/adapters/tripadvisor.ts`, `src/sites/ctrip/openapi.yaml`, `src/sites/indeed/openapi.yaml`, `src/sites/homedepot/adapters/homedepot-web.ts`, `skills/openweb/knowledge/bot-detection.md`
 **Verification:** 835 tests pass. All 4 sites verified with real data in headed browser.
 **Commit:** `69f856a`, `97ed6e8`, `e3a2f3a`, `93a191b`, `6d75283`
 **Next:** All sites PASS except goodrx/zillow (PerimeterX cooldown). Session complete.
@@ -2455,7 +2455,7 @@
 ## 2026-04-06: Skill doc rewrite + 6 new sites + runtime improvements
 
 **What changed:**
-- Complete rewrite of `skill/openweb/` — 3 peer folders (add-site/, references/, knowledge/) organized by loading pattern. 24 files, 177K → 144K. Self-contained: zero doc/main cross-references.
+- Complete rewrite of `skills/openweb/` — 3 peer folders (add-site/, references/, knowledge/) organized by loading pattern. 24 files, 177K → 144K. Self-contained: zero doc/main cross-references.
 - Double-design process (Claude + Codex): independent designs, cross-review, 3-round /align, user discussion, resolved all open questions.
 - 6 new sites: airbnb (2 ops), spotify (4), tiktok (1), notion (3), yelp (2), zillow (1). All verified with DOC.md + PROGRESS.md.
 - doc/main alignment audit: fixed 3 discrepancies (phantom `fallback` auth type, `ws` transport value, incomplete XOpenWebOperation fields).
@@ -2471,7 +2471,7 @@
 - warmSession in adapters violated self-contained rule and caused double-warming. Centralization fixes both.
 - String-matching for bot detection was fragile coupling. Dedicated failureClass is the right abstraction.
 
-**Key files:** `skill/openweb/` (all 24 files), `src/runtime/adapter-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/http-executor.ts`, `src/lifecycle/verify.ts`, `src/lib/errors.ts`, `doc/main/README.md`, `doc/main/runtime.md`
+**Key files:** `skills/openweb/` (all 24 files), `src/runtime/adapter-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/http-executor.ts`, `src/lifecycle/verify.ts`, `src/lib/errors.ts`, `doc/main/README.md`, `doc/main/runtime.md`
 **Verification:** 843 tests pass, lint clean (site files), 55/63 sites verify PASS, 0 regressions introduced
 **Commit:** 8035901..040284e (12 commits)
 **Next:** reuters DataDome fix, yahoo-finance 429 recovery, npm publish
@@ -2514,7 +2514,7 @@
 - First impressions matter — the README is the entry point for all new users and contributors
 - One-line install reduces friction from "clone repo + configure" to a single curl command
 
-**Key files:** `README.md`, `install-skill.sh`, `skill/openweb/SKILL.md`
+**Key files:** `README.md`, `install-skill.sh`, `skills/openweb/SKILL.md`
 **Verification:** README renders correctly, install-skill.sh tested
 **Commit:** (this session)
 **Next:** npm publish
@@ -2599,7 +2599,7 @@
 **Why:**
 - Codex second-round review found real bugs (auth doubled, lock poisoning) and doc drift
 
-**Key files:** src/runtime/request-builder.ts, src/runtime/token-cache.ts, src/runtime/ws-*.ts, src/types/primitives.ts, skill/openweb/references/knowledge/*.md
+**Key files:** src/runtime/request-builder.ts, src/runtime/token-cache.ts, src/runtime/ws-*.ts, src/types/primitives.ts, skills/openweb/references/knowledge/*.md
 **Verification:** 780/780 tests, lint clean, build passes, `node dist/cli.js` works
 **Commit:** 363d4f4
 **Next:** npm publish
@@ -2621,7 +2621,7 @@
 - Final polish before v0.1.0 open-source npm publish
 - Codex found the critical bundle issue that would have made the published CLI unusable
 
-**Key files:** src/runtime/ws-runtime.ts, src/compiler/analyzer/labeler.ts, src/types/schema.ts, src/types/extensions.ts, scripts/pack-check.js, src/capture/connection.ts, skill/openweb/references/cli.md
+**Key files:** src/runtime/ws-runtime.ts, src/compiler/analyzer/labeler.ts, src/types/schema.ts, src/types/extensions.ts, scripts/pack-check.js, src/capture/connection.ts, skills/openweb/references/cli.md
 **Verification:** 780/780 tests pass, lint clean, build succeeds, `node dist/cli.js` starts correctly, pack check passes
 **Commit:** 438b829
 **Next:** npm publish
@@ -2664,7 +2664,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 - Added mixed transport site pattern to `x-openweb-extensions.md` (sites that use both node and page transport across operations)
 - Added adapter init/navigation best practices to `spec-curation.md` (permissive init, per-operation navigation, ERR_ABORTED handling)
 
-**Key files:** `skill/openweb/references/knowledge/x-openweb-extensions.md`, `skill/openweb/references/spec-curation.md`
+**Key files:** `skills/openweb/references/knowledge/x-openweb-extensions.md`, `skills/openweb/references/spec-curation.md`
 
 ## 2026-04-02: Fidelity adapter — 13/13 PASS
 
@@ -2777,7 +2777,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
   origin — adapter paths are logical, not real URLs (OpenAPI doesn't allow
   multiple ops on same path+method).
 
-**Key files:** `src/sites/{google-search,booking,redfin}/adapters/*.ts`, `skill/openweb/references/spec-curation.md`, `skill/openweb/references/knowledge/x-openweb-extensions.md`
+**Key files:** `src/sites/{google-search,booking,redfin}/adapters/*.ts`, `skills/openweb/references/spec-curation.md`, `skills/openweb/references/knowledge/x-openweb-extensions.md`
 **Verification:** google-search 7 results, booking 25 Tokyo hotels, redfin 41 Seattle listings
 **Commit:** b237c7c
 
@@ -2794,7 +2794,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - Multiple workers sharing one Chrome browser had traffic cross-contamination, PID collisions, and no way to stop specific sessions. Capture primitives were already page-scoped — only the CLI needed changes.
 
-**Key files:** `src/commands/capture.ts`, `src/cli.ts`, `skill/openweb/references/discover.md`, `skill/openweb/references/cli.md`
+**Key files:** `src/commands/capture.ts`, `src/cli.ts`, `skills/openweb/references/discover.md`, `skills/openweb/references/cli.md`
 **Verification:** 3/3 QA tests pass (backward compat, isolated session, multi-session error)
 
 ## 2026-03-31: Fix compile --script hang + capture script guide
@@ -2809,7 +2809,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - `compile --script` could hang indefinitely: no parent timeout, `networkidle` never fires on SPAs, `page.close()`/`browser.close()` can hang on bad CDP state. Discovered 3 additional bugs during QA: Promise.race propagates cleanup rejections, lingering setTimeout prevents process exit, pnpm/tsx wrappers don't die on SIGINT.
 
-**Key files:** `src/compiler/recorder.ts`, `src/lib/config.ts`, `scripts/record_discord.ts`, `skill/openweb/references/capture-script-guide.md`
+**Key files:** `src/compiler/recorder.ts`, `src/lib/config.ts`, `scripts/record_discord.ts`, `skills/openweb/references/capture-script-guide.md`
 **Verification:** 3/3 QA tests pass (hang timeout, Discord --script, two-phase capture)
 **Commit:** c3f0cad
 
@@ -2834,7 +2834,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - All 4 items from Discord rediscovery friction log (doc/todo/improve-thought/discord-discover/cn/friction-log.md)
 
-**Key files:** `src/compiler/recorder.ts`, `scripts/build-sites.js`, `src/compiler/analyzer/schema-v2.ts`, `skill/openweb/references/knowledge/auth-patterns.md`
+**Key files:** `src/compiler/recorder.ts`, `scripts/build-sites.js`, `src/compiler/analyzer/schema-v2.ts`, `skills/openweb/references/knowledge/auth-patterns.md`
 **Verification:** pnpm build passes (with sync), 720/720 tests pass
 **Commit:** 03bf14a
 
@@ -2852,7 +2852,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - During Discord rediscovery, agent loaded 689 lines of compile.md but only used ~100 lines per phase. Progressive disclosure pattern: process docs stay linear, reference material loads on demand.
 
-**Key files:** `skill/openweb/SKILL.md`, `skill/openweb/references/discover.md`, `skill/openweb/references/compile.md`, `skill/openweb/references/analysis-review.md`, `skill/openweb/references/spec-curation.md`
+**Key files:** `skills/openweb/SKILL.md`, `skills/openweb/references/discover.md`, `skills/openweb/references/compile.md`, `skills/openweb/references/analysis-review.md`, `skills/openweb/references/spec-curation.md`
 **Verification:** pnpm build passes, discord verify 10/10 PASS, Codex cross-review APPROVE (2 rounds)
 **Commit:** 398ffc0
 **Design:** doc/todo/skill-doc-refactor/final/design.md
@@ -2986,7 +2986,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 - Capture Target Binding was wrong: said capture attaches to ONE target, advised closing other tabs. Actual code (`src/capture/session.ts:247-270`) attaches to `pages()[0]` + all new tabs via `context.on('page')`. The real failure mode is pre-existing tabs or separate Playwright connections, not "wrong tab".
 - Flowchart and Incremental Discovery provide high value relative to token cost.
 
-**Key files:** `skill/openweb/references/discover.md`
+**Key files:** `skills/openweb/references/discover.md`
 **Verification:** git diff shows +64/-20 lines; all 4 sections updated surgically
 **Commit:** a3537cc
 **Next:** N8 (mixed-traffic auth warning in compile.md), N9 (ops checklist per archetype), N10 (multi-worker stop warning)
@@ -3003,7 +3003,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - V5 analysis: 4/7 agents lost prior-round knowledge when files were deleted from worktree, 3/7 missed tab-specific endpoints, 3/7 got SSR HTML instead of JSON search API
 
-**Key files:** `skill/openweb/references/discover.md`
+**Key files:** `skills/openweb/references/discover.md`
 **Verification:** git diff shows +21/-20 lines (token-neutral)
 **Commit:** 8697bb1
 **Next:** N8 (mixed-traffic auth warning in compile.md), N9 (ops checklist per archetype), N10 (multi-worker stop warning)
@@ -3021,7 +3021,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - V5 rediscovery analysis (7 sites) showed: all 7 lost time to capture failures, 5/7 had silent HAR misses from wrong CDP target, 5/7 captured zero/minimal write ops despite guidance saying "do writes"
 
-**Key files:** `skill/openweb/references/discover.md`
+**Key files:** `skills/openweb/references/discover.md`
 **Verification:** git diff shows +75/-67 lines (net +8, token-neutral)
 **Commit:** 0d3ec46
 **Next:** Consider N5 (fast-path git recovery), N6 (tab switching), N7 (SPA search), N8 (mixed-traffic auth warning in compile.md)
@@ -3038,7 +3038,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - V4 rediscovery analysis showed 7/8 agents wasted context on knowledge reading, 6/8 missed write ops, 5/8 used wrong navigation pattern
 
-**Key files:** `skill/openweb/references/discover.md`, `skill/openweb/references/compile.md`
+**Key files:** `skills/openweb/references/discover.md`, `skills/openweb/references/compile.md`
 **Verification:** git diff shows +38/-34 lines (token-neutral)
 **Commit:** 45a9d0d
 **Next:** Consider fixing P2 (capture troubleshooting table), P7 (lazy-load/tabs guidance)
@@ -3134,7 +3134,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 - Token cache `_unsafe` variants — lock-free `readTokenCacheUnsafe`, `writeTokenCacheUnsafe`, `clearTokenCacheUnsafe` for use inside `withTokenLock` to avoid double-locking
 - Compile skill doc updated: new "Runtime QA" sub-step (4c) in verify step
 
-**Key files:** `src/runtime/http-executor.ts`, `src/runtime/session-executor.ts`, `src/runtime/token-cache.ts`, `src/lib/param-validator.ts`, `skill/openweb/references/compile.md`
+**Key files:** `src/runtime/http-executor.ts`, `src/runtime/session-executor.ts`, `src/runtime/token-cache.ts`, `src/lib/param-validator.ts`, `skills/openweb/references/compile.md`
 **Verification:** Code review, timer leak fix applied
 **Next:** Runtime QA on real sites
 **Blockers:** None
@@ -3153,7 +3153,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - Round 3 compliance review identified 7 design gaps blocking architecture-complete sign-off. These were the bounded, implementable fixes (KISS design). Report tier slimming and browser-based verify deferred pending real site testing.
 
-**Key files:** `src/compiler/verify-v2.ts`, `src/compiler/types-v2.ts`, `src/compiler/analyzer/classify.ts`, `src/compiler/analyzer/auth-candidates.ts`, `src/compiler/analyzer/example-select.ts` (new), `src/compiler/analyzer/analyze.ts`, `src/compiler/curation/apply-curation.ts`, `src/commands/compile.ts`, `skill/openweb/references/discover.md`
+**Key files:** `src/compiler/verify-v2.ts`, `src/compiler/types-v2.ts`, `src/compiler/analyzer/classify.ts`, `src/compiler/analyzer/auth-candidates.ts`, `src/compiler/analyzer/example-select.ts` (new), `src/compiler/analyzer/analyze.ts`, `src/compiler/curation/apply-curation.ts`, `src/commands/compile.ts`, `skills/openweb/references/discover.md`
 **Verification:** 704 tests pass, no lint errors
 **Next:** Run sites through updated pipeline to validate; defer report tier slimming and browser-verify until real patterns observed
 **Blockers:** None
@@ -3246,7 +3246,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 ## 2026-03-26: M38 — Skill review + doc polish + lint + publish prep
 
 **What changed:**
-- skill/openweb/ fully rewritten: SKILL.md router (5 intents), discover.md (iterative loop), compile.md (decision model + WS track)
+- skills/openweb/ fully rewritten: SKILL.md router (5 intents), discover.md (iterative loop), compile.md (decision model + WS track)
 - 7 new knowledge files: ws-patterns, bot-detection-patterns, extraction-patterns, graphql-patterns, archetypes split (5 deep files)
 - site-doc.md moved from doc/todo/ to references/
 - Lint clean on core code (44 files), gitignore cleaned (.claude/projects/, tmp/)
@@ -3261,7 +3261,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - Skill docs needed rewrite for intent-based routing and WS support. Lint + doc cleanup for publish readiness.
 
-**Key files:** skill/openweb/, CLAUDE.md, src/compiler/, .gitignore
+**Key files:** skills/openweb/, CLAUDE.md, src/compiler/, .gitignore
 **Verification:** `pnpm build` clean, `pnpm test` 560/560 pass, `pnpm lint` clean
 **Next:** M37 site coverage expansion (16 HIGH + 6 MEDIUM re-discovery)
 **Blockers:** None
@@ -3340,7 +3340,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 
 **What changed:**
 - Deleted 29 trivial public API fixtures (catfact, chucknorris, etc.) — no user value, direct curl works
-- Deleted `src/knowledge/` (failures.ts, heuristics.ts) — superseded by `skill/openweb/references/knowledge/` markdown files
+- Deleted `src/knowledge/` (failures.ts, heuristics.ts) — superseded by `skills/openweb/references/knowledge/` markdown files
 - 3 fixtures refactored: google-flights, google-search, redfin inline JS → adapter files (extraction complexity rule)
 - Navigator reads DOC.md instead of legacy notes.md; 6 old notes.md deleted
 - Per-fixture DOC.md + PROGRESS.md documentation system (guide at doc/todo/site_doc/guide.md)
@@ -3378,7 +3378,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 **Why:**
 - M26 redefined from API sites to consumer sites (no free public API). These are openweb's core value proposition — sites where users need to reverse-engineer the web client's internal API.
 
-**Key files:** 13 new fixture dirs in src/sites/, doc/todo/site_doc/guide.md, skill/openweb/references/compile.md
+**Key files:** 13 new fixture dirs in src/sites/, doc/todo/site_doc/guide.md, skills/openweb/references/compile.md
 **Verification:** `pnpm build` clean (10 adapters), `pnpm test` 367/367 pass
 **Commit:** 72a09ac..eede864
 **Next:** Quality review of 13 fixtures, then decide M27 (API sites) vs M29 (reflect)
@@ -3393,14 +3393,14 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 - Split `primitives.md` (410 lines) → `doc/main/primitives/` subdirectory (README.md + auth.md + signing.md)
 - Split `roadmap.md` (996 lines) → active-only (136 lines) + `archive/roadmap-completed.md`
 - Trimmed `adding-sites.md` (357→286) and `development.md` (340→205)
-- Moved skill to project root: `.claude/skills/openweb/` → `skill/openweb/` (symlink back for Claude Code)
-- Deleted stale `doc/knowledge/` (canonical knowledge lives in `skill/openweb/references/knowledge/`)
+- Moved skill to project root: `.claude/skills/openweb/` → `skills/openweb/` (symlink back for Claude Code)
+- Deleted stale `doc/knowledge/` (canonical knowledge lives in `skills/openweb/references/knowledge/`)
 - Updated all `-> See:` pointers, skill path refs in `architecture.md`, README.md timestamp
 
 **Why:**
 - Docs had drifted from `/init-all` and `/update-doc` standards: no CLAUDE.md, completed milestones in todo/, oversized files, duplicated knowledge, no multi-agent symlinks
 
-**Key files:** `CLAUDE.md`, `doc/main/primitives/`, `doc/todo/roadmap.md`, `doc/archive/`, `skill/openweb/`, `doc/main/architecture.md`, `doc/main/README.md`
+**Key files:** `CLAUDE.md`, `doc/main/primitives/`, `doc/todo/roadmap.md`, `doc/archive/`, `skills/openweb/`, `doc/main/architecture.md`, `doc/main/README.md`
 **Verification:** All SOTA doc files ≤300 lines, no stale `primitives.md` or `.claude/skills/openweb` refs in active docs, all symlinks resolve
 **Commit:** (this commit)
 **Next:** M26 redo or M29 (user login → discover all)

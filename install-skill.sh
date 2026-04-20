@@ -47,16 +47,16 @@ else
 fi
 
 # --- resolve skill source ---
-if [ -d "skill/openweb" ]; then
-  SKILL_SRC="skill/openweb"
+if [ -d "skills/openweb" ]; then
+  SKILL_SRC="skills/openweb"
   echo "Using local skill source."
 else
   TMP=$(mktemp -d)
   trap 'rm -rf "$TMP"' EXIT
   echo "Downloading openweb skill..."
   git clone --depth 1 --filter=blob:none --sparse "$REPO" "$TMP/openweb" 2>/dev/null
-  git -C "$TMP/openweb" sparse-checkout set skill/openweb 2>/dev/null
-  SKILL_SRC="$TMP/openweb/skill/openweb"
+  git -C "$TMP/openweb" sparse-checkout set skills/openweb 2>/dev/null
+  SKILL_SRC="$TMP/openweb/skills/openweb"
 fi
 
 # --- install into each detected agent ---

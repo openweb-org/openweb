@@ -6,7 +6,7 @@
 
 **Problem:** Pinterest requires custom headers (`x-requested-with: XMLHttpRequest`, `x-pinterest-appstate: active`, `x-pinterest-pws-handler`) for ALL API calls, even via `page.evaluate(fetch)`. The capture guide only covers cookie auth, token auth, and CORS — not custom header requirements for bot detection.
 
-**Root cause:** `skill/openweb/references/capture-guide.md` — "Direct API Calls via page.evaluate(fetch)" section only mentions `credentials: 'same-origin'`, not site-specific headers.
+**Root cause:** `skills/openweb/references/capture-guide.md` — "Direct API Calls via page.evaluate(fetch)" section only mentions `credentials: 'same-origin'`, not site-specific headers.
 
 **Suggested fix:** Add a subsection to capture-guide.md about "Custom Header Requirements" noting that some sites require additional headers beyond cookies for `page.evaluate(fetch)` to succeed. Recommend checking captured HAR request headers to identify required non-standard headers.
 
