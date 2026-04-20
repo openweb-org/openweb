@@ -5,7 +5,7 @@
   "cases": [
     {
       "input": {
-        "media_id": "3865890235180097425",
+        "media_id": "3877961230447408478",
         "comment_id": "${prev.createComment.id}"
       },
       "assertions": {
@@ -14,5 +14,5 @@
       }
     }
   ],
-  "order": 120
+  "order": 2
 }

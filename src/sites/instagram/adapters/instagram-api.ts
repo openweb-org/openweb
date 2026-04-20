@@ -287,7 +287,7 @@ const OPERATIONS: Record<string, Handler> = {
     if (!commentId) throw helpers.errors.missingParam('comment_id')
     return postJson(
       helpers, page,
-      `https://www.instagram.com/api/v1/web/comments/${mediaId}/${commentId}/delete/`,
+      `https://www.instagram.com/api/v1/web/comments/${mediaId}/delete/${commentId}/`,
       '',
     )
   },

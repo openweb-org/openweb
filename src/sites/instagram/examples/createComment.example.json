@@ -5,8 +5,8 @@
   "cases": [
     {
       "input": {
-        "id": "3865890235180097425",
-        "comment_text": "test ${now}"
+        "id": "3877961230447408478",
+        "comment_text": "love the team energy 🔥"
       },
       "assertions": {
         "status": 200,
@@ -14,5 +14,5 @@
       }
     }
   ],
-  "order": 110
+  "order": 1
 }
