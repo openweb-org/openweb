@@ -38,7 +38,6 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 ### Direct messages
 1. `getUserByScreenName(screen_name)` → `rest_id`
 2. `sendDM(recipientId, text)` — approved contacts only
-3. `deleteDM(messageId)` — delete a sent message
 
 ### Notifications and bookmarks
 1. `getNotifications` → mentions, likes, retweets, follows
@@ -80,7 +79,6 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 | hideReply | hide reply | tweet_id (reply to your tweet) | hidden: true | write, CAUTION |
 | unhideReply | unhide reply | tweet_id | hidden: false | write, CAUTION |
 | sendDM | send DM | recipientId ← getUserByScreenName rest_id, text | DM event | write, CAUTION, approved contacts |
-| deleteDM | delete DM | messageId | — | write, CAUTION |
 
 ## Quick Start
 
@@ -159,7 +157,7 @@ openweb x exec getUserLikes '{"userId": "4398626122", "count": 20}'
 - Rate limiting: ~900 requests/15min for most endpoints
 - Response schemas are deeply nested (TimelineTimelineItem → tweet_results → result → legacy)
 - `sendDM` only works for approved contacts (users who follow you or have open DMs)
-- `deleteDM` uses GraphQL `DMMessageDeleteMutation` — operation name may change
+- **`deleteDM` was removed from the spec (2026-04-19).** The `DMMessageDeleteMutation` queryId lives in a webpack chunk that's only fetched when the user clicks "Delete for you" inside an open DM thread — not in main.js, not in any chunk loaded by visiting `/messages` or by opening a conversation. Discovery would need to trigger a real delete to intercept the request URL, which is environment-fragile and not worth automating for a single op. Re-add only if a chunk-stable discovery path emerges.
 - `getBookmarks` and `getNotifications` only return the authenticated user's data
 - `getBookmarks` uses the `Bookmarks` GraphQL operation whose queryId lives in a lazy-loaded webpack chunk (not in main.js); the adapter discovers it by navigating to `/i/bookmarks` and capturing the API request URL on first call
 - `getTrending` → use `getExplorePage`; `getThread` → use `getTweetDetail`
@@ -170,6 +168,6 @@ openweb x exec getUserLikes '{"userId": "4398626122", "count": 20}'
 - **Fix (runtime commit `acc23ad`):** verify no longer pre-acquires `deps.browser`; each op calls `ensureBrowser()` to re-read the live port. **Impact:** x went from 0/14 → 8/14 PASS in one shot — `likeTweet`, `unlikeTweet`, `createBookmark`, `deleteBookmark`, `createRetweet`, `deleteRetweet`, `unblockUser`, `unfollowUser` all PASS with a pre-warmed tab.
 - **Self-target fixture pitfall (commit `43f8e37`):** the original example `userId 4211243893` was the logged-in account itself (@iamoonkey). Twitter returns 403 (`code 158/147/271 — "you can't follow/block/mute yourself"`). The runtime maps 403 → `needs_login`, then `handleLoginRequired()` opens a system browser and polls for 5 min — verify's per-op 45 s timeout fires first. The destroy variants returned 200 no-op so they appeared to PASS, masking the diagnosis. Resolved by switching the fixture to `2244994945` (@XDevelopers, a stable third-party). Standalone `pnpm dev x exec` now confirms all 6 user-graph ops return 200.
 - **Pair `order` field (commit `43f8e37`):** added `order: 1..8` to follow/unfollow/block/unblock/mute/unmute/hide/unhide so each create runs immediately before its destroy. Prevents cross-pair contamination — e.g. without ordering, `blockUser` would auto-unfollow @XDevelopers and a later `unfollowUser` would 200 no-op against an unrelated state.
-- **Reply fixture refresh:** `hideReply`/`unhideReply` now use `tweet_id 2045740947703562740` — a real reply created via the `reply` op against MoonkeyX's pinned tweet. Twitter's PUT `/i/api/2/tweets/{id}/hidden` requires the authenticated user to own the parent tweet.
+- **Reply fixture (permanent, 2026-04-19):** `hideReply`/`unhideReply` use `tweet_id 2046061970021847164` — a reply by `@QGuo219895` (the user's alt account) on `@iamoonkey/2045749343437619246`. Both fixtures hard-code this id and `unhideReply` chains via `order: 2`. Both ops are pinned by the user as a permanent verify-target; no per-run seeding required.
 - **Aggregate verify still flaky:** even with correct fixtures, the verify framework's per-op cascade (kill+restart Chrome on the first 401/403/timeout, retry within 45 s budget) leaves Chrome in inconsistent state for downstream ops — port-bound errors, page closed, queryId cache lost. Symptom: 2/8 PASS in `verify --write` despite all 6 passing in standalone `exec`. Root cause is verify-framework, not site fixtures.
 - See `doc/todo/write-verify/handoff.md` §3.3 for full hypothesis list and §4 for cross-cutting framework gaps.

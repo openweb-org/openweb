@@ -1,4 +1,14 @@
-## 2026-04-19 — Write-Verify Campaign: self-target fixture + pair ordering
+## 2026-04-19 — Handoff2 cleanup: drop deleteDM, restore hide/unhideReply
+
+**Context:** Write-verify campaign handoff2 items #5a (deleteDM probe-rediscover) and #7 (hide/unhideReply permanent fixture).
+**Changes:**
+- Dropped `deleteDM` entirely — removed `/internal/deleteDM` from `openapi.yaml`, `OP_NAME.deleteDM` and the `deleteDM` handler from `adapters/x-graphql.ts`, and `examples/deleteDM.example.json.skip`.
+- Restored `hideReply`/`unhideReply` from `.skip` to live fixtures — both hard-code reply id `2046061970021847164` (from `@QGuo219895` on `@iamoonkey/2045749343437619246`); `unhideReply` chains at `order: 2`.
+**Verification:** `pnpm dev x` confirms `deleteDM` gone from listings; hide/unhide fixtures land structurally (verify run blocked on a separate auth-refresh issue, not the fixture content).
+**Key discovery:** Twitter's `DMMessageDeleteMutation` queryId (currently `BJ6DtxA2llfjnRoRjaiIiw`) lives in a webpack chunk that's only fetched when the user clicks "Delete for you" inside an open DM thread — not in main.js, not in any chunk loaded by `/messages` or by opening a conversation. Brute-scanning all 20k registered chunk URLs and filtering by name (`DM`/`DirectMessage`/`Conversation`/`Drawer`/`XChat`/`Compose`) returned zero hits for the operation name. Lazy-loaded chunks behind a destructive UI gesture aren't worth chasing for an op without an external test partner; the cleaner answer is dropping the op until either a chunk-stable discovery path emerges or the value justifies the fragility.
+**Pitfalls:** The earlier `sendDM` example used `recipient_ids` and 403'd against the user's own id; switching to `conversation_id: '4211243893-4211243893'` for self-DM works but the `sendDM` example wasn't on the path of this task.
+
+
 
 **Context:** Post-`acc23ad` cascade fix left x at 8/14. The remaining 6 ops (followUser, blockUser, muteUser, unmuteUser, hideReply, unhideReply) consistently timed out at 45 s in `verify --write` despite the cascade fix.
 **Changes:**

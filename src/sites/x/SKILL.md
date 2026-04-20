@@ -39,7 +39,6 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 ### Direct messages
 1. `getUserByScreenName(screen_name)` → `rest_id` (recipientId)
 2. `sendDM(recipientId, text)` → DM event with `messageId` — approved contacts only
-3. `deleteDM(messageId)` — delete a sent message (messageId from sendDM response)
 
 ### Notifications and bookmarks
 1. `getNotifications` → mentions, likes, retweets, follows
@@ -78,10 +77,9 @@ Social media and microblogging platform. Archetype: Social Media. GraphQL API wi
 | unblockUser | unblock user | userId ← getUserByScreenName rest_id (or paired blockUser) | user object | write — verified PASS |
 | muteUser | mute user | userId ← getUserByScreenName rest_id | user object | write, CAUTION — page-lifecycle issue (see Known Limitations) |
 | unmuteUser | unmute user | userId ← getUserByScreenName rest_id (or paired muteUser) | user object | write, CAUTION — page-lifecycle issue (see Known Limitations) |
-| hideReply | hide reply | tweet_id ← getTweetDetail reply entries | hidden: true | write, CAUTION — needs real reply context |
-| unhideReply | unhide reply | tweet_id ← getTweetDetail reply entries | hidden: false | write, CAUTION — needs real reply context |
+| hideReply | hide reply | tweet_id ← getTweetDetail reply entries (or pinned fixture id) | hidden: true | write — verified PASS via permanent fixture |
+| unhideReply | unhide reply | tweet_id ← getTweetDetail reply entries (or pinned fixture id) | hidden: false | write — verified PASS via permanent fixture |
 | sendDM | send DM | recipientId ← getUserByScreenName rest_id, text | messageId, DM event | write, CAUTION, approved contacts |
-| deleteDM | delete DM | messageId ← sendDM | — | write, CAUTION |
 
 ## Quick Start
 
@@ -127,5 +125,5 @@ openweb x exec getUserLikes '{"userId": "4398626122", "count": 20}'
 
 - **Open `https://x.com/home` in the managed Chrome (port 9222) before running write ops.** The site declares `page_plan.entry_url=https://x.com/home` with `warm: true`, but a runtime cascade can leave verify holding a stale browser handle if no x.com tab is already open at start. Pre-warming the tab also ensures cookies, ct0 CSRF, and the webpack signing module are hydrated.
 - **Never use your own userId as a follow/block/mute target.** Twitter returns 403 (`code 158/147/271 — "you can't <verb> yourself"`) which the runtime maps to `needs_login`, triggering a 45 s cascade-timeout per op. Use a stable third-party account (e.g. `@XDevelopers` id `2244994945`) for testing. Destroy variants (unfollow/unblock/unmute) return 200 no-op even on self, masking the issue if you only check those.
-- **`hideReply` / `unhideReply` need a real reply on one of your own tweets.** Use `reply` to seed a fixture, then capture `legacy.id_str` from the response.
+- **`hideReply` / `unhideReply` use a permanent fixture pair.** Reply id `2046061970021847164` (from `@QGuo219895`) on parent tweet `2045749343437619246` (`@iamoonkey`) is pinned as the verify-target — both fixtures hard-code this id; `unhideReply` chains via `order: 2`. No re-seeding needed between runs.
 - **Verified write ops:** `likeTweet`, `unlikeTweet`, `createBookmark`, `deleteBookmark`, `createRetweet`, `deleteRetweet`, `unblockUser`, `unfollowUser`, plus all 6 user/reply ops in standalone `pnpm dev x exec` runs after the 2026-04-19 fixture refresh. Aggregate `verify --write` still loses the create-side ops to cascade churn — see DOC.md "Verify quirk".
