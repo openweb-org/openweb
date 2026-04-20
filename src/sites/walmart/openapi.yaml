@@ -15,6 +15,11 @@ paths:
       summary: Search products — name, usItemId, linePrice, averageRating, canonicalUrl
       x-openweb:
         permission: read
+        transport: page
+        page_plan:
+          warm: true
+          settle_ms: 3000
+          wait_until: domcontentloaded
         build:
           stable_id: wm0002
           tool_version: 1
