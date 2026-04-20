@@ -58,7 +58,7 @@ async function submitTransaction(
     body,
   })
   if (resp.status !== 200) {
-    throw errors.fatal(`submitTransaction returned ${resp.status}: ${resp.text.slice(0, 200)}`)
+    throw errors.fatal(`submitTransaction returned ${resp.status}: ${resp.text.slice(0, 800)}`)
   }
 }
 
@@ -73,6 +73,9 @@ const OPERATIONS: Record<string, Handler> = {
 
     if (!spaceId) throw errors.missingParam('x-notion-space-id')
     if (!title) throw errors.missingParam('title')
+
+    const userId = await getNotionUserId(page)
+    if (!userId) throw errors.needsLogin()
 
     const isSubpage = params.parentId && String(params.parentId) !== spaceId
     const parentTable = isSubpage ? 'block' : 'space'
@@ -95,6 +98,20 @@ const OPERATIONS: Record<string, Handler> = {
           created_time: now,
           last_edited_time: now,
           properties: { title: [[title]] },
+        },
+      },
+      {
+        pointer: { table: 'block', id: newPageId, spaceId },
+        command: 'update',
+        path: [],
+        args: {
+          permissions: [
+            { type: 'user_permission', role: 'editor', user_id: userId },
+          ],
+          created_by_table: 'notion_user',
+          created_by_id: userId,
+          last_edited_by_table: 'notion_user',
+          last_edited_by_id: userId,
         },
       },
       {
@@ -123,13 +140,13 @@ const OPERATIONS: Record<string, Handler> = {
     const operations = [
       {
         pointer: { table: 'block', id: pageId, spaceId },
-        command: 'update',
+        command: 'set',
         path: ['properties', 'title'],
         args: [[title]],
       },
       {
         pointer: { table: 'block', id: pageId, spaceId },
-        command: 'update',
+        command: 'set',
         path: ['last_edited_time'],
         args: now,
       },
@@ -157,7 +174,7 @@ const OPERATIONS: Record<string, Handler> = {
       },
       {
         pointer: { table: 'block', id: pageId, spaceId },
-        command: 'update',
+        command: 'set',
         path: ['last_edited_time'],
         args: now,
       },

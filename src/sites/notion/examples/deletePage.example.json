@@ -2,11 +2,12 @@
   "operation_id": "deletePage",
   "method": "delete",
   "replay_safety": "unsafe_mutation",
+  "order": 3,
   "cases": [
     {
       "input": {
         "x-notion-space-id": "fba8f373-0afa-439e-b6d5-f69d38f144fb",
-        "pageId": "{pageId}"
+        "pageId": "${prev.createPage.pageId}"
       },
       "assertions": {
         "status": 200,
