@@ -69,3 +69,18 @@ servers:
 Rule shape: `{ path?: dotted, equals?: string|number, contains?: string }`. Omit `path` to match against the body itself (bare-string error bodies). Op-level `auth_check: false` disables server-level rules for that op.
 
 When to add: the site's "logged-out read" returns HTTP 200 with a stable error code or message. Capture the no-cookie response, identify the discriminating field, encode it as a single rule.
+
+## Request-Shape Misdiagnosis (`needs_login` ≠ auth failure)
+
+When `verify` reports `needs_login`, `auth_expired`, or 429 on an op the user can perform manually in real Chrome, the root cause is **almost always a request-shape diff** — missing client-token header, wrong endpoint, stale GraphQL hash, or absent SPA bot-mitigation headers — **not** account quota or cookie/auth state.
+
+- **Detection signals:** standalone `pnpm dev <site> exec <op>` reproduces the failure with a freshly-warmed browser; the user can do the same action by clicking in real Chrome; cookies in the managed profile are valid (other ops on the same site PASS).
+- **Why the misdiagnosis happens:** `src/lib/errors.ts:getHttpFailure(401|403|timeout)` maps every auth-shaped HTTP failure into `needs_login`, which triggers `handleLoginRequired() → refreshProfile()`. The cascade looks like an auth bug because the symptom is "browser opens for re-login."
+- **Action:** before touching auth or cookies, diff the request the SPA actually sends (DevTools → Network → Copy as fetch) against what the adapter sends. Look for: missing `client-token` / `x-csrf-token` / `x-super-properties` / `wm_qos.correlation_id` style headers; dead REST endpoint that's been migrated to GraphQL; persisted-query hash that's rotated. Run a probe script (`scripts/probe-<site>.ts`) to A/B the live shape against the recorded one.
+- **Examples (2026-04-20 handoff5):**
+  - `spotify` (commit `a1831bb`) — like/unlike misclassified as 429 quota; real cause was wrong pathfinder operationName + missing client-token.
+  - `walmart` (commit `46dd46e`) — `removeFromCart` misclassified as per-account 429 quota; real cause was missing SPA bot-mitigation headers (`x-o-platform-version`, `tenant-id`, `traceparent`, `wm_qos.correlation_id`) on `orchestra/*` calls.
+  - `x` (commit `b734164`) — `hideReply`/`unhideReply` misclassified as login-loop; real cause was the legacy REST `PUT /i/api/2/tweets/{id}/hidden` endpoint had been removed (hangs 45 s) and the SPA now uses GraphQL `ModerateTweet`.
+  - `youtube` (in-flight) — `addComment`/`deleteComment` misclassified as auth/quota; real cause distinct here (account-level shadowban surfaced by InnerTube `comment/create_comment` 200 with `Comment failed to post.` payload), but the same surface symptom of "verify says auth, manual works."
+
+If a single fix turns a "permanent quota" or "permanent login loop" into a clean PASS, the diagnosis was always wrong. Update both the site DOC.md and any op-level `auth_check` rule so the next agent sees the real signature, not the cascade output.
