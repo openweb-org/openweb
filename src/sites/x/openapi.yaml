@@ -1089,6 +1089,9 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  tweet_moderate_put:
+                    type: string
 
   /internal/unhideReply:
     post:
@@ -1123,6 +1126,9 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  tweet_unmoderate_put:
+                    type: string
 
   /internal/sendDM:
     post:

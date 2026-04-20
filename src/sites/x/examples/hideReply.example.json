@@ -6,7 +6,7 @@
   "cases": [
     {
       "input": {
-        "tweet_id": "${prev.reply.create_tweet.tweet_results.result.rest_id}"
+        "tweet_id": "2046061970021847164"
       },
       "assertions": {
         "status": 200,
