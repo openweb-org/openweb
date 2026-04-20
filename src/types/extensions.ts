@@ -107,4 +107,6 @@ export interface XOpenWebOperation {
   /** Per-operation overrides for the page-acquisition plan. Each field here wins
    *  over the server-level page_plan, even when the value is falsy. */
   readonly page_plan?: PagePlanConfig
+  /** When 'requires_interactive_solve', verify skips this op (CAPTCHA-gated). */
+  readonly verify_status?: 'ok' | 'requires_interactive_solve'
 }

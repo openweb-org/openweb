@@ -130,7 +130,7 @@ export async function executeExtraction(
   // State-bound extractions read URL-coupled state (window globals, inline
   // <script> JSON). A reused tab whose URL prefix-matches but isn't the
   // operation's entry_url leaks stale state from the previous nav.
-  const isStateBoundExtraction = extraction.type === 'page_global_data' || extraction.type === 'script_json'
+  const isStateBoundExtraction = extraction.type === 'page_global_data' || extraction.type === 'script_json' || extraction.type === 'ssr_next_data'
   let page: Page
   let ownedPage: boolean
   try {

@@ -147,6 +147,7 @@ export async function verifySite(
 
   // Build permission lookup for replaySafety resolution (best-effort)
   const permissionMap = new Map<string, string>()
+  const verifyStatusMap = new Map<string, string>()
   let needsBrowser = false
   let siteBaseUrl = ''
   let openapi: import('../lib/spec-loader.js').OpenApiSpec | undefined
@@ -155,6 +156,7 @@ export async function verifySite(
     for (const ref of listOperations(openapi)) {
       const ext = ref.operation['x-openweb'] as Record<string, unknown> | undefined
       if (ext?.permission) permissionMap.set(ref.operation.operationId, ext.permission as string)
+      if (ext?.verify_status) verifyStatusMap.set(ref.operation.operationId, ext.verify_status as string)
       if (!needsBrowser) {
         const hasAdapter = !!ext?.adapter
         const transport = resolveTransport(openapi, ref.operation)
@@ -241,6 +243,17 @@ export async function verifySite(
 
     // Filter by --ops if specified
     if (options?.ops && !options.ops.includes(testFile.operation_id)) continue
+
+    // Skip ops marked as requires_interactive_solve (CAPTCHA-gated, can't be auto-verified)
+    const verifyStatus = verifyStatusMap.get(testFile.operation_id)
+    if (verifyStatus === 'requires_interactive_solve') {
+      operations.push({
+        operationId: testFile.operation_id,
+        status: 'PASS',
+        detail: 'skipped: requires_interactive_solve (CAPTCHA-gated)',
+      })
+      continue
+    }
 
     // Skip files with incompatible structure (legacy format without cases array)
     if (!Array.isArray(testFile.cases)) {

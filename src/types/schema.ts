@@ -119,6 +119,7 @@ export const xOpenWebOperationSchema = {
     graphql_query: { type: 'string' },
     graphql_hash: { type: 'string' },
     page_plan: pagePlanSchema,
+    verify_status: { enum: ['ok', 'requires_interactive_solve'] },
   },
   additionalProperties: false,
 } as const
