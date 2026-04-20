@@ -1,3 +1,26 @@
+## 2026-04-19/20: write-verify handoff2 → handoff3 — close out remaining ops
+
+**What changed:**
+- 17 commits (9 feat/fix + 8 docs) closing out handoff2 plan. Resolved 11/17 ops PASS, 1 dropped from spec, 5 still env-blocked.
+- New per-site work: chatgpt `chatgpt-web` adapter (`bda0d62`) using dispatch-events + passive intercept to bypass Sentinel + SHA3-512 PoW gate; HN `unvoteStory` + `deleteComment` ops added with HMAC scraping (`febd3b3`); bilibili `listFavoriteFolders` read op added so writes chain via `${prev.listFavoriteFolders.data.list.0.id}` (`6431f65`); IG create/deleteComment URL param-order fix (`8efd496` — was misdiagnosed as endpoint drift, fixed by capturing live XHR via one-click delete); x `deleteDM` removed from spec; x hide/unhideReply un-skipped with permanent fixture id `2046061970021847164`.
+- Central infrastructure: `skill/openweb/knowledge/bot-detection.md` extended with the dispatch-events + passive intercept pattern as a general anti-bot bypass approach (b56af0d). Pattern: focus input element, dispatch synthetic keyboard events, let the SPA's own JS solve client-side gates, intercept response.
+- Per-site SKILL.md/DOC.md/PROGRESS.md updated for every touched site (chatgpt, HN, whatsapp, bilibili, x, IG).
+
+**Why:**
+- handoff2 had 15 in-spec failing write ops + 2 spec additions queued. Run via 5 multmux workers under `/orchestrate` with max-3 parallelism, ~50min wall-clock for the implementation phase + ~15min for docs. Categories addressed: pure fixture (chatgpt, HN, whatsapp), endpoint probe-rediscover (bilibili, x deleteDM), spec additions (HN HMAC), anti-bot reframe (chatgpt — Sentinel/PoW, not auth-detection bug as initially diagnosed), fixture retarget (IG).
+- Reframe corrections: handoff2 §5.1 hypothesis that walmart/spotify 429 was anti-bot fingerprint (not real quota) was tested and disproven — `transport: page` was already configured for both, same 429 fires from live page context. Real per-account quota; needs 24h drain + VPN.
+- Reusable lessons surfaced: (a) "upstream endpoint drift" 404s can be parameter-order bugs solvable by one-click XHR capture; (b) lazy-loaded webpack chunks for low-value ops without external test partners (x deleteDM) aren't worth probing — drop instead of `.skip`; (c) public-text fixtures (HN/Reddit/X/IG comments) need substantive on-topic copy not "test xxx" placeholders.
+
+**Key files:** `src/sites/{chatgpt,hackernews,whatsapp,bilibili,x,instagram}/`, `skill/openweb/knowledge/bot-detection.md`, new `doc/todo/write-verify/handoff3.md`.
+**Verification:** Per-site `pnpm dev verify <site> --browser --write` for each touched op (logs in worker capture history). HN site full sweep 18/18 PASS. No full `verify --all` re-sweep run.
+**Commit:** range `41021c4..c85872b` (17 commits).
+**Next:** User-action only — drain walmart/spotify 24h cooldown + retry on VPN. Optional code follow-ups: chatgpt SSE buffering via CDP `Network.dataReceived` (currently `response_text` empty but schema-valid); `src/lib/errors.ts` `getHttpFailure(403) → needs_login` should distinguish app-level 403 (Sentinel/PoW/quota) from auth-403 by body-content classifier so verify fails fast on the former; whatsapp `sendTextMsgToChat` could return messageId so `deleteMessage` chains.
+**Blockers:** walmart + spotify (5 ops, real per-account quota — env, not code).
+
+-> Full handoff: [doc/todo/write-verify/handoff3.md](todo/write-verify/handoff3.md)
+
+---
+
 ## 2026-04-18: write-verify campaign — first end-to-end sweep of write ops
 
 **What changed:**
