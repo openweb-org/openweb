@@ -1,11 +1,12 @@
 {
   "operation_id": "deleteComment",
   "replay_safety": "unsafe_mutation",
+  "order": 2,
   "cases": [
     {
       "input": {
-        "videoId": "dQw4w9WgXcQ",
-        "commentId": "UgzB1_kM5yz1Nv0nHdR4AaABAg"
+        "videoId": "jNQXAC9IVRw",
+        "commentId": "${prev.addComment.commentId}"
       },
       "assertions": {
         "status": 200,

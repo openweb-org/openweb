@@ -1,11 +1,12 @@
 {
   "operation_id": "addComment",
   "replay_safety": "unsafe_mutation",
+  "order": 1,
   "cases": [
     {
       "input": {
-        "videoId": "dQw4w9WgXcQ",
-        "text": "Great video!"
+        "videoId": "jNQXAC9IVRw",
+        "text": "Wild to think this 19 second clip kicked off the entire YouTube era — the elephants really do have long trunks."
       },
       "assertions": {
         "status": 200,

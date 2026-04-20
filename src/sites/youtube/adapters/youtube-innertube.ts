@@ -338,8 +338,8 @@ const addComment: Handler = async (page, params, helpers) => {
     throw errors.retriable('Could not extract comment creation params — comments may be disabled on this video')
   }
 
-  // Step 2: post the comment via /comment/create_comment
-  const commentResp = await innertubePost(
+  // Step 2: post the comment via /comment/create_comment (requires sapisidhash auth)
+  const commentResp = await innertubeAuthPost(
     helpers, page, 'comment/create_comment',
     { context, createCommentParams: createParams, commentText: text },
     config,
@@ -364,6 +364,33 @@ const addComment: Handler = async (page, params, helpers) => {
       }
     }
   }
+  // Fallback: deep-search response for any "Ug…" (YouTube comment IDs prefix Ug).
+  if (!commentId) {
+    const stack: unknown[] = [commentResp]
+    while (stack.length) {
+      const cur = stack.pop()
+      if (typeof cur === 'string') {
+        if (/^Ug[\w-]{10,}/.test(cur)) { commentId = cur; break }
+      } else if (Array.isArray(cur)) {
+        for (const v of cur) stack.push(v)
+      } else if (cur && typeof cur === 'object') {
+        for (const v of Object.values(cur as Record<string, unknown>)) stack.push(v)
+      }
+    }
+  }
+  if (!commentId) {
+    // YouTube returns HTTP 200 with a showErrorAction when its spam filter
+    // rejects the comment — surface that distinct signal.
+    const topActions = commentResp.actions as Array<Record<string, unknown>> | undefined
+    if (Array.isArray(topActions)) {
+      for (const a of topActions) {
+        const errMsg = dig(a, 'showErrorAction', 'errorMessage', 'messageRenderer', 'text')
+        const text = textRuns(errMsg) || (errMsg as { simpleText?: string } | undefined)?.simpleText
+        if (text) throw errors.retriable(`YouTube rejected comment: ${text}`)
+      }
+    }
+    throw errors.retriable('Could not extract created commentId from create_comment response')
+  }
 
   return { videoId, commentId, text, author: '' }
 }
@@ -382,7 +409,7 @@ const deleteComment: Handler = async (page, params, helpers) => {
   // InnerTube uses perform_comment_action with an encoded action string.
   // The action is: CAYaJ" + base64(commentId action proto)
   // Simpler approach: use the action endpoint directly with the comment external ID.
-  await innertubePost(
+  await innertubeAuthPost(
     helpers, page, 'comment/perform_comment_action',
     { context, actions: ['action_remove_comment'], commentId },
     config,
