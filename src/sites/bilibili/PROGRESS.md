@@ -51,3 +51,15 @@ Three reverse write operations to complement existing write ops:
 **Changes:** `adapters/bilibili-web.ts` migrated from `CodeAdapter` (init / isAuthenticated / execute) to `CustomRunner` (single `run(ctx: PreparedContext)`); 485 → 451 lines. Dropped `init()` (only checked `page.url().includes('bilibili.com')` — trivial; PagePlan covers it) and `isAuthenticated()` (only probed local SESSDATA cookie — not a real server probe). The needs_login signal now surfaces per-op via `getCSRFToken` throwing `errors.needsLogin()` when `bili_jct` is missing on write ops. All 7 op semantics preserved byte-for-byte (URLs, headers, body, returns).
 **Verification:** `pnpm dev verify bilibili` — 7/8 ops PASS; 1 env failure (searchVideos: "no browser tab open").
 **Key files:** `src/sites/bilibili/adapters/bilibili-web.ts`, `src/sites/bilibili/DOC.md` (Adapter Patterns section added).
+
+## 2026-04-19 — addToFavorites verify recovery
+
+**Context:** Write-verify campaign (handoff2 #5b). `addToFavorites` had no example file and no read-op source for the required `add_media_ids` folder id, so it couldn't verify.
+**Changes:**
+- New read op `listFavoriteFolders` (GET `/x/v3/fav/folder/created/list`) — returns the user's favorite folders so writes can chain to a real folder id. Spec entry, adapter handler, example with `order: 0` (so it runs before any write).
+- New `addToFavorites.example.json` chains via `${prev.listFavoriteFolders.data.list.0.id}` (`order: 1`).
+- `removeFromFavorites.example.json` rewritten to chain via the same template (`order: 2`) so the pair leaves the account state unchanged.
+- `add_media_ids` / `del_media_ids` schema relaxed from `string` to `[string, integer]` so the chained numeric id passes validation without explicit stringification — adapter still coerces with `String()`.
+**Verification:** `pnpm dev verify bilibili --ops listFavoriteFolders,addToFavorites,removeFromFavorites --browser --write` — 3/3 PASS.
+**Key discovery:** Template resolver returns the raw value in whole-value mode (`"${expr}"`) but stringifies in interpolation mode. When chaining a numeric field into a string-typed param, prefer relaxing the schema over post-hoc string concatenation hacks.
+**Pitfalls:** The user's account had zero created folders initially (`count: 0`), so the chain target had to be seeded by creating one (named `verify`) via `/x/v3/fav/folder/add`. Probe scripts must check this prerequisite before assuming a usable chain target exists.

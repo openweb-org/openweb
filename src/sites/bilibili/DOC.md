@@ -114,3 +114,4 @@ openweb bilibili exec unfollowUploader '{"fid": 1695320}'
 - Rate limiting on search and user profile endpoints
 - Session cookies expire; re-login via managed browser to refresh
 - Response schema enums contain captured sample data (specific video titles/descriptions) from compilation — these are not real constraints
+- **`add_media_ids` / `del_media_ids` are typed `[string, integer]`** (not just string) so a chained numeric folder id from `listFavoriteFolders.data.list[0].id` passes param validation without explicit stringification. The adapter coerces via `String()` before posting form-urlencoded.

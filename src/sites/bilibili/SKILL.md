@@ -14,8 +14,14 @@ Chinese video sharing and social platform (similar to YouTube). Archetype: Chine
 ### Search and engage
 1. `searchVideos(keyword)` → results → `bvid`, `author.mid`
 2. `getVideoDetail(bvid)` → full video info → `aid`, `cid`, `owner.mid`
-3. `likeVideo(aid=aid)` / `addToFavorites(rid=aid, add_media_ids)` → engage (requires auth + write)
-4. `unlikeVideo(aid=aid)` / `removeFromFavorites(rid=aid, del_media_ids)` → undo engagement
+3. `likeVideo(aid=aid)` → engage (requires auth + write)
+4. `unlikeVideo(aid=aid)` → undo engagement
+
+### Favorite a video (chains via favorite folder)
+1. `listFavoriteFolders()` → user's folders → `data.list[0].id` (folder media_id)
+2. `getVideoDetail(bvid)` → `aid`
+3. `addToFavorites(rid=aid, add_media_ids=${prev.listFavoriteFolders.data.list.0.id})` → add (requires auth + write)
+4. `removeFromFavorites(rid=aid, del_media_ids=${prev.listFavoriteFolders.data.list.0.id})` → undo
 
 ### Explore a creator's content
 1. `getUserProfile(mid)` → bio, level, follower count → `mid`
@@ -38,10 +44,11 @@ Chinese video sharing and social platform (similar to YouTube). Archetype: Chine
 | getUserProfile | user bio, level, stats | `mid` <- searchVideos.author.mid / getVideoDetail.owner.mid | name, sign, level, face, fans_medal | wbi-signed |
 | searchUserVideos | user's uploaded videos | `mid` <- getUserProfile, `pn`, `ps` | title, play, duration, bvid, created | wbi-signed |
 | getRecommendedFeed | personalized feed | `ps` | bvid, title, play, uploader, duration | entry point |
+| listFavoriteFolders | list user's favorite folders | — | `data.list[].id` (folder media_id), title, media_count | entry point for favorite chains, requires auth |
 | likeVideo | like a video | `aid` <- getVideoDetail, `like`=1 | code, message | write, requires auth |
 | unlikeVideo | unlike a video | `aid` <- getVideoDetail | code, message | write, reverse of likeVideo |
-| addToFavorites | add video to favorites | `rid` (=aid) <- getVideoDetail, `add_media_ids` | code, message | write, requires auth |
-| removeFromFavorites | remove from favorites | `rid` (=aid) <- getVideoDetail, `del_media_ids` | code, message | write, reverse of addToFavorites |
+| addToFavorites | add video to favorites | `rid` (=aid) <- getVideoDetail, `add_media_ids` <- listFavoriteFolders.data.list[0].id | code, message | write, requires auth |
+| removeFromFavorites | remove from favorites | `rid` (=aid) <- getVideoDetail, `del_media_ids` <- listFavoriteFolders.data.list[0].id | code, message | write, reverse of addToFavorites |
 | followUploader | follow a user | `fid` (=mid) <- getUserProfile/getVideoDetail.owner.mid | code, message | write, requires auth |
 | unfollowUploader | unfollow a user | `fid` (=mid) <- getUserProfile/getVideoDetail.owner.mid | code, message | write, reverse of followUploader |
 
@@ -77,6 +84,12 @@ openweb bilibili exec likeVideo '{"aid": 123456, "like": 1}'
 
 # Unlike a video (requires auth + write permission)
 openweb bilibili exec unlikeVideo '{"aid": 123456}'
+
+# List your favorite folders (chain into addToFavorites)
+openweb bilibili exec listFavoriteFolders '{}'
+
+# Add a video to a favorite folder (chain media_id from listFavoriteFolders)
+openweb bilibili exec addToFavorites '{"rid": 123456, "add_media_ids": "12345"}'
 
 # Remove from favorites (requires auth + write permission)
 openweb bilibili exec removeFromFavorites '{"rid": 123456, "del_media_ids": "12345"}'
