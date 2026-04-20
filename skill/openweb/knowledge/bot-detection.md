@@ -141,6 +141,77 @@ data that programmatic fetch cannot replicate.
 
 -> See: adapter-recipes.md § Response Interception for the general pattern
 
+### Dispatch-Events Pattern (when the SPA itself solves a per-request challenge)
+
+A stronger variant of the intercept pattern: when the API call is gated
+by a **per-request token the SPA computes inline** (Sentinel chat-requirements,
+proof-of-work, Arkose, hCaptcha tokens minted on send), even
+`page.evaluate(fetch)` from the live page returns 403 because the
+challenge solver lives inside an event handler that only runs in
+response to real user input.
+
+**Symptom:** Both Node fetch AND `page.evaluate(fetch)` return identical
+`403` payloads ("Unusual activity detected", "Bot challenge failed",
+PoW-related error codes), even with a freshly-warmed page that just
+loaded successfully.
+
+**Fix:** Drive the SPA's own UI handler with synthesized input events,
+let the page solve the challenge, and intercept the resulting response
+off the wire. Avoid DOM clicks (brittle, can be detected) — use
+`focus()` + `page.keyboard.type` + `page.keyboard.press('Enter')`:
+
+```typescript
+// Listener registered BEFORE the keypress so an early response is not missed
+let bodyPromise: Promise<string> | null = null
+page.on('response', (resp) => {
+  if (!bodyPromise && /\/api\/send-endpoint/.test(resp.url())) {
+    bodyPromise = resp.text().catch(() => '')
+  }
+})
+
+// Focus + type + submit — no clicks
+await page.evaluate((sel) => (document.querySelector(sel) as HTMLElement)?.focus(), '#composer')
+await page.keyboard.type(prompt)
+await page.keyboard.press('Enter')
+
+// Wait for the SPA's own fetch to resolve
+const body = await bodyPromise
+```
+
+**Why this beats reimplementing the challenge:**
+- PoW algorithms rotate (OpenAI changes seed format / difficulty). Adapter
+  re-implementations break silently.
+- Tokens often bind to ephemeral browser state (canvas/WebGL fingerprint,
+  recent mouse events, IndexedDB entries) that's expensive or
+  impossible to reproduce outside the live page.
+- Intercept-only (Path B in adapter triage) doesn't work because tokens
+  are one-shot per request — observing one send doesn't unlock the next.
+
+**Pitfalls:**
+- Modern composers are often **ProseMirror / Lexical / Slate
+  `contenteditable` divs**, not `<input>` / `<textarea>`. `el.value = …`
+  is a no-op and `el.textContent = …` won't fire the input events the
+  framework listens for. Only `page.keyboard.type` (or a real
+  `dispatchEvent(new InputEvent(…))` sequence) updates editor state.
+- Listener URL match must exclude prepare/precheck endpoints — many SPAs
+  hit `/api/send/prepare` first to mint a per-turn token, then open the
+  real streaming endpoint. A naïve prefix match captures the prepare
+  response and misses the actual data.
+- Playwright's `Response.text()` resolves on response headers, not on
+  stream end. For SSE / chunked responses, prefer a CDP
+  `Network.dataReceived` listener buffered until `Network.loadingFinished`.
+- The site may also classify the response with a `403` that the runtime
+  treats as `needs_login` (`getHttpFailure(403)` in `src/lib/errors.ts`).
+  When this triggers an unwanted login cascade, fail fast with a
+  body-content classifier instead of looping.
+
+**Real example:** `src/sites/chatgpt/adapters/chatgpt-web.ts` — chatgpt's
+`POST /backend-api/f/conversation` is gated by a Sentinel
+chat-requirements token + SHA3-512 PoW. The adapter focuses
+`#prompt-textarea` (ProseMirror), types via `page.keyboard.type`, presses
+Enter, and intercepts the SSE response — no PoW reimplementation, no
+DOM clicks, no PoW seed/difficulty handling.
+
 ## Capture Strategy by Detection Level
 
 | Detection Level | Capture Approach |
