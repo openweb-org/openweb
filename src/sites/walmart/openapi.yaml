@@ -297,7 +297,8 @@ paths:
                         description: Formatted price (e.g. "$142.49").
                       imageUrl:
                         type: string
-                        description: Product thumbnail URL.
+                        nullable: true
+                        description: Product thumbnail URL (may be null).
   /internal/removeFromCart:
     post:
       operationId: removeFromCart
