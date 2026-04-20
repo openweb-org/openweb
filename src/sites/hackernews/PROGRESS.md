@@ -1,3 +1,25 @@
+## 2026-04-19 — HMAC unvote/delete ops
+
+**Context:** HN HMAC probe to add the missing inverse ops (`unvoteStory`, `deleteComment`) so every write op has a clean rollback partner. Per write-verify handoff §5.5, the HN HMAC was an unknown — fallback was to drop all 4 HN write ops if the token model was incompatible with verify's session.
+
+**Changes:**
+- 2 new ops: `unvoteStory` (hn0017), `deleteComment` (hn0018, `permission: delete`)
+- `addComment` adapter now returns `{ok, parent, id}` by re-fetching `/threads?id={user}` after POST and parsing the first `<tr class="athing comtr" id="...">` — enables `${prev.addComment.id}` chaining
+- `unvoteStory` scrapes `#un_{id}` href (same per-(user, item) HMAC as upvote, but only rendered while currently upvoted)
+- `deleteComment` does GET `/delete-confirm` → parse hidden hmac → POST `/xdelete` form-encoded
+- 2 chained pairs restored: `upvoteStory(order:1)` → `unvoteStory(order:2)`; `addComment(order:1)` → `deleteComment(order:2)`
+- DOC.md: documented HMAC scraping, `addComment` id-discovery via `/threads`, `/xdelete` endpoint pitfall
+
+**Verification:** `pnpm dev verify --site hackernews --browser --write` — **18/18 PASS** (14 reads + 4 writes)
+
+**Key discovery:** HN's delete endpoint is `/xdelete`, not `/delete`. The obvious URL returns 404; the canonical source is `form[action="/xdelete"]` inside `/delete-confirm`. Do not infer the submit endpoint from the path of the confirm step.
+
+**Pitfalls encountered:**
+- `safety` enum is `safe | caution` only (validator in `src/types/validator.ts`). `destructive` looks plausible but fails x-openweb validation, which then poisons every read op in the same site (all 14 returned the same enum error before this was fixed).
+- HN's POST `/comment` response gives no comment id, so chained delete required an extra `/threads` round-trip. The same pattern likely applies to other classic form-redirect sites where the create response is just an HTML redirect to the parent.
+
+---
+
 ## 2026-04-14: Transport upgrade — adapter read ops from page to node
 
 **What changed:**

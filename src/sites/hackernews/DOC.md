@@ -47,7 +47,9 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 | getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter node (Algolia) |
 | getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter node (Algolia) |
 | upvoteStory | upvote item | id | ok, id | adapter (page) |
-| addComment | post comment | parent, text | ok, parent | adapter (page) |
+| unvoteStory | reverse upvote | id | ok, id | adapter (page) |
+| addComment | post comment | parent, text | ok, parent, id | adapter (page) |
+| deleteComment | delete own comment | id | ok, id | adapter (page) |
 
 ## Quick Start
 
@@ -76,8 +78,14 @@ openweb hackernews exec getNewComments '{}'
 # Upvote a story (requires browser + login)
 openweb hackernews exec upvoteStory '{"id": 42407357}'
 
+# Reverse the upvote (only valid while currently upvoted)
+openweb hackernews exec unvoteStory '{"id": 42407357}'
+
 # Comment on a story (requires browser + login)
 openweb hackernews exec addComment '{"parent": 42407357, "text": "Great article!"}'
+
+# Delete your own comment (HN ~2-hour window)
+openweb hackernews exec deleteComment '{"id": 47830121}'
 ```
 
 ---
@@ -91,13 +99,47 @@ openweb hackernews exec addComment '{"parent": 42407357, "text": "Great article!
 - **Writes**: Form-based submission to `news.ycombinator.com` — no public write API
 
 ## Auth
-No auth for reads. Write operations (`upvoteStory`, `addComment`) require a logged-in cookie session in the browser. Vote link href contains auth token; comment form contains HMAC token.
+No auth for reads. Write operations (`upvoteStory`, `unvoteStory`, `addComment`, `deleteComment`) require a logged-in cookie session in the browser. HN issues per-(user, item) HMAC tokens that must be scraped from rendered HTML — there is no general-purpose CSRF cookie.
 
 ## Transport
 - **14 node ops total**: All read ops use node transport — no browser needed
   - 10 L1 declarative node ops: Direct HTTP to Algolia/Firebase
   - 4 adapter node ops: Node.js `fetch` to Algolia via adapter (parameterized queries that need value composition)
-- **2 adapter write ops**: `page.evaluate(fetch(...))` with DOM extraction for auth tokens
+- **4 adapter write ops**: `page.evaluate(fetch(...))` with DOM extraction for HMAC tokens (upvote/unvote/addComment/deleteComment)
+
+## Adapter Patterns
+
+### Per-(user, item) HMAC scraping for vote/unvote
+
+HN's vote and unvote links live next to the item in the listing/item HTML and embed a per-(user, item) HMAC `auth` token directly in the URL:
+
+```
+#up_{itemId}  → vote?id={itemId}&how=up&auth={hmac}&goto=...
+#un_{itemId}  → vote?id={itemId}&how=un&auth={hmac}&goto=...
+```
+
+The `auth` value is identical for both `how=up` and `how=un` on a given (user, item) pair, but only one of the two anchors is rendered at a time:
+- `#up_{id}` appears when the user has not voted (or after unvote)
+- `#un_{id}` appears only after a successful upvote
+
+Adapter strategy: navigate to `/item?id={itemId}`, then `document.querySelector('#up_{id}' | '#un_{id}')` and `fetch(href, { credentials: 'include' })`. No token caching — every call re-scrapes because the token is short-lived and per-page.
+
+### Comment form HMAC + new-comment id discovery
+
+`addComment` POSTs to `/comment` form-encoded with `parent`, `text`, `goto`, `hmac`. The `hmac` is a hidden `<input>` inside `form[action="comment"]` on the parent item page — separate from the vote HMAC.
+
+The POST response is an HTML redirect that does not include the new comment's id. To enable `${prev.addComment.id}` chaining, the adapter reads `#me` for the logged-in username, then fetches `/threads?id={username}` and parses the first `<tr class="athing comtr" id="...">` — the user's most recent comment. This is reliable as long as no other comment is posted by the same account between the two requests.
+
+### Delete flow uses `/xdelete`, not `/delete`
+
+`deleteComment` follows a confirm-then-submit pattern:
+
+1. `GET /delete-confirm?id={commentId}&goto=...` returns an HTML form with hidden `hmac`.
+2. `POST /xdelete` form-encoded with `id`, `goto`, `hmac`, `d=Yes`.
+
+**Pitfall:** the obvious URL `/delete` returns 404 — only `/xdelete` accepts the POST. The form's `action="/xdelete"` is the canonical source of truth; do not infer the endpoint from the path of the confirm step.
+
+The delete-confirm step also fails if the comment is outside HN's ~2-hour delete window (the form simply omits the `hmac` input), so the adapter throws a clear error in that case.
 
 ## Known Issues
 - Algolia data has ~30s delay from HN (near-real-time, not instant)

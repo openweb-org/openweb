@@ -11,15 +11,17 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 
 ### Upvote a story
 1. `getTopStories` → pick story → `objectID`
-2. `upvoteStory(id=objectID)` → upvotes the story (requires login)
+2. `upvoteStory(id=objectID)` → `{ok, id}` (requires login)
+3. `unvoteStory(id=${prev.upvoteStory.id})` → `{ok, id}` — reverses the upvote (only valid while upvoted)
 
 ### Comment on a story
 1. `getStoryDetail(id)` → `item.id`
-2. `addComment(parent=item.id, text)` → posts top-level comment (requires login)
+2. `addComment(parent=item.id, text)` → `{ok, parent, id}` — `id` is the new comment's id (requires login)
+3. `deleteComment(id=${prev.addComment.id})` → `{ok, id}` — must be within HN's ~2-hour delete window
 
 ### Reply to a comment
 1. `getStoryDetail(id)` → `children[]` → pick comment → `comment.id`
-2. `addComment(parent=comment.id, text)` → posts reply (requires login)
+2. `addComment(parent=comment.id, text)` → `{ok, parent, id}` — posts reply (requires login)
 
 ### Explore a user
 1. `getUserProfile(id)` → karma, created, about
@@ -51,7 +53,9 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 | getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter (Algolia) |
 | getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter (Algolia) |
 | upvoteStory | upvote item | id <- feeds/getStoryDetail | ok, id | adapter (page) |
-| addComment | post comment | parent <- getStoryDetail, text | ok, parent | adapter (page) |
+| unvoteStory | reverse upvote | id <- upvoteStory | ok, id | adapter (page) |
+| addComment | post comment | parent <- getStoryDetail, text | ok, parent, id | adapter (page) |
+| deleteComment | delete own comment | id <- addComment | ok, id | adapter (page); ~2-hour window |
 
 ## Raw Algolia wire shape
 
@@ -122,6 +126,12 @@ openweb hackernews exec getNewComments '{}'
 # Upvote a story (requires browser + login)
 openweb hackernews exec upvoteStory '{"id": 42407357}'
 
+# Reverse the upvote (only valid while currently upvoted)
+openweb hackernews exec unvoteStory '{"id": 42407357}'
+
 # Comment on a story (requires browser + login)
 openweb hackernews exec addComment '{"parent": 42407357, "text": "Great article!"}'
+
+# Delete your own comment (HN ~2-hour delete window)
+openweb hackernews exec deleteComment '{"id": 47830121}'
 ```
