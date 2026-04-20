@@ -402,8 +402,10 @@ const addComment: Handler = async (page, params, helpers) => {
 
   await ensureWatchPage(page, videoId)
 
-  // Comments lazy-load — must scroll into view before the section renders.
-  await page.evaluate(() => window.scrollTo(0, 700))
+  // Comments are lazy-loaded — scroll the <ytd-comments> container into view
+  // (layout-independent) to trigger hydration of the placeholder + thread list.
+  await page.waitForSelector('ytd-comments', { timeout: 15_000, state: 'attached' })
+  await page.evaluate(() => document.querySelector('ytd-comments')?.scrollIntoView({ block: 'start' }))
   await page.waitForSelector('ytd-comments #placeholder-area', { timeout: 20_000 })
 
   const cap = captureResponse(page, /\/youtubei\/v1\/comment\/create_comment(?:\?|$)/)
@@ -437,30 +439,42 @@ const addComment: Handler = async (page, params, helpers) => {
       }
     }
 
-    // The commentId returned in actionResults.key is an internal action ID,
-    // not the URL-form Ug... ID we need for deleteComment. The SPA renders
-    // the new comment optimistically at the top of the list — read its
-    // commentId from the DOM. Wait up to 10s for the optimistic render.
+    // Wait for the SERVER-CONFIRMED render in the DOM, then read the canonical
+    // commentId from the comment's `lc=` anchor href. The SPA renders the new
+    // comment optimistically with a client-side id, then swaps in the
+    // server-assigned id once /create_comment confirms — so reading from the
+    // anchor a beat after the response gives the id that lc=<id> can actually
+    // resolve. (Tried `actionResults[0].key` and `properties.commentId` from the
+    // response; both produced ids that lc= deep-link did not recognize.)
     let commentId = ''
     const start = Date.now()
-    while (!commentId && Date.now() - start < 10_000) {
+    while (!commentId && Date.now() - start < 15_000) {
       commentId = await page.evaluate((needle) => {
         const threads = Array.from(document.querySelectorAll('ytd-comment-thread-renderer'))
         for (const t of threads) {
           const content = t.querySelector('#content-text')?.textContent?.trim() || ''
           if (!content.includes(needle)) continue
-          const m = (t as HTMLElement).outerHTML.match(/Ug[\w-]{18,30}/)
-          if (m) return m[0]
+          const anchor = t.querySelector('a[href*="lc="]')
+          const m = (anchor?.getAttribute('href') || '').match(/[?&]lc=([^&]+)/)
+          if (m) return m[1]
         }
         return ''
       }, text.slice(0, 80))
       if (!commentId) await page.waitForTimeout(500)
     }
+    // Last-resort fallback: read whatever commentId the response carries (may
+    // be client-optimistic, may not chain to deleteComment but won't strand
+    // callers who only need an opaque handle).
     if (!commentId) {
-      // Fallback: take the response's first Ug... string even if non-canonical
-      commentId = deepFindString(body, /^Ug[\w-]{10,}/)
+      const mutations = dig(body, 'frameworkUpdates', 'entityBatchUpdate', 'mutations') as Array<Record<string, unknown>> | undefined
+      if (Array.isArray(mutations)) {
+        for (const m of mutations) {
+          const props = dig(m, 'payload', 'commentEntityPayload', 'properties') as Record<string, unknown> | undefined
+          if (props?.commentId) { commentId = String(props.commentId); break }
+        }
+      }
     }
-    if (!commentId) throw errors.retriable('Could not extract commentId — comment may not have rendered yet')
+    if (!commentId) throw errors.retriable('Could not extract commentId — comment did not render in DOM and response had no entity payload')
     return { videoId, commentId, text, author: '' }
   } finally {
     cap.off()
@@ -475,33 +489,39 @@ const deleteComment: Handler = async (page, params, helpers) => {
   if (!videoId) throw errors.missingParam('videoId')
   if (!commentId) throw errors.missingParam('commentId')
 
-  // Use YT's `lc=` deep-link — it pins the target comment to the top of the
-  // section regardless of pagination/sort, so we don't have to hunt for it.
+  // YT's `lc=<commentId>` pins the comment to the top — but the comments
+  // section is lazy-loaded on scroll, so a single scrollIntoView on the
+  // <ytd-comments> container is required to trigger hydration. (Earlier code
+  // used `scrollTo(0, 700)` which fell short of the comments section on this
+  // layout — anchored scrollIntoView is layout-independent.)
   await page.goto(`https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-  await page.waitForTimeout(2000)
-  await page.evaluate(() => window.scrollTo(0, 700))
-  await page.waitForSelector('ytd-comments ytd-comment-thread-renderer', { timeout: 20_000 })
+  await page.waitForSelector('ytd-comments', { timeout: 15_000, state: 'attached' })
+  // Scroll the comments container into view to trigger lazy-hydration. Use
+  // both scrollIntoView (layout-independent) and a window scroll to handle
+  // virtualized layouts where the container itself is offscreen.
+  await page.evaluate(() => {
+    const c = document.querySelector('ytd-comments') as HTMLElement | null
+    c?.scrollIntoView({ block: 'start' })
+  })
+  await page.waitForTimeout(1500)
+  await page.evaluate(() => {
+    const c = document.querySelector('ytd-comments') as HTMLElement | null
+    if (c) {
+      const y = c.getBoundingClientRect().top + window.scrollY
+      window.scrollTo(0, Math.max(0, y - 80))
+    }
+  })
+  await page.waitForSelector('ytd-comments ytd-comment-thread-renderer', { timeout: 25_000, state: 'attached' })
 
-  // Newly-posted comments may not appear immediately — poll for the target
-  // commentId, scrolling further as needed to trigger pagination. Skip pinned
-  // comments (the creator's pinned comment is rendered first and matches
-  // unrelated outerHTML strings); prefer non-pinned threads whose ytd-comment-view-model
-  // contains the commentId.
+  // Match by canonical lc= anchor (the form addComment now returns and getComments
+  // exposes); fall back to outerHTML substring for safety.
   let thread: Awaited<ReturnType<Page['$']>> = null
   const findStart = Date.now()
   while (Date.now() - findStart < 20_000) {
     const handle = await page.evaluateHandle((id) => {
       const threads = Array.from(document.querySelectorAll('ytd-comment-thread-renderer'))
-      // First pass: thread whose comment-view-model is NOT pinned and whose outerHTML contains id
-      let match = threads.find(t => {
-        const view = t.querySelector('ytd-comment-view-model')
-        if (!view) return false
-        if (view.hasAttribute('pinned')) return false
-        return (t as HTMLElement).outerHTML.includes(id)
-      })
-      // Fallback: any thread containing the id
-      if (!match) match = threads.find(t => (t as HTMLElement).outerHTML.includes(id))
-      if (match) (match as HTMLElement).scrollIntoView({ block: 'center' })
+      const byAnchor = threads.find(t => Array.from(t.querySelectorAll('a[href*="lc="]')).some(a => (a.getAttribute('href') || '').includes(`lc=${id}`)))
+      const match = byAnchor || threads.find(t => (t as HTMLElement).outerHTML.includes(id))
       return match || null
     }, commentId)
     const el = handle.asElement()
