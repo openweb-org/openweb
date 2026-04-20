@@ -268,3 +268,17 @@ Use this for patterns that are **unique to a site** and not covered by the gener
 - **Site layer:** Preferred for site-specific patterns. Check page URL or title inside the adapter's operation handler or `navigateTo()`.
 
 -> See: `src/runtime/bot-detect.ts` (generic layer implementation)
+
+## Diagnostic pitfall: "Target page/context/browser has been closed"
+
+This Playwright error from a clean isolated retest does **not** automatically mean a `browser-fetch-executor.ts` race or a `page-candidates.ts` lifecycle bug. The most common real cause is **orphan-Chrome split-brain**: a prior `verify` loop hit a wrapper timeout (`/tmp/run_with_timeout.sh`) that killed the parent `pnpm` PID but left the spawned Chrome on port 9222. The next session's page-candidates picks the wrong context and `page.evaluate` fails mid-call.
+
+Before classifying as a runtime bug, always cycle:
+
+```bash
+openweb browser stop
+pkill -9 -f openweb-profile-
+openweb browser start
+```
+
+Then re-run the failing op in isolation. If it still fails, then investigate `browser-fetch-executor.ts` / `page-candidates.ts`. See `doc/todo/write-verify/handoff5.md` §3.2 retraction for a worked example (walmart/searchProducts + xiaohongshu/getRelatedNotes both turned out to be this, not a runtime bug).
