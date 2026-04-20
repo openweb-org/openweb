@@ -27,3 +27,11 @@
 **Changes:** Added `examples/markAsRead.example.json` with `read: true` (idempotent toggle — safe to replay against an already-read chat). Adapter and openapi unchanged. (commit 0a05cf8)
 **Verification:** 1/1 PASS — `pnpm dev verify whatsapp --write --browser --ops markAsRead`.
 **Key discovery:** When seeding a new write op into a site, the example fixture is part of the deliverable — without it, `verify --write` reports green but never actually exercises the op.
+
+## 2026-04-19 — Fixture: sendMessage write-op verify
+
+**Context:** `sendMessage` was defined in `openapi.yaml` and documented in SKILL.md/DOC.md, but no example fixture existed — `verify --write --ops sendMessage` reported "0/0 ops" (silently skipped). Same root cause as the 2026-04-18 `markAsRead` gap: write op shipped without its example.
+**Changes:** Added `examples/sendMessage.example.json` targeting `13472225726@c.us` (US +1 347-222-5726 — publicly-known scam number used as a freely-sendable verify sink). DOC.md gained a `## Verify Fixtures` section documenting the choice so future maintainers don't mistake the number for PII or a real contact. Message body uses the `${now}` template helper for per-run uniqueness (same pattern as x `createTweet`).
+**Verification:** 1/1 PASS — `pnpm dev verify whatsapp --ops sendMessage --browser --write`.
+**Key discovery:** `sendTextMsgToChat` returns `{messageSendResult, t}` which the adapter projects to `{success, timestamp}` — no serialized message id surfaces. That blocks an `order:1`/`order:2` chain into `deleteMessage` via `${prev.sendMessage.messageId}`; the chain would require widening the adapter response shape (out of scope for this fixture-only fix). The send is acceptable standalone because the target is a scam number with no real recipient impact.
+**Pitfalls encountered:** First draft used `to: "+13472225726"` (plain phone format, per the handoff note), but the openapi schema requires `chatId` in WhatsApp's `<digits>@c.us` form — handoff notation was non-canonical.
