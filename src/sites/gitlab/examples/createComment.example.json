@@ -2,6 +2,7 @@
   "operation_id": "createComment",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 1,
   "cases": [
     {
       "input": { "projectId": 81206763, "issueIid": 1, "body": "Test comment from openweb" },
