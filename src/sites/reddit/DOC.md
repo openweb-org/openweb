@@ -136,3 +136,4 @@ Node transport — all operations work via direct HTTP fetch.
 - Some subreddits may be private or quarantined (returns 403/451)
 - Response size can be large (100KB+ for feeds, 200KB+ for comment threads)
 - Reddit API traditionally expects `application/x-www-form-urlencoded`; JSON requestBody may need adapter
+- **`createComment` fixture rot:** the `thing_id` decays once the target post is deleted, locked, or archived (Reddit auto-archives at 6 months). Refresh by sourcing a recent active thread via `openweb reddit getSubredditPosts '{"subreddit":"learnprogramming","sort":"new"}'` and pinning the freshest non-stickied `t3_*` ID. Per `feedback_hn_comment_text.md`, the comment text must be substantive and on-topic — placeholder strings like "test xxx" are removed by Reddit's spam filter without an error.

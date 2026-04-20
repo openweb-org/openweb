@@ -1,3 +1,10 @@
+## 2026-04-20 — Fixture refresh (handoff5)
+
+**Context:** `createComment` failing in handoff4 because pinned `thing_id` (`t3_1jzzq4z`, then `t3_1si747w`) had been deleted/archived upstream. Reddit silently spam-filters stale-thread comments without surfacing a clean error.
+**Changes:** Rotated `createComment.example.json` `thing_id` to live r/learnprogramming thread `t3_1sqc9f1` and replaced the comment body with a 60-word substantive on-topic reply per `feedback_hn_comment_text.md`. Live thread sourced via `openweb reddit getSubredditPosts`. (commit 1982640)
+**Verification:** `pnpm dev verify reddit --browser --write` 16/16 PASS.
+**Key discovery:** `t3_*` IDs in fixtures should be re-derived from `getSubredditPosts(sort:new)` rather than hand-pinned, but cross-op chaining isn't wired here yet — documenting the refresh recipe in DOC.md is the cheap fix.
+
 ## 2026-04-18 — Write-op verify fix
 **Context:** `vote` and `savePost` were defined in `openapi.yaml` and have read→write workflows in SKILL.md, but had no `example.json` fixtures. Verify silently skipped them ("0/0 ops") because `--ops <name>` filter found no matching example file.
 **Changes:** Added `examples/vote.example.json` (id=t3_1si747w, dir=1) and `examples/savePost.example.json` (id=t3_1si747w) — both target the test post owned by the verify account, consistent with other reddit write ops. (commit b8d1055)
