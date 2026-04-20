@@ -263,8 +263,7 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
   if (portOwner !== null && portOwner !== existingPid) {
     throw new OpenWebError({
       error: 'execution_failed', code: 'EXECUTION_FAILED',
-      message: `Port ${port} is already bound by external process PID ${portOwner}. ` +
-        `An untracked Chrome on the same port causes session split-brain.`,
+      message: `Port ${port} is already bound by external process PID ${portOwner}. An untracked Chrome on the same port causes session split-brain.`,
       action: `Kill it (\`kill ${portOwner}\`) or set a different port in ${openwebHome()}/config.json under "browser.port", then retry.`,
       retriable: false, failureClass: 'fatal',
     })

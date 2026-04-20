@@ -1,5 +1,5 @@
 {
-  "generated": "2026-04-17",
+  "generated": "2026-04-20",
   "note": "Baseline pattern counts per site. See scripts/adapter-pattern-report.ts — ratcheting down is the unit of forward progress for normalize-adapter. Refresh via --write-baseline only after counts legitimately drop.",
   "counts": {
     "airbnb": {
@@ -18,9 +18,14 @@
       "page_goto": 3,
       "query_selector": 56
     },
+    "chatgpt": {
+      "page_goto": 1,
+      "page_on_response": 1,
+      "query_selector": 2
+    },
     "costco": {
-      "page_goto": 2,
-      "query_selector": 1
+      "page_goto": 3,
+      "query_selector": 3
     },
     "craigslist": {
       "page_goto": 1,
@@ -30,6 +35,10 @@
       "page_goto": 2,
       "page_on_response": 2,
       "query_selector": 1
+    },
+    "github": {
+      "page_goto": 5,
+      "query_selector": 8
     },
     "glassdoor": {
       "page_goto": 2,
@@ -54,8 +63,8 @@
       "query_selector": 46
     },
     "hackernews": {
-      "page_goto": 2,
-      "query_selector": 3
+      "page_goto": 4,
+      "query_selector": 5
     },
     "homedepot": {
       "page_goto": 1,
@@ -127,17 +136,20 @@
       "page_goto": 1
     },
     "walmart": {
-      "next_data": 4
+      "page_goto": 1,
+      "next_data": 7
     },
     "x": {
       "page_goto": 4,
-      "query_selector": 1
+      "query_selector": 2
     },
     "xiaohongshu": {
       "page_goto": 12
     },
     "youtube": {
-      "page_goto": 2
+      "page_goto": 4,
+      "page_on_response": 1,
+      "query_selector": 16
     },
     "zillow": {
       "page_goto": 4,

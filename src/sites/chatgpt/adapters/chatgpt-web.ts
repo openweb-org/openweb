@@ -101,7 +101,7 @@ async function sendMessage(
     const navStart = Date.now()
     while (!conversationId && Date.now() - navStart < 10_000) {
       const m = page.url().match(CONVERSATION_URL_MATCH)
-      if (m) { conversationId = m[1]!; break }
+      if (m?.[1]) { conversationId = m[1]; break }
       await new Promise((r) => setTimeout(r, 250))
     }
 
