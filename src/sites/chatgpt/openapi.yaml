@@ -410,19 +410,32 @@ paths:
                             type: string
                         qualitative_properties:
                           type: object
-  /f/conversation:
+  /internal/sendMessage:
     post:
       operationId: sendMessage
-      summary: Send a message and get streaming response (SSE)
+      summary: Send a message via the chatgpt.com SPA and return the assembled assistant reply
+      description: |
+        Driven by the `chatgpt-web` adapter. The endpoint
+        `/backend-api/f/conversation` is gated by a per-request Sentinel
+        chat-requirements token and a SHA3-512 proof-of-work challenge
+        bound to the browser fingerprint, so direct HTTP cannot replay it.
+        The adapter types the prompt into the composer and lets the SPA
+        solve the challenge, then intercepts the SSE response off the wire.
       x-openweb:
         permission: write
+        transport: page
+        adapter:
+          name: chatgpt-web
+          operation: sendMessage
+        page_plan:
+          entry_url: https://chatgpt.com/
+          ready: '#prompt-textarea'
         build:
           stable_id: cg0005
           tool_version: 2
           verified: false
-          signals: []
-      parameters:
-        - $ref: '#/components/parameters/UserAgent'
+          signals:
+            - adapter-verified
       requestBody:
         required: true
         content:
@@ -430,60 +443,30 @@ paths:
             schema:
               type: object
               required:
-                - action
-                - messages
-                - parent_message_id
-                - model
+                - prompt
               properties:
-                action:
+                prompt:
                   type: string
-                  enum:
-                    - next
-                  description: Always "next" for new messages.
-                messages:
-                  type: array
-                  items:
-                    type: object
-                    required:
-                      - id
-                      - author
-                      - content
-                    properties:
-                      id:
-                        type: string
-                        description: UUID for the message.
-                      author:
-                        type: object
-                        properties:
-                          role:
-                            type: string
-                            enum:
-                              - user
-                      content:
-                        type: object
-                        properties:
-                          content_type:
-                            type: string
-                            enum:
-                              - text
-                          parts:
-                            type: array
-                            items:
-                              type: string
-                parent_message_id:
-                  type: string
-                  description: Parent node ID from getConversation current_node, or UUID for new conversations.
-                model:
-                  type: string
-                  description: Model slug from getModels (e.g. "gpt-4o").
-                conversation_id:
-                  type: string
-                  description: Existing conversation UUID. Omit for new conversations.
+                  description: User prompt text. The adapter selects the currently active model and conversation; pass an empty `conversation_id` to start a new chat (default).
       responses:
         '200':
-          description: Server-Sent Events stream with message deltas.
+          description: Assembled reply plus the new conversation id.
           content:
-            text/event-stream:
+            application/json:
               schema:
-                type: string
-                description: SSE stream with delta events containing incremental message content.
+                type: object
+                required:
+                  - conversation_id
+                  - response_text
+                properties:
+                  conversation_id:
+                    type:
+                      - string
+                      - 'null'
+                    description: New conversation UUID (from the post-send page URL).
+                  response_text:
+                    type: string
+                    description: Assistant reply assembled from SSE delta events.
+                  sse_event_count:
+                    type: integer
+                    description: Number of SSE `data:` frames received (diagnostic).

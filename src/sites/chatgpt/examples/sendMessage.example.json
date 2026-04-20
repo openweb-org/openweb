@@ -5,19 +5,7 @@
   "cases": [
     {
       "input": {
-        "action": "next",
-        "messages": [
-          {
-            "id": "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
-            "author": { "role": "user" },
-            "content": {
-              "content_type": "text",
-              "parts": ["verify ping ${now}"]
-            }
-          }
-        ],
-        "parent_message_id": "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb",
-        "model": "gpt-4o"
+        "prompt": "verify ping ${now}"
       },
       "assertions": {
         "status": 200,
