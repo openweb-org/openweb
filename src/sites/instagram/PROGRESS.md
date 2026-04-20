@@ -1,3 +1,10 @@
+## 2026-04-20 — 24/24 PASS confirmed after cookie refresh (handoff5)
+
+**Context:** Handoff4 read-side regressed because the orphan-Chrome cleanup gap from §3.1 left several ops hitting a dead browser handle. Write-side already-recovered ops from earlier sessions remained intact.
+**Changes:** None to spec or adapter. Reads passed cleanly after `pkill -9 -f openweb-profile-` + `openweb browser start` (fresh-cookie cascade from default Chrome profile, same recipe as bluesky/x).
+**Verification:** `pnpm dev verify instagram --browser --write` 24/24 PASS — all 12 reads + 12 writes.
+**Key discovery:** Instagram is now hermetic across both read and write surfaces; no fixture rot or endpoint drift surfaced this round. The single recurring failure mode is the wrapper-leak orphan-Chrome problem at the verify-framework layer (handoff5 §5.1), not anything site-specific.
+
 ## 2026-04-19 — createComment/deleteComment Recovery (12/12 PASS)
 
 **Context:** From handoff2 §1, `createComment`/`deleteComment` (`*.example.json.skip`) initially looked like upstream endpoint drift — `createComment` returned `{id, status:"ok"}` but the paired `deleteComment` 404'd consistently.
