@@ -9,7 +9,7 @@ pnpm install && pnpm build
 pnpm test              # run all tests
 pnpm lint              # biome lint
 pnpm dev sites         # list available sites
-pnpm dev <site> exec <op> '{...}'   # execute an operation
+pnpm dev <site> <op> '{...}'   # execute an operation
 ```
 
 ## Documentation
@@ -18,8 +18,7 @@ pnpm dev <site> exec <op> '{...}'   # execute an operation
 - **Architecture & system docs:** `doc/main/README.md`
 - **Dev workflow & guides:** `doc/dev/development.md`
 - **Progress history:** `doc/PROGRESS.md`
-- **Active work:** `doc/todo/`
-- **Historical docs:** `doc/archive/`
+- **Project docs:** `doc/todo/` (active work) and `doc/archive/` (historical docs), symlinked from the openweb-docs repo, commit separately
 
 ## Documentation Sync
 
