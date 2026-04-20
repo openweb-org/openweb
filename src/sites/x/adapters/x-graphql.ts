@@ -41,7 +41,6 @@ const OP_NAME: Record<string, string> = {
   getNotifications: 'notifications/all',  // REST v2
   getUserLikes: 'Likes',
   getBookmarks: 'Bookmarks',
-  deleteDM: 'DMMessageDeleteMutation',
 }
 
 const BEARER = 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA'
@@ -671,16 +670,6 @@ const OPERATIONS: Record<string, Handler> = {
     })
     return executeRest(page, 'POST', '/i/api/1.1/dm/new2.json',
       'application/json', body, errors)
-  },
-
-  deleteDM: async (page, params, helpers) => {
-    const { errors } = helpers
-    const messageId = String(params.messageId ?? '')
-    if (!messageId) throw errors.missingParam('messageId')
-    return executeGraphqlPost(page, 'DMMessageDeleteMutation', {
-      messageId,
-      requestId: `${Date.now()}`,
-    }, {}, errors)
   },
 
   getNotifications: async (page, params, helpers) => {

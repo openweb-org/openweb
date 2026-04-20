@@ -1168,40 +1168,6 @@ paths:
               schema:
                 type: object
 
-  /internal/deleteDM:
-    post:
-      operationId: deleteDM
-      summary: "Delete a direct message"
-      x-openweb:
-        permission: write
-        safety: caution
-        build:
-          stable_id: a5b6c7d8e9f01b32
-          tool_version: 2
-          signals: [adapter-verified]
-        adapter:
-          name: x-graphql
-          operation: deleteDM
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - messageId
-              properties:
-                messageId:
-                  type: string
-                  description: DM message ID to delete
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-
   /internal/getNotifications:
     get:
       operationId: getNotifications
