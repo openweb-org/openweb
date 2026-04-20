@@ -102,23 +102,23 @@ describe('permission gate', () => {
     })
   })
 
-  it('allows write operations when site override permits', async () => {
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ cart_id: 'abc', total_cart_item_quantity: 1 }), {
-        status: 201,
-        headers: { 'content-type': 'application/json' },
+  it('allows write operations when site override permits (gated by TEST_BARRIER)', async () => {
+    // The test asserts the gate let the call through, not that a real write succeeded.
+    // Under VITEST, the executor refuses to dispatch any write/delete/transact op — so
+    // reaching TEST_BARRIER proves the permission check passed. If the gate had blocked,
+    // we'd see permission_required first.
+    await expect(
+      executeOperation('target', 'addToCart', { cart_item: { tcin: '91252434' } }, {
+        permissionsConfig: {
+          defaults: defaultPermissions.defaults,
+          sites: { 'target': { write: 'allow' } },
+        },
       }),
-    ) as unknown as typeof fetch
-
-    const result = await executeOperation('target', 'addToCart', { cart_item: { tcin: '91252434' } }, {
-      fetchImpl: fetchMock,
-      permissionsConfig: {
-        defaults: defaultPermissions.defaults,
-        sites: { 'target': { write: 'allow' } },
+    ).rejects.toMatchObject({
+      payload: {
+        code: 'TEST_BARRIER',
       },
     })
-
-    expect(result.status).toBe(201)
   })
 
   it('allows read operations on default config', async () => {

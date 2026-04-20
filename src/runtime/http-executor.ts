@@ -114,6 +114,21 @@ export async function executeOperation(
     throw OpenWebError.permissionRequired(site, operationId, category)
   }
 
+  // Test-environment barrier: refuse to dispatch any state-changing operation under vitest.
+  // Why: not all transports honor `fetchImpl` (page/node bypass it), so a "mocked" test could
+  // execute a real write against the user's authenticated session. A test asserting allow-path
+  // should expect this barrier — its presence proves the gate let the call through.
+  if (process.env.VITEST && (category === 'write' || category === 'delete' || category === 'transact')) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'TEST_BARRIER',
+      message: `Refusing to dispatch ${category} operation ${site}/${operationId} under VITEST. Tests must not execute live state-changing calls.`,
+      action: 'Rewrite the test to assert against TEST_BARRIER as proof the permission gate let the call through, instead of expecting a fake success response.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+
   let status: number
   let body: unknown
   let responseHeaders: Record<string, string> = {}

@@ -5,6 +5,7 @@ export type OpenWebErrorCode =
   | 'TOOL_NOT_FOUND'
   | 'INVALID_PARAMS'
   | 'AUTH_FAILED'
+  | 'TEST_BARRIER'
 
 export type FailureClass =
   | 'needs_browser'
