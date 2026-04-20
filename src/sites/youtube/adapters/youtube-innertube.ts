@@ -72,15 +72,34 @@ function computeAuthHeader(cookieValue: string, prefix: string, origin: string):
   return `${prefix} ${ts}_${hash}_u`
 }
 
-/** Get SAPISID cookie from browser context for authenticated requests. */
+/**
+ * Get SAPISID cookie from browser context for authenticated requests.
+ *
+ * SAPISID lives on .google.com (Google SSO scope), NOT on .youtube.com — querying
+ * only youtube.com misses it. __Secure-3PAPISID is the third-party variant that's
+ * also set on .youtube.com so it actually rides along on requests to youtube.com.
+ *
+ * The YouTube SPA sends a multi-hash Authorization header so the server can pick
+ * whichever prefix matches a cookie it can see in the request. We do the same:
+ * concatenate hashes for every cookie we find so the server picks the matching
+ * one (e.g. SAPISID3PHASH validates against the .youtube.com __Secure-3PAPISID
+ * that the browser actually sends with the cross-origin fetch).
+ */
 async function getSapisidAuth(page: Page): Promise<string | undefined> {
   try {
-    const cookies = await page.context().cookies('https://www.youtube.com')
+    const ctx = page.context()
+    const cookies = [
+      ...(await ctx.cookies('https://www.google.com')),
+      ...(await ctx.cookies('https://www.youtube.com')),
+    ]
+    const parts: string[] = []
     const sapisid = cookies.find(c => c.name === 'SAPISID')
-    if (sapisid) return computeAuthHeader(sapisid.value, 'SAPISIDHASH', 'https://www.youtube.com')
+    if (sapisid) parts.push(computeAuthHeader(sapisid.value, 'SAPISIDHASH', 'https://www.youtube.com'))
+    const sapisid1p = cookies.find(c => c.name === '__Secure-1PAPISID')
+    if (sapisid1p) parts.push(computeAuthHeader(sapisid1p.value, 'SAPISID1PHASH', 'https://www.youtube.com'))
     const sapisid3p = cookies.find(c => c.name === '__Secure-3PAPISID')
-    if (sapisid3p) return computeAuthHeader(sapisid3p.value, 'SAPISID3PHASH', 'https://www.youtube.com')
-    return undefined
+    if (sapisid3p) parts.push(computeAuthHeader(sapisid3p.value, 'SAPISID3PHASH', 'https://www.youtube.com'))
+    return parts.length ? parts.join(' ') : undefined
   } catch {
     return undefined
   }
