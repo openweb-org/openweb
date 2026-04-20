@@ -1,0 +1,16 @@
+{
+  "operation_id": "sendMessage",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "chatId": "13472225726@c.us",
+        "message": "verify ping ${now}"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

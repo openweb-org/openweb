@@ -95,6 +95,9 @@ QR code scan in headed browser. Session persists in browser profile. No standard
   - **Chat collection probe:** checks `ChatCollection.getModelsArray().length > 0` — server-derived auth validity, not just credential presence. Throws `errors.needsLogin()` on empty collection.
 - **Trade-off:** `ensureReady` runs on every `run()` call (vs once at init). Cost is two short `page.evaluate` calls — cheap, and eliminates the race where ops dispatched before modules were ready.
 
+## Verify Fixtures
+- **`sendMessage` target `13472225726@c.us`**: this is a publicly-known scam number (US +1 347-222-5726) used as a sink for verify runs. Not PII — chosen because messages can be sent freely without harming a real contact, and there is no inverse `unsendMessage` for newly-sent messages (deleteMessage requires a `messageId` not returned by `sendTextMsgToChat`'s round-trip).
+
 ## Known Issues
 - **QR scan required**: User must scan QR code in managed browser before operations work.
 - **Binary WS**: Standard capture produces 0 usable API samples — adapter-only site.
