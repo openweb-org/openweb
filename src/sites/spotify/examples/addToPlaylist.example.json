@@ -5,7 +5,7 @@
   "cases": [
     {
       "input": {
-        "playlistId": "37i9dQZF1DXcBWIGoYBM5M",
+        "playlistId": "0hIjqrSiVWJX35wl8ob27O",
         "trackUris": ["spotify:track:4u7EnebtmKWzUH433cf5Qv"]
       },
       "assertions": { "status": 200, "response_schema_valid": true }

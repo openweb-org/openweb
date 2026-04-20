@@ -87,6 +87,11 @@ async function extractToken(page: Page, errors: ErrorHelpers): Promise<{ accessT
     throw errors.apiError('Spotify', 'Could not extract access token from web player')
   }
 
+  // Wait for the page to settle after the search-page navigation so the
+  // next page.evaluate doesn't lose its execution context mid-fetch.
+  await page.waitForLoadState('domcontentloaded').catch(() => {})
+  await page.waitForTimeout(500)
+
   return { accessToken, clientToken }
 }
 
@@ -227,6 +232,44 @@ async function spotifyApiFetch(
 // operationName.
 const LIBRARY_MUTATION_HASH = '7c5a69420e2bfae3da5cc4e14cbc8bb3f6090f80afc00ffc179177f19be3f33d'
 
+/** Spclient is the WebPlayer's "writable" namespace for playlists/library —
+ *  takes the same Bearer + client-token, but the api gateway rejects
+ *  api.spotify.com mutations from WebPlayer tokens with 429. Mirrors what
+ *  the live UI does when you click Create / Add / Remove in a playlist. */
+async function spclientFetch(
+  page: Page,
+  method: string,
+  url: string,
+  accessToken: string,
+  clientToken: string,
+  body?: string,
+): Promise<{ status: number; text: string }> {
+  return page.evaluate(
+    async (args: { method: string; url: string; accessToken: string; clientToken: string; body?: string }) => {
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 15_000)
+      try {
+        const resp = await fetch(args.url, {
+          method: args.method,
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${args.accessToken}`,
+            'client-token': args.clientToken,
+            'app-platform': 'WebPlayer',
+          },
+          body: args.body,
+          signal: ctrl.signal,
+        })
+        return { status: resp.status, text: await resp.text() }
+      } finally {
+        clearTimeout(timer)
+      }
+    },
+    { method, url, accessToken, clientToken, body },
+  )
+}
+
 async function libraryMutation(
   page: Page,
   operationName: 'addToLibrary' | 'removeFromLibrary',
@@ -291,33 +334,81 @@ const WRITE_OPERATIONS: Record<string, WriteHandler> = {
   async addToPlaylist(page, params, accessToken, clientToken, errors) {
     const playlistId = params.playlistId as string
     const trackUris = params.trackUris as string[]
-    const body: Record<string, unknown> = { uris: trackUris }
-    if (params.position !== undefined) body.position = params.position
-    const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
-    const result = await spotifyApiFetch(page, 'POST', url, accessToken, clientToken, JSON.stringify(body))
+    // spclient changes endpoint — confirmed via direct probe of the SPA's
+    // own POST. The extra `attributes` Spotify's UI sends are optional.
+    const url = `https://spclient.wg.spotify.com/playlist/v2/playlist/${encodeURIComponent(playlistId)}/changes`
+    const addOp: Record<string, unknown> = {
+      items: trackUris.map((uri) => ({ uri })),
+    }
+    if (params.position !== undefined) addOp.fromIndex = params.position
+    else addOp.addLast = true
+    const body = JSON.stringify({
+      deltas: [{
+        ops: [{ kind: 'ADD', add: addOp }],
+        info: { source: { client: 'WEBPLAYER' } },
+      }],
+    })
+    const result = await spclientFetch(page, 'POST', url, accessToken, clientToken, body)
     if (result.status >= 400) throw errors.httpError(result.status)
-    return JSON.parse(result.text)
+    const json = JSON.parse(result.text || '{}') as { revision?: string }
+    return { snapshot_id: json.revision ?? '' }
   },
   async removeFromPlaylist(page, params, accessToken, clientToken, errors) {
     const playlistId = params.playlistId as string
     const trackUris = params.trackUris as string[]
-    const body = { tracks: trackUris.map((uri) => ({ uri })) }
-    const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
-    const result = await spotifyApiFetch(page, 'DELETE', url, accessToken, clientToken, JSON.stringify(body))
+    const url = `https://spclient.wg.spotify.com/playlist/v2/playlist/${encodeURIComponent(playlistId)}/changes`
+    const body = JSON.stringify({
+      deltas: [{
+        ops: [{
+          kind: 'REM',
+          rem: {
+            items: trackUris.map((uri) => ({ uri })),
+            itemsAsKey: true,
+          },
+        }],
+        info: { source: { client: 'WEBPLAYER' } },
+      }],
+    })
+    const result = await spclientFetch(page, 'POST', url, accessToken, clientToken, body)
     if (result.status >= 400) throw errors.httpError(result.status)
-    return JSON.parse(result.text)
+    const json = JSON.parse(result.text || '{}') as { revision?: string }
+    return { snapshot_id: json.revision ?? '' }
   },
   async createPlaylist(page, params, accessToken, clientToken, errors) {
-    const meResult = await spotifyApiFetch(page, 'GET', 'https://api.spotify.com/v1/me', accessToken, clientToken)
-    if (meResult.status >= 400) throw errors.httpError(meResult.status)
-    const userId = (JSON.parse(meResult.text) as { id: string }).id
-    const body: Record<string, unknown> = { name: params.name as string }
-    if (params.description !== undefined) body.description = params.description
-    if (params.public !== undefined) body.public = params.public
-    const url = `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`
-    const result = await spotifyApiFetch(page, 'POST', url, accessToken, clientToken, JSON.stringify(body))
+    // Confirmed via CDP capture — Web Player's "+" → New playlist hits
+    // POST spclient.wg.spotify.com/playlist/v2/playlist with an UPDATE_LIST_ATTRIBUTES op.
+    const name = params.name as string
+    const url = 'https://spclient.wg.spotify.com/playlist/v2/playlist'
+    const body = JSON.stringify({
+      ops: [{
+        kind: 'UPDATE_LIST_ATTRIBUTES',
+        updateListAttributes: { newAttributes: { values: { name } } },
+      }],
+    })
+    const result = await spclientFetch(page, 'POST', url, accessToken, clientToken, body)
     if (result.status >= 400) throw errors.httpError(result.status)
-    return JSON.parse(result.text)
+    const created = JSON.parse(result.text) as { uri?: string; revision?: string }
+    if (!created.uri) throw errors.apiError('Spotify', 'createPlaylist returned no uri')
+    const playlistId = created.uri.replace('spotify:playlist:', '')
+
+    // Apply description / public if provided — these go through a separate
+    // updates call on the new playlist's changes endpoint.
+    const extraOps: Array<Record<string, unknown>> = []
+    if (params.description !== undefined) {
+      extraOps.push({ kind: 'UPDATE_LIST_ATTRIBUTES', updateListAttributes: { newAttributes: { values: { description: params.description as string } } } })
+    }
+    if (extraOps.length > 0) {
+      const updateBody = JSON.stringify({ deltas: [{ ops: extraOps, info: { source: { client: 'WEBPLAYER' } } }] })
+      await spclientFetch(page, 'POST', `https://spclient.wg.spotify.com/playlist/v2/playlist/${playlistId}/changes`, accessToken, clientToken, updateBody)
+    }
+
+    return {
+      id: playlistId,
+      uri: created.uri,
+      name,
+      description: (params.description as string) ?? '',
+      public: (params.public as boolean) ?? false,
+    }
   },
 }
 
