@@ -86,20 +86,19 @@ openweb walmart exec removeFromCart '{"usItemId": "5113175776"}'
   - Cart data from GraphQL response
 
 ## Adapter Patterns
-- **Orchestra GraphQL headers** — `/orchestra/cartxo/graphql/*` and `/orchestra/home/graphql/*` calls require Walmart's "Glass" client identity headers in addition to the standard Apollo headers; without them PerimeterX returns HTTP 418 ("I'm a teapot") at the edge before the request ever reaches the GraphQL gateway:
-  - `x-o-bu: WALMART-US`
-  - `x-o-mart: B2C`
-  - `x-o-platform: rweb`
-  - `x-o-platform-version: us-web-1.x.x`
-  - `WM_MP: true`
-  - Plus the persisted-query envelope fields the adapter already sets (`x-apollo-operation-name`, `x-o-gql-query`, `wm_qos.correlation_id`).
-  Apply on every orchestra call (MergeAndGetCart, updateItems). With these headers the failure mode shifts from 418 (anti-bot block, request shape rejected) to 429 (rate limit, request shape accepted) — a useful health signal.
+- **Orchestra SPA-fingerprint headers** — `/orchestra/home/graphql/*` calls require Walmart's full WebPlayer header bundle; without them Akamai's bot-mitigation layer flags the request as scripted and returns 429 on the first hit. The mitigation cookie/IP isn't throttled — the request *shape* is. The adapter mirrors what the live React app sends:
+  - Identity: `x-o-bu: WALMART-US`, `x-o-mart: B2C`, `x-o-platform: rweb`, `x-o-platform-version: usweb-1.256.1`, `x-o-segment: oaoh`, `x-o-ccm: server`, `tenant-id: elh9ie`, `wm_mp: true`
+  - Per-call trace: `wm_qos.correlation_id`, `x-o-correlation-id`, `wm-client-traceid`, `traceparent: 00-<32hex>-<16hex>-00`, `x-latency-trace: 1`, `wm_page_url`
+  - Apollo envelope: `x-apollo-operation-name`, `x-o-gql-query` (`mutation`/`query` form correctly)
+  Apply on every orchestra call (`getCart`, `updateItems`).
+- **Cart read via GET `getCart`, not `MergeAndGetCart`** — the SPA itself reads cart state via the lightweight GET `getCart` persisted query when the user is on `/cart`. The earlier implementation called `MergeAndGetCart` (a heavy mutation) twice per op and tripped 429 reliably. Mirroring the SPA's GET pattern brought the failure rate to zero.
 - **Idempotent removeFromCart via updateItems(qty=1) seeding** — the `updateItems` mutation accepts `quantity: 0` to remove an item, but Walmart's gateway 400s when the item is not already in the cart. The adapter therefore calls `updateItems(quantity=1)` first to seed the line, then `updateItems(quantity=0)` to remove it. This makes removeFromCart safe to call with any `usItemId` without a preceding addToCart, which matters for verify pair execution and for retries after partial failures.
 
 ## Known Issues
 - **PerimeterX bot detection** blocks all CDP-connected browsers for full page navigations (headless and non-headless). Navigating to any walmart.com URL in the managed browser redirects to `/blocked?url=...` ("Robot or human?" challenge). Initial page load typically succeeds; subsequent full navigations are blocked. SPA navigation and in-page fetch() calls work.
-- **Orchestra rate limit on cart writes** — even with the correct orchestra headers (see Adapter Patterns), repeated addToCart/removeFromCart calls from the same client identity hit HTTP 429 from PerimeterX's rate limiter. Cooldown is ≥1 h before the same client can retry. The 418→429 transition is the proof that the request shape is now accepted; the 429 is environmental, not a code defect.
-- **addToCart/removeFromCart require open walmart.com page** — the adapter needs a browser tab on walmart.com. Open one manually before using cart ops.
+- **No per-account cart quota** — earlier handoffs classified `removeFromCart` 429s as a per-account quota. **This was a misclassification.** Root cause was missing SPA-fingerprint headers (see Adapter Patterns above); once the full bundle was sent, addToCart and removeFromCart both pass cleanly. There is no observed per-account throttle on cart writes.
+- **searchProducts uses `transport: page`** — node SSR fetch was prone to a `Target page, context or browser has been closed` flake on the first request after auth swap. Switching to `transport: page` made it reliable.
+- **addToCart/removeFromCart require open walmart.com page** — the adapter needs a browser tab on walmart.com so the SPA's bot-mitigation cookies are warm and Origin/Referer match.
 - **Persisted query hashes** — the GraphQL mutation hashes are derived from query text and are stable across Walmart deploys, but could change if Walmart modifies the query schema.
 - **Search results cause persistent verify DRIFT** — different products returned each call, with varying field structures. Schema validation passes; only the fingerprint hash changes. Expected behavior for dynamic endpoints.
 - **`averageRating` nullable** — some search result items have `null` rating. Schema uses `type: [number, "null"]`.

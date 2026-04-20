@@ -110,7 +110,7 @@ openweb spotify exec removeFromPlaylist '{"playlistId":"37i9dQZF1DXcBWIGoYBM5M",
 - Persisted queries with `sha256Hash` — no inline query strings
 - Single endpoint, operations differentiated by `operationName` + hash
 - Cross-origin: API on `api-partner.spotify.com`, web app on `open.spotify.com`
-- REST API via `spclient.wg.spotify.com` for user profile / playlists
+- REST API via `spclient.wg.spotify.com` — used for `getUserPlaylists` (read) **and** all playlist mutations (create / addToPlaylist / removeFromPlaylist). The legacy `api.spotify.com/v1/playlists` paths return 429 for WebPlayer-issued tokens; `spclient` accepts the same Bearer + client-token and is what the live WebPlayer UI itself calls when the user clicks Create / Add / Remove.
 
 ### Auth
 - Bearer token extracted from web player's fetch interceptor at runtime
@@ -131,9 +131,13 @@ openweb spotify exec removeFromPlaylist '{"playlistId":"37i9dQZF1DXcBWIGoYBM5M",
 - **Shape:** `CustomRunner` with `run(ctx)` entry (migrated from legacy `CodeAdapter` in Phase 5C). No `init()` / `isAuthenticated()` — Spotify works anonymously, and URL-match probes are redundant with PagePlan.
 - **Dispatch:** Two parallel handler tables keyed by `operation`:
   - `GRAPHQL_OPERATIONS` — pathfinder persisted-query ops (search, getArtist, getTrack, etc.)
-  - `WRITE_OPERATIONS` — Web API mutations (likeTrack, createPlaylist, addToPlaylist, …) plus the REST `getUserPlaylists`
+  - `WRITE_OPERATIONS` — playlist & library mutations (likeTrack/unlikeTrack via pathfinder; createPlaylist/addToPlaylist/removeFromPlaylist via `spclient`) plus the REST `getUserPlaylists`
   `run()` looks up the handler and invokes it; no imperative switch.
 - **Token cascade:** Bearer + client-token cached at module scope, refreshed on demand. `isNeedsLogin(err)` helper centralizes the 401/403 retry decision shared by every handler.
+- **Two write gateways:**
+  - `spotifyApiFetch()` → pathfinder GraphQL (`api-partner.spotify.com`) — used by likeTrack/unlikeTrack via `addToLibrary`/`removeFromLibrary` mutations.
+  - `spclientFetch()` → `spclient.wg.spotify.com/playlist/v2/playlist[/{id}/changes]` with the WebPlayer's `app-platform: WebPlayer` header — used by createPlaylist (UPDATE_LIST_ATTRIBUTES op) and addToPlaylist/removeFromPlaylist (deltas → ADD/REM ops with `info.source.client = WEBPLAYER`).
+- **Page settle after extractToken:** a brief `waitForLoadState('domcontentloaded')` + 500ms wait is required after token extraction so the next `page.evaluate` doesn't lose its execution context across the search-page navigation that the token interceptor triggers.
 
 ### Extraction
 - Direct JSON responses from GraphQL API
@@ -141,7 +145,8 @@ openweb spotify exec removeFromPlaylist '{"playlistId":"37i9dQZF1DXcBWIGoYBM5M",
 
 ### Known Issues
 - **Token expiry:** Bearer tokens expire periodically; adapter retries with fresh token on 401/403
-- **Rate limiting:** `api.spotify.com/v1/` rate-limits aggressively with web player tokens; use pathfinder API instead
+- **api.spotify.com 429s for WebPlayer tokens** — the legacy `api.spotify.com/v1/playlists/...` REST endpoints return 429 immediately when called with a Bearer token issued by the WebPlayer. Earlier handoffs misclassified this as a per-account quota; root cause is wrong gateway. Use `spclient.wg.spotify.com/playlist/v2/...` instead — same auth, same SPA, no throttle.
 - **Persisted query hashes:** Hashes may change with web player updates; re-capture if queries return `PersistedQueryNotFound`
 - **Anonymous access:** Search works without login, but results may be limited
+- **Playlist mutations require ownership:** `spclient` write paths reject mutations on playlists the logged-in user doesn't own. Fixtures must point at user-owned playlists; the public DiscoverWeekly id won't work for verify.
 - **getUserPlaylists:** Uses REST endpoint on `spclient.wg.spotify.com`, not GraphQL pathfinder

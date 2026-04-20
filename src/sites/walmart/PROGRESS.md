@@ -37,3 +37,13 @@
 **Verification:** 0/1 PASS at commit time, but the failure transitioned from HTTP 418 → HTTP 429. The 418→429 shift is load-bearing: 418 means "anti-bot rejected the request shape"; 429 means "request shape accepted, you've just exceeded the per-client rate limit". Cooldown ≥1 h before re-running.
 **Key discovery:** Walmart's orchestra gateway uses two-tier rejection — PerimeterX 418 for unrecognized clients (no orchestra headers) and a 429 rate-limit for recognized clients exceeding burst quota. The transition between the two is the cleanest health signal for "is my code right".
 **Pitfalls:** Initially attempted to add only `x-o-bu` — still 418. The full Glass header set is required as a bundle; partial sets are still classified as anomalous by the bot detector.
+
+## 2026-04-20 — Cart 429 root-caused; searchProducts→page; full PASS
+
+**Context:** Stage 5e re-verification of walmart against the user's "I can do everything manually in default Chrome" baseline. Handoff5 had walmart at 2/4 with `removeFromCart` classified as "per-account 429 quota" and `searchProducts` classified as page-handle lifecycle bug.
+**Changes:** (commits `46dd46e`, `653df5e`)
+- `removeFromCart` / `addToCart`: replaced `MergeAndGetCart` with the SPA's lightweight GET `getCart` persisted query, and expanded the orchestra header bundle to the full live-WebPlayer set (`x-o-platform-version`, `tenant-id`, `x-o-segment`, `x-o-ccm`, `x-latency-trace`, `wm_qos.correlation_id`, `x-o-correlation-id`, `wm-client-traceid`, `traceparent`, `wm_page_url`).
+- `searchProducts`: switched from `transport: node` SSR fetch to `transport: page` to sidestep the `Target page closed` flake under post-auth-swap conditions.
+**Verification:** 5/5 PASS (`pnpm dev verify walmart --browser --write`).
+**Key discovery:** The "per-account 429 quota" was a misclassification. Walmart Akamai fingerprints orchestra calls by header bundle, not by account; with the full SPA header set the quota disappears entirely. The 418→429 transition documented in the prior entry is *also* not "rate limit" — it's "request shape closer to valid but still missing trace headers". Only the full WebPlayer bundle yields 200.
+**Pitfalls:** None — once the real cause was identified the fix was direct.

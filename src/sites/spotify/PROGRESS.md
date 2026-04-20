@@ -1,5 +1,18 @@
 # Spotify — Progress
 
+## 2026-04-20 — Playlist writes via spclient (api.spotify.com 429 retracted)
+
+**Context:** Stage 5e — `addToPlaylist`, `removeFromPlaylist`, and `createPlaylist` were failing with 429 against `api.spotify.com/v1/playlists/...`. Prior handoffs called this a per-account quota; user confirmed they could perform the same actions in default Chrome, ruling that out.
+**Changes:** (commit `bd89921`)
+- Added `spclientFetch()` helper in `adapters/spotify-pathfinder.ts` mirroring the WebPlayer's `app-platform: WebPlayer` header set against `spclient.wg.spotify.com`.
+- `createPlaylist` now hits `POST spclient.wg.spotify.com/playlist/v2/playlist` with an `UPDATE_LIST_ATTRIBUTES` op (the SPA's actual New Playlist call). Returns `{id, uri, name, description, public}` shape.
+- `addToPlaylist` / `removeFromPlaylist` now hit `POST .../playlist/v2/playlist/{id}/changes` with `deltas[].ops[].kind = ADD | REM` and `info.source.client = WEBPLAYER`. Returns `{snapshot_id}` (mapped from response `revision`).
+- Added page-settle (`waitForLoadState('domcontentloaded')` + 500ms) after `extractToken` to prevent execution-context loss across the search-page navigation that the token interceptor triggers.
+- Fixture rotation: `addToPlaylist`/`removeFromPlaylist` switched from public DiscoverWeekly id `37i9dQZF1DXcBWIGoYBM5M` to user-owned `0hIjqrSiVWJX35wl8ob27O` since spclient mutations require ownership.
+**Verification:** Playlist write ops PASS via `pnpm dev verify spotify --browser --write --ops <op>`.
+**Key discovery:** WebPlayer-issued Bearer tokens are *valid* against both `api.spotify.com` and `spclient.wg.spotify.com`, but `api.spotify.com` 429s them on first hit while `spclient` accepts them indefinitely. The "rate limit" is really a gateway-classification difference — Spotify treats spclient as the WebPlayer's own write surface and api.spotify.com as a third-party-developer surface.
+**Pitfalls:** First attempt sent the spclient request without `app-platform: WebPlayer`; got 401. The WebPlayer header is required for the gateway to treat the token as in-scope.
+
 ## 2026-04-17 — Adapter Refactor
 
 **Context:** Phase 5C normalization — migrate `spotify-pathfinder` from the legacy `CodeAdapter` interface to the leaner `CustomRunner` shape, and unify per-op dispatch.
