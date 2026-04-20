@@ -49,44 +49,60 @@ function getChromePath(): string {
   })
 }
 
-/** Copy only auth-relevant files from Chrome profile (not cache/history) */
+// Profile entries we never copy: derived caches (regenerated on first run), runtime
+// locks/logs (would conflict with the new Chrome instance), session-restore state
+// (would re-open tabs from the source browser), saved passwords (sensitive, not
+// needed for cookie-based auth), and macOS extended-attribute artifacts.
+const PROFILE_EXCLUDE = new Set([
+  // Derived GPU/shader/code caches
+  'Cache', 'Code Cache', 'GPUCache', 'DawnCache', 'DawnGraphiteCache',
+  'DawnWebGPUCache', 'GrShaderCache', 'GraphiteDawnCache', 'ShaderCache',
+  // Regenerable browsing-history derivatives (large, irrelevant to auth)
+  'History', 'History-journal', 'History-wal', 'History-shm',
+  'HistoryEmbeddings', 'HistoryEmbeddings-journal',
+  'Top Sites', 'Top Sites-journal', 'Visited Links',
+  'Favicons', 'Favicons-journal',
+  'Network Action Predictor', 'Network Action Predictor-journal',
+  // Locks, logs, runtime state — will be recreated by the new Chrome
+  'LOCK', 'LOG', 'LOG.old', 'Sessions', 'Session Storage-journal',
+  'Crashpad', 'BrowserMetrics-spare.pma', 'Crash Reports',
+  'blob_storage', 'File System',
+  // Last-session restore state would re-open the user's tabs in our headless instance
+  'Current Session', 'Current Tabs', 'Last Session', 'Last Tabs',
+  // Saved-password store — sensitive and unrelated to cookie auth
+  'Login Data', 'Login Data-journal',
+  'Login Data For Account', 'Login Data For Account-journal',
+  // Backups + macOS noise
+  'Bookmarks.bak', '.DS_Store',
+])
+
+/**
+ * Snapshot a Chrome profile into `dest`, copying everything required for the
+ * authenticated session and skipping derived caches / conflicting runtime state.
+ *
+ * Earlier versions copied a tight allowlist (Cookies, Web Data, Preferences,
+ * Local/Session Storage, IndexedDB). That missed Account Web Data, Sync Data,
+ * Network/, Trust Tokens, and other state Chrome consults during sign-in
+ * propagation — the symptom was YouTube returning yt_li=0 because the snapshot
+ * looked like a never-signed-in profile to the GAIA pipeline. We now copy the
+ * whole profile minus a blocklist, which is more robust and only marginally
+ * larger.
+ */
 export async function copyProfileSelective(src: string, dest: string): Promise<void> {
   await mkdir(dest, { recursive: true, mode: 0o700 })
-
-  // Only copy files needed for auth: Cookies, Local Storage (leveldb only), Session Storage, IndexedDB, Web Data
-  // SQLite WAL/SHM sidecars (-wal, -shm) are critical when source Chrome is running — without them the
-  // copied DB snapshots only the last checkpoint and misses the most recent uncommitted transactions
-  // (i.e. the active session's logins).
-  const relevantDirs = ['Session Storage', 'IndexedDB']
-  const relevantFiles = [
-    'Cookies', 'Cookies-journal', 'Cookies-wal', 'Cookies-shm',
-    'Web Data', 'Web Data-journal', 'Web Data-wal', 'Web Data-shm',
-    'Preferences', 'Secure Preferences',
-  ]
-
-  for (const file of relevantFiles) {
-    const srcPath = join(src, file)
-    if (existsSync(srcPath)) {
-      const destPath = join(dest, file)
+  const entries = await readdir(src, { withFileTypes: true })
+  for (const entry of entries) {
+    if (PROFILE_EXCLUDE.has(entry.name)) continue
+    // Skip macOS extended-attribute sidecars (`.com.google.Chrome.*`, `._foo`)
+    if (entry.name.startsWith('.com.google.Chrome.') || entry.name.startsWith('._')) continue
+    const srcPath = join(src, entry.name)
+    const destPath = join(dest, entry.name)
+    if (entry.isDirectory()) {
+      await cp(srcPath, destPath, { recursive: true })
+    } else if (entry.isFile()) {
       await copyFile(srcPath, destPath)
       await chmod(destPath, 0o600)
     }
-  }
-
-  for (const dir of relevantDirs) {
-    const srcDir = join(src, dir)
-    if (!existsSync(srcDir)) continue
-
-    const destDir = join(dest, dir)
-    await cp(srcDir, destDir, { recursive: true })
-  }
-
-  // Local Storage: copy only leveldb/ (skip 16k legacy .localstorage files from pre-2017 Chrome)
-  const lsLevelDb = join(src, 'Local Storage', 'leveldb')
-  if (existsSync(lsLevelDb)) {
-    const destLs = join(dest, 'Local Storage', 'leveldb')
-    await mkdir(destLs, { recursive: true })
-    await cp(lsLevelDb, destLs, { recursive: true })
   }
 }
 
@@ -271,13 +287,19 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
   const tempProfileDir = join(tempUserDataDir, 'Default')
   await copyProfileSelective(profilePath, tempProfileDir)
 
-  // Copy Local State from Chrome root (parent of profile dir) — contains the
-  // os_crypt key needed to decrypt the Cookies SQLite database on macOS/Windows.
-  const localStateSrc = join(profilePath, '..', 'Local State')
-  if (existsSync(localStateSrc)) {
-    const localStateDest = join(tempUserDataDir, 'Local State')
-    await copyFile(localStateSrc, localStateDest)
-    await chmod(localStateDest, 0o600)
+  // Copy root-level files from Chrome's User Data dir (parent of profile dir).
+  // - Local State holds the os_crypt key needed to decrypt Cookies on macOS/Windows.
+  // - First Run / Last Version / Last Browser tell Chrome this isn't a fresh install,
+  //   which keeps the GAIA / sync subsystem from re-initialising and dropping the
+  //   first-party Google auth cookies (manifested as YouTube yt_li=0).
+  const userDataRoot = join(profilePath, '..')
+  for (const name of ['Local State', 'First Run', 'Last Version', 'Last Browser']) {
+    const fromPath = join(userDataRoot, name)
+    if (existsSync(fromPath)) {
+      const toPath = join(tempUserDataDir, name)
+      await copyFile(fromPath, toPath)
+      await chmod(toPath, 0o600)
+    }
   }
 
   // Launch Chrome

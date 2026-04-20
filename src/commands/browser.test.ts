@@ -71,6 +71,58 @@ describe('RC6: getOpenTabUrls', () => {
   })
 })
 
+describe('copyProfileSelective', () => {
+  // Use real fs against a temp dir — no mocking
+  it('copies auth state and skips caches/locks/sessions', async () => {
+    const { mkdtemp, mkdir, writeFile, readdir, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+
+    const src = await mkdtemp(join(tmpdir(), 'owebck-src-'))
+    const dest = await mkdtemp(join(tmpdir(), 'owebck-dst-'))
+    await rm(dest, { recursive: true, force: true })
+
+    try {
+      // Files that MUST be copied (auth + identity + sync state)
+      const keep = [
+        'Cookies', 'Cookies-journal', 'Web Data', 'Preferences', 'Secure Preferences',
+        'Account Web Data', 'Trust Tokens', 'TransportSecurity',
+      ]
+      for (const f of keep) await writeFile(join(src, f), 'data')
+
+      // Dirs that MUST be copied
+      await mkdir(join(src, 'Local Storage', 'leveldb'), { recursive: true })
+      await writeFile(join(src, 'Local Storage', 'leveldb', '000003.log'), 'x')
+      await mkdir(join(src, 'Session Storage'), { recursive: true })
+      await writeFile(join(src, 'Session Storage', '000001.log'), 'x')
+      await mkdir(join(src, 'Sync Data', 'LevelDB'), { recursive: true })
+      await writeFile(join(src, 'Sync Data', 'LevelDB', '000003.log'), 'x')
+
+      // Excluded: caches, locks, session-restore, passwords
+      const drop = ['Cache', 'Code Cache', 'GPUCache', 'History', 'Top Sites', 'Sessions', 'LOCK', 'Login Data']
+      for (const d of drop) {
+        await mkdir(join(src, d), { recursive: true })
+        await writeFile(join(src, d, 'inside'), 'x')
+      }
+      await writeFile(join(src, '.com.google.Chrome.abc'), 'x') // macOS xattr sidecar
+
+      const { copyProfileSelective } = await import('./browser.js')
+      await copyProfileSelective(src, dest)
+
+      const got = new Set(await readdir(dest))
+      for (const f of keep) expect(got.has(f), `missing ${f}`).toBe(true)
+      expect(got.has('Local Storage')).toBe(true)
+      expect(got.has('Session Storage')).toBe(true)
+      expect(got.has('Sync Data')).toBe(true)
+      for (const d of drop) expect(got.has(d), `should have skipped ${d}`).toBe(false)
+      expect(got.has('.com.google.Chrome.abc')).toBe(false)
+    } finally {
+      await rm(src, { recursive: true, force: true })
+      await rm(dest, { recursive: true, force: true })
+    }
+  })
+})
+
 describe('RC6: restoreTabs', () => {
   const originalFetch = globalThis.fetch
 

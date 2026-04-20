@@ -84,3 +84,16 @@ When `verify` reports `needs_login`, `auth_expired`, or 429 on an op the user ca
   - `youtube` (in-flight) — `addComment`/`deleteComment` misclassified as auth/quota; real cause distinct here (account-level shadowban surfaced by InnerTube `comment/create_comment` 200 with `Comment failed to post.` payload), but the same surface symptom of "verify says auth, manual works."
 
 If a single fix turns a "permanent quota" or "permanent login loop" into a clean PASS, the diagnosis was always wrong. Update both the site DOC.md and any op-level `auth_check` rule so the next agent sees the real signature, not the cascade output.
+
+## Profile-Snapshot Coverage (`copyProfileSelective`)
+
+`browser start` snapshots the user's Chrome profile into `mkdtemp` so it can launch a clean instance with the same auth state. Earlier the snapshot used a tight allowlist (`Cookies`, `Web Data`, `Preferences`, `Local/Session Storage`, `IndexedDB`). That missed several files Chrome consults during sign-in propagation:
+
+- `Account Web Data` — GAIA account metadata for signed-in profiles.
+- `Sync Data/` — account sync state; Chrome can mark the profile as signed-out without it.
+- `Trust Tokens`, `TransportSecurity`, `Network Persistent State` — TLS/origin-state Chrome expects to be present for an established profile.
+- Root-level `First Run` / `Last Version` — without these Chrome treats the user-data-dir as a fresh install and may re-initialise GAIA, dropping first-party Google auth cookies.
+
+The snapshot is now **copy-everything-minus-blocklist** (caches, `History`, `Sessions`, `Login Data`, locks, macOS `.com.google.Chrome.*` xattr sidecars). Marginally larger (~tens of MB), considerably more robust.
+
+**Important diagnostic note — "missing first-party SAPISID" was misleading.** SAPISID/SID/HSID/SSID are set on `.google.com`, not `.youtube.com`. They are present in the source `Cookies` SQLite even with the old allowlist. So a YouTube 401 with `LOGGED_IN: true` and only `LOGIN_INFO` returned for `https://www.youtube.com` is not necessarily a snapshot bug — it can be an adapter scope bug where `page.context().cookies('https://www.youtube.com')` is queried instead of also asking for `.google.com`. Verify by calling browser-level `Storage.getCookies` (no URL filter) before assuming the snapshot is broken.
