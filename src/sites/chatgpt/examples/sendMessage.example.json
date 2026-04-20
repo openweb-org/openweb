@@ -1,0 +1,28 @@
+{
+  "operation_id": "sendMessage",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "action": "next",
+        "messages": [
+          {
+            "id": "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
+            "author": { "role": "user" },
+            "content": {
+              "content_type": "text",
+              "parts": ["verify ping ${now}"]
+            }
+          }
+        ],
+        "parent_message_id": "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb",
+        "model": "gpt-4o"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
