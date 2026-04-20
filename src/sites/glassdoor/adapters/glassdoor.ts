@@ -28,7 +28,7 @@ async function waitForCloudflare(page: Page, errors: Errors): Promise<void> {
 }
 
 async function navigateTo(page: Page, url: string, errors: Errors): Promise<void> {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
   await waitForCloudflare(page, errors)
   await page.waitForTimeout(2_000)
 }
