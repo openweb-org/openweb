@@ -1,12 +1,12 @@
 {
-  "operation_id": "upvoteStory",
+  "operation_id": "deleteComment",
   "method": "post",
   "replay_safety": "unsafe_mutation",
-  "order": 1,
+  "order": 2,
   "cases": [
     {
       "input": {
-        "id": 47828896
+        "id": "${prev.addComment.id}"
       },
       "assertions": {
         "status": 200,

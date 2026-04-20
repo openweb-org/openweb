@@ -1010,3 +1010,100 @@ paths:
                     type: boolean
                   parent:
                     type: integer
+                  id:
+                    type: integer
+                    description: 'Newly created comment ID.'
+
+  /internal/unvoteStory:
+    post:
+      operationId: unvoteStory
+      summary: 'Reverse an upvote on a story or comment — requires logged-in session'
+      servers:
+      - url: https://news.ycombinator.com
+        x-openweb:
+          transport: page
+          auth:
+            type: cookie_session
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: hn0017
+          tool_version: 1
+          verified: true
+          signals:
+          - adapter-verified
+        adapter:
+          name: hackernews
+          operation: unvoteStory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              properties:
+                id:
+                  type: integer
+                  description: 'Hacker News item ID to unvote (story or comment previously upvoted by the current user).'
+      responses:
+        '200':
+          description: Unvote result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  id:
+                    type: integer
+
+  /internal/deleteComment:
+    post:
+      operationId: deleteComment
+      summary: 'Delete a comment within HN ~2-hour delete window — requires logged-in session'
+      servers:
+      - url: https://news.ycombinator.com
+        x-openweb:
+          transport: page
+          auth:
+            type: cookie_session
+      x-openweb:
+        permission: delete
+        safety: caution
+        build:
+          stable_id: hn0018
+          tool_version: 1
+          verified: true
+          signals:
+          - adapter-verified
+        adapter:
+          name: hackernews
+          operation: deleteComment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              properties:
+                id:
+                  type: integer
+                  description: 'Hacker News comment ID to delete (only your own, within ~2-hour window).'
+      responses:
+        '200':
+          description: Delete result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  id:
+                    type: integer

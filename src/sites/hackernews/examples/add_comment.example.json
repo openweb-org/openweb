@@ -2,11 +2,12 @@
   "operation_id": "addComment",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 1,
   "cases": [
     {
       "input": {
-        "parent": 42407357,
-        "text": "Great article, thanks for sharing!"
+        "parent": 47829951,
+        "text": "Agreed — box-shadow does not participate in the focus-ring accessibility hooks the way outline does, and on Windows high-contrast mode the shadow gets stripped while outline survives. :focus-visible plus outline remains the path of least resistance."
       },
       "assertions": {
         "status": 200,
