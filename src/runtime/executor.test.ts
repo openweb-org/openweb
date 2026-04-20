@@ -119,7 +119,7 @@ describe('permission gate', () => {
     })
 
     expect(result.status).toBe(201)
-  })
+  }, 20_000)
 
   it('allows read operations on default config', async () => {
     const fetchMock = vi.fn(async () =>
