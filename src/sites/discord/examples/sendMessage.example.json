@@ -2,6 +2,7 @@
   "operation_id": "sendMessage",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 1,
   "cases": [
     {
       "input": {
