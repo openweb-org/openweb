@@ -212,6 +212,77 @@ chat-requirements token + SHA3-512 PoW. The adapter focuses
 Enter, and intercepts the SSE response — no PoW reimplementation, no
 DOM clicks, no PoW seed/difficulty handling.
 
+**Second example:** `src/sites/youtube/adapters/youtube-innertube.ts` —
+YouTube's `like/like`, `comment/create_comment`, `comment/perform_comment_action`
+are gated by Chrome's `x-browser-validation` header (TLS-bound, only attached
+to UI-initiated requests). The adapter clicks the like button / comment
+composer / kebab menu via Playwright `.click()`, intercepts the resulting
+InnerTube response, and reads commentIds from the canonical entity payload.
+
+**Hard-won sub-pitfalls (YouTube probe, 2026-04-20):**
+- **JS `(el).click()` ≠ Playwright `el.click()` for polymer components.**
+  YouTube's `tp-yt-paper-dialog` / `ytd-menu-navigation-item-renderer` listen
+  for the full pointer event sequence Playwright synthesizes; `HTMLElement.click()`
+  from `page.evaluate` fires the click event but skips the gestures the
+  polymer handler binds to (the confirm dialog never opens). Symptom: same
+  DOM target, same `click()` call shape, but JS `.click()` does nothing
+  while Playwright `.click()` opens the dialog. **Action:** for
+  polymer/web-component menu items + dialog buttons, always use
+  `evaluateHandle` + Playwright `.click()`, not `page.evaluate(() => el.click())`.
+- **`state: 'attached'` for popups, not `'visible'`.** YouTube renders
+  `ytd-menu-popup-renderer` and `ytd-popup-container > tp-yt-iron-dropdown`
+  with `max-height: 0px` initially, only animating to full size after the
+  open transition. Playwright's default `waitForSelector` (`state: 'visible'`)
+  times out because the element is technically `display: block` with
+  zero pixels. **Action:** for any popup/dropdown wait on polymer-based
+  sites, use `state: 'attached'` and rely on inner-element click to
+  finish the open animation.
+- **`scrollIntoView` on the section container, not fixed-pixel `scrollTo`.**
+  Lazy-loaded sections (comments, replies, search-result rails) need a
+  scroll into them to trigger hydration, but a fixed-pixel target
+  (`scrollTo(0, 700)`) is layout-dependent — it overshoots/undershoots
+  depending on viewport, ad presence, header height. **Action:**
+  `document.querySelector('<container>')?.scrollIntoView({ block: 'start' })`
+  triggers hydration in one layout-independent step.
+- **Canonical commentId / messageId source:** read from
+  `body.frameworkUpdates.entityBatchUpdate.mutations[].payload.<X>EntityPayload.properties.<idField>`
+  (the entity-mutation that the SPA uses to render). Don't trust
+  `actionResults[0].key` — it's an internal action ID (often `undefined`
+  or shaped differently from the canonical id). The entity-payload id
+  matches the URL-form id used in deep-links (`lc=` for YT comments)
+  and round-trips through later read ops.
+- **Duplicate-text spam-filter on social writes.** YouTube, Twitter, and
+  similar platforms silently filter (no error response, just absent from
+  the public thread) repeated identical text within a rolling window.
+  Fixtures must uniqueify text per run — see `${now}` in
+  `src/lib/template-resolver.ts` and the `[verify ${now}] …` prefix in
+  `src/sites/youtube/examples/addComment.example.json` /
+  `src/sites/x/examples/createTweet.example.json`.
+
+### Polymer / Web-Component UI Quirks
+
+A separate-from-bot-detection class of friction worth flagging on its own:
+sites built with Polymer or Lit web components (YouTube, parts of Google
+Photos, parts of Reddit's old layout) bind handlers in ways that don't
+play well with `page.evaluate`-driven clicks. Symptoms:
+
+- Menu opens on Playwright click, doesn't open on JS click.
+- Confirm dialog renders in `ytd-popup-container` / `ytd-app` but at
+  `max-height: 0` until the animation completes — `state: 'visible'`
+  hangs even though the element is in the DOM.
+- The clickable target is often the inner `<a class="yt-simple-endpoint">`
+  or the inner `<button>`, not the wrapper `*-renderer` element.
+
+**Action when adapting a polymer-based site:**
+1. Default to Playwright `.click()` (via `evaluateHandle` + `asElement().click()`)
+   for *any* interaction inside the SPA's chrome.
+2. Default to `state: 'attached'` for *any* popup / dropdown / dialog
+   wait. Visibility checks bite later, never earlier.
+3. When the wrapper element doesn't respond, drill into its inner
+   `<a>` / `<button>` and click that.
+4. If you have to use `page.evaluate(el.click())`, reserve it for
+   plain-`<button>` elements with no polymer handler in the chain.
+
 ## Capture Strategy by Detection Level
 
 | Detection Level | Capture Approach |
