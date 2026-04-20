@@ -78,3 +78,12 @@
 - Document 1 verified operation using DOM extraction pattern
 
 **Verification:** spec review only — no new capture or compilation
+
+---
+
+## 2026-04-19 — Fixture refresh: upvoteStory
+
+**Context:** `upvoteStory` example pinned to a stale story id (42407357), causing intermittent verify failures when HN cycled the story off the front page (vote tokens are scoped per-(user, item, time-window)).
+**Changes:** `examples/upvote_story.example.json` retargeted to id `47828896` (current top of HN front page at time of edit). No adapter or spec changes. Companion edit: `order: 1` field added so a future paired `unvoteStory` can chain via `${prev.upvoteStory.id}` per the new SKILL.md workflow.
+**Verification:** 1/1 PASS — `pnpm dev verify hackernews --ops upvoteStory --browser --write`.
+**Pitfalls encountered:** Verify dispatches against the registry-installed copy at `$OPENWEB_HOME/sites/hackernews/`, not `src/sites/hackernews/` directly — edits to the source tree must be mirrored into the install for in-loop verification (or rely on the next package install to propagate).
