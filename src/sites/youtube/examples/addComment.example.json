@@ -5,8 +5,8 @@
   "cases": [
     {
       "input": {
-        "videoId": "jNQXAC9IVRw",
-        "text": "Wild to think this 19 second clip kicked off the entire YouTube era — the elephants really do have long trunks."
+        "videoId": "KDmbehLBphg",
+        "text": "The bit about catching the deploy regression before it hit prod is exactly the workflow I've been trying to build into my own setup — appreciate you walking through the actual debugging path instead of skipping to the fix."
       },
       "assertions": {
         "status": 200,

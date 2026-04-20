@@ -1,6 +1,7 @@
 {
   "operation_id": "sendMessage",
   "replay_safety": "unsafe_mutation",
+  "order": 1,
   "cases": [
     {
       "input": { "chatId": "me", "text": "openweb verify test" },

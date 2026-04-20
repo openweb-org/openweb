@@ -1,9 +1,10 @@
 {
   "operation_id": "deleteMessage",
   "replay_safety": "unsafe_mutation",
+  "order": 7,
   "cases": [
     {
-      "input": { "chatId": "8259810574", "messageId": "latest" },
+      "input": { "chatId": "me", "messageId": "latest" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

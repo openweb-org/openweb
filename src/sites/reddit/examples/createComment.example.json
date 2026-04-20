@@ -5,8 +5,8 @@
   "cases": [
     {
       "input": {
-        "thing_id": "t3_1si747w",
-        "text": "Test comment from openweb"
+        "thing_id": "t3_1sqc9f1",
+        "text": "Same boat — speed went way up, but I started catching myself shipping code I couldn't have written from scratch. What helped me was forcing a quick whiteboard pass before accepting an AI suggestion: if I can't sketch the data flow in 30 seconds, I rewrite by hand. Slower per-PR, but my mental model stays intact."
       },
       "assertions": {
         "status": 200,
