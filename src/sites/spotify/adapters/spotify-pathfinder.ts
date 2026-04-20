@@ -190,10 +190,14 @@ async function spotifyApiFetch(
   method: string,
   url: string,
   accessToken: string,
+  clientToken: string,
   body?: string,
 ): Promise<{ status: number; text: string }> {
+  // Spotify Web API endpoints (api.spotify.com) refuse traffic that doesn't
+  // carry the WebPlayer signature headers — without them the gateway returns
+  // 429 even on the very first call. Mirror what the SPA sends.
   return page.evaluate(
-    async (args: { method: string; url: string; accessToken: string; body?: string }) => {
+    async (args: { method: string; url: string; accessToken: string; clientToken: string; body?: string }) => {
       const ctrl = new AbortController()
       const timer = setTimeout(() => ctrl.abort(), 15_000)
       try {
@@ -203,6 +207,8 @@ async function spotifyApiFetch(
             Accept: 'application/json',
             'Content-Type': 'application/json',
             authorization: `Bearer ${args.accessToken}`,
+            'client-token': args.clientToken,
+            'app-platform': 'WebPlayer',
           },
           body: args.body,
           signal: ctrl.signal,
@@ -212,58 +218,104 @@ async function spotifyApiFetch(
         clearTimeout(timer)
       }
     },
-    { method, url, accessToken, body },
+    { method, url, accessToken, clientToken, body },
   )
+}
+
+// Pathfinder mutation hashes used by the live web player. Same hash covers
+// add+remove because Spotify ships a multi-operation document keyed by
+// operationName.
+const LIBRARY_MUTATION_HASH = '7c5a69420e2bfae3da5cc4e14cbc8bb3f6090f80afc00ffc179177f19be3f33d'
+
+async function libraryMutation(
+  page: Page,
+  operationName: 'addToLibrary' | 'removeFromLibrary',
+  trackId: string,
+  accessToken: string,
+  clientToken: string,
+  errors: ErrorHelpers,
+): Promise<unknown> {
+  const body = JSON.stringify({
+    variables: { libraryItemUris: [`spotify:track:${trackId}`] },
+    operationName,
+    extensions: { persistedQuery: { version: 1, sha256Hash: LIBRARY_MUTATION_HASH } },
+  })
+  const result = await page.evaluate(
+    async (args: { url: string; body: string; accessToken: string; clientToken: string }) => {
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 15_000)
+      try {
+        const resp = await fetch(args.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'app-platform': 'WebPlayer',
+            authorization: `Bearer ${args.accessToken}`,
+            'client-token': args.clientToken,
+          },
+          body: args.body,
+          signal: ctrl.signal,
+        })
+        return { status: resp.status, text: await resp.text() }
+      } finally {
+        clearTimeout(timer)
+      }
+    },
+    { url: API_URL, body, accessToken, clientToken },
+  )
+  if (result.status >= 400) throw errors.httpError(result.status)
+  const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
+  if (json.errors && !json.data) {
+    const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Spotify GraphQL error'
+    throw errors.apiError('Spotify', msg)
+  }
+  return { success: true }
 }
 
 type WriteHandler = (
   page: Page,
   params: Readonly<Record<string, unknown>>,
   accessToken: string,
+  clientToken: string,
   errors: ErrorHelpers,
 ) => Promise<unknown>
 
 const WRITE_OPERATIONS: Record<string, WriteHandler> = {
-  async likeTrack(page, params, accessToken, errors) {
-    const trackId = params.trackId as string
-    const result = await spotifyApiFetch(page, 'PUT', 'https://api.spotify.com/v1/me/tracks', accessToken, JSON.stringify({ ids: [trackId] }))
-    if (result.status >= 400) throw errors.httpError(result.status)
-    return { success: true }
+  async likeTrack(page, params, accessToken, clientToken, errors) {
+    return libraryMutation(page, 'addToLibrary', params.trackId as string, accessToken, clientToken, errors)
   },
-  async unlikeTrack(page, params, accessToken, errors) {
-    const trackId = params.trackId as string
-    const result = await spotifyApiFetch(page, 'DELETE', 'https://api.spotify.com/v1/me/tracks', accessToken, JSON.stringify({ ids: [trackId] }))
-    if (result.status >= 400) throw errors.httpError(result.status)
-    return { success: true }
+  async unlikeTrack(page, params, accessToken, clientToken, errors) {
+    return libraryMutation(page, 'removeFromLibrary', params.trackId as string, accessToken, clientToken, errors)
   },
-  async addToPlaylist(page, params, accessToken, errors) {
+  async addToPlaylist(page, params, accessToken, clientToken, errors) {
     const playlistId = params.playlistId as string
     const trackUris = params.trackUris as string[]
     const body: Record<string, unknown> = { uris: trackUris }
     if (params.position !== undefined) body.position = params.position
     const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
-    const result = await spotifyApiFetch(page, 'POST', url, accessToken, JSON.stringify(body))
+    const result = await spotifyApiFetch(page, 'POST', url, accessToken, clientToken, JSON.stringify(body))
     if (result.status >= 400) throw errors.httpError(result.status)
     return JSON.parse(result.text)
   },
-  async removeFromPlaylist(page, params, accessToken, errors) {
+  async removeFromPlaylist(page, params, accessToken, clientToken, errors) {
     const playlistId = params.playlistId as string
     const trackUris = params.trackUris as string[]
     const body = { tracks: trackUris.map((uri) => ({ uri })) }
     const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
-    const result = await spotifyApiFetch(page, 'DELETE', url, accessToken, JSON.stringify(body))
+    const result = await spotifyApiFetch(page, 'DELETE', url, accessToken, clientToken, JSON.stringify(body))
     if (result.status >= 400) throw errors.httpError(result.status)
     return JSON.parse(result.text)
   },
-  async createPlaylist(page, params, accessToken, errors) {
-    const meResult = await spotifyApiFetch(page, 'GET', 'https://api.spotify.com/v1/me', accessToken)
+  async createPlaylist(page, params, accessToken, clientToken, errors) {
+    const meResult = await spotifyApiFetch(page, 'GET', 'https://api.spotify.com/v1/me', accessToken, clientToken)
     if (meResult.status >= 400) throw errors.httpError(meResult.status)
     const userId = (JSON.parse(meResult.text) as { id: string }).id
     const body: Record<string, unknown> = { name: params.name as string }
     if (params.description !== undefined) body.description = params.description
     if (params.public !== undefined) body.public = params.public
     const url = `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`
-    const result = await spotifyApiFetch(page, 'POST', url, accessToken, JSON.stringify(body))
+    const result = await spotifyApiFetch(page, 'POST', url, accessToken, clientToken, JSON.stringify(body))
     if (result.status >= 400) throw errors.httpError(result.status)
     return JSON.parse(result.text)
   },
@@ -297,11 +349,11 @@ const runner: CustomRunner = {
 
     if (writeHandler) {
       try {
-        return await writeHandler(page, params, cachedTokens.accessToken, errors)
+        return await writeHandler(page, params, cachedTokens.accessToken, cachedTokens.clientToken, errors)
       } catch (err) {
         if (isNeedsLogin(err)) {
           cachedTokens = await extractToken(page, errors)
-          return writeHandler(page, params, cachedTokens.accessToken, errors)
+          return writeHandler(page, params, cachedTokens.accessToken, cachedTokens.clientToken, errors)
         }
         throw err
       }
