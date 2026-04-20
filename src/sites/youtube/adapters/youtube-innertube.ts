@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import type { Page } from 'patchright'
+import type { Page, Response as PwResponse } from 'patchright'
 
 import type { AdapterHelpers, CustomRunner, PreparedContext } from '../../../types/adapter.js'
 
@@ -340,7 +340,59 @@ const getPlaylist: Handler = async (page, params, helpers) => {
   }
 }
 
-// --- addComment ---
+// --- intercept helper (dispatch-events pattern) ---
+//
+// JS fetch (even page.evaluate(fetch)) cannot replay YouTube's write APIs:
+// Chrome's anti-abuse layer compares sec-fetch-mode + the TLS-bound
+// x-browser-validation header against the SPA-initiated origin. Only requests
+// that originate from real Chrome UI events pass. We drive the SPA's own UI
+// and intercept the response off the wire — same approach as chatgpt-web.ts.
+function captureResponse(page: Page, urlMatch: RegExp): {
+  wait: (timeoutMs: number) => Promise<unknown>
+  off: () => void
+} {
+  let bodyPromise: Promise<unknown> | null = null
+  const handler = (resp: PwResponse) => {
+    if (bodyPromise) return
+    if (resp.request().method() !== 'POST') return
+    if (!urlMatch.test(resp.url())) return
+    bodyPromise = resp.json().catch(() => resp.text().catch(() => null))
+  }
+  page.on('response', handler)
+  return {
+    wait: async (timeoutMs) => {
+      const start = Date.now()
+      while (!bodyPromise && Date.now() - start < timeoutMs) {
+        await new Promise(r => setTimeout(r, 200))
+      }
+      return bodyPromise
+    },
+    off: () => page.off('response', handler),
+  }
+}
+
+async function ensureWatchPage(page: Page, videoId: string): Promise<void> {
+  if (page.url().includes(`watch?v=${videoId}`)) return
+  await page.goto(`https://www.youtube.com/watch?v=${videoId}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+  await page.waitForTimeout(1500)
+}
+
+function deepFindString(root: unknown, regex: RegExp): string {
+  const stack: unknown[] = [root]
+  while (stack.length) {
+    const cur = stack.pop()
+    if (typeof cur === 'string') {
+      if (regex.test(cur)) return cur
+    } else if (Array.isArray(cur)) {
+      for (const v of cur) stack.push(v)
+    } else if (cur && typeof cur === 'object') {
+      for (const v of Object.values(cur as Record<string, unknown>)) stack.push(v)
+    }
+  }
+  return ''
+}
+
+// --- addComment (dispatch-events + passive intercept) ---
 const addComment: Handler = async (page, params, helpers) => {
   const { errors } = helpers
   const videoId = String(params.videoId || '')
@@ -348,128 +400,74 @@ const addComment: Handler = async (page, params, helpers) => {
   if (!videoId) throw errors.missingParam('videoId')
   if (!text) throw errors.missingParam('text')
 
-  // Ensure page is on the watch URL so ytcfg has the watch-page INNERTUBE_CONTEXT
-  // (originalUrl, mainAppWebInfo). Without this, YT's spam filter rejects writes.
-  if (!page.url().includes(`watch?v=${videoId}`)) {
-    await page.goto(`https://www.youtube.com/watch?v=${videoId}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-    await page.waitForTimeout(1500)
-  }
+  await ensureWatchPage(page, videoId)
 
-  const config = await getYtConfig(page)
-  const context = makeContext(config)
+  // Comments lazy-load — must scroll into view before the section renders.
+  await page.evaluate(() => window.scrollTo(0, 700))
+  await page.waitForSelector('ytd-comments #placeholder-area', { timeout: 20_000 })
 
-  // Step 1: get createCommentParams from /next (comment creation token)
-  const nextResp = await innertubePost(helpers, page, 'next', { context, videoId }, config) as Record<string, unknown>
+  const cap = captureResponse(page, /\/youtubei\/v1\/comment\/create_comment(?:\?|$)/)
+  try {
+    await page.click('ytd-comments #placeholder-area')
+    await page.waitForSelector('ytd-commentbox #contenteditable-root', { timeout: 10_000, state: 'attached' })
+    // Composer is a contenteditable — must use real keyboard events
+    await page.locator('ytd-commentbox #contenteditable-root').first().focus()
+    await page.keyboard.type(text)
+    // Submit button is rendered hidden until the editor has content; click via JS
+    // because the visible-state heuristic is unreliable across YT's button shells.
+    await page.waitForFunction(() => {
+      const btn = document.querySelector('ytd-commentbox button[aria-label="Comment"]') as HTMLButtonElement | null
+      return btn && btn.getAttribute('aria-disabled') !== 'true' && !btn.disabled
+    }, { timeout: 5_000 })
+    await page.evaluate(() => {
+      const btn = document.querySelector('ytd-commentbox button[aria-label="Comment"]') as HTMLButtonElement | null
+      btn?.click()
+    })
 
-  const resultContents = dig(
-    nextResp,
-    'contents', 'twoColumnWatchNextResults', 'results', 'results', 'contents',
-  ) as Array<Record<string, unknown>> | undefined
+    const body = await cap.wait(20_000) as Record<string, unknown> | null
+    if (!body) throw errors.retriable('No /comment/create_comment response within timeout')
 
-  let createParams: string | undefined
-  if (Array.isArray(resultContents)) {
-    for (const item of resultContents) {
-      const section = item.itemSectionRenderer as Record<string, unknown> | undefined
-      if (!section) continue
-      const sectionContents = section.contents as Array<Record<string, unknown>> | undefined
-      if (!Array.isArray(sectionContents)) continue
-      for (const inner of sectionContents) {
-        const contRenderer = inner.continuationItemRenderer as Record<string, unknown> | undefined
-        if (!contRenderer) continue
-        const token = dig(contRenderer, 'continuationEndpoint', 'continuationCommand', 'token') as string | undefined
-        if (token) { createParams = token; break }
-      }
-      if (createParams) break
-    }
-  }
-
-  if (!createParams) {
-    throw errors.retriable('Could not extract comment creation params — comments may be disabled on this video')
-  }
-
-  // The continuation token above only fetches comments. The actual createCommentParams
-  // lives in the comments header (commentSimpleboxRenderer) — fetch the comments first
-  // (authenticated, so the composer renders for the logged-in user instead of a sign-in
-  // prompt) and dig out the real submit param. Without this, /create_comment returns 404.
-  const commentsResp = await innertubeAuthPost(
-    helpers, page, 'next', { context, continuation: createParams }, config,
-  ) as Record<string, unknown>
-  let realCreateParams: string | undefined
-  const stack: unknown[] = [commentsResp]
-  while (stack.length) {
-    const cur = stack.pop()
-    if (cur && typeof cur === 'object') {
-      const obj = cur as Record<string, unknown>
-      const cp = obj.createCommentParams
-      if (typeof cp === 'string') { realCreateParams = cp; break }
-      for (const v of Object.values(obj)) stack.push(v)
-    } else if (Array.isArray(cur)) {
-      for (const v of cur) stack.push(v)
-    }
-  }
-  if (!realCreateParams) {
-    throw errors.retriable('Could not find createCommentParams in comments header — the composer did not render (account likely lacks 1P SAPISID cookie; re-login needed)')
-  }
-  createParams = realCreateParams
-
-  // Step 2: post the comment via /comment/create_comment (requires sapisidhash auth)
-  const commentResp = await innertubeAuthPost(
-    helpers, page, 'comment/create_comment',
-    { context, createCommentParams: createParams, commentText: text },
-    config,
-  ) as Record<string, unknown>
-
-  // Extract created comment ID from response
-  const actions = commentResp.actionResults as Array<Record<string, unknown>> | undefined
-  let commentId = ''
-  if (Array.isArray(actions)) {
-    for (const action of actions) {
-      const key = action.key as string | undefined
-      if (key) { commentId = key; break }
-    }
-  }
-  // Fallback: try frameworkUpdates path
-  if (!commentId) {
-    const mutations = dig(commentResp, 'frameworkUpdates', 'entityBatchUpdate', 'mutations') as Array<Record<string, unknown>> | undefined
-    if (Array.isArray(mutations)) {
-      for (const m of mutations) {
-        const payload = dig(m, 'payload', 'commentEntityPayload', 'properties') as Record<string, unknown> | undefined
-        if (payload?.commentId) { commentId = String(payload.commentId); break }
-      }
-    }
-  }
-  // Fallback: deep-search response for any "Ug…" (YouTube comment IDs prefix Ug).
-  if (!commentId) {
-    const stack: unknown[] = [commentResp]
-    while (stack.length) {
-      const cur = stack.pop()
-      if (typeof cur === 'string') {
-        if (/^Ug[\w-]{10,}/.test(cur)) { commentId = cur; break }
-      } else if (Array.isArray(cur)) {
-        for (const v of cur) stack.push(v)
-      } else if (cur && typeof cur === 'object') {
-        for (const v of Object.values(cur as Record<string, unknown>)) stack.push(v)
-      }
-    }
-  }
-  if (!commentId) {
-    // YouTube returns HTTP 200 with a showErrorAction when its spam filter
-    // rejects the comment — surface that distinct signal.
-    const topActions = commentResp.actions as Array<Record<string, unknown>> | undefined
+    // Surface YT spam-filter rejection if present
+    const topActions = body.actions as Array<Record<string, unknown>> | undefined
     if (Array.isArray(topActions)) {
       for (const a of topActions) {
         const errMsg = dig(a, 'showErrorAction', 'errorMessage', 'messageRenderer', 'text')
-        const text = textRuns(errMsg) || (errMsg as { simpleText?: string } | undefined)?.simpleText
-        if (text) throw errors.retriable(`YouTube rejected comment: ${text}`)
+        const t = textRuns(errMsg) || (errMsg as { simpleText?: string } | undefined)?.simpleText
+        if (t) throw errors.retriable(`YouTube rejected comment: ${t}`)
       }
     }
-    throw errors.retriable('Could not extract created commentId from create_comment response')
-  }
 
-  return { videoId, commentId, text, author: '' }
+    // The commentId returned in actionResults.key is an internal action ID,
+    // not the URL-form Ug... ID we need for deleteComment. The SPA renders
+    // the new comment optimistically at the top of the list — read its
+    // commentId from the DOM. Wait up to 10s for the optimistic render.
+    let commentId = ''
+    const start = Date.now()
+    while (!commentId && Date.now() - start < 10_000) {
+      commentId = await page.evaluate((needle) => {
+        const threads = Array.from(document.querySelectorAll('ytd-comment-thread-renderer'))
+        for (const t of threads) {
+          const content = t.querySelector('#content-text')?.textContent?.trim() || ''
+          if (!content.includes(needle)) continue
+          const m = (t as HTMLElement).outerHTML.match(/Ug[\w-]{18,30}/)
+          if (m) return m[0]
+        }
+        return ''
+      }, text.slice(0, 80))
+      if (!commentId) await page.waitForTimeout(500)
+    }
+    if (!commentId) {
+      // Fallback: take the response's first Ug... string even if non-canonical
+      commentId = deepFindString(body, /^Ug[\w-]{10,}/)
+    }
+    if (!commentId) throw errors.retriable('Could not extract commentId — comment may not have rendered yet')
+    return { videoId, commentId, text, author: '' }
+  } finally {
+    cap.off()
+  }
 }
 
-// --- deleteComment ---
+// --- deleteComment (dispatch-events + passive intercept) ---
 const deleteComment: Handler = async (page, params, helpers) => {
   const { errors } = helpers
   const videoId = String(params.videoId || '')
@@ -477,24 +475,82 @@ const deleteComment: Handler = async (page, params, helpers) => {
   if (!videoId) throw errors.missingParam('videoId')
   if (!commentId) throw errors.missingParam('commentId')
 
-  if (!page.url().includes(`watch?v=${videoId}`)) {
-    await page.goto(`https://www.youtube.com/watch?v=${videoId}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-    await page.waitForTimeout(1500)
+  // Use YT's `lc=` deep-link — it pins the target comment to the top of the
+  // section regardless of pagination/sort, so we don't have to hunt for it.
+  await page.goto(`https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+  await page.waitForTimeout(2000)
+  await page.evaluate(() => window.scrollTo(0, 700))
+  await page.waitForSelector('ytd-comments ytd-comment-thread-renderer', { timeout: 20_000 })
+
+  // Newly-posted comments may not appear immediately — poll for the target
+  // commentId, scrolling further as needed to trigger pagination. Skip pinned
+  // comments (the creator's pinned comment is rendered first and matches
+  // unrelated outerHTML strings); prefer non-pinned threads whose ytd-comment-view-model
+  // contains the commentId.
+  let thread: Awaited<ReturnType<Page['$']>> = null
+  const findStart = Date.now()
+  while (Date.now() - findStart < 20_000) {
+    const handle = await page.evaluateHandle((id) => {
+      const threads = Array.from(document.querySelectorAll('ytd-comment-thread-renderer'))
+      // First pass: thread whose comment-view-model is NOT pinned and whose outerHTML contains id
+      let match = threads.find(t => {
+        const view = t.querySelector('ytd-comment-view-model')
+        if (!view) return false
+        if (view.hasAttribute('pinned')) return false
+        return (t as HTMLElement).outerHTML.includes(id)
+      })
+      // Fallback: any thread containing the id
+      if (!match) match = threads.find(t => (t as HTMLElement).outerHTML.includes(id))
+      if (match) (match as HTMLElement).scrollIntoView({ block: 'center' })
+      return match || null
+    }, commentId)
+    const el = handle.asElement()
+    if (el) { thread = el as unknown as Awaited<ReturnType<Page['$']>>; break }
+    await page.waitForTimeout(500)
   }
+  if (!thread) throw errors.retriable(`Comment ${commentId} not in rendered list after wait`)
 
-  const config = await getYtConfig(page)
-  const context = makeContext(config)
+  const cap = captureResponse(page, /\/youtubei\/v1\/comment\/perform_comment_action(?:\?|$)/)
+  try {
+    await thread.hover()
+    const kebab = await thread.$('#action-menu button, ytd-menu-renderer button, button[aria-label*="ction menu" i]')
+    if (!kebab) throw errors.retriable('Kebab menu button not found on comment')
+    await kebab.click()
 
-  // InnerTube uses perform_comment_action with an encoded action string.
-  // The action is: CAYaJ" + base64(commentId action proto)
-  // Simpler approach: use the action endpoint directly with the comment external ID.
-  await innertubeAuthPost(
-    helpers, page, 'comment/perform_comment_action',
-    { context, actions: ['action_remove_comment'], commentId },
-    config,
-  )
+    await page.waitForSelector(
+      'ytd-menu-popup-renderer ytd-menu-service-item-renderer, tp-yt-paper-listbox ytd-menu-service-item-renderer',
+      { timeout: 5_000 },
+    )
+    const clickedDelete = await page.evaluate(() => {
+      const items = Array.from(document.querySelectorAll(
+        'ytd-menu-popup-renderer ytd-menu-service-item-renderer, tp-yt-paper-listbox ytd-menu-service-item-renderer',
+      ))
+      const del = items.find(i => /^\s*delete\s*$/i.test((i.textContent || '').trim()))
+      if (!del) return false
+      ;(del as HTMLElement).click()
+      return true
+    })
+    if (!clickedDelete) throw errors.retriable('Delete menu item not found')
 
-  return { videoId, commentId, deleted: true }
+    await page.waitForSelector('yt-confirm-dialog-renderer, tp-yt-paper-dialog', { timeout: 5_000 })
+    const clickedConfirm = await page.evaluate(() => {
+      const candidates = [
+        ...document.querySelectorAll('yt-confirm-dialog-renderer #confirm-button button'),
+        ...document.querySelectorAll('tp-yt-paper-dialog button'),
+      ]
+      const btn = (candidates.find(b => /delete/i.test((b.textContent || '').trim())) || candidates[0]) as HTMLElement | undefined
+      if (!btn) return false
+      btn.click()
+      return true
+    })
+    if (!clickedConfirm) throw errors.retriable('Confirm-delete button not found')
+
+    const body = await cap.wait(15_000)
+    if (!body) throw errors.retriable('No /perform_comment_action response within timeout')
+    return { videoId, commentId, deleted: true }
+  } finally {
+    cap.off()
+  }
 }
 
 // --- getTranscript ---
@@ -586,23 +642,58 @@ const getTranscript: Handler = async (page, params, helpers) => {
   }
 }
 
-// --- likeVideo / unlikeVideo ---
+// --- likeVideo / unlikeVideo (dispatch-events + passive intercept) ---
+//
+// The like button is a toggle. We click it and intercept whichever of
+// /like/like or /like/removelike fires. Caller asks for "like" — if the
+// video was already liked (button shows pressed), the click would un-like
+// it; we detect and re-click so the resulting state matches the request.
+async function clickLikeAndCapture(
+  page: Page,
+  videoId: string,
+  desired: 'like' | 'unlike',
+  helpers: AdapterHelpers,
+): Promise<unknown> {
+  const { errors } = helpers
+  await ensureWatchPage(page, videoId)
+  const likeSel = 'like-button-view-model button[aria-label*="ike this video" i]'
+  await page.waitForSelector(likeSel, { timeout: 20_000, state: 'attached' })
+
+  const cap = captureResponse(page, /\/youtubei\/v1\/like\/(like|removelike)(?:\?|$)/)
+  try {
+    // Read pressed state to decide whether to click once or twice (toggle semantics)
+    const isLiked = await page.evaluate((sel) => {
+      const btn = document.querySelector(sel) as HTMLButtonElement | null
+      if (!btn) return false
+      return btn.getAttribute('aria-pressed') === 'true'
+    }, likeSel)
+    const wantLiked = desired === 'like'
+    if (isLiked === wantLiked) {
+      // Already in desired state; nothing to intercept. Return synthetic success.
+      return { videoId, [desired === 'like' ? 'liked' : 'unliked']: true, noop: true }
+    }
+    await page.evaluate((sel) => {
+      const btn = document.querySelector(sel) as HTMLButtonElement | null
+      btn?.click()
+    }, likeSel)
+    const body = await cap.wait(15_000)
+    if (!body) throw errors.retriable(`No /like/${desired === 'like' ? 'like' : 'removelike'} response within timeout`)
+    return body
+  } finally {
+    cap.off()
+  }
+}
+
 const likeVideo: Handler = async (page, params, helpers) => {
   const videoId = String(params.videoId || '')
   if (!videoId) throw helpers.errors.missingParam('videoId')
-
-  const config = await getYtConfig(page)
-  const context = makeContext(config)
-  return innertubeAuthPost(helpers, page, 'like/like', { context, target: { videoId } }, config)
+  return clickLikeAndCapture(page, videoId, 'like', helpers)
 }
 
 const unlikeVideo: Handler = async (page, params, helpers) => {
   const videoId = String(params.videoId || '')
   if (!videoId) throw helpers.errors.missingParam('videoId')
-
-  const config = await getYtConfig(page)
-  const context = makeContext(config)
-  return innertubeAuthPost(helpers, page, 'like/removelike', { context, target: { videoId } }, config)
+  return clickLikeAndCapture(page, videoId, 'unlike', helpers)
 }
 
 // --- subscribeChannel / unsubscribeChannel ---
