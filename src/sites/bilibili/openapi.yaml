@@ -11621,6 +11621,76 @@ paths:
                 required:
                   - code
                   - message
+  /x/v3/fav/folder/created/list:
+    get:
+      operationId: listFavoriteFolders
+      summary: List the authenticated user's created favorite folders (read; needed to chain into addToFavorites).
+      x-openweb:
+        permission: read
+        safety: safe
+        requires_auth: true
+        build:
+          stable_id: bili0011a
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: bilibili-web
+          operation: listFavoriteFolders
+      parameters:
+        - in: query
+          name: ps
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Page size.
+        - in: query
+          name: pn
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+      responses:
+        "200":
+          description: Favorite folder listing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      has_more:
+                        type: boolean
+                      list:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              description: Folder media_id (use as add_media_ids in addToFavorites).
+                            fid:
+                              type: integer
+                            mid:
+                              type: integer
+                            title:
+                              type: string
+                            media_count:
+                              type: integer
+                required:
+                  - code
+                  - message
   /x/v3/fav/resource/deal:
     post:
       operationId: addToFavorites
@@ -11652,11 +11722,11 @@ paths:
                   type: integer
                   description: Video aid (from getVideoDetail).
                 add_media_ids:
-                  type: string
-                  description: Comma-separated favorite folder IDs to add to.
+                  type: [string, integer]
+                  description: Favorite folder ID (or comma-separated list) to add to.
                 del_media_ids:
-                  type: string
-                  description: Comma-separated favorite folder IDs to remove from.
+                  type: [string, integer]
+                  description: Favorite folder ID (or comma-separated list) to remove from.
       responses:
         "200":
           description: Favorites result.
@@ -11798,8 +11868,8 @@ paths:
                   type: integer
                   description: Video aid (from getVideoDetail).
                 del_media_ids:
-                  type: string
-                  description: Comma-separated favorite folder IDs to remove from.
+                  type: [string, integer]
+                  description: Favorite folder ID (or comma-separated list) to remove from.
       responses:
         "200":
           description: Remove from favorites result.

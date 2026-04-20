@@ -384,6 +384,16 @@ async function getVideoUserRelation(page: Page, params: Readonly<Record<string, 
 
 /* ---------- write operations ---------- */
 
+async function listFavoriteFolders(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
+  const { errors } = helpers
+  const cookies = await page.context().cookies('https://www.bilibili.com')
+  const mid = cookies.find((c) => c.name === 'DedeUserID')?.value
+  if (!mid) throw errors.needsLogin()
+  const ps = Number(params.ps ?? 20)
+  const pn = Number(params.pn ?? 1)
+  return fetchApiViaPage(page, '/x/v3/fav/folder/created/list', { up_mid: mid, ps, pn })
+}
+
 async function likeVideo(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
   const { errors } = helpers
   const aid = Number(params.aid)
@@ -466,6 +476,7 @@ const OPERATIONS: Record<string, Handler> = {
   unfollowUploader,
   getUserProfile: getUserInfo,
   searchUserVideos: getUserVideos,
+  listFavoriteFolders,
 }
 
 const runner: CustomRunner = {

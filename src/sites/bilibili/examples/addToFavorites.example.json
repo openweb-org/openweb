@@ -1,13 +1,13 @@
 {
-  "operation_id": "removeFromFavorites",
+  "operation_id": "addToFavorites",
   "method": "post",
   "replay_safety": "unsafe_mutation",
-  "order": 2,
+  "order": 1,
   "cases": [
     {
       "input": {
         "rid": 170001,
-        "del_media_ids": "${prev.listFavoriteFolders.data.list.0.id}"
+        "add_media_ids": "${prev.listFavoriteFolders.data.list.0.id}"
       },
       "assertions": {
         "status": 200,

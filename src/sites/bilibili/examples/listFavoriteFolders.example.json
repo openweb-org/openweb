@@ -1,0 +1,14 @@
+{
+  "operation_id": "listFavoriteFolders",
+  "method": "get",
+  "order": 0,
+  "cases": [
+    {
+      "input": {},
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
