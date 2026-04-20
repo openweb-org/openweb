@@ -1,3 +1,10 @@
+## 2026-04-20 — deleteMessage fixture chained in Saved Messages (handoff5)
+
+**Context:** `deleteMessage` was the last unchained write op — fixture pinned `chatId: "8259810574"` (a real peer) with `messageId: "latest"`, which is fragile (peer can leave/archive) and risked deleting cross-account history. `sendMessage` had no `order:` field, so the resolver could see no outgoing messages and the op silently no-op'd or hit "no outgoing messages".
+**Changes:** `sendMessage.example.json` gained `"order": 1` to seed Saved Messages first; `deleteMessage.example.json` switched `chatId` to `"me"` (resolved to `currentUserId` per `adapters/telegram-protocol.js:110`) and `"order": 7` so it runs after the existing `editMessage`/`forwardMessages`/`pinMessage`/`unpinMessage`/`markAsRead` chain. Fallback: junk account `@vdyzrisw` if Saved Messages ever gets restricted. (commit 1982640)
+**Verification:** `pnpm dev verify telegram --browser --write` 12/12 PASS.
+**Key discovery:** Saved Messages (`chatId: "me"`) is the canonical hermetic-fixture target for telegram writes — no shared-state pollution, no peer dependency, no risk of corrupting real chats. Combine with `messageId: "latest"` + an `order: 1` seed to make the chain self-creating.
+
 ## 2026-04-19 — Write-Verify Campaign: 4/5 PASS via outgoing-message fixture + forwardMessages adapter fix
 
 **Context:** Prior session left telegram at 1/5 (markAsRead only). The other 4 write ops (`editMessage`, `forwardMessages`, `pinMessage`, `unpinMessage`) all failed with "no outgoing messages" because they resolve `messageId: "latest"` against `global.messages.byChatId[peerId]` filtered by `isOutgoing === true`, and the verify account's Saved Messages chat had never had an outgoing message.
