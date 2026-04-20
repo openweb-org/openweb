@@ -20,7 +20,12 @@
 **Verification (`pnpm dev verify youtube --browser --write --ops likeVideo,addComment,deleteComment`):**
 - ✓ `likeVideo`: PASS
 - ✓ `addComment`: PASS
-- ⚠ `deleteComment`: pattern works (kebab → menu → delete → confirm flow exercised correctly), residual blocker is YT propagation/spam-pending — `lc=<freshCommentId>` deep-link sometimes does not surface the just-posted comment within the 20s poll window. Adapter pattern is correct.
+- ⚠ `deleteComment`: pattern works (kebab → menu → delete → confirm flow exercised correctly), residual blocker is **YT spam-filter shadowban**, confirmed via live probe (commit `f920599`):
+  - `addComment` returns HTTP 200 + a `commentId`, but the comment never appears in the public comments thread on the video page.
+  - `lc=<freshCommentId>` deep-link returns the regular page title ("Coding Vlog Ep. 6 - Deploying a New Feature - YouTube") instead of "Comment from @imooooonkey…" — YT's URL handler doesn't recognize the freshly-posted ID at all.
+  - DOM scan after navigation shows zero `@imooooonkey` comments among the rendered threads; older `@imooooonkey` comments from prior runs that *did* survive the filter (`UgwVTfLIp_qKWKUc3k94AaABAg`) DO surface via `lc=` and DO have the canonical anchor — proving the deleteComment UI flow works on visible comments.
+  - This is the same diagnosis originally proposed in `doc/todo/write-verify/handoff5.md` §3.1 (and twice retracted in favor of request-shape / cookie-scope hypotheses, both wrong). Probe-confirmed this round.
+- **Recovery path** (out of adapter scope): use a YouTube account whose comments aren't spam-filtered, or wait for the filter to relax (typically days–weeks).
 
 **Architectural decision:** Read-only multi-step ops (`getComments`, `getPlaylist`) keep using `innertubeAuthPost` / `pageFetch` — Chrome's anti-abuse does not gate those. Only mutation ops require the dispatch-events path.
 
