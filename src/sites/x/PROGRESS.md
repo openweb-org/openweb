@@ -1,3 +1,14 @@
+## 2026-04-20 — hideReply/unhideReply transport upgrade + cross-account fixture (handoff5)
+
+**Context:** Both ops were stuck in a "login-loop" failure mode in handoff4 — 45 s timeouts plus a runtime cascade that opened the system browser. Two interlocking root causes: (1) the legacy REST endpoint `PUT /i/api/2/tweets/{id}/hidden` no longer exists on x.com, requests just hang; (2) the fixture had a foreign `tweet_id` with `order: 1` (before `createTweet`), so the inevitable 403 got classified as `needs_login` and triggered the auth cascade.
+**Changes:**
+- `adapters/x-graphql.ts` — switched `hideReply`/`unhideReply` from REST `PUT` to GraphQL `ModerateTweet` / `UnmoderateTweet` with `variables: { tweetId }`. Hashes resolved dynamically same as other GraphQL ops. (commit `b734164`)
+- `examples/hideReply.example.json` + `examples/unhideReply.example.json` — first attempt chained `tweetId` from `${prev.reply.create_tweet.tweet_results.result.rest_id}` at `order: 18/19`; X blocks moderating own self-thread replies (returns DRIFT). Second commit restored cross-account reply id `2046061970021847164` (`@QGuo219895` reply on `@iamoonkey/2045749343437619246`) so the static example actually exercises the moderation path. (commit `986b916`)
+- `openapi.yaml` — relaxed response schema to `type: object` because the actual response is `{tweet_moderate_put|tweet_unmoderate_put: "Done"}`, not `{hidden: boolean}`.
+**Verification:** `pnpm dev verify x --browser --write --ops hideReply,unhideReply` 2/2 PASS. Aggregate `verify x --write` strict pass: 27/29 (93 %).
+**Key discovery:** What looked like a verify-framework cascade bug was a **request-shape diff** masquerading as auth failure. The 45 s hang on the dead REST endpoint produced the same observable signature as a real 401, and `getHttpFailure(403/timeout) → needs_login` mapped both into the cascade. Lesson: when verify hangs at the auth layer but the user can perform the action manually, suspect endpoint drift / wrong transport before suspecting auth state. (See `skill/openweb/knowledge/auth-routing.md` § "Request-shape misdiagnosis" for the pattern.)
+**Pitfalls encountered:** (a) chaining the moderation fixture from `${prev.reply...}` is impossible because of X's self-thread block — cross-account is the only path. (b) Schema validation initially failed silently because the GraphQL response isn't even close to the REST `{hidden}` shape; `type:object` is the correct relaxation since the field name itself encodes the success state.
+
 ## 2026-04-19 — Handoff2 cleanup: drop deleteDM, restore hide/unhideReply
 
 **Context:** Write-verify campaign handoff2 items #5a (deleteDM probe-rediscover) and #7 (hide/unhideReply permanent fixture).
