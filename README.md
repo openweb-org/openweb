@@ -168,7 +168,11 @@ pnpm test && pnpm lint
 
 > **Platform:** Tested on macOS with Google Chrome. Linux and Windows paths are implemented but not yet tested. Requires Chrome installed.
 
-OpenWeb is a tool for interacting with websites through their existing interfaces. Users are responsible for complying with each website's terms of service. This project is not affiliated with, endorsed by, or associated with any of the websites listed above.
+OpenWeb is for lawful use — personal automation, research, accessibility, and building agents on accounts and data you own or are authorized to access. **You are solely responsible** for complying with each site's Terms of Service, applicable laws (including computer-misuse and data-protection statutes), and the acceptable-use policies of any account you authenticate with.
+
+Write, delete, and transactional operations run under your authenticated session — sites may rate-limit, suspend, or ban accounts that automate against their interface. **Do not** use OpenWeb to harvest third-party personal data at scale, evade anti-abuse systems, or access systems without authorization.
+
+Not affiliated with, endorsed by, or associated with any listed website. Provided "as is" with no warranty; see [LICENSE](LICENSE).
 
 ## License
 
