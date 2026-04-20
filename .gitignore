@@ -16,6 +16,7 @@ doc/archive
 .multmux
 # Personal agent memory (not for OSS)
 .claude/projects/
+.claude/scheduled_tasks.lock
 # Temporary files
 tmp/
 # Stale capture/test artifacts
