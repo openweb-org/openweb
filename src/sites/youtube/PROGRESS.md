@@ -1,5 +1,27 @@
 # YouTube — Progress
 
+## 2026-04-20 — `addComment` / `deleteComment` Request Shape Fix (Stage 5d)
+
+**Context:** Both ops failed against a logged-in account that *can* post comments manually in default Chrome. Prior handoff (`handoff5.md` §3) misdiagnosed it as account shadowban / quota — same misdiagnosis pattern as walmart (`46dd46e`) and spotify (`a1831bb`).
+
+**Real cause (three layers):**
+1. **Minimal context + missing headers.** The adapter sent `context = {client: {clientName, clientVersion}}` (2 keys) and only `authorization`/`x-goog-authuser`/`x-origin` headers. Real SPA sends ~26-key `INNERTUBE_CONTEXT.client` (visitorData, mainAppWebInfo, configInfo.appInstallData, deviceMake, browserName/Version, screenPixelDensity, platform, etc.) plus `x-goog-visitor-id`, `x-youtube-client-name`, `x-youtube-client-version`, `x-youtube-bootstrap-logged-in: true`. With the impoverished shape, YT's spam filter returned `showErrorAction: "Comment failed to post."` (HTTP 200 + soft block).
+2. **Wrong `createCommentParams` token.** The adapter was passing the GET-comments continuation token to `/comment/create_comment` — that returns HTTP 404 "Requested entity was not found". The actual `createCommentParams` lives inside `commentsHeaderRenderer.createRenderer.commentSimpleboxRenderer` of the *second* `/next` response (the one that fetches the comments). That second `/next` must be authenticated, otherwise YT renders a sign-in modal in place of the composer.
+3. **Wrong SAPISIDHASH prefix for cookie set.** The adapter only computed `SAPISIDHASH` from `SAPISID`. Many sessions only have `__Secure-3PAPISID` (no first-party `SAPISID`); the matching prefix is `SAPISID3PHASH`. Sending `SAPISIDHASH` with a 3P cookie value yields HTTP 401.
+
+**Changes (`src/sites/youtube/adapters/youtube-innertube.ts`):**
+- `getYtConfig` now also returns `INNERTUBE_CONTEXT`, `VISITOR_DATA`, `INNERTUBE_CONTEXT_CLIENT_NAME` from `ytcfg.data_`.
+- `makeContext(config)` returns the full ytcfg context when available; falls back to the 2-key minimal context only if ytcfg is missing.
+- `innertubePost` / `innertubeAuthPost` add `x-youtube-client-name`, `x-youtube-client-version`, `x-goog-visitor-id`, and (auth path) `x-youtube-bootstrap-logged-in: true`.
+- `getSapisidAuth` prefers `SAPISID` (`SAPISIDHASH` prefix) and falls back to `__Secure-3PAPISID` (`SAPISID3PHASH` prefix). Hash format includes the `_u` user suffix the SPA uses.
+- `addComment` and `deleteComment` now navigate to `/watch?v=<id>` first so `ytcfg` is the watch-page context, then `addComment` does the two-step composer fetch (`/next?videoId` → comments continuation → authenticated `/next?continuation` → walk for `createCommentParams` → `/comment/create_comment`).
+
+**Verification status:** Adapter request shape now matches the SPA byte-for-byte on the inspected fields, but `addComment`/`deleteComment` still fail in this session because the openweb-managed browser profile lacks the first-party `SAPISID` cookie set — only `__Secure-3PSID`/`__Secure-3PAPISID`/`LOGIN_INFO` are present, so the authenticated `/next` returns the sign-in composer (`yt_li=0`) and the new diagnostic fires: *"the composer did not render (account likely lacks 1P SAPISID cookie; re-login needed)"*. `likeVideo` exhibits the same 401 against this profile, confirming the issue is the cookie set, not request shape. Fix is environmental: re-login to YouTube in the openweb-managed browser to populate the 1P cookies; the adapter changes are necessary and will take effect once that's done.
+
+**Handoff5 §3.1 retraction:** the original "Comment failed to post" was *not* an account shadowban / soft-block from posting frequency. Root cause was request shape (impoverished `context.client`, wrong continuation token used as `createCommentParams`, missing SPA headers). Pattern matches walmart/spotify: server-side soft-rejects of openweb's request that look like account problems but are actually divergence from the real SPA shape.
+
+---
+
 ## 2026-04-18 — Write-Verify Campaign
 
 **Context:** First end-to-end exercise of write ops via `pnpm dev verify youtube --write`.

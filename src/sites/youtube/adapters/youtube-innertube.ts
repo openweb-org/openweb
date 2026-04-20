@@ -17,10 +17,15 @@ type Errors = AdapterHelpers['errors']
 const API_BASE = 'https://www.youtube.com/youtubei/v1'
 const DEFAULT_KEY = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
 const DEFAULT_CLIENT_VERSION = '2.20260325.08.00'
+const DEFAULT_CLIENT_NAME_NUM = '1'
 
 interface YtConfig {
   key: string
   clientVersion: string
+  clientNameNum: string
+  visitorData: string
+  /** Full INNERTUBE_CONTEXT pulled from ytcfg — required for writes; SPA sends ~30 client fields. */
+  innertubeContext: Record<string, unknown> | null
 }
 
 async function getYtConfig(page: Page): Promise<YtConfig> {
@@ -29,27 +34,42 @@ async function getYtConfig(page: Page): Promise<YtConfig> {
       const w = window as unknown as Record<string, unknown>
       const ytcfg = w.ytcfg as Record<string, unknown> | undefined
       if (!ytcfg) return null
-      const data = (ytcfg.data_ || ytcfg.d) as Record<string, string> | undefined
+      const data = (ytcfg.data_ || ytcfg.d) as Record<string, unknown> | undefined
       if (!data) return null
       return {
-        key: data.INNERTUBE_API_KEY || '',
-        clientVersion: data.INNERTUBE_CLIENT_VERSION || '',
+        key: String(data.INNERTUBE_API_KEY || ''),
+        clientVersion: String(data.INNERTUBE_CLIENT_VERSION || ''),
+        clientNameNum: String(data.INNERTUBE_CONTEXT_CLIENT_NAME || '1'),
+        visitorData: String(data.VISITOR_DATA || ''),
+        innertubeContext: (data.INNERTUBE_CONTEXT as Record<string, unknown>) || null,
       }
     })
     if (config?.key && config?.clientVersion) return config
   } catch { /* page may not have ytcfg loaded */ }
-  return { key: DEFAULT_KEY, clientVersion: DEFAULT_CLIENT_VERSION }
+  return {
+    key: DEFAULT_KEY,
+    clientVersion: DEFAULT_CLIENT_VERSION,
+    clientNameNum: DEFAULT_CLIENT_NAME_NUM,
+    visitorData: '',
+    innertubeContext: null,
+  }
 }
 
-function makeContext(clientVersion: string) {
-  return { client: { clientName: 'WEB', clientVersion } }
+/** Build context for InnerTube body. Use full ytcfg INNERTUBE_CONTEXT when available — required for write ops. */
+function makeContext(config: YtConfig): Record<string, unknown> {
+  if (config.innertubeContext) return config.innertubeContext
+  return { client: { clientName: 'WEB', clientVersion: config.clientVersion } }
 }
 
-/** Compute SAPISIDHASH for YouTube authenticated requests. */
-function computeSapisidhash(sapisid: string, origin: string): string {
-  const timestamp = Math.floor(Date.now() / 1000)
-  const hash = createHash('sha1').update(`${timestamp} ${sapisid} ${origin}`).digest('hex')
-  return `SAPISIDHASH ${timestamp}_${hash}`
+/**
+ * Compute the YouTube auth header. The server validates the hash against the
+ * matching cookie: SAPISIDHASH ↔ SAPISID, SAPISID3PHASH ↔ __Secure-3PAPISID.
+ * Use whichever cookie is available — sending the wrong prefix yields 401.
+ */
+function computeAuthHeader(cookieValue: string, prefix: string, origin: string): string {
+  const ts = Math.floor(Date.now() / 1000)
+  const hash = createHash('sha1').update(`${ts} ${cookieValue} ${origin}`).digest('hex')
+  return `${prefix} ${ts}_${hash}_u`
 }
 
 /** Get SAPISID cookie from browser context for authenticated requests. */
@@ -57,8 +77,10 @@ async function getSapisidAuth(page: Page): Promise<string | undefined> {
   try {
     const cookies = await page.context().cookies('https://www.youtube.com')
     const sapisid = cookies.find(c => c.name === 'SAPISID')
-    if (!sapisid) return undefined
-    return computeSapisidhash(sapisid.value, 'https://www.youtube.com')
+    if (sapisid) return computeAuthHeader(sapisid.value, 'SAPISIDHASH', 'https://www.youtube.com')
+    const sapisid3p = cookies.find(c => c.name === '__Secure-3PAPISID')
+    if (sapisid3p) return computeAuthHeader(sapisid3p.value, 'SAPISID3PHASH', 'https://www.youtube.com')
+    return undefined
   } catch {
     return undefined
   }
@@ -73,12 +95,13 @@ async function innertubePost(
 ): Promise<unknown> {
   const { pageFetch, errors } = helpers
   const url = `${API_BASE}/${endpoint}?key=${config.key}&prettyPrint=false`
-  const result = await pageFetch(page, {
-    url,
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    'x-youtube-client-name': config.clientNameNum,
+    'x-youtube-client-version': config.clientVersion,
+  }
+  if (config.visitorData) headers['x-goog-visitor-id'] = config.visitorData
+  const result = await pageFetch(page, { url, method: 'POST', headers, body: JSON.stringify(body) })
   if (result.status >= 400) {
     throw errors.retriable(`InnerTube ${endpoint} returned HTTP ${result.status}`)
   }
@@ -89,7 +112,7 @@ async function innertubePost(
   }
 }
 
-/** Authenticated InnerTube POST — includes sapisidhash Authorization header. */
+/** Authenticated InnerTube POST — includes sapisidhash Authorization header plus full SPA-aligned headers. */
 async function innertubeAuthPost(
   helpers: AdapterHelpers,
   page: Page,
@@ -103,17 +126,17 @@ async function innertubeAuthPost(
     throw errors.fatal('Not logged in to YouTube — SAPISID cookie not found')
   }
   const url = `${API_BASE}/${endpoint}?key=${config.key}&prettyPrint=false`
-  const result = await pageFetch(page, {
-    url,
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'authorization': auth,
-      'x-goog-authuser': '0',
-      'x-origin': 'https://www.youtube.com',
-    },
-    body: JSON.stringify(body),
-  })
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    'authorization': auth,
+    'x-goog-authuser': '0',
+    'x-origin': 'https://www.youtube.com',
+    'x-youtube-client-name': config.clientNameNum,
+    'x-youtube-client-version': config.clientVersion,
+    'x-youtube-bootstrap-logged-in': 'true',
+  }
+  if (config.visitorData) headers['x-goog-visitor-id'] = config.visitorData
+  const result = await pageFetch(page, { url, method: 'POST', headers, body: JSON.stringify(body) })
   if (result.status === 401 || result.status === 403) {
     throw errors.fatal(`YouTube auth failed (HTTP ${result.status}) — login required`)
   }
@@ -155,7 +178,7 @@ const getComments: Handler = async (page, params, helpers) => {
   if (!videoId) throw errors.missingParam('videoId')
 
   const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
+  const context = makeContext(config)
 
   // Step 1: get the comment section continuation token from /next
   const nextResp = await innertubePost(helpers, page, 'next', { context, videoId }, config) as Record<string, unknown>
@@ -244,7 +267,7 @@ const getPlaylist: Handler = async (page, params, helpers) => {
   if (!playlistId) throw errors.missingParam('playlistId')
 
   const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
+  const context = makeContext(config)
   const browseId = playlistId.startsWith('VL') ? playlistId : `VL${playlistId}`
 
   const resp = await innertubePost(
@@ -306,8 +329,15 @@ const addComment: Handler = async (page, params, helpers) => {
   if (!videoId) throw errors.missingParam('videoId')
   if (!text) throw errors.missingParam('text')
 
+  // Ensure page is on the watch URL so ytcfg has the watch-page INNERTUBE_CONTEXT
+  // (originalUrl, mainAppWebInfo). Without this, YT's spam filter rejects writes.
+  if (!page.url().includes(`watch?v=${videoId}`)) {
+    await page.goto(`https://www.youtube.com/watch?v=${videoId}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+    await page.waitForTimeout(1500)
+  }
+
   const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
+  const context = makeContext(config)
 
   // Step 1: get createCommentParams from /next (comment creation token)
   const nextResp = await innertubePost(helpers, page, 'next', { context, videoId }, config) as Record<string, unknown>
@@ -337,6 +367,31 @@ const addComment: Handler = async (page, params, helpers) => {
   if (!createParams) {
     throw errors.retriable('Could not extract comment creation params — comments may be disabled on this video')
   }
+
+  // The continuation token above only fetches comments. The actual createCommentParams
+  // lives in the comments header (commentSimpleboxRenderer) — fetch the comments first
+  // (authenticated, so the composer renders for the logged-in user instead of a sign-in
+  // prompt) and dig out the real submit param. Without this, /create_comment returns 404.
+  const commentsResp = await innertubeAuthPost(
+    helpers, page, 'next', { context, continuation: createParams }, config,
+  ) as Record<string, unknown>
+  let realCreateParams: string | undefined
+  const stack: unknown[] = [commentsResp]
+  while (stack.length) {
+    const cur = stack.pop()
+    if (cur && typeof cur === 'object') {
+      const obj = cur as Record<string, unknown>
+      const cp = obj.createCommentParams
+      if (typeof cp === 'string') { realCreateParams = cp; break }
+      for (const v of Object.values(obj)) stack.push(v)
+    } else if (Array.isArray(cur)) {
+      for (const v of cur) stack.push(v)
+    }
+  }
+  if (!realCreateParams) {
+    throw errors.retriable('Could not find createCommentParams in comments header — the composer did not render (account likely lacks 1P SAPISID cookie; re-login needed)')
+  }
+  createParams = realCreateParams
 
   // Step 2: post the comment via /comment/create_comment (requires sapisidhash auth)
   const commentResp = await innertubeAuthPost(
@@ -403,8 +458,13 @@ const deleteComment: Handler = async (page, params, helpers) => {
   if (!videoId) throw errors.missingParam('videoId')
   if (!commentId) throw errors.missingParam('commentId')
 
+  if (!page.url().includes(`watch?v=${videoId}`)) {
+    await page.goto(`https://www.youtube.com/watch?v=${videoId}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+    await page.waitForTimeout(1500)
+  }
+
   const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
+  const context = makeContext(config)
 
   // InnerTube uses perform_comment_action with an encoded action string.
   // The action is: CAYaJ" + base64(commentId action proto)
@@ -513,7 +573,7 @@ const likeVideo: Handler = async (page, params, helpers) => {
   if (!videoId) throw helpers.errors.missingParam('videoId')
 
   const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
+  const context = makeContext(config)
   return innertubeAuthPost(helpers, page, 'like/like', { context, target: { videoId } }, config)
 }
 
@@ -522,7 +582,7 @@ const unlikeVideo: Handler = async (page, params, helpers) => {
   if (!videoId) throw helpers.errors.missingParam('videoId')
 
   const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
+  const context = makeContext(config)
   return innertubeAuthPost(helpers, page, 'like/removelike', { context, target: { videoId } }, config)
 }
 
@@ -537,14 +597,14 @@ function extractChannelIds(params: Readonly<Record<string, unknown>>, errors: Er
 const subscribeChannel: Handler = async (page, params, helpers) => {
   const channelIds = extractChannelIds(params, helpers.errors)
   const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
+  const context = makeContext(config)
   return innertubeAuthPost(helpers, page, 'subscription/subscribe', { context, channelIds }, config)
 }
 
 const unsubscribeChannel: Handler = async (page, params, helpers) => {
   const channelIds = extractChannelIds(params, helpers.errors)
   const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
+  const context = makeContext(config)
   return innertubeAuthPost(helpers, page, 'subscription/unsubscribe', { context, channelIds }, config)
 }
 
