@@ -143,6 +143,22 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
       return
     }
 
+    // Guard: if a third positional arg is present but didn't parse as JSON, the user
+    // almost certainly meant to invoke an op with params and forgot to quote them
+    // (shells split unquoted `{"k": "v"}` into `{k:` and `v}`). Don't silently fall
+    // through to the show screen — error with a quoting hint.
+    if (third && !third.startsWith('-')) {
+      const stitched = fourth && !fourth.startsWith('-') ? `${third} ${fourth} ...` : third
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'INVALID_PARAMS',
+        message: `Could not parse params as JSON: \`${stitched}\`. Did you forget to quote the JSON? Shells split unquoted braces on whitespace.`,
+        action: `Wrap params in single quotes, e.g.: openweb ${site} ${second} '{"title": "Linux"}'`,
+        retriable: false,
+        failureClass: 'fatal',
+      })
+    }
+
     const tool = second && !second.startsWith('-') ? second : undefined
     const full = argv.includes('--full') || argv.includes('-f')
     const json = argv.includes('--json')
