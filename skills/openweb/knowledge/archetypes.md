@@ -102,6 +102,8 @@ Quick-reference for typical operations by site category. Use during Step 1 (Fram
   - addToPlaylist / removeFromPlaylist (music/video)
   - createPlaylist / deletePlaylist
 
+> Note: some bundled content sites (e.g. youtube-music) are currently read-only — engagement/library writes are not yet implemented.
+
 ---
 
 ## E-commerce
@@ -112,7 +114,7 @@ Quick-reference for typical operations by site category. Use during Step 1 (Fram
   - updateCartQuantity (set to 0 = remove)
   - saveItem (wishlist) / unsaveItem
 - Read: view cart
-- Transact (deny by default): checkout, placeOrder
+- Transact (not yet implemented in any bundled site; placeholder for future): checkout, placeOrder
 
 ## Travel
 
@@ -131,7 +133,7 @@ Quick-reference for typical operations by site category. Use during Step 1 (Fram
 ## Job Boards
 
 - Read: search jobs, job detail, company profile, salary data, reviews
-- Write (reversible pairs):
+- Write (reversible pairs, not yet implemented in any bundled site; placeholder for future):
   - saveJob / unsaveJob
 
 ---
@@ -158,10 +160,8 @@ Quick-reference for typical operations by site category. Use during Step 1 (Fram
 
 ## Finance / Banking
 
-- Read: account/portfolio overview, stock/asset quote (by symbol), market data, transaction history (paginated), search securities
-- Write (reversible pairs):
-  - addToWatchlist / removeFromWatchlist
-- Transact (deny by default): placeOrder, transfer
+- Read: account/portfolio overview, stock/asset quote (by symbol), market data, transaction history (paginated), search securities, watchlist
+- Write & Transact (not yet implemented in any bundled site; bundled finance sites — robinhood, fidelity, xueqiu, yahoo-finance — are read-only; placeholder for future): addToWatchlist / removeFromWatchlist, placeOrder, transfer
 
 ## Email & Cloud / Storage
 

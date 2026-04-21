@@ -1,3 +1,23 @@
+## 2026-04-20: doc refresh — site count, per-site SKILL.md, and missing x-openweb fields
+
+**What changed:**
+- README.md, doc/main/{README,architecture}.md, doc/dev/{development,adding-sites}.md: site/op counts updated `55 sites` → `93 sites, 757 ops`; test count `560` → `~1,050`; per-site package tree refreshed to include `SKILL.md`, `PROGRESS.md`, `examples/` (previously missing).
+- skills/openweb/references/x-openweb.md: added missing extension fields — server-level `auth_check`, `headers`, `page_plan`; operation-level `auth_check` override, `verify_status`. These were in `src/types/extensions.ts` but undocumented in the shipped agent skill.
+- skills/openweb/references/cli.md: documented the unquoted-JSON-param error behavior added in `9bee470`.
+- README.md sites table per-site op counts re-synced with `openapi.yaml` headers (6 drifted: x 30→29, discord 16→14, substack 5→4, hackernews 16→18, bilibili 14→15, xueqiu 12→10).
+- README.md and doc/main/README.md: explicit `skills/openweb/` reference in Documentation section, since the skill ships as a separate deliverable.
+
+**Why:**
+- Drift accumulated since the last doc sweep (2026-04-04 / 2026-04-17). Site count grew from 55 → 93 across normalize-adapter + write-verify campaigns. Per-site `SKILL.md` was added by the document-step compiler refactor but the structure trees in docs still showed only `manifest.json + openapi.yaml + adapters/ + DOC.md`. Three new x-openweb fields (`auth_check`, `headers`, `verify_status`) shipped in the type system without a corresponding skill-doc update — agents reading the skill couldn't discover them.
+
+**Key files:** `README.md`, `doc/main/README.md`, `doc/main/architecture.md`, `doc/dev/development.md`, `doc/dev/adding-sites.md`, `skills/openweb/references/x-openweb.md`, `skills/openweb/references/cli.md`.
+**Verification:** Cross-checked all changes against actual code (`src/types/extensions.ts` for fields, `ls src/sites/<site>/` for package layout, `find src/sites -maxdepth 1 -type d | wc -l` for count, `grep -cE` over openapi.yaml for op counts). No stale `skill/openweb/` paths remain (confirmed via grep).
+**Commit:** pending.
+**Next:** Consider porting OpenCLI-style `smart-search` skill (intent routing) as a separate `skills/openweb-search/` deliverable — current skill is operator-focused, not task-router-focused.
+**Blockers:** None.
+
+---
+
 ## 2026-04-19/20: write-verify handoff2 → handoff3 — close out remaining ops
 
 **What changed:**

@@ -87,7 +87,7 @@ Some sites roll their own detection in addition to (or instead of) commercial so
 | Custom request signing | e.g. some e-commerce, social media sites | `x-amzn-*`-style headers, custom HMAC, or per-request transaction ID headers computed client-side |
 | Custom required headers | e.g. some social media, image-sharing sites | Requires `x-requested-with: XMLHttpRequest` or site-specific app ID headers -- 400/403 without |
 | Encrypted payloads | e.g. some search engines, social platforms | Request body/params are base64/protobuf -- can't be replayed without the encoder |
-| Rate-based blocking | Most APIs | `429` or silent empty responses after N requests/minute |
+| Rate-based blocking | Most APIs | `429` or silent empty responses after N requests/minute. Site-specific 429s may be header/fingerprint validation misclassified as rate limits (e.g., Walmart 429 was Akamai header-bundle fingerprinting, not quota; Spotify 429 was gateway-classification spclient vs api.spotify.com) — verify against current site state. |
 | Rate-based redirect loops | e.g. some professional networks | Rapid sequential node requests trigger redirect loops (>5 redirects) |
 | Referrer/origin validation | Many sites | Requests without proper `Referer` or `Origin` header get `403` |
 | Cookie chaining | e.g. banking, ticket sites | Multi-step cookie flow -- must visit specific pages in order |
@@ -198,8 +198,10 @@ const body = await bodyPromise
   real streaming endpoint. A naïve prefix match captures the prepare
   response and misses the actual data.
 - Playwright's `Response.text()` resolves on response headers, not on
-  stream end. For SSE / chunked responses, prefer a CDP
-  `Network.dataReceived` listener buffered until `Network.loadingFinished`.
+  stream end. In practice, `Response.text()` works on SSE if the body
+  is fully sent before the await (e.g., `chatgpt-web` uses this pattern).
+  CDP `Network.dataReceived` buffered until `Network.loadingFinished`
+  is safer for streaming responses arriving incrementally.
 - The site may also classify the response with a `403` that the runtime
   treats as `needs_login` (`getHttpFailure(403)` in `src/lib/errors.ts`).
   When this triggers an unwanted login cascade, fail fast with a
@@ -306,4 +308,4 @@ pkill -9 -f openweb-profile-
 openweb browser start
 ```
 
-Then re-run the failing op in isolation. If it still fails, then investigate `browser-fetch-executor.ts` / `page-candidates.ts`. See `doc/todo/write-verify/handoff5.md` §3.2 retraction for a worked example (walmart/searchProducts + xiaohongshu/getRelatedNotes both turned out to be this, not a runtime bug).
+Then re-run the failing op in isolation. If it still fails, then investigate `browser-fetch-executor.ts` / `page-candidates.ts`. See `src/sites/walmart/PROGRESS.md` and `src/sites/xiaohongshu/PROGRESS.md` for worked examples (walmart/searchProducts + xiaohongshu/getRelatedNotes both turned out to be this, not a runtime bug).

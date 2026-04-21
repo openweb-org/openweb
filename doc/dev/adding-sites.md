@@ -1,7 +1,7 @@
 # Adding a New Site
 
 > How to create a new site — from capture to verified skill package.
-> Last updated: 2026-03-29 (v1+v5 site merge)
+> Last updated: 2026-04-20 (404418d)
 
 ## Decision Tree
 

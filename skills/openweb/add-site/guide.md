@@ -251,8 +251,8 @@ Runs: analyze -> auto-curate -> generate -> verify.
 
 | Output | Location |
 |--------|----------|
-| `analysis-summary.json`, `analysis.json`, `verify-report.json`, `summary.txt` | `$OPENWEB_HOME/compile/<site>/` |
-| `openapi.yaml`, `asyncapi.yaml`, `manifest.json`, `examples/` | `$OPENWEB_HOME/sites/<site>/` |
+| `analysis-summary.json`, `analysis.json`, `analysis-full.json`, `verify-report.json`, `summary.txt` | `$OPENWEB_HOME/compile/<site>/` |
+| `openapi.yaml`, `asyncapi.yaml` (if WebSocket operations exist), `manifest.json`, `examples/` | `$OPENWEB_HOME/sites/<site>/` |
 
 Auto-curation accepts all clusters, picks top auth candidate, uses
 suggested camelCase operation names.

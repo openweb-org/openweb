@@ -62,6 +62,8 @@ openweb verify <site> --ops op1 --browser    # combine filters
 Use `--browser` for sites with `transport: page` — it auto-starts the managed
 browser and verifies page-transport ops that would otherwise fail.
 Use `--ops` to debug individual operations without running the full suite.
+The `--ops` value is a comma-separated list of operation IDs with **no spaces**
+(e.g., `--ops searchStores,getMenu`, not `--ops searchStores, getMenu`).
 
 #### Status Interpretation
 

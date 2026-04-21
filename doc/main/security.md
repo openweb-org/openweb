@@ -54,6 +54,8 @@ SSRF validation is enforced across all network paths:
 - **WebSocket connections**: `ws-runtime.ts` converts `wss://` → `https://` for DNS check before connecting
 - **WS HTTP handshake**: validates handshake endpoint URL
 
+**Note:** `src/lib/config/blocked-domains.*` and `blocked-paths.*` are **compile-time** labels consumed by `src/compiler/analyzer/labeler.ts` to categorize captured samples (e.g. tracking, static); they are not runtime SSRF enforcement. Runtime protection relies solely on the IP-based validation above.
+
 -> See: `src/lib/ssrf.ts`
 
 ---
@@ -113,7 +115,12 @@ type OpenWebErrorCode =
   | 'TOOL_NOT_FOUND'
   | 'INVALID_PARAMS'
   | 'AUTH_FAILED'
+  | 'TEST_BARRIER'
 ```
+
+### Test-Environment Barrier
+
+Under `process.env.VITEST`, any operation with permission category `write`, `delete`, or `transact` is refused pre-dispatch with a `TEST_BARRIER` error. This prevents tests from accidentally executing live state-changing calls against the user's authenticated session when a transport bypasses the injected `fetchImpl`. Tests asserting the permission gate let the call through should expect `TEST_BARRIER` rather than a fake success response (see `src/runtime/http-executor.ts:117-130`).
 
 ### Error Flow
 

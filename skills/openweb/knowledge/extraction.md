@@ -47,7 +47,7 @@ Data lives in the DOM as rendered HTML -- no JSON payload available.
 - **Example:** `[...document.querySelectorAll('.product-card')].map(el => ({ title: el.querySelector('.title').textContent.trim(), price: el.querySelector('.price').textContent.trim() }))`
 - **Gotcha:** Fragile -- CSS class names change. Prefer JSON-based patterns when available.
 
-## page_global
+## page_global_data
 
 Data assigned to a global variable by inline JavaScript.
 

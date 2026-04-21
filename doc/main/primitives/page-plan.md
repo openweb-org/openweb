@@ -39,7 +39,7 @@ paths:
 | `wait_until` | string | `"load"` | Playwright `waitUntil` (`domcontentloaded` / `load` / `networkidle` / `commit`). |
 | `settle_ms` | number | `0` | Extra delay after `ready`. Escape hatch — prefer a tighter `ready` selector. |
 | `warm` | boolean | `false` | Run `warmSession()` after readiness (PerimeterX / DataDome / Akamai cookie wait with retry). |
-| `warm_origin` | `'page' \| 'server' \| URL` | auto | Override the URL `warmSession` navigates against. Default: entry_url when its origin differs from serverUrl, otherwise serverUrl. Use `'page'` for sites whose API lives on a different subdomain than the entry page (e.g. apple-podcasts). |
+| `warm_origin` | `'page' \| 'server' \| string` | auto | Override the URL `warmSession` navigates against. Default: entry_url when its origin differs from serverUrl, otherwise serverUrl. Use `'page'` for sites whose API lives on a different subdomain than the entry page (e.g. apple-podcasts). An explicit string must be a full `http(s)://` URL (validated by `resolveWarmUrl`). |
 | `nav_timeout_ms` | number | `30000` | Navigation + readiness timeout. |
 
 ---
@@ -89,13 +89,14 @@ PagePlan is ignored when the resolved transport doesn't need a browser page:
 4. If no reuse: new page, page.goto(entry_url, { waitUntil: plan.wait_until })
 5. If ready selector: page.waitForSelector(plan.ready, { timeout: plan.nav_timeout_ms })
 6. If settle_ms: await setTimeout(plan.settle_ms)
-7. If warm: warmSession(page, page.url())   // on page origin, not server URL
+7. If warm: warmSession(page, plan.entry_url)   // always the resolved entry_url
 8. Return { page, owned: newly-created? }
 ```
 
-`warmSession` runs with the **page's current origin**, not the spec's `serverUrl`. This matters for sites whose entry page is on a different origin from the API server (e.g. apple-podcasts — page on `podcasts.apple.com`, API on `amp-api.podcasts.apple.com`). Warming the API origin would navigate away from the entry page and destroy JS-context auth like `window.MusicKit`.
+Two warm paths exist and they differ:
 
-`browser_fetch` (transport `page`) applies the same rule for its own explicit warm call: if `entry_url` origin differs from `serverUrl` origin, it warms on entry_url; otherwise serverUrl. `page_plan.warm_origin` overrides this when a site needs explicit control.
+- **`acquirePage` (this orchestrator)** always warms on the resolved `plan.entry_url` directly — no origin heuristic, no `warm_origin` consultation. The entry_url has already been chosen by the caller, so it is the right target.
+- **`browser-fetch-executor` (transport `page`)** issues its own warm call via `resolveWarmUrl(planConfig.warm_origin, entryUrl, serverUrl)`. When `warm_origin` is unset, that helper picks `entry_url` if its origin differs from `serverUrl` (so adapter auth like `window.MusicKit` on `podcasts.apple.com` survives an API call to `amp-api.podcasts.apple.com`), otherwise `serverUrl`. `warm_origin` (`'page'` / `'server'` / explicit URL) overrides the heuristic.
 
 ---
 

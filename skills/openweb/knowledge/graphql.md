@@ -12,6 +12,18 @@ The client sends a hash instead of the full query string. The server looks up th
 - **Modeling:** Store hash in `x-persisted-query-hash` extension in openapi.yaml.
 - **Hash rotation:** Some sites rotate persisted query hashes on every deploy. For these, hardcoding hashes is fragile. Use an L3 adapter that extracts hashes at runtime from the site's JS bundle: `page.evaluate(() => fetch(mainBundleUrl).then(text => regex-parse queryId+operationName pairs))`.
 
+### APQ Flavors (GET vs POST)
+
+The runtime auto-selects the wire shape by HTTP method declared in the spec (`src/runtime/http-executor.ts:456-459`):
+
+- **POST (Apollo)** — `buildJsonRequestBody` emits `extensions.persistedQuery.sha256Hash` in the JSON body, with user params wrapped under `variables` (`src/runtime/request-builder.ts:147-167`). If `graphql_query` is also set, the full query rides along as APQ cache-miss fallback.
+- **GET (Relay)** — `buildGraphqlGetApqQuery` JSON-stringifies both `variables` and `extensions` (the `persistedQuery` envelope) and merges them into the URL query string (`src/runtime/request-builder.ts:182-216`):
+  ```
+  /path?variables={...}&extensions={"persistedQuery":{"version":1,"sha256Hash":"..."}}
+  ```
+
+Same spec declares both — the `requestBody` schema doubles as the variable payload for the GET flavor.
+
 ## Query Hashing (Client-Side)
 
 The client includes the full query but also a computed hash for caching/validation.
@@ -93,9 +105,21 @@ Test each discovered operation with and without auth cookies to classify access 
 
 This classification drives `x-openweb.auth` settings in the site package.
 
+## `graphql_query` Field-Conflict Escape Hatch
+
+When `wrap: variables` is active and a user-facing param happens to be named `query` (common for search operations), the schema property would shadow the GraphQL query string at body root. The spec sets `x-openweb.graphql_query` to inject the GraphQL document at body root post-wrap, while the user's `query` param flows under `variables` (`src/types/extensions.ts:100-102`, `src/runtime/request-builder.ts:147-151`):
+
+```yaml
+x-openweb:
+  wrap: variables
+  graphql_query: "query SearchProducts($query: String!) { ... }"
+```
+
+Result on the wire: `{ query: "query SearchProducts...", variables: { query: "<user input>" } }`.
+
 ## Ephemeral queryId / doc_id Hashes
 
-Some sites use ephemeral `doc_id` or `queryId` parameters instead of standard Apollo persisted-query hashes.
+Some sites use ephemeral `doc_id` or `queryId` parameters instead of standard Apollo persisted-query hashes. Note: `queryId` here is extracted from URL **query params** (e.g. `?queryId=abc.1`) — this is distinct from Apollo persisted-query hashes carried in the POST body's `extensions.persistedQuery.sha256Hash` (`src/compiler/analyzer/graphql-cluster.ts:73-85`, where `queryId` discriminator is checked before `operationName`).
 
 **Key difference from Apollo persisted queries:**
 - Apollo hashes are SHA-256 of the query text -- deterministic and reproducible
@@ -187,7 +211,7 @@ paths:
 **Key patterns:**
 - **Virtual path**: `/gql~searchProducts` is the spec key (unique per operation)
 - **`actual_path: /gql`**: the real wire endpoint
-- **`wrap: variables`**: user-supplied params (`query`, `limit`) are wrapped under `variables` on the wire; `const` fields (`operationName`, `extensions`) stay at root
+- **`wrap: variables`**: non-const user-supplied params (`query`, `limit`) are wrapped under `variables` on the wire; fields with `schema.const` (`operationName`, `extensions`) stay at body root (`src/runtime/request-builder.ts:118-145`)
 - **`unwrap: data`**: response `{ data: { ... }, errors: [] }` → extracts `data`
 - **`schema.const`**: fixed headers (Client-Id) and body fields (operationName, hash) are invisible to callers
 - **Path-differentiated GraphQL** (e.g. `/graphql/{operationName}`): use real paths, no `actual_path` needed

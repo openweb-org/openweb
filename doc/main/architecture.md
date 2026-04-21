@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-04-04 (patchright, warmSession, headless stealth, site fixes)
+> Last updated: 2026-04-20 (404418d)
 
 ## Mission
 
@@ -95,7 +95,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), no content filtering, body-size-gate only | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17), unfiltered (v2) |
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skills/openweb/references/` | 2 process docs + 2 deep refs + 7 knowledge files |
 | **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete — npm binary `openweb` (M33) |
-| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `$OPENWEB_HOME/sites/` (installed) | 55 sites with DOC.md + PROGRESS.md |
+| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `$OPENWEB_HOME/sites/` (installed) | 90+ sites with SKILL.md + DOC.md + PROGRESS.md |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `skills/openweb/SKILL.md` | 5-intent router (M38) |
 
 ---
@@ -136,7 +136,7 @@ Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
 └────────────────────────────────────────────────────────┘
 ```
 
--> See: [primitives/](primitives/README.md) — all 16 primitive types
+-> See: [primitives/](primitives/README.md) — all 17+ primitive types
 
 ---
 
@@ -214,7 +214,7 @@ Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessio
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |
 
-55 total sites. Full list: `pnpm dev sites`
+90+ sites, 750+ operations. Full list: `pnpm dev sites`
 
 **Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `permission: write`) demonstrating POST-based GraphQL on a public API.
 

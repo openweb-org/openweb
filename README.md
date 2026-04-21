@@ -99,7 +99,10 @@ src/sites/<site>/
   manifest.json       # identity, auth, stats
   openapi.yaml        # operations, params, response schemas
   adapters/           # JS transforms for complex sites
-  DOC.md              # operator notes
+  examples/           # captured fixtures, used by --example and tests
+  SKILL.md            # agent-facing usage notes (workflows, intent mapping)
+  DOC.md              # operator notes (auth, transport, internals)
+  PROGRESS.md         # site build history
 ```
 
 The runtime reads the spec → builds the request (URL, headers, auth, CSRF) → dispatches via the right transport (HTTP, browser fetch, SSR, WebSocket) → returns structured JSON.
@@ -126,16 +129,16 @@ See [`skills/openweb/add-site/guide.md`](skills/openweb/add-site/guide.md) for t
 
 ## Sites
 
-90+ sites, 750+ operations:
+90+ sites, 750+ operations (numbers in parentheses are per-site operation counts):
 
 | Category | Sites |
 |---|---|
-| **Social** | instagram(24), x(30), reddit(17), bluesky(22), linkedin(12), weibo(16), xiaohongshu(14), zhihu(17), discord(16), telegram(13), whatsapp(8), tiktok(25), pinterest(11) |
+| **Social** | instagram(24), x(29), reddit(17), bluesky(22), linkedin(12), weibo(16), xiaohongshu(14), zhihu(17), discord(14), telegram(13), whatsapp(8), tiktok(25), pinterest(11) |
 | **Commerce** | amazon(8), walmart(5), target(5), costco(14), bestbuy(5), ebay(3), etsy(4), jd(4), instacart(3), homedepot(5) |
 | **Food & Delivery** | doordash(5), grubhub(3), ubereats(8), starbucks(3), opentable(4) |
-| **Content** | youtube(15), youtube-music(9), medium(14), substack(5), wikipedia(14), hackernews(16), bilibili(14), soundcloud(4), spotify(13), twitch(7), apple-podcasts(4), douban(14) |
+| **Content** | youtube(15), youtube-music(9), medium(14), substack(4), wikipedia(14), hackernews(18), bilibili(15), soundcloud(4), spotify(13), twitch(7), apple-podcasts(4), douban(14) |
 | **Travel** | booking(5), expedia(6), google-flights(5), tripadvisor(7), kayak(2), ctrip(13), airbnb(5), uber(3) |
-| **Finance** | robinhood(14), fidelity(13), yahoo-finance(9), xueqiu(12), bloomberg(7), coinmarketcap(3), coingecko(5), seeking-alpha(4) |
+| **Finance** | robinhood(14), fidelity(13), yahoo-finance(9), xueqiu(10), bloomberg(7), coinmarketcap(3), coingecko(5), seeking-alpha(4) |
 | **News** | bbc-news(4), cnn(3), reuters(4), guardian(3), techcrunch(4), npr(3), espn(6) |
 | **Dev** | github(18), gitlab(17), leetcode(12), chatgpt(6), stackoverflow(5), docker-hub(3), huggingface(5), npm(4), pypi(3) |
 | **Search** | google-search(10), google-maps(14), google-scholar(3) |
@@ -144,12 +147,13 @@ See [`skills/openweb/add-site/guide.md`](skills/openweb/add-site/guide.md) for t
 | **Productivity** | notion(7), todoist(6), trello(7) |
 | **Other** | craigslist(3), goodrx(3), producthunt(4), quora(4), steam(11), boss(7), arxiv(3) |
 
-Run `openweb sites` for the complete list with operation counts and auth requirements.
+Run `openweb sites` for the source of truth — the table above is hand-maintained and may drift; the CLI also shows auth requirements.
 
 ## Documentation
 
 | | |
 |---|---|
+| [`skills/openweb/`](skills/openweb/) | Shipped agent skill (router, references, add-site guides) |
 | [`doc/main/`](doc/main/) | Architecture, runtime, security |
 | [`doc/dev/`](doc/dev/) | Development guides |
 

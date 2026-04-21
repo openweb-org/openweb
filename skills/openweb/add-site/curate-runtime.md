@@ -16,6 +16,7 @@ extraction, or adapter-based operations.
 | `auth` | AuthPrimitive | If site has auth |
 | `csrf` | CsrfPrimitive + `scope` | If site has CSRF |
 | `signing` | SigningPrimitive | If site has signing |
+| `auth_check` | AuthCheckPrimitive | When site signals "unauthenticated despite HTTP 200" via body shape |
 | `headers` | `Record<string, string>` | If site needs constant headers (e.g., User-Agent override) |
 
 **Operation-level** (per-operation `x-openweb`) — overrides server config:
@@ -280,6 +281,10 @@ servers:
         ready: '.content'
         warm: true
 ```
+
+> **`warm_origin` default:** when `entry_url.origin !== serverUrl.origin`, warm
+> uses the entry_url origin; otherwise warm uses serverUrl. Override with
+> explicit `warm_origin: 'page' | 'server' | <URL string>`.
 
 The runner becomes a single `run(ctx)` entry with a switch on `ctx.operation`:
 ```typescript

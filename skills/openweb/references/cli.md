@@ -39,6 +39,8 @@ openweb <site> exec <op> '{}' --max-response 8192
 
 **Auto-exec shorthand:** `openweb <site> <op> '{"key":"value"}'` triggers exec when the third positional arg is a JSON object and no show-mode flags (`--json`, `--full`, `-f`, `--example`) are present.
 
+**Param quoting:** Always wrap JSON params in single quotes — unquoted JSON (`{key:value}`) errors out with a diagnostic instead of silently falling through to the help screen.
+
 **Output contract:**
 
 - **stdout**: JSON result body on success
@@ -69,9 +71,9 @@ openweb browser status
 
 Override profile source with `--profile <dir>` or `browser.profile` in config. Default port: 9222. One managed browser at a time.
 
-**Headed mode:** The managed browser is headless by default. Use `--no-headless` when the user needs to interact with it (CAPTCHA solving, debugging). Set `"browser": {"headless": false}` in config for persistent headed mode. Example: `openweb browser restart --no-headless`.
+**Headed mode:** The managed browser is headless by default. Pass `--headless false` (or yargs negation `--no-headless`) when the user needs to interact with it (CAPTCHA solving, debugging). Set `"browser": {"headless": false}` in config for persistent headed mode. Example: `openweb browser restart --headless false`.
 
-**Off-screen headed:** When auto-started (e.g., by `exec` or `verify`), headed browsers launch off-screen (`--window-position=10000,10000`) so they don't steal focus. Manual `browser start --no-headless` launches on-screen for interactive use (CAPTCHA solving).
+**Off-screen headed:** When auto-started (e.g., by `exec` or `verify`), headed browsers launch off-screen (`--window-position=10000,10000`) so they don't steal focus. Manual `browser start --headless false` launches on-screen for interactive use (CAPTCHA solving).
 
 ## Login
 
@@ -125,10 +127,9 @@ openweb verify <site> --write                # include write/delete ops (transac
 openweb verify <site> --browser --write      # full verify: all transports + write ops
 openweb verify --all                         # all sites
 openweb verify --all --report json           # machine-readable drift report
-openweb verify --all --report markdown       # reviewable markdown report
 ```
 
-**Status vocabulary:** `PASS` | `DRIFT` | `FAIL` | `auth_expired`
+**Status vocabulary:** `PASS` | `DRIFT` | `FAIL` | `auth_expired` | `bot_blocked`
 
 - `--write` replays write/delete operations (transact always excluded, warning printed to stderr)
 - `--report` only valid with `--all`

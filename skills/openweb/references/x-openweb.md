@@ -14,6 +14,10 @@ Applied to the server object. Every field here affects ALL operations.
 | `auth` | AuthPrimitive | No | Authentication — site-wide |
 | `csrf` | CsrfPrimitive + `scope` | No | CSRF token resolution |
 | `signing` | SigningPrimitive | No | Custom request signing |
+| `auth_check` | AuthCheckPrimitive | No | Body-shape patterns that signal "unauthenticated despite HTTP 200" (e.g. empty `data` or specific error messages). Synthesizes a `needs_login` failure so the auth cascade can recover. Disable per-op with `auth_check: false` |
+| `headers` | `Record<string, string>` | No | Constant headers merged into every node-transport request to this server (e.g. per-site User-Agent overrides, API keys) |
+| `page_plan` | PagePlan | No | Default page-acquisition plan for page-transport operations (entry_url, ready, warm, nav_timeout) |
+| `adapter` | AdapterRef | No | Default adapter for all operations under this server. Op-level `adapter` overrides; `adapter: false` opts out per-op |
 
 ### Transport
 
@@ -69,9 +73,10 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `auth` | AuthPrimitive \| `false` | Override or disable server-level auth |
 | `csrf` | CsrfPrimitive + `scope` \| `false` | Override or disable server-level CSRF |
 | `signing` | SigningPrimitive \| `false` | Override or disable server-level signing |
+| `auth_check` | AuthCheckPrimitive \| `false` | Override or disable server-level `auth_check` rules for this op |
 | `pagination` | PaginationPrimitive | Cursor or link-header pagination config |
 | `extraction` | ExtractionPrimitive | SSR/DOM data extraction config |
-| `adapter` | AdapterRef | Delegates execution to a TypeScript adapter |
+| `adapter` | AdapterRef \| `false` | Override or disable server-level adapter. `false` opts this op out of a server-level adapter |
 | `actual_path` | string | Real URL path when spec key is a virtual path (e.g. GraphQL dedup) |
 | `unwrap` | string | Dot-path into parsed response body to extract before returning (e.g. `data`, `0.data`) |
 | `wrap` | string | Wrap non-const request body params under this key (e.g. `variables` for GraphQL) |
@@ -81,6 +86,7 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `build` | BuildMeta | Compiler metadata — **do not edit manually** |
 | `safety` | `safe` \| `caution` | Compiler hint for state-modifying ops |
 | `requires_auth` | boolean | Compiler hint — not enforced at runtime |
+| `verify_status` | `'ok'` \| `'requires_interactive_solve'` | When `requires_interactive_solve`, `verify` skips this op (CAPTCHA-gated, manual-solve required) |
 
 ### Permission
 
@@ -106,7 +112,7 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `page_global_data` | `page_url?`, `expression?`, `path?`, `adapter?`, `method?`, `resolve_apollo_refs?`, `apollo_cache_path?` | Read a `window.*` global variable. Same `resolve_apollo_refs` semantics as `ssr_next_data` |
 | `html_selector` | `page_url?`, `selectors`, `attribute?`, `multiple?` | CSS selector on the DOM |
 | `script_json` | `selector`, `path?`, `strip_comments?`, `type_filter?`, `multi?` | Parse `<script>` JSON blocks. `strip_comments: true` unwraps `<!-- -->`-wrapped JSON (Yelp-style). `type_filter` picks ld+json by `@type` (string or string[]); `multi: true` returns all matching blocks as array |
-| `response_capture` | `match_url` (glob), `page_url?`, `wait_until?`, `unwrap?` | Navigate via PagePlan and capture the first network response matching `match_url`. Listener installed before `page.goto` — always forces fresh navigation |
+| `response_capture` | `match_url` (glob), `page_url?`, `unwrap?` | Navigate via PagePlan and capture the first network response matching `match_url`. Listener installed before `page.goto` — always forces fresh navigation |
 
 See `knowledge/extraction.md` for decision flow and usage guidance.
 

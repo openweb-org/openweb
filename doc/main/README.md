@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-04-17 (normalize-adapter v2 — PagePlan, CustomRunner, script_json/response_capture/graphql_hash primitives)
+> Last updated: 2026-04-20 (404418d)
 
 ## Quick Start
 
@@ -81,7 +81,7 @@ src/
 │   ├── cache-manager.ts        #   Response cache
 │   ├── token-cache.ts          #   Auth token cache (AES-256-GCM vault)
 │   ├── navigator.ts            #   CLI navigation helper (render site/operation info)
-│   └── primitives/             #   L2 primitive resolvers (14 handlers)
+│   └── primitives/             #   L2 primitive resolvers (17 handlers)
 │
 ├── types/                      # Meta-spec type system
 │   ├── primitives.ts           #   L2 primitive discriminated unions
@@ -145,7 +145,7 @@ src/
     ├── discord/                #   L2 (webpack_module_walk, page transport)
     ├── whatsapp/               #   L3 adapter (Meta require() module system)
     ├── telegram/               #   L3 adapter (teact global state)
-    └── ...                     #   55 more sites
+    └── ...                     #   more sites (run `pnpm dev sites` for the full list)
 ```
 
 ---

@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-04-04 (patchright replaces playwright)
+> Last updated: 2026-04-20 (9bee470)
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup -> dist/ + compile adapters)
-pnpm test           # Run tests (560 pass)
+pnpm test           # Run tests (1,000+ pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -126,7 +126,7 @@ src/
 │   └── ws-analyzer/          #   WS capture → classify → cluster → schema
 ├── capture/                  # Browser CDP recording
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, AsyncAPI, permissions, logger)
-└── sites/                    # Site packages (55 sites)
+└── sites/                    # Site packages (90+ sites)
 ```
 
 -> See: [doc/main/README.md](../main/README.md) -- full code structure with per-file annotations
@@ -134,9 +134,9 @@ src/
 ## Site Resolution
 
 1. `$OPENWEB_HOME/sites/<site>/openapi.yaml` -- User-installed (primary, populated by `compile`)
-2. `dist/sites/<site>/openapi.yaml` -- Bundled sites (npm package fallback)
-3. `./src/sites/<site>/openapi.yaml` -- Development fixtures (dev fallback)
-4. `$OPENWEB_HOME/registry/<site>/current` -> versioned -- Registry
+2. `$OPENWEB_HOME/registry/<site>/current` -> versioned -- Registry
+3. `dist/sites/<site>/openapi.yaml` -- Bundled sites (npm package fallback)
+4. `./src/sites/<site>/openapi.yaml` -- Development fixtures (dev fallback)
 
 Site names: `/^[a-z0-9][a-z0-9_-]*$/`.
 

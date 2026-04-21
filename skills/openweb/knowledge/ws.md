@@ -29,6 +29,14 @@ Client sends a request, server responds with a correlated message. Looks like RE
   - Slack: `{"type":"message","channel":"C...","text":"hello","id":42}` -> `{"ok":true,"reply_to":42}`
 - **Action:** Model as a standard operation with params->response. Map the correlation ID.
 
+### Publish (Fire-and-Forget)
+
+Client sends data without subscription; no server correlation. Detected when frames are sent-only without response or correlation ID.
+
+- **Signal:** Sent-only frames with no matching reply and no correlation ID
+- **Example:** Discord presence updates (`{"op":3,"d":{"status":"online",...}}`)
+- **Action:** Model as a `publish` operation when the send itself is the user intent
+
 ### Stream / Push
 
 Server pushes data continuously after connection or subscription. No client request triggers each message.
@@ -47,6 +55,15 @@ Many WS APIs authenticate during the handshake or immediately after.
 - **First-message auth:** Client sends an `identify`/`auth` message immediately after connect
   - Discord: `{"op":2,"d":{"token":"...","properties":{...}}}`
   - Slack: sends connection token in the WebSocket URL itself
+
+The runtime models four WS auth types (`src/types/ws-primitives.ts`):
+
+| Type | When to use |
+|------|-------------|
+| `ws_first_message` | Client sends auth/identify frame after connect (Discord) |
+| `ws_upgrade_header` | Token injected as HTTP header on the WS upgrade request |
+| `ws_url_token` | Token embedded as a URL query/path param (Slack) |
+| `ws_http_handshake` | Separate HTTP call exchanges credentials for a WS ticket before connect |
 
 ### Reconnection & Resume
 
@@ -104,7 +121,7 @@ Session limits, rate limit headers, shard info. Useful for transport config, not
 
 ## Site Package Modeling
 
-WS operations are modeled in `asyncapi.yaml` (separate from the HTTP `openapi.yaml`):
+WS operations *should* be modeled in `asyncapi.yaml` (separate from the HTTP `openapi.yaml`); coverage in the bundled site set is currently sparse:
 
 ```yaml
 channels:
@@ -126,6 +143,20 @@ operations:
     x-openweb:
       permission: read
       pattern: subscribe
+      subscribe_message:
+        constants: { type: 'subscribe', channel: 'ticker' }
+        bindings:
+          - { path: 'product_id', source: 'param', key: 'product_id' }
+      unsubscribe_message:
+        constants: { type: 'unsubscribe', channel: 'ticker' }
+        bindings: []
+      correlation:
+        field: 'request_id'
+        source: 'uuid'
+      event_match:
+        type: 'ticker'
+      build:
+        source: 'capture'
 ```
 
-The `x-openweb` extension on operations specifies permission and message pattern.
+The `x-openweb` extension on operations carries: `permission`, `pattern`, `subscribe_message`, `unsubscribe_message`, `correlation` (field + source: `echo`/`sequence`/`uuid`), `event_match` (server-frame matcher), and `build` metadata. See `src/types/ws-extensions.ts` for the full contract.

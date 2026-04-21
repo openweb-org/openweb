@@ -22,7 +22,7 @@ Chrome (--remote-debugging-port=9222)
 | Source | Output file | What it captures |
 |--------|-------------|------------------|
 | HTTP traffic | `traffic.har` | All HTTP requests/responses (unfiltered, body-size-gated) |
-| WebSocket frames | `websocket_frames.jsonl` | CDP `Network.webSocket*` events |
+| WebSocket frames | `websocket_frames.jsonl` (only written when WS frames are captured) | CDP `Network.webSocket*` events |
 | State snapshots | `state_snapshots/*.json` | localStorage, sessionStorage, cookies |
 | DOM extraction | `dom_extractions/*.json` | Meta tags, hidden inputs, framework globals, webpack chunks |
 
@@ -68,7 +68,7 @@ This design ensures the compiler's Analyze phase has complete data for classific
 
 ## Framework Globals Detection
 
-DOM extraction detects 19 known framework globals:
+DOM extraction detects 25 known framework globals:
 
 `__NEXT_DATA__`, `__NUXT__`, `__APOLLO_STATE__`, `ytcfg`, `webpackChunk*`, `gapi.client`, etc.
 
@@ -84,7 +84,7 @@ These feed into the compiler's Phase 3 pattern matching (e.g., `__NEXT_DATA__` �
 ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle>
 ```
 
-Auto-manages browser instances. If no `cdpEndpoint` is provided, checks for a running managed browser and starts one if needed. Returns a `BrowserHandle` with `release()` for cleanup. Internally uses `connectWithRetry()` for CDP connection with exponential backoff.
+Auto-manages browser instances. If no `cdpEndpoint` is provided, checks for a running managed browser and starts one if needed. Returns a `BrowserHandle` with `release()` for cleanup. Internally uses `connectWithRetry()` for CDP connection with linear backoff (1s per attempt, 3 attempts max).
 
 -> See: `src/runtime/browser-lifecycle.ts`, `src/capture/connection.ts`
 
@@ -156,7 +156,7 @@ src/capture/
 ├── state-capture.ts    # localStorage, sessionStorage, cookies snapshots
 ├── dom-capture.ts      # Meta tags, hidden inputs, framework globals detection
 ├── bundle.ts           # Write capture bundle directory to disk
-├── connection.ts       # CDP connection with exponential backoff
+├── connection.ts       # CDP connection with linear backoff (1s per attempt, 3 attempts max)
 └── types.ts            # StateSnapshot, DomExtraction, WsFrame, CaptureMetadata, HAR types
 ```
 

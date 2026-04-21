@@ -85,8 +85,9 @@ red flag for sites requiring login.
 
 ### CSRF Verification
 
-Auto-detected CSRF may be wrong. Check `authCandidates[0].csrfOptions` for
-all cookie-to-header matches ranked by confidence.
+Auto-detected CSRF may be wrong. Check the top-level `csrfOptions` array in
+analysis-summary.json — each entry is a CsrfPrimitive scored by
+`scoreCsrfMatch()` (auth-candidates.ts:228).
 
 **False positives:** locale cookies (`lc-main=en_US` -> `x-li-lang`), preference
 cookies — short values, not tokens.

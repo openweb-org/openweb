@@ -9,7 +9,7 @@ L2 primitives are **declarative config units** stored in the `x-openweb` extensi
 
 Each primitive has a `type` discriminator and type-specific config fields.
 
--> See: `src/types/primitives.ts` — all 16 primitive type definitions
+-> See: `src/types/primitives.ts` — all 17 primitive type definitions
 
 ---
 
@@ -270,6 +270,6 @@ src/runtime/primitives/
 
 - [architecture.md](../architecture.md) — System overview and 3-layer model
 - [runtime.md](../runtime.md) — Execution pipeline that invokes primitives
-- [meta-spec.md](../meta-spec.md) — Type definitions for all 16 primitives
+- [meta-spec.md](../meta-spec.md) — Type definitions for all 17 primitives
 - [adapters.md](../adapters.md) — L3 escape hatch when primitives aren't enough
 - `src/types/primitives.ts` — Full type definitions

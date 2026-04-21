@@ -25,6 +25,9 @@ Delete any operation matching these criteria:
 - **Internal framework** — `rsc-action`, `flagship-web`, `_next`
 - **SaaS dashboard internals** — internal namespace traffic; manual filtering needed
 
+> `src/compiler/analyzer/classify.ts` pre-filters many noise samples
+> (analytics/tracking/static) during analysis; the rules above cover what slips through.
+
 ### Recover Write Ops from Noisy Names
 
 Compiler generates names like `createAnswersVoters` (upvote),
@@ -87,6 +90,10 @@ whether the operation returns what it needs.
 Browser-generated tokens handled by adapter/page transport do not belong in
 the operation's parameter list. Remove them.
 
+> **Scrubbing vs parameter removal:** `src/compiler/curation/scrub.ts` automatically
+> strips PII from example *values*. Removing anti-bot *parameters* (e.g.
+> `dm_img_*`, `w_rid`) from the schema itself is a MANUAL curation step.
+
 | Parameter(s) | Source |
 |---|---|
 | `dm_cover_img_str`, `dm_img_inter`, `dm_img_list`, `dm_img_str` | Bilibili |
@@ -133,6 +140,12 @@ Auto-curation defaults are usually correct. Verify edge cases:
 - GraphQL queries via POST should be `read`, not `write`
 - Idempotent POST endpoints that only fetch data should be `read`
 
+> **Two-stage permission derivation:** `apply-curation.ts` `defaultPermission()`
+> returns `write` for any POST/PUT/PATCH (no `transact` detection). The `transact`
+> permission is auto-assigned later at GENERATION time by
+> `src/lib/permission-derive.ts` via `TRANSACT_PATTERNS`
+> (checkout/purchase/payment/order/subscribe in the path).
+
 ### Write Op Curation
 
 Write ops need extra attention:
@@ -177,6 +190,9 @@ curated package.
   curated; take new if existing was a stub
 - **NEVER delete existing write operations**
 - **NEVER delete existing adapter references**
+
+> Permissions on existing operations are preserved as-is during merge. Only
+> NEW operations receive auto-derived defaults from `apply-curation.ts`.
 
 **Step 4 — Merge auth:** Keep existing complex auth. If existing has no auth and
 new detected `cookie_session` + CSRF, take the new config.

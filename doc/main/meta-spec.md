@@ -29,7 +29,10 @@ interface XOpenWebServer {
   auth?: AuthPrimitive
   csrf?: CsrfPrimitive & { scope?: string[] }
   signing?: SigningPrimitive
+  auth_check?: AuthCheckPrimitive  // body-shape rules signaling "unauthenticated despite HTTP 200"
   headers?: Record<string, string>  // constant headers merged into every node request
+  page_plan?: PagePlanConfig        // default page-acquisition plan for page-transport ops
+  adapter?: AdapterRef              // default adapter ref for operations under this server
 }
 ```
 
@@ -68,10 +71,17 @@ interface XOpenWebOperation {
   auth?: AuthPrimitive | false      // Override server auth (false to disable)
   csrf?: CsrfPrimitive | false     // Override server CSRF (false to disable)
   signing?: SigningPrimitive | false // Override server signing (false to disable)
+  auth_check?: AuthCheckPrimitive | false  // Override or disable server auth_check rules
   pagination?: PaginationPrimitive
   extraction?: ExtractionPrimitive
   adapter?: AdapterRef
   actual_path?: string              // Real URL path when spec key is virtual (e.g. GraphQL dedup)
+  unwrap?: string                   // Dot-path into parsed body to extract before returning
+  wrap?: string                     // Wrap non-const request body params under this key (e.g. 'variables' for GraphQL)
+  graphql_query?: string            // GraphQL query string injected at body root when wrap conflicts with a param name
+  graphql_hash?: string             // Apollo APQ hash (raw hex or 'sha256:<hex>')
+  page_plan?: PagePlanConfig        // Per-operation overrides for the page-acquisition plan
+  verify_status?: 'ok' | 'requires_interactive_solve'  // 'requires_interactive_solve' makes verify skip this op (CAPTCHA-gated)
 }
 ```
 
@@ -172,10 +182,10 @@ params.
 
 | Type | Description | Key config |
 |------|-------------|------------|
-| `ssr_next_data` | Next.js SSR data | `page_url`, `path` |
+| `ssr_next_data` | Next.js SSR data | `page_url`, `path`, `resolve_apollo_refs`, `apollo_cache_path` |
 | `html_selector` | CSS selector | `page_url`, `selectors`, `attribute`, `multiple` |
 | `script_json` | Script tag JSON (supports JSON-LD, `<!-- -->`-wrapped payloads, multi-block pages) | `selector`, `path`, `strip_comments`, `type_filter`, `multi` |
-| `page_global_data` | Window global | `page_url`, `expression`, `path`, `adapter`, `method` |
+| `page_global_data` | Window global | `page_url`, `expression`, `path`, `adapter`, `method`, `resolve_apollo_refs`, `apollo_cache_path` |
 | `response_capture` | Intercept first network response during navigation | `match_url` (glob), `unwrap` |
 
 `script_json` with `strip_comments: true` unwraps Yelp-style HTML-comment-wrapped JSON and runs under both page and node transports (generalized via `node-ssr-executor`). `response_capture` always forces a fresh page navigation — the listener is installed before `page.goto` to avoid racing fast responses.

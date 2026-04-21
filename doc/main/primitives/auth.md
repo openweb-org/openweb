@@ -11,6 +11,10 @@
 | `webpack_module_walk` | Walk webpack chunk cache, find module, call function | `page.evaluate()` | Yes |
 | `exchange_chain` | Multi-step token exchange (call A -> extract -> call B -> extract) | `fetch()` chain | Yes |
 
+All auth primitives use the shared `Inject` shape with `header`, `prefix`, or `query`. The `json_body_path` field on `Inject` is CSRF-only (used by the `api_response` CSRF primitive) and is not honored by auth resolvers.
+
+To disable auth for a single operation, set `x-openweb.auth: false` at the operation level — this skips all auth resolution and signing for that op, even when a server-level `auth` is configured.
+
 ---
 
 ## cookie_session
@@ -129,6 +133,27 @@ auth:
 ```
 
 -> See: `src/runtime/primitives/exchange-chain.ts`
+
+---
+
+## auth_check
+
+Body-shape patterns that flag "unauthenticated despite HTTP 200" — some sites return 200 with an error envelope (e.g. `{"error": "login_required"}`) instead of a 401. `auth_check` lets the runtime synthesize a `needs_login` failure from the response body.
+
+```yaml
+x-openweb:
+  auth_check:
+    - path: "error.code"
+      equals: "UNAUTHENTICATED"
+    - path: "message"
+      contains: "please log in"
+    - equals: "unauthorized"   # matches a bare-string body
+```
+
+- Each rule needs either `equals` (strict, with string/number coercion) or `contains` (case-insensitive substring on the stringified value).
+- Omit `path` to match against the body itself (useful for bare-string bodies).
+- Rules combine with **OR** semantics — any match triggers `needs_login`.
+- Can be set at server level (applies to all ops) or operation level. Operation-level `auth_check: false` disables a server-level rule for that op.
 
 ---
 

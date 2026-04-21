@@ -28,7 +28,7 @@ interface PreparedContext {
   page: Page | null                // null for transport: node
   operation: string                // operationId from the OpenAPI spec
   params: Record<string, unknown>  // validated caller input
-  helpers: AdapterHelpers          // pageFetch, nodeFetch, graphqlFetch, errors, extract*
+  helpers: AdapterHelpers          // pageFetch, graphqlFetch, ssrExtract, jsonLdExtract, domExtract, errors
   auth: AuthResult | undefined     // pre-resolved from spec auth primitive
   serverUrl: string                // already interpolated with server variables
 }
@@ -36,14 +36,17 @@ interface PreparedContext {
 interface AdapterHelpers {
   pageFetch(page: Page, options: PageFetchOptions): Promise<PageFetchResult>
   graphqlFetch(page: Page, options: GraphqlFetchOptions): Promise<unknown>
-  nodeFetch(options: NodeFetchOptions): Promise<PageFetchResult>
-  interceptResponse(page: Page, options: InterceptOptions): Promise<unknown>
-  ssrExtract(page: Page, source: string, path: string): Promise<unknown>
-  jsonLdExtract(page: Page, typeFilter?: string): Promise<unknown>
-  domExtract(page: Page, spec: DomExtractSpec): Promise<unknown>
+  ssrExtract(page: Page, source: string, path?: string): Promise<unknown>
+  jsonLdExtract(page: Page, typeFilter?: string): Promise<unknown[]>
+  domExtract(
+    page: Page,
+    spec: DomExtractSpec,
+  ): Promise<Record<string, string | null> | Array<Record<string, string | null>>>
   errors: AdapterErrorHelpers      // unknownOp, missingParam, httpError, needsLogin, fatal, retriable, etc.
 }
 ```
+
+Note: `nodeFetch` and `interceptResponse` are exported from `src/lib/adapter-helpers.ts` but are **not** injected into `ctx.helpers` — only the six members above are available on the runner context.
 
 The runner is a **single function**. There is no separate `init()` or `isAuthenticated()` — the runtime handles both:
 - Navigation + readiness comes from `x-openweb.page_plan` on the operation (-> See: `primitives/page-plan.md`).
@@ -75,7 +78,7 @@ The runner is a **single function**. There is no separate `init()` or `isAuthent
 ```
 
 Key properties:
-- Page is `null` when transport is `node` — runner must use `ctx.helpers.nodeFetch()`.
+- Page is `null` when transport is `node` — runner must do its own HTTP (e.g. global `fetch`); `nodeFetch` is not on `ctx.helpers`.
 - PagePlan settings (entry_url / ready / warm / nav_timeout_ms) run before the runner. Trivial URL checks and simple cookie probes that used to live in `init()`/`isAuthenticated()` are gone.
 - Runner result is **not validated** against the operation's response schema (unlike L1/L2). Writing shape-correct output is the runner's job.
 - Runners are cached by `siteRoot:runnerName`.
@@ -179,8 +182,8 @@ src/runtime/
 └── response-unwrap.ts        # applyResponseUnwrap (used by all HTTP executors)
 
 src/lib/
-└── adapter-helpers.ts        # pageFetch, graphqlFetch, nodeFetch, interceptResponse,
-                              # ssrExtract, jsonLdExtract, domExtract
+└── adapter-helpers.ts        # pageFetch, graphqlFetch, ssrExtract, jsonLdExtract, domExtract
+                              # (also exports nodeFetch + interceptResponse, but these are NOT injected into ctx.helpers)
 
 src/types/
 └── adapter.ts                # CustomRunner, PreparedContext, AdapterHelpers, AuthResult

@@ -4,6 +4,8 @@ Detailed reference for each auth, CSRF, and signing primitive. Per-primitive: de
 
 For quick signal-to-primitive routing, see [auth-routing.md](auth-routing.md).
 
+**Inject modes:** The `Inject` type defines four fields (`header`, `prefix`, `query`, `json_body_path`), but `json_body_path` is supported only by the `api_response` CSRF primitive (see `src/runtime/primitives/api-response.ts`). Auth primitives (`localStorage_jwt`, `sessionStorage_msal`, `page_global`, `webpack_module_walk`, `exchange_chain`) use `header`, `prefix`, `query` only.
+
 ---
 
 ## cookie_session
@@ -32,7 +34,7 @@ For quick signal-to-primitive routing, see [auth-routing.md](auth-routing.md).
 - Header typically named `x-csrf-token`, `x-xsrf-token`, or site-specific
 
 **Gotchas:**
-- **Scope matters:** Some sites require CSRF on ALL methods including GET. Check `scope` field.
+- **Scope matters:** Some sites require CSRF on ALL methods including GET. Check `scope` field. Note: `scope` lives on the `CsrfPrimitive` intersection in `src/types/extensions.ts` (`CsrfPrimitive & { scope?: readonly string[] }`), not on the `CsrfPrimitive` type itself in `src/types/primitives.ts`.
   - e.g. some social platforms: CSRF on all methods including GET
   - e.g. some professional networks: CSRF header required on ALL HTTP methods (`scope: [GET, POST, PUT, DELETE]`)
 - **Quoted cookie values:** Some cookie values are quoted (e.g., `"ajax:123456789"`). The resolver handles quoted values.

@@ -6,7 +6,9 @@ How to choose the right transport tier, diagnose node feasibility, discover APIs
 
 Seven tiers from most fragile to most stable. Each tier eliminates a fragility surface of the tier below it.
 
-### Tier 1 — DOM Action (page.click / page.fill)
+> **Note on scope:** Tiers 1 & 4 describe patterns used **inside adapters**, not runtime transport modes. Runtime transport dispatch operates on `node` vs `page` (see `src/runtime/operation-context.ts`); the executor routes via `extraction` (Tiers 2–3) or `browser_fetch` (Tier 5). Tier 6 (module walk) is an **auth resolution primitive** (`src/runtime/primitives/webpack-module-walk.ts`), not a transport tier — it appears here only to show where rotating-token discovery fits in the stability hierarchy.
+
+### Tier 1 — DOM Action (page.click / page.fill) *(adapter pattern)*
 
 - **Fragility surface:** Selector strings, element render timing, layout shifts, A/B test DOM variants
 - **When to use:** Write operations requiring form submission, login flows, or stateful interactions that have no API equivalent
@@ -24,7 +26,7 @@ Seven tiers from most fragile to most stable. Each tier eliminates a fragility s
 - **When to use:** Page embeds structured data in a `<script>` tag. Common patterns: `__NEXT_DATA__`, Apollo SSR cache, LD+JSON, `window.__data`
 - **When to move up:** If the embedded data originates from a fetchable API, call the API directly to skip HTML parsing.
 
-### Tier 4 — API Intercept (response interception via CDP)
+### Tier 4 — API Intercept (response interception via CDP) *(adapter pattern)*
 
 - **Fragility surface:** CDP connection, browser lifecycle, page navigation timing, response body buffering
 - **When to use:** API exists but requires browser-context cookies or bot detection tokens that can't be replicated in Node
@@ -36,7 +38,7 @@ Seven tiers from most fragile to most stable. Each tier eliminates a fragility s
 - **When to use:** API works from within the browser JS context but not from Node (bot detection fingerprints the request origin). Common with PerimeterX-protected GraphQL endpoints.
 - **When to move up:** Test the same request from Node with appropriate headers. If it returns valid data, skip the browser entirely.
 
-### Tier 6 — Module Walk (runtime JS bundle extraction)
+### Tier 6 — Module Walk (runtime JS bundle extraction) *(auth primitive, not transport)*
 
 - **Fragility surface:** Bundle URL changes on redeploy, minification variable names, webpack chunk structure
 - **When to use:** Persisted query hashes, signing keys, or API tokens embedded in the site's JS bundles. Useful when hashes rotate on every deploy.
@@ -120,10 +122,14 @@ Five-step process for discovering and modeling a site's GraphQL API. Works wheth
 
 ### Step 1 — CDP Capture
 
-Record browser traffic and filter for GraphQL:
+Record browser traffic, then inspect the capture for GraphQL requests:
 
 ```bash
-openweb capture <site> --filter graphql
+openweb capture start --output capture/
+# (browse the site, trigger the operations you want to model)
+openweb capture stop
+# Filter the recorded HAR/samples for GraphQL endpoints:
+grep -lE '"query"|"operationName"|persistedQuery' capture/*.json
 ```
 
 Look for:
@@ -216,6 +222,8 @@ Common assumptions that block transport upgrades. Each has been disproved in pra
 ## When NOT to Upgrade
 
 Clear criteria for stopping a transport upgrade attempt. Document the evidence and move on.
+
+> **Runtime behavior on bot detection:** The runtime does **not** silently fall back from `node` to `page` (or from `page` to extraction) when bot detection fires. Instead, the executor throws a `bot_blocked` failureClass error (see `src/runtime/extraction-executor.ts` and `src/runtime/browser-fetch-executor.ts`) with the action: `Run: openweb browser restart --no-headless`, solve the CAPTCHA in the visible browser, then retry. Tier selection is a **design-time** decision encoded in the site package, not a runtime auto-upgrade.
 
 ### Multi-Layer Bot Detection Stacking
 

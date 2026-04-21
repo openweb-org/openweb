@@ -43,7 +43,7 @@ If fix revealed something novel → read `add-site/document.md` for knowledge up
 ### Expired or Missing Cookie
 
 **Symptom:** `401`/`403`; body says "session expired" or redirects to login.
-**Fix:** `openweb login <site>` then `openweb verify <site>`. If token-cached: `openweb browser restart`.
+**Fix:** (1) `openweb login <site>`, (2) `openweb browser restart` so the managed browser picks up the new auth, (3) `openweb verify <site>`.
 
 ### CSRF Token Mismatch
 
@@ -103,8 +103,8 @@ If fix revealed something novel → read `add-site/document.md` for knowledge up
 
 ### CDP Connection Refused
 
-**Symptom:** `ECONNREFUSED 127.0.0.1:9222`.
-**Fix:** browser auto-starts when needed. If auto-start fails, check Chrome is installed. Manual: `openweb browser start`. Port conflict: check if 9222 is in use.
+**Symptom:** `ECONNREFUSED 127.0.0.1:<port>`.
+**Fix:** browser auto-starts when needed. If auto-start fails, check Chrome is installed. Manual: `openweb browser start`. The actual CDP port is read from `~/.openweb/browser.port` (9222 is just the default fallback) — check that file when diagnosing port conflicts.
 
 ### Stale Browser Session
 
@@ -218,10 +218,26 @@ For sites that consistently trigger CAPTCHAs, set `"browser": {"headless": false
 **Symptom:** auth ops return `401`, browser session valid; site changed token delivery (cookie name, header format, or moved to bearer).
 **Fix:** re-capture auth flow, update auth config, `openweb browser restart`, `openweb verify <site>`.
 
+### Cache Location / Manual Clear
+
+Token cache lives at `~/.openweb/tokens/<site>/vault.json` (encrypted AES-256-GCM, key derived via PBKDF2). To force-clear a single site without restarting the browser: `rm -rf ~/.openweb/tokens/<site>`.
+
 ### Cross-Site Token Conflict
 
 **Symptom:** logging into site B invalidates site A (shared parent domain or SSO, cookie scope overlaps).
 **Fix:** document in both DOC.md files. Use separate browser profiles if possible, or verify sequentially.
+
+---
+
+---
+
+## Test Environment
+
+### TEST_BARRIER on write/delete/transact
+
+**Symptom:** Under `VITEST`, any operation with permission category `write`, `delete`, or `transact` throws `OpenWebError` with code `TEST_BARRIER` before dispatch (`src/runtime/http-executor.ts`).
+**Why:** Not all transports honor `fetchImpl` (page/node SSR bypass it), so a "mocked" test could execute a real write against the user's authenticated session. The barrier proves the permission gate let the call through.
+**Fix:** In real CLI use, pass `--write` (or the appropriate permission flag) to bypass — the barrier is VITEST-only. In tests, assert that `TEST_BARRIER` is thrown rather than expecting a fake success response.
 
 ---
 

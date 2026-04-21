@@ -36,8 +36,9 @@ hand-crafted specs often produce bare schemas.
 
 ### Schema Depth Rules
 
-- **Max 2-3 levels deep.** Use `type: object` for deeply nested sub-objects
-  that agents rarely need to inspect.
+- **Recommended max 2-3 levels deep** (curation guideline; the compiler enforces
+  `maxDepth: 10` in `schema-v2.ts`). Use `type: object` for deeply nested
+  sub-objects that agents rarely need to inspect.
 - **Arrays:** Describe the item schema. Don't leave `items: { type: object }`
   bare — at minimum include the key fields.
 - **Nullable fields:** Mark with `nullable: true` when the field may be absent
@@ -88,6 +89,10 @@ properties:
     nullable: true
 ```
 
+> Note: OpenAPI 3.1 prefers `type: [T, 'null']` (or `oneOf: [{type: T}, {type: 'null'}]`)
+> over the legacy 3.0 `nullable: true`. Both parse correctly; most sites in
+> this repo use the 3.1 idioms.
+
 If the adapter extracts from DOM and an element is missing, the field should be
 `nullable: true` rather than omitted — this gives agents a stable schema
 contract. Common nullable fields: user bio, profile image, optional metadata,
@@ -106,6 +111,9 @@ schema must match what the LD+JSON block actually contains — `@type`, `name`,
 `aggregateRating`, etc. — not what the site's internal REST/GraphQL API would
 return. Do not copy field names from the site's API docs if the extraction
 source is LD+JSON.
+
+> Filter LD+JSON for data-only fields; exclude `@context`, `@id`, `@type`,
+> `@graph` metadata from the response schema unless meaningful to users.
 
 **Multiple LD+JSON blocks per page.** A single page may embed several blocks
 with different `@type` values. The adapter or extraction expression must filter
@@ -145,9 +153,12 @@ Check parameter examples in the spec and example fixtures
 - **Auth tokens or session IDs in examples?** Remove entirely.
 - **Location data, IP addresses, device IDs?** Scrub or generalize.
 
-The auto-scrubber catches common patterns (emails, phone numbers, SSNs), but
-manually flag anything it might miss — especially:
+The auto-scrubber catches common patterns (emails, phone numbers, SSNs) and
+generic long IDs (>20 chars via `LONG_ID_RE` in `src/compiler/curation/scrub.ts`),
+but manually flag anything it might miss — especially:
 - Site-specific user IDs that could identify real users
+- Domain-specific slug/ID formats the generic regex won't catch (e.g.,
+  Starbucks `53646-283069` storeNumber)
 - Internal URLs or hostnames
 - Timestamps that pinpoint exact user activity
 

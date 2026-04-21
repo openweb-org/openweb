@@ -7,7 +7,7 @@
 > - "Navigate + DOM extract" is now `page_global_data` / `html_selector` / `script_json` with PagePlan — use extraction, not an adapter.
 > - Only keep an adapter (now called `CustomRunner`) when the site genuinely needs signing, module-system access, binary protocols, or other site-specific logic that spec cannot express.
 >
-> When you do write a runner, the contract is `run(ctx: PreparedContext)` — a single function, no `init()` / `isAuthenticated()`. See `doc/main/adapters.md` for the current CustomRunner interface. The recipes below still show the legacy `execute()` signature; the body of each recipe is the pattern you want, but migrate the outer wrapper to `run(ctx)` when applying.
+> When you do write a runner, the contract is `run(ctx: PreparedContext)` — a single function. Adapters can optionally define `init()` and `isAuthenticated()`; the runtime provides defaults if omitted (see commit 9d89b73). See `doc/main/adapters.md` for the current CustomRunner interface. `PreparedContext` provides `{ page, operation, params, helpers, auth, serverUrl }` — destructure what you need at the top of `run()`.
 
 ## Raw-API Principle (read first)
 
@@ -45,8 +45,10 @@ Capture API responses that fire during page navigation — the data arrives as a
 
 ```typescript
 // interceptResponse: register listener BEFORE navigation, capture first matching response
-async execute(page: Page, operation: string, params: Record<string, unknown>, helpers: AdapterHelpers) {
+async run(ctx: PreparedContext) {
+  const { page, params, helpers } = ctx
   const { errors } = helpers
+  if (!page) throw errors.fatal('this runner requires a page (transport: page)')
 
   // Import interceptResponse directly — it's exported from adapter-helpers but not on the helpers object
   const { interceptResponse } = await import('../../../lib/adapter-helpers.js')
@@ -94,16 +96,18 @@ Fetch HTML server-side and extract embedded data via regex or string parsing. No
 ```typescript
 import { nodeFetch } from '../../../lib/adapter-helpers.js'
 
-async execute(page: Page | null, operation: string, params: Record<string, unknown>, helpers: AdapterHelpers) {
+async run(ctx: PreparedContext) {
+  const { page, params, helpers } = ctx
   const { errors } = helpers
+  // page may be null when spec declares x-openweb.transport: node — that's fine here
   const id = params.id as string
   if (!id) throw errors.missingParam('id')
 
   const url = `https://example.com/items/${encodeURIComponent(id)}`
-  const res = await nodeFetch({ url })
-  if (res.status >= 400) throw errors.httpError(res.status)
+  const result = await nodeFetch({ url })
+  if (result.status >= 400) throw errors.httpError(result.status)
 
-  const html = res.text
+  const html = result.text
 
   // Pattern A: __NEXT_DATA__
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
@@ -195,8 +199,10 @@ One real API endpoint serves multiple logical operations, differentiated by a pa
 **In adapter — shared implementation:**
 
 ```typescript
-async execute(page: Page, operation: string, params: Record<string, unknown>, helpers: AdapterHelpers) {
+async run(ctx: PreparedContext) {
+  const { page, operation, params, helpers } = ctx
   const { pageFetch, errors } = helpers
+  if (!page) throw errors.fatal('this runner requires a page (transport: page)')
   const query = params.query as string
   if (!query) throw errors.missingParam('query')
 
@@ -303,8 +309,10 @@ Techniques for when standard `page.goto()` fails or returns stale/cached content
 **Pattern A: about:blank reset (forces fresh navigation)**
 
 ```typescript
-async execute(page: Page, operation: string, params: Record<string, unknown>, helpers: AdapterHelpers) {
+async run(ctx: PreparedContext) {
+  const { page, params, helpers } = ctx
   const { errors } = helpers
+  if (!page) throw errors.fatal('this runner requires a page (transport: page)')
   const url = `https://example.com/items/${params.id}`
 
   // Navigate away first to force a clean page load
