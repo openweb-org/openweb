@@ -339,7 +339,7 @@ All transports (except page, which delegates to browser) follow redirects manual
 |------|---------|
 | Max redirects | Follow up to 5 redirects; fail if the 6th response is still a redirect |
 | SSRF per hop | Each redirect URL validated against SSRF blocklist |
-| Cross-origin | Strip `Authorization`, `Cookie`, `X-CSRF-*` headers |
+| Cross-origin | Strip `Authorization`, `Cookie`, and CSRF token headers (`x-csrftoken`, `x-csrf-token`) |
 | 301 / 302 / 303 | Rewrite method to GET, drop request body (matches native `fetch` behavior) |
 | 307 / 308 | Preserve original method and body |
 | Missing `Location` | A 3xx without `Location` raises a retriable execution error |

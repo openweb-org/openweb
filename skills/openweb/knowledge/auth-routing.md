@@ -15,10 +15,12 @@ Quick lookup: site signals -> expected auth family -> which section of [auth-pri
 | localStorage key with JWT value (`eyJ...`) | localStorage_jwt | Auth |
 | sessionStorage key matching `msal.token.keys.*` | sessionStorage_msal | Auth |
 | POST to token endpoint returns bearer token used in subsequent requests | exchange_chain | Auth |
-| Token found in `webpackChunk*` module cache | webpack_module_walk | Auth |
+| Static token found in `webpackChunk*` module cache (e.g., Discord) | webpack_module_walk | Auth |
 | Auth data in JS global variable (e.g., `window.ytcfg`-style) | page_global | Auth |
 | `SAPISIDHASH` in request headers | sapisidhash | Signing |
 | Per-request computed params (X-Bogus, x-client-transaction-id) that don't match any stored value | custom_signing | Pattern (adapter) |
+
+> **webpack distinction:** `webpack_module_walk` extracts a **static token** from the chunk cache (e.g., Discord's bearer token). When webpack lookup is used to discover a **per-request signing function** (e.g., X's `x-client-transaction-id` generator), classify it as `custom_signing` adapter pattern, not auth primitive — the webpack walk is an implementation detail of the signer, not the auth source.
 
 ## Per-Operation Override
 

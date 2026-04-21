@@ -68,9 +68,9 @@ This design ensures the compiler's Analyze phase has complete data for classific
 
 ## Framework Globals Detection
 
-DOM extraction detects 25 known framework globals:
+DOM extraction detects 19 known framework globals:
 
-`__NEXT_DATA__`, `__NUXT__`, `__APOLLO_STATE__`, `ytcfg`, `webpackChunk*`, `gapi.client`, etc.
+`__NEXT_DATA__`, `__NUXT__`, `__APOLLO_STATE__`, `__PRELOADED_STATE__`, `ytcfg`, `WIZ_global_data`, etc.
 
 These feed into the compiler's Phase 3 pattern matching (e.g., `__NEXT_DATA__` → `ssr_next_data` primitive).
 

@@ -119,7 +119,7 @@ Quick-reference for typical operations by site category. Use during Step 1 (Fram
 ## Travel
 
 - Read: search listings (paginated), listing detail (by ID), price/availability, reviews
-- Write (reversible pairs):
+- Write (reversible pairs, not yet implemented in any bundled site; placeholder for future):
   - saveProperty (wishlist) / unsaveProperty
 - Transact (deny by default): book/reserve
 

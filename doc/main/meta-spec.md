@@ -142,7 +142,7 @@ params.
 
 ## L2 Primitive Type Catalog
 
-16 types organized into 5 categories. Each is a **discriminated union** on the `type` field.
+17 types organized into 5 categories. Each is a **discriminated union** on the `type` field.
 
 ### Auth (6 types)
 

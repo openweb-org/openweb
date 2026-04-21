@@ -134,7 +134,7 @@ This separates capture from compilation for fast iteration.
 ### Two-Phase Script Skeleton
 
 ```typescript
-import { chromium } from 'playwright'
+import { chromium } from 'patchright'
 
 const browser = await chromium.connectOverCDP('http://localhost:9222')
 const page = browser.contexts()[0]!.pages()[0]!  // reuse monitored page
@@ -165,7 +165,7 @@ session via `createCaptureSession()`. Killed after 120s.
 
 ```typescript
 import { parseArgs } from 'node:util'
-import { chromium } from 'playwright'
+import { chromium } from 'patchright'
 import { createCaptureSession } from '../src/capture/session.js'
 
 const { values } = parseArgs({ options: { out: { type: 'string' } }, strict: false })

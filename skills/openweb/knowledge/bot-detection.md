@@ -106,7 +106,7 @@ Can Node make the request without auth cookies?
                       +- Does page.evaluate(fetch(...)) work?
                            +- Yes -> adapter with pageFetch/graphqlFetch
                            +- No -> Does page.request.fetch() work?
-                                +- Yes -> adapter with page.request.fetch (Costco pattern)
+                                +- Yes -> adapter with page.request.fetch (e.g. Costco read ops; cart writes switch to page.evaluate(fetch()) due to Akamai header-bundle fingerprinting)
                                 +- No (PX blocks all API calls) -> SSR extraction
                                      Navigate to target page, extract __NEXT_DATA__
                                      or intercept response from site's own JS

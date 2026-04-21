@@ -7,7 +7,7 @@
 > - "Navigate + DOM extract" is now `page_global_data` / `html_selector` / `script_json` with PagePlan — use extraction, not an adapter.
 > - Only keep an adapter (now called `CustomRunner`) when the site genuinely needs signing, module-system access, binary protocols, or other site-specific logic that spec cannot express.
 >
-> When you do write a runner, the contract is `run(ctx: PreparedContext)` — a single function. Adapters can optionally define `init()` and `isAuthenticated()`; the runtime provides defaults if omitted (see commit 9d89b73). See `doc/main/adapters.md` for the current CustomRunner interface. `PreparedContext` provides `{ page, operation, params, helpers, auth, serverUrl }` — destructure what you need at the top of `run()`.
+> When you do write a runner, the contract is `run(ctx: PreparedContext)` — a single function. Adapters can optionally define `warmReady?(page)` to probe per-site readiness during warm-up — runtime polls it until true or `warmTimeoutMs` (default 15000ms) elapses. Use for SPAs whose hydration the runtime can't detect via cookies (Telegram webpack chunks, IndexedDB-backed sessions). The runtime's PagePlan handles general initialization; auth resolution happens before `run(ctx)`. See `doc/main/adapters.md` for the current CustomRunner interface. `PreparedContext` provides `{ page, operation, params, helpers, auth, serverUrl }` — destructure what you need at the top of `run()`.
 
 ## Raw-API Principle (read first)
 

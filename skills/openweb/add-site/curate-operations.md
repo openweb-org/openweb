@@ -25,7 +25,7 @@ Delete any operation matching these criteria:
 - **Internal framework** — `rsc-action`, `flagship-web`, `_next`
 - **SaaS dashboard internals** — internal namespace traffic; manual filtering needed
 
-> `src/compiler/analyzer/classify.ts` pre-filters many noise samples
+> `src/compiler/analyzer/labeler.ts` pre-filters many noise samples (via domain and path blocklists)
 > (analytics/tracking/static) during analysis; the rules above cover what slips through.
 
 ### Recover Write Ops from Noisy Names

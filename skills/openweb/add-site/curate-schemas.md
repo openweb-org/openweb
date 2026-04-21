@@ -90,8 +90,9 @@ properties:
 ```
 
 > Note: OpenAPI 3.1 prefers `type: [T, 'null']` (or `oneOf: [{type: T}, {type: 'null'}]`)
-> over the legacy 3.0 `nullable: true`. Both parse correctly; most sites in
-> this repo use the 3.1 idioms.
+> over the legacy 3.0 `nullable: true`. Both parse correctly. This repo uses both:
+> 3.0-style `nullable: true` (e.g. GitHub) and 3.1-style `type: [T, 'null']`
+> (e.g. Yahoo Finance). Choose consistently within a site.
 
 If the adapter extracts from DOM and an element is missing, the field should be
 `nullable: true` rather than omitted — this gives agents a stable schema

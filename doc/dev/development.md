@@ -117,7 +117,7 @@ pnpm dev instagram getTimeline '{}'
 ```
 src/
 ├── cli.ts                    # Entry point, yargs routing
-├── commands/                 # CLI commands (exec, show, browser, compile, capture, test, sites, verify, registry)
+├── commands/                 # CLI commands (exec, show, browser, login, compile, capture, test, sites, verify, registry)
 ├── runtime/                  # Operation execution (HTTP + WS modes)
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline

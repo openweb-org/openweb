@@ -137,7 +137,8 @@ If no APIs found in 2d, skip this step.
 ```typescript
 const cookies = await context.cookies()
 const botCookies = cookies.filter(c =>
-  ['_abck', '_px3', '_pxhd', 'datadome', 'cf_clearance'].includes(c.name)
+  ['_abck', '_px3', '_pxhd', 'datadome', 'cf_clearance'].includes(c.name) ||
+  c.name.startsWith('ry_ry-')
 )
 ```
 

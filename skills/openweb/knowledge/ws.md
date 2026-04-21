@@ -121,7 +121,7 @@ Session limits, rate limit headers, shard info. Useful for transport config, not
 
 ## Site Package Modeling
 
-WS operations *should* be modeled in `asyncapi.yaml` (separate from the HTTP `openapi.yaml`); coverage in the bundled site set is currently sparse:
+WS operations *should* be modeled in `asyncapi.yaml` (separate from the HTTP `openapi.yaml`); not yet implemented in any bundled site (the spec format and runtime are ready; site-side coverage is pending):
 
 ```yaml
 channels:

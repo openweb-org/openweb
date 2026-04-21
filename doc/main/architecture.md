@@ -22,7 +22,7 @@ Agent-native way to access any website. Bridging agent CLI and human GUI through
 │  L1: Structural Spec (OpenAPI 3.1 + AsyncAPI)                 │  ~40% of sites
 │  Pure HTTP — no browser needed                                │
 ├───────────────────────────────────────────────────────────────┤
-│  L2: Interaction Primitives (16-type DSL)                     │  ~50% of sites
+│  L2: Interaction Primitives (17-type DSL)                     │  ~50% of sites
 │  Declarative auth/CSRF/signing/pagination/extraction config   │
 ├───────────────────────────────────────────────────────────────┤
 │  L3: Code Adapters (arbitrary JS in browser)                  │  ~10% of sites
