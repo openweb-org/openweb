@@ -17,10 +17,10 @@
 Browser automation clicks buttons, reads pixels, and burns tokens. OpenWeb calls the same APIs the website calls.
 
 - **Fast, cheap, and token-efficient** — No screenshots, no vision API, no LLM-powered parsing. JSON in, JSON out.
-- **Minimal effort per operation** — Direct HTTP when it works, browser-backed fetch when the site requires it. WebSocket and code adapters for maximal flexibility. The right transport per site, automatically — the caller never chooses or cares.
+- **Minimal effort per operation** — Direct HTTP when it works, browser-backed fetch when the site requires it, and code adapters for maximal flexibility. The right transport per site, automatically — the caller never chooses or cares.
 - **Predictable, typed API** — Typed params, response schemas, and examples for every operation.
-- **Safe by default** — Read, write, delete, and transact operations gated by permission tiers. SSRF protection on every request.
 - **Auth that just works** — Cookies, JWT, CSRF, request signing, exchange chains — auto-resolved per request. You never touch tokens.
+- **Safe by default** — Read, write, delete, and transact operations gated by permission tiers. SSRF protection on every request.
 - **Any site, any time** — 90+ sites out of the box across social, commerce, content, travel, finance, and more. Not listed? [Add it](#discover).
 
 ## Quick Start
