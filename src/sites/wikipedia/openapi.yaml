@@ -9,8 +9,6 @@ servers:
 - url: https://en.wikipedia.org
   x-openweb:
     transport: node
-    auth:
-      type: cookie_session
 paths:
   /w/api.php:
     get:
