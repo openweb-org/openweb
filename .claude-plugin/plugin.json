@@ -1,0 +1,22 @@
+{
+  "name": "openweb",
+  "description": "Agent-native way to access any website. Calls the same APIs the website calls — fast, cheap, typed JSON. 90+ sites including Google, Amazon, Reddit, YouTube, GitHub, Instagram, Bloomberg, Zillow. Auth (cookies, JWT, CSRF, signing) auto-resolved per request.",
+  "version": "0.1.3",
+  "author": {
+    "name": "openweb-org contributors",
+    "url": "https://github.com/openweb-org"
+  },
+  "homepage": "https://getopenweb.com",
+  "repository": "https://github.com/openweb-org/openweb",
+  "license": "MIT",
+  "keywords": [
+    "web",
+    "api",
+    "agent",
+    "sites",
+    "scraping",
+    "browser",
+    "auth",
+    "json"
+  ]
+}
