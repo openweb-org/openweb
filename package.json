@@ -1,6 +1,6 @@
 {
   "name": "@openweb-org/openweb",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Let any agent access the web — typed site APIs, auth primitives, one CLI",
   "type": "module",
   "bin": {
