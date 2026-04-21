@@ -2,6 +2,8 @@
 
 Detailed reference for each auth, CSRF, and signing primitive. Per-primitive: detection signals, configuration, and gotchas.
 
+> **Note on terminology.** "Signing" in this document refers to **HTTP request signing** (HMAC headers, `x-client-transaction-id`, `sapisidhash`, etc.) used by some sites' web APIs. OpenWeb has no cryptocurrency, wallet, blockchain, or crypto-key functionality.
+
 For quick signal-to-primitive routing, see [auth-routing.md](auth-routing.md).
 
 **Inject modes:** The `Inject` type defines four fields (`header`, `prefix`, `query`, `json_body_path`), but `json_body_path` is supported only by the `api_response` CSRF primitive (see `src/runtime/primitives/api-response.ts`). Auth primitives (`localStorage_jwt`, `sessionStorage_msal`, `page_global`, `webpack_module_walk`, `exchange_chain`) use `header`, `prefix`, `query` only.

@@ -1,5 +1,7 @@
 # Add or Expand a Site
 
+> **Audience: site authors** adding or expanding OpenWeb's site coverage. This workflow describes how to capture, probe, and curate a site's API surface (analogous to using browser DevTools to understand a site). End users running `openweb <site> <op>` do not enter this workflow.
+
 Complete workflow for adding a new site package or expanding an existing one.
 
 ```mermaid

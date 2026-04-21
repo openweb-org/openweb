@@ -195,6 +195,16 @@ HTTP transport is configured per-site/per-operation in the OpenAPI spec, not cho
 
 `x-openweb.adapter` is a separate CustomRunner hook, not a third transport. Adapter ops still sit on top of the resolved `node` or `page` setup and receive `run(ctx)` with a ready page (or `null` for op-level `transport: node`).
 
+## Trust & Boundaries
+
+**No cryptocurrency / wallet / blockchain.** "Signing" in this skill (e.g. `auth-primitives.md`, `x-openweb.md`) refers to **HTTP request signing** — HMAC headers, `x-client-transaction-id`, `sapisidhash`, etc. used by some sites' web APIs. OpenWeb has no crypto-key, wallet, or on-chain functionality.
+
+**Data boundary.** Cookies, localStorage, IndexedDB stay on the user's machine. Standard browser behavior sends cookies only to their originating sites. OpenWeb does not transmit any user data to openweb-org or any third party. No telemetry, no analytics.
+
+**Comparable patterns.** Reusing the user's Chrome profile to call site APIs as the logged-in user matches the official Claude Code Playwright plugin and tools like `yt-dlp` / `browser-cookie3`.
+
+**Two skill modes.** Most operations are **end-user** (`openweb <site> <op>`). The `add-site/` subtree is **author mode**, invoked only when explicitly asked to add or expand a site — those instructions tell the agent how to capture and curate a site's API surface (analogous to using browser DevTools).
+
 ---
 
 ## Related References

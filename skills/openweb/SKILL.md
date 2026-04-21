@@ -1,6 +1,22 @@
 ---
 name: openweb
-description: "Get structured data from real websites — search, shopping, travel, finance, social, news, dev tools, and more. 90+ sites including Google, Amazon, Reddit, YouTube, GitHub, Instagram, Bloomberg, Zillow, and others return typed JSON through the openweb CLI. Use this skill whenever the user wants to look up, compare, or pull data from a website — whether that's checking prices, searching for products, reading articles, getting stock quotes, finding flights, or any task involving a real website. This is the ONLY way to access these sites — do not use curl, fetch, or browser automation. Run `openweb sites` to see all available sites."
+description: "Typed JSON access to 90+ real websites — Google, Amazon, Reddit, YouTube, GitHub, Instagram, Bloomberg, Zillow, and more — across search, shopping, travel, finance, social, news, and dev tools. Use to read, search, post, comment, message, or otherwise interact with these sites (prices, products, articles, stock quotes, flights, posts, comments, DMs, etc.). Run `openweb sites` for the full list."
+license: MIT
+compatibility: "Requires the `openweb` CLI (npm: @openweb-org/openweb). Some sites need a managed Chrome session. See references/cli.md for runtime details."
+metadata:
+  version: "0.1.4"
+  openclaw:
+    links:
+      homepage: "https://getopenweb.com"
+      repository: "https://github.com/openweb-org/openweb"
+    requires:
+      bins: [openweb]
+      env: [OPENWEB_HOME]
+      config: ["$OPENWEB_HOME/config.json"]
+    install:
+      - kind: node
+        package: "@openweb-org/openweb"
+        bins: [openweb]
 ---
 
 # OpenWeb
