@@ -1,4 +1,5 @@
 import { access, readFile, readdir } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -28,11 +29,16 @@ async function hasSitePackage(dir: string): Promise<boolean> {
 /** Site names must be lowercase alphanumeric with hyphens/underscores. */
 const SAFE_SITE_NAME = /^[a-z0-9][a-z0-9_-]*$/
 
-/** Package root — two levels up from dist/lib/site-resolver.js (or src/lib/site-resolver.ts in dev). */
-const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
-
-/** Bundled sites shipped inside the npm package. */
-const BUNDLED_SITES = path.join(PKG_ROOT, 'dist', 'sites')
+/** Bundled sites shipped inside the npm package.
+ * Production: tsup bundles flat into dist/, so sites is a sibling (`dist/sites`).
+ * Dev: this file lives at src/lib/site-resolver.ts, so sites is two levels up + dist/sites.
+ * Probe both — the first existing wins. */
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const BUNDLED_SITES = (() => {
+  const flat = path.join(HERE, 'sites')                        // bundled prod (dist/sites)
+  if (existsSync(flat)) return flat
+  return path.resolve(HERE, '..', '..', 'dist', 'sites')       // dev (src/lib → repo/dist/sites)
+})()
 
 export interface ResolveSiteOptions {
   /** Skip registry lookup — use when installing to avoid self-copy. */
