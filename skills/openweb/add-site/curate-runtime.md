@@ -137,6 +137,7 @@ auth:
 
 `scope` controls which methods require CSRF — typically `["POST", "PUT", "DELETE"]`.
 Some sites require CSRF on GET too (X/Twitter, LinkedIn) — check captured traffic.
+For `api_response`, make `endpoint` an **absolute HTTPS URL**. The resolver SSRF-validates that URL directly, then fetches it in page context so rotated cookies stay aligned with the browser jar.
 
 ### Signing
 
@@ -158,6 +159,7 @@ paths:
       x-openweb:
         auth: false
         csrf: false
+        signing: false
 ```
 
 Never remove site-level auth — override with `false` at the operation level.
@@ -209,12 +211,15 @@ x-openweb:
     operation: operationName
 ```
 
-Adapters must be **self-contained** — no external imports. The runtime injects
-shared helpers via the 4th `execute()` parameter:
+The runner contract is a single `run(ctx: PreparedContext)` entry. The runtime injects
+shared helpers on `ctx.helpers`:
 
 - `helpers.pageFetch(page, { url, method?, body?, headers?, timeout? })` — browser-context fetch, returns `{ status, text }`
 - `helpers.graphqlFetch(page, { url, operationName, variables, hash?, query?, batched? })` — GraphQL fetch, returns unwrapped `data`
+- `helpers.ssrExtract(page, source, path?)`, `helpers.jsonLdExtract(page, typeFilter?)`, `helpers.domExtract(page, spec)` — extraction helpers
 - `helpers.errors` — error factories: `unknownOp`, `missingParam`, `httpError`, `apiError`, `needsLogin`, `botBlocked`, `fatal`, `retriable`, `wrap`
+
+`nodeFetch` and `interceptResponse` are **not** injected on `ctx.helpers`. Import them directly from `../../../lib/adapter-helpers.js` when needed; the build step bundles those imports into the emitted adapter `.js`.
 
 ### Intercept Pattern
 
@@ -296,8 +301,11 @@ const runner: CustomRunner = {
   async run(ctx: PreparedContext) {
     const page = ctx.page!   // null only when transport: node
     switch (ctx.operation) {
-      case 'getItems':
-        return ctx.helpers.pageFetch(page, { url: `/api/items?q=${ctx.params.q}` })
+      case 'getItems': {
+        const result = await ctx.helpers.pageFetch(page, { url: `/api/items?q=${ctx.params.q}`, method: 'GET' })
+        if (result.status >= 400) throw ctx.helpers.errors.httpError(result.status)
+        return JSON.parse(result.text)
+      }
       default:
         throw ctx.helpers.errors.unknownOp(ctx.operation)
     }
@@ -310,6 +318,8 @@ export default runner
 runner — PagePlan already did that. **Do not** add a runner just to chain
 two calls or to rename wire fields — expose ops separately and document in
 SKILL.md.
+
+`ctx.auth` is the only request material pre-resolved into `PreparedContext`. Server-level CSRF/signing config is not injected into adapter ops automatically.
 
 ---
 
@@ -334,3 +344,4 @@ SKILL.md.
 6. **`replay_safety` placed in spec `x-openweb` instead of `example.json`.** The spec
    uses `safety` (values: `safe`, `caution`). The `example.json` uses `replay_safety`
    (values: `safe_read`, `unsafe_mutation`).
+7. **Assuming `auth: false` also disables signing.** It does not. Public ops that must bypass signing or CSRF need their own `signing: false` / `csrf: false`.

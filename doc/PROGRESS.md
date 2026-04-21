@@ -1,3 +1,21 @@
+## 2026-04-21: doc sync — main/dev docs and shipped openweb skill aligned to current runtime
+
+**What changed:**
+- Refreshed `doc/main/*` and `doc/dev/*` to match the current runtime/compiler surface: CustomRunner now documents `PreparedContext` accurately, adapter outputs are described as still flowing through shared `auth_check` + response-schema validation, `api_response` CSRF now requires an absolute endpoint and browser-context fetch, PagePlan `entry_url` interpolation is caller-param only, browser capture is explicitly unfiltered, and security docs now match the real redirect-sensitive-header list.
+- Synced shipped skill docs under `skills/openweb/` with the actual packaged/runtime behavior: per-site `SKILL.md`/`PROGRESS.md` are source-tree docs and not guaranteed in `$OPENWEB_HOME/sites/<site>/`; `verify --browser` is documented as browser pre-start/keep-alive rather than op selection; `ctx.helpers` lists only the injected helper surface; `nodeFetch` / `interceptResponse` are documented as direct helper-library imports; stale `x-openweb.injected` guidance was replaced with `schema.const`; capture output paths now match `capture/` and `capture-<session>/`.
+- Added/updated caution points where docs had over-broadened behavior: `auth: false` no longer claims to disable signing, `servers[].x-openweb.headers` is scoped to the direct node path, `DRIFT` is documented as advisory for verify exit codes, malformed example files without `cases` now fail verify, and WS verify is explicitly documented as behavior-only (no WS schema diff yet).
+
+**Why:**
+- Drift accumulated after the normalize-adapter/runtime cleanup and the write-verify campaign. The big rewrites were already in place, but a second pass against source code still found a handful of boundary mismatches: docs described broader runtime automation than the code actually performs, assumed per-site source docs existed in the shipped package, and still carried a few pre-refactor CLI / adapter / capture assumptions. This pass tightens those edges so agents can trust the docs again.
+
+**Key files:** `doc/main/{README,architecture,runtime,meta-spec,adapters,security,browser-capture,compiler,primitives/auth,primitives/signing,primitives/page-plan}.md`, `doc/dev/{development,adding-sites}.md`, `skills/openweb/{SKILL.md,references/{cli,troubleshooting,x-openweb}.md,add-site/{guide,curate-runtime,verify}.md,knowledge/adapter-recipes.md}`.
+**Verification:** Source-inspection only (doc-only change). Cross-checked statements against `src/runtime/{http-executor,session-executor,browser-fetch-executor,adapter-executor,redirect,page-plan}.ts`, `src/runtime/primitives/api-response.ts`, `src/commands/{browser,capture,verify}.ts`, `src/lifecycle/verify.ts`, `src/types/{adapter,extensions}.ts`, `src/lib/{adapter-helpers,config,param-validator}.ts`, `src/compiler/analyzer/labeler.ts`, and `scripts/{build-adapters,build-sites}.js`. Followed with grep sanity checks for removed stale phrases.
+**Commit:** pending (base HEAD `647c20c`)
+**Next:** Optional cleanup only — align a few older site-local docs that still mention legacy patterns (`x-openweb.injected`, old verify wording) if they become active touch points.
+**Blockers:** None.
+
+---
+
 ## 2026-04-20: doc refresh — site count, per-site SKILL.md, and missing x-openweb fields
 
 **What changed:**

@@ -13,7 +13,7 @@
 
 All auth primitives use the shared `Inject` shape with `header`, `prefix`, or `query`. The `json_body_path` field on `Inject` is CSRF-only (used by the `api_response` CSRF primitive) and is not honored by auth resolvers.
 
-To disable auth for a single operation, set `x-openweb.auth: false` at the operation level — this skips all auth resolution and signing for that op, even when a server-level `auth` is configured.
+To disable auth for a single operation, set `x-openweb.auth: false` at the operation level — this skips auth resolution for that op even when a server-level `auth` is configured. It does **not** disable CSRF or signing; opt those out separately with `csrf: false` / `signing: false` when needed.
 
 ---
 

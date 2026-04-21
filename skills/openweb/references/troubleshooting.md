@@ -53,7 +53,7 @@ If fix revealed something novel → read `add-site/document.md` for knowledge up
 ### Cookie Domain Mismatch
 
 **Symptom:** auth works in browser but ops fail — cookies not sent (API on `api.example.com`, cookies on `www.example.com`).
-**Fix:** set `domain` in the site's auth config to cover the API subdomain.
+**Fix:** there is no auth `domain` field. If token storage lives on a different app origin, use `app_path` on `localStorage_jwt` / `webpack_module_walk`. If the page and API origins differ, make sure `page_plan.entry_url` / `warm_origin` point at the page origin that actually establishes auth. For `cookie_session`, confirm the real browser cookie domain already covers the API host.
 
 ---
 
@@ -134,7 +134,7 @@ If fix revealed something novel → read `add-site/document.md` for knowledge up
 
 For sites that consistently trigger CAPTCHAs, set `"browser": {"headless": false}` in `~/.openweb/config.json` for persistent headed mode. Auto-started headed browsers launch off-screen and won't interfere with user activity — only manual `browser start --no-headless` shows a visible window for CAPTCHA solving.
 
-**Note:** This is different from `needs_login` — login happens in the user's default browser (cookies get copied to managed browser). CAPTCHAs must be solved in the managed browser itself because the challenge cookie/state must stay in that session.
+**Note:** This is different from `needs_login` — `openweb login <site>` prefers the managed browser when CDP is already up, otherwise it falls back to the system browser. CAPTCHAs still need to be solved in the managed browser session because the challenge cookie/state must stay there.
 
 ### Adapter Returns Garbage Data (fake PASS)
 

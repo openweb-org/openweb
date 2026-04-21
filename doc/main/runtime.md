@@ -1,260 +1,301 @@
 # Runtime Execution Pipeline
 
-> Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-04-06 (centralized warmSession, bot_blocked failureClass, auth cascade)
+> Protocol routing, browser lifecycle, auth cascade, and request construction.
+> Last updated: 2026-04-21 (647c20c)
 
-## Overview
+## Entry Points
 
-The runtime is the core of OpenWeb. Given a site name, operation ID, and parameters, it:
-1. Loads the OpenAPI spec and validates `x-openweb` extensions (AJV)
-2. Finds the operation
-3. **Permission gate** — checks `x-openweb.permission` (or derives from HTTP method) against `$OPENWEB_HOME/config.json`
-4. **Token cache check** — for authenticated node transport, tries cached cookies/storage before browser
-5. Resolves the transport
-6. Dispatches to the correct executor
-7. Returns a structured result
+There are two public runtime entry points:
 
--> See: `src/runtime/executor.ts`
+| Function | Role | Source |
+|----------|------|--------|
+| `dispatchOperation(site, operationId, params, deps)` | top-level protocol router used by CLI exec | `src/runtime/http-executor.ts` |
+| `executeOperation(site, operationId, params, deps)` | HTTP operation executor | `src/runtime/http-executor.ts` |
 
----
+`src/runtime/executor.ts` is only a barrel that re-exports both names.
 
-## Execution Dispatch
+## Protocol Dispatch
 
-```
-executeOperation(site, operationId, params, deps)
-       │
-       ├── Check quarantine status (emit warning if quarantined)
-       ├── Load OpenAPI spec (openapi.yaml)
-       ├── Find operation by operationId
-       ├── Permission gate (read/write/delete/transact → allow/prompt/deny)
-       ├── Resolve transport (operation → server → node)
-       │
-       ├── L3 custom runner?
-       │     └── loadAdapter() → acquirePage() [PagePlan] → resolveAuth → runner.run(ctx)
-       │
-       ├── extraction?
-       │     └── executeExtraction()
-       │
-       ├── ws?
-       │     └── ws-executor → ws-connection (7-state machine) → ws-router
-       │
-       ├── page?
-       │     └── executeBrowserFetch()
-       │
-       └── node?
-             ├── auth needed? → token cache hit? → executeCachedFetch()
-             │                  cache miss      → executeSessionHttp() → write cache
-             └── no auth → fetchWithRedirects()
+`dispatchOperation()` resolves the site package first, then routes by operation protocol:
+
+```text
+dispatchOperation()
+  -> loadSitePackage(site)
+  -> findOperationEntry(operationId)
+  -> wrap fetchImpl with AbortController
+  -> entry.protocol === 'http'
+       ? withHttpRetry(() => executeOperation(...))
+       : executeWsFromCli(...)
 ```
 
-**Transport Resolution Hierarchy:**
-1. Operation-level: `x-openweb.transport` on the operation
-2. Server-level: `x-openweb.transport` on the server
-3. Default: `node`
+Important consequences:
 
-If an operation has `x-openweb.adapter`, L3 adapter takes priority regardless of transport.
-If an operation has `x-openweb.extraction`, the runtime dispatches to `executeExtraction()` before the HTTP executors.
+- HTTP and WS use the same CLI surface.
+- the operation timeout (`$OPENWEB_HOME/config.json -> timeout`, default `30000`) is enforced above the executor-specific code
+- HTTP retries are applied around the HTTP path only
 
-**Operation timeout:** All operations are wrapped in a 30s timeout (configurable via `"timeout"` in `~/.openweb/config.json`, in milliseconds). The timer is properly cleaned up on completion to avoid resource leaks.
+## HTTP Dispatch Order
 
----
+Once the operation is known to be HTTP, `executeOperation()` takes over:
 
-## Parameter Binding
-
-All HTTP executors share the same path/query/header/body binding pipeline.
-`node` transport with auth config layers auth/CSRF/signing on top; `node` without auth skips those browser-derived steps.
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  1. Validate      required checks, unknown rejection,   │
-│                   type validation, apply defaults        │
-│                                                         │
-│  2. Path params   substitute {template} in URL path     │
-│                                                         │
-│  3. Query params  append to URL as ?key=value           │
-│                                                         │
-│  4. Header params set in request headers                │
-│                                                         │
-│  5. Body params   requestBody JSON fields → JSON body   │
-│                   (POST/PUT/PATCH only)                 │
-└─────────────────────────────────────────────────────────┘
+```text
+executeOperation()
+  -> optional quarantine warning from manifest
+  -> loadOpenApi(site)
+  -> find operation by operationId
+  -> permission gate
+  -> resolve transport (`node` or `page`)
+  -> adapter branch?
+  -> extraction branch?
+  -> page transport?
+  -> node transport
 ```
 
-Path/query/header parameters come from OpenAPI `parameters[]`.
-Body parameters come from `requestBody.content['application/json'].schema.properties` (or `application/x-www-form-urlencoded` — see below).
-Defaults apply before binding, including body defaults. Body fields are validated against their declared schema types before request construction, and only fields declared in `requestBody` are serialized into the JSON body. Auth-injected query params (for example YouTube's `key`) are merged into the input map before URL construction; `buildTargetUrl()` deduplicates spec-declared params via a `seen` set and appends any remaining auth params via `extraQueryParams`, preventing double-append.
-If an object `requestBody` is marked `required: true`, the runtime sends `{}` even when no explicit body fields are supplied, so the request still includes a JSON body.
+The short-circuit rules matter:
 
-**Form-encoded bodies:** When a spec declares `requestBody.content['application/x-www-form-urlencoded']`, the runtime serializes body params as `URLSearchParams` instead of JSON and sets `Content-Type: application/x-www-form-urlencoded`. This is needed for APIs that reject JSON bodies (e.g., Reddit's `/api/submit`). The `buildFormRequestBody()` function takes priority over `buildJsonRequestBody()` when the spec declares form-encoded content.
+1. `x-openweb.adapter` wins first. If present, the runtime loads a `CustomRunner`.
+2. `x-openweb.extraction` wins next. Extraction bypasses normal HTTP request execution.
+3. Otherwise transport resolution applies: operation-level transport, then server-level transport, then default `node`.
 
-**GraphQL APQ, GET flavor (Relay):** When `x-openweb.graphql_hash` is set on a GET op, `buildGraphqlGetApqQuery()` packs `variables` (built from `requestBody` non-const params, wrap-aware) and `extensions.persistedQuery` into the URL query string — both JSON-stringified and URL-encoded — and skips the request body. The POST flavor (Apollo APQ) is unchanged: body carries `extensions.persistedQuery.sha256Hash`, optionally with a `query` fallback. The runtime auto-selects by HTTP method; the spec declares the variable shape once and works for both wire forms.
+WS is outside this stack. It is routed before `executeOperation()` based on the site package entry protocol, not on `x-openweb.transport`.
 
--> See: `src/runtime/session-executor.ts`, `src/runtime/request-builder.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`; `src/runtime/executor.ts` — direct HTTP reuse
+## Permission Gate
 
----
+Every HTTP operation passes through the permission gate before any network work:
 
-## Extraction Operations
+- explicit `x-openweb.permission` wins
+- otherwise the runtime derives the category from method + path
+- defaults come from `$OPENWEB_HOME/config.json`
 
-Extraction-only operations read data from the live page instead of issuing an HTTP request.
+Possible outcomes:
 
+| Policy | Runtime result |
+|--------|----------------|
+| `allow` | continue |
+| `prompt` | throw `permission_required` |
+| `deny` | throw `permission_denied` |
+
+Under `VITEST`, write/delete/transact operations are stopped earlier by the `TEST_BARRIER` to prevent real mutations during tests.
+
+## Parameter Binding and Request Construction
+
+All HTTP paths share the same parameter pipeline:
+
+```text
+validate params
+  -> apply defaults
+  -> resolve parameter templates (`x-openweb.template`)
+  -> path substitution
+  -> query/header collection
+  -> request-body build
+  -> auth/CSRF/signing augmentation
+  -> wrap / GraphQL shaping
+  -> execute request
+  -> unwrap / response parse / optional schema validation
 ```
-┌─────────────────────────────────────────────────────┐
-│  1. Connect to browser via CDP                      │
-│  2. Find page matching page_url/origin              │
-│  3. Resolve extraction primitive                    │
-│     - script_json                                   │
-│     - ssr_next_data                                 │
-│     - html_selector                                 │
-│     - page_global_data                              │
-│  4. Return extracted JSON-ish payload               │
-└─────────────────────────────────────────────────────┘
-```
 
-Extraction operations reuse the same strict page matching as node transport: worker-like pages are filtered out, there is no unrelated-tab fallback, and missing tabs surface `needs_page` with an actionable URL hint.
+Key behaviors:
 
--> See: `src/runtime/extraction-executor.ts`
+- `validateParams()` rejects unknown params and type mismatches
+- parameter-level `x-openweb.template` derives wire values from other resolved params
+- request bodies support both JSON and `application/x-www-form-urlencoded`
+- `wrap`, `graphql_query`, and `graphql_hash` shape GraphQL/APQ requests
+- `unwrap` extracts a dot-path from the parsed response before it is returned
 
----
+Useful source files:
 
-## Browser Lifecycle
+- `src/lib/param-validator.ts`
+- `src/runtime/request-builder.ts`
+- `src/lib/url-builder.ts`
+- `src/runtime/response-unwrap.ts`
 
-The runtime auto-manages browser instances via `ensureBrowser()`. No manual `browser start` is needed.
+## Managed Browser Lifecycle
 
-```
+`ensureBrowser()` is the runtime-owned browser entry point.
+
+```text
 ensureBrowser(cdpEndpoint?)
-       │
-       ├── External CDP endpoint provided?
-       │     └── Connect directly (no managed browser involved)
-       │
-       ├── Managed browser already running? (PID file + process alive + CDP responds)
-       │     └── Connect, touch last-used, ensure watchdog alive
-       │
-       └── No managed browser
-             ├── Acquire filesystem lock (atomic, PID-based, stale-safe)
-             ├── Double-check after lock (another process may have started Chrome)
-             ├── Start Chrome (config from ~/.openweb/config.json)
-             │     └── If headed (headless: false), launch off-screen (--window-position=10000,10000)
-             ├── Write PID/port files
-             ├── Connect via CDP with retry
-             ├── Touch last-used, spawn watchdog
-             └── Return BrowserHandle { browser, release() }
+  -> external endpoint? connect directly
+  -> else check managed Chrome state files
+  -> if missing, acquire browser.start.lock
+  -> start managed Chrome if needed
+  -> connect over CDP
+  -> touch browser.last-used
+  -> ensure watchdog is running
 ```
 
-**BrowserHandle:** Every caller gets a handle with `release()` that disconnects from CDP without killing Chrome. Chrome is killed only by `browser stop` or the idle watchdog.
+The browser model is split:
 
-**Shell watchdog:** A detached `sh` process polls `browser.last-used` every 60s. If Chrome has been idle for 5 minutes (no `exec` or `capture` activity), the watchdog kills Chrome, cleans up temp profile and state files, then exits. The watchdog is respawned on each `ensureBrowser()` call if not alive.
+- **managed Chrome** is launched by `src/commands/browser.ts`
+- **Patchright** is the CDP client used by `ensureBrowser()` and the capture layer
 
-**Concurrency:** A filesystem lock (`browser.start.lock`) serializes Chrome startup across concurrent CLI processes. Stale locks (dead PID) are auto-cleaned.
+Managed-browser details:
 
--> See: `src/runtime/browser-lifecycle.ts`, `src/commands/browser.ts`
+- one managed instance per `OPENWEB_HOME`
+- profile copy is blocklist-based: copy the whole Chrome profile except caches, runtime locks, session-restore files, and password stores
+- a PID-file lock serializes concurrent startup
+- a detached watchdog kills the browser after 5 minutes of idle time
+- `BrowserHandle.release()` disconnects CDP; it does not kill Chrome
 
----
+### Headless and User-Agent Behavior
 
-## Headless Stealth
+- managed Chrome always gets `--disable-blink-features=AutomationControlled`
+- `--user-agent=...` is only added when the user explicitly sets `userAgent` in config
+- node-side requests still use `DEFAULT_USER_AGENT`, which is auto-detected from the local Chrome version when possible
 
-The managed browser applies stealth measures to avoid bot detection:
+This distinction matters: browser launch UA override is opt-in, while node transport always has a Chrome-like default UA.
 
-1. **Patchright** — Playwright fork that patches CDP detection signals (`navigator.webdriver`, `Runtime.enable` leak, etc.). Drop-in API-compatible replacement.
-2. **User-Agent override** — `--user-agent` flag sets a common Windows Chrome UA (Chrome/133) instead of the default headless UA string. Configurable via `user_agent` in `config.json`.
-3. **Blink feature disable** — `--disable-blink-features=AutomationControlled` removes the `navigator.webdriver = true` flag.
+## Page Acquisition and Warm-Up
 
-These are applied automatically on managed browser startup. External CDP connections inherit whatever stealth the external browser has.
+Browser-backed operations use `PagePlan` plus `acquirePage()`:
 
--> See: `src/runtime/browser-lifecycle.ts` (launch args), `src/lib/config.ts` (default UA)
-
----
-
-## Session Warm-Up
-
-`warmSession()` prepares a browser page for bot-protected sites by letting anti-bot sensor scripts (Akamai, DataDome, etc.) run and generate valid session cookies before the runtime issues API requests.
-
-```
-warmSession(page, url, opts?)
-       │
-       ├── Already warmed? (WeakSet cache per Page instance)
-       │     └── No-op
-       │
-       ├── Navigate to URL (if not already on same origin)
-       │     └── waitUntil: 'domcontentloaded' + 2s SPA settle
-       │
-       ├── waitForCookie specified?
-       │     └── Poll context.cookies() until cookie appears (500ms interval)
-       │
-       └── No cookie specified
-             └── Fixed 3s delay (sensor scripts typically complete in 1-2s)
+```text
+resolvePagePlan(server, operation)
+  -> merge field-by-field
+  -> interpolate entry_url with params
+  -> reuse matching page if safe
+  -> else navigate/create page
+  -> apply ready selector / settle_ms
+  -> optionally warm the page
 ```
 
-Warm state is cached per `Page` — calling twice on the same page is a no-op. `warmSession()` is called centrally by `adapter-executor.ts` before every `runner.run(ctx)` call and by `browser-fetch-executor.ts` before every browser-fetch request. Adapters do not call `warmSession()` themselves.
+The runtime uses a few important internal rules:
 
--> See: `src/runtime/warm-session.ts`
+- `response_capture` forces a fresh page so the listener is installed before navigation
+- extraction-only operations without an explicit `page_url` may use same-origin fallback instead of forcing literal-path navigation
+- state-bound extractions (`script_json`, `ssr_next_data`, `page_global_data`) can refresh on reuse when a prefix-matched page is not exact enough
+- `browser-fetch` can honor `page_plan.warm_origin`; adapter/extraction warm-up uses the resolved entry page directly
 
----
+`warmSession()` itself handles:
 
-## Auth Cascade (4-Tier)
+- fixed delay when no cookie target is configured
+- cookie-stabilization polling when a site needs a sensor cookie such as `_abck`
+- bot-block retry loops for challenge pages
+- optional `waitFor` predicates wired from `CustomRunner.warmReady()`
 
-For `node` transport operations that need auth (server has `x-openweb.auth`/`csrf`/`signing`), the runtime runs a 4-tier cascade:
+Relevant files:
 
-```
-Tier 1: Token cache       ─ Read cached cookies/localStorage
-        hit? → execute with cached tokens
-        401/403? → clear cache, fall to tier 2
+- `src/runtime/page-plan.ts`
+- `src/runtime/browser-fetch-executor.ts`
+- `src/runtime/extraction-executor.ts`
+- `src/runtime/warm-session.ts`
 
-Tier 2: Browser extract   ─ ensureBrowser() → extract fresh tokens
-        success? → write cache, return result
-        401/403? → fall to tier 3
+## Auth Cascade and Token Cache
 
-Tier 3: Profile refresh   ─ Re-copy default Chrome profile (managed browser only)
-        success? → write cache, return result
-        401/403? → fall to tier 4
+Authenticated node transport uses a per-site token cache at:
 
-Tier 4: User login        ─ Open site in system browser, poll with exponential backoff
-        Opens site_url from manifest (human login page, not API endpoint)
-        Poll: refreshProfile() → retry → check auth (5s→10s→20s→40s→60s cap)
-        Timeout: 5 minutes → throws needs_login
-```
-
-**External CDP:** When connecting to an external CDP endpoint (`--cdp-endpoint`), tiers 3 (profile refresh) is skipped since the runtime cannot restart an external browser. Tier 4 is only attempted if the endpoint is localhost.
-
-**Lock strategy:** Token cache reads/writes use brief per-site locks. Browser operations (connecting, extracting, refreshing) are never held under the cache lock.
-
--> See: `src/runtime/http-executor.ts`, `src/runtime/browser-lifecycle.ts`, `src/runtime/cache-manager.ts`
-
----
-
-## Node Transport (Authenticated)
-
-The primary L2 execution path. Uses a real HTTP client with cookies/headers extracted from the browser.
-
-```
-┌─────────────────────────────────────────────────────┐
-│  1. Connect to browser via CDP                      │
-│  2. Find page matching server origin                │
-│     (filters worker-like pages, no unrelated-tab    │
-│      fallback; exact origin → same host → same SLD) │
-│  3. Validate parameters                             │
-│  4. Build URL (path substitution + query params)    │
-│  5. Resolve auth → cookies + headers                │
-│  6. Resolve CSRF → headers (mutations only)         │
-│  7. Resolve signing → headers (per-request)         │
-│  8. Build request body (mutations only)             │
-│  9. Execute HTTP request                            │
-│ 10. Follow redirects (max 5, SSRF-validated)        │
-│ 11. Parse + validate response                       │
-└─────────────────────────────────────────────────────┘
+```text
+$OPENWEB_HOME/tokens/<site>/vault.json
 ```
 
-**Page matching**: The runtime finds a real browser tab matching the API's origin.
-Worker-like pages (`*.js`, empty content) are ignored. There is no fallback to an unrelated tab. If no matching page is found, the runtime attempts **auto-navigation**: it opens a new tab to the site's origin URL (with `load` wait + 2s SPA settle, 15s timeout) and re-checks. If navigation fails, the created page is cleaned up immediately. If auto-navigate also fails, the runtime raises `needs_page` with a concrete URL to open.
+The cascade is:
 
--> See: `src/runtime/session-executor.ts`, `src/runtime/redirect.ts`, `src/runtime/request-builder.ts`, `src/runtime/operation-context.ts`
+1. **token cache**: reuse cached cookies/storage when still valid
+2. **live browser extraction**: resolve auth from the current browser state
+3. **managed-profile refresh**: restart managed Chrome with a fresh profile copy
+4. **user login loop**: open the site in the user's browser and poll with backoff
 
-### Constant Headers
+Notes:
 
-Server-level `x-openweb.headers` allows per-site constant headers (e.g., User-Agent overrides for node-transport requests). These are merged into every request to that server, before auth/CSRF headers. Useful when a site requires a specific UA string to avoid 429s.
+- tier 3 only exists for the managed browser
+- external CDP endpoints skip managed-profile refresh
+- tier 4 only makes sense for localhost CDP endpoints
+- cache locking is per site and short-lived; browser work is never held under the token lock
 
-### Browser Context Recovery
+The login loop in the runtime (`handleLoginRequired`) opens the system browser. The CLI `openweb login <site>` command is different: it prefers the managed browser when one is already running.
 
-When an anti-bot system (PerimeterX, DataDome) kills the CDP browser context mid-operation, the http-executor restarts the browser and retries the operation instead of failing fatally. This covers adapter ops that use `page.evaluate()` for in-page fetches.
+## Transport-Specific Paths
+
+### `node` transport
+
+Use this when the API is stable enough to call from Node.js.
+
+Two subpaths exist:
+
+- **unauthenticated/direct**: build the request and call `fetchWithRedirects()`
+- **authenticated**: resolve auth/CSRF/signing and use the session-style node executor path
+
+Constant headers from `servers[].x-openweb.headers` are currently merged only on the unauthenticated/direct node path. They are not injected by the session executor or `page` transport.
+
+### `page` transport
+
+Use this when the request must run inside a real browser page:
+
+- native TLS/browser fingerprint matters
+- same-origin browser context matters
+- in-page auth state or bot-mitigation state must stay attached to the page
+
+The final request runs through `page.evaluate(fetch(...))`, not through the Node.js fetch path.
+
+### Extraction
+
+Extraction operations do not issue the declared HTTP request at all. They acquire a page and resolve one of the extraction primitives:
+
+- `script_json`
+- `ssr_next_data`
+- `html_selector`
+- `page_global_data`
+- `response_capture`
+
+`script_json` and `ssr_next_data` also have a node-side fast path when the data can be fetched and parsed directly from HTML.
+
+### Adapter
+
+Adapters run `CustomRunner.run(ctx)` after page acquisition, auth resolution, and warm-up. The runtime still owns:
+
+- page acquisition
+- auth resolution
+- bot detection after the call
+- page ownership cleanup
+
+## Redirects and SSRF
+
+- Node-side HTTP paths follow redirects manually with per-hop SSRF validation.
+- Page transport validates the initial request URL, then delegates redirect behavior to the browser network stack.
+- WS handshake validation converts `wss://` to `https://` for DNS/IP checks before connecting.
+
+See [security.md](security.md) for the full model.
+
+## Failure Classes
+
+The CLI-facing error contract relies on `failureClass`, not just HTTP status:
+
+| `failureClass` | Meaning |
+|----------------|---------|
+| `needs_browser` | a browser process or CDP connection is required |
+| `needs_login` | auth is missing or expired and recovery did not succeed |
+| `needs_page` | a matching page/tab is required |
+| `bot_blocked` | challenge/CAPTCHA/rate-limit page detected |
+| `permission_required` | action is prompt-gated |
+| `permission_denied` | action is denied by policy |
+| `retriable` | safe to retry after delay or recovery |
+| `fatal` | fix the spec, params, or environment first |
+
+## Relevant Files
+
+```text
+src/runtime/
+├── executor.ts                # public exports only
+├── http-executor.ts           # dispatchOperation + executeOperation
+├── browser-lifecycle.ts       # ensureBrowser, watchdog, login loop
+├── browser-fetch-executor.ts  # page transport
+├── extraction-executor.ts     # extraction branch
+├── node-ssr-executor.ts       # node-side HTML extraction
+├── adapter-executor.ts        # CustomRunner loading + execution
+├── request-builder.ts         # param -> wire shaping
+├── response-unwrap.ts         # post-parse unwrapping
+├── page-plan.ts               # page reuse / navigation / warm orchestration
+├── cache-manager.ts           # auth-material capture/write
+├── token-cache.ts             # encrypted per-site token vault
+└── ws-*.ts                    # WebSocket runtime
+```
+
+## Related Docs
+
+- [architecture.md](architecture.md)
+- [meta-spec.md](meta-spec.md)
+- [primitives/README.md](primitives/README.md)
+- [security.md](security.md)
 
 -> See: `src/runtime/http-executor.ts`
 
@@ -343,7 +384,7 @@ All transports (except page, which delegates to browser) follow redirects manual
 | 301 / 302 / 303 | Rewrite method to GET, drop request body (matches native `fetch` behavior) |
 | 307 / 308 | Preserve original method and body |
 | Missing `Location` | A 3xx without `Location` raises a retriable execution error |
-| `opaqueredirect` | Browser-side behavior — `browser_fetch` with `redirect: 'manual'` returns opaque response (status 0). Not handled by Node-side redirect logic. |
+| `opaqueredirect` | Browser-side behavior — `page` transport with `redirect: 'manual'` returns an opaque response (status 0). Not handled by Node-side redirect logic. |
 
 -> See: [security.md](security.md) — SSRF protection details
 

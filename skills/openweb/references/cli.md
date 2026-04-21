@@ -51,7 +51,7 @@ openweb <site> exec <op> '{}' --max-response 8192
 
 ## Browser Management
 
-The CLI auto-starts a managed headless Chrome when an operation requires browser access. No manual setup needed — `exec`, `verify --browser`, and `capture start` all launch Chrome on demand and connect automatically.
+The CLI auto-starts a managed headless Chrome when an operation requires browser access. No manual setup needed — `exec`, browser-backed auth/transport flows, and `capture start` all launch Chrome on demand and connect automatically. `verify --browser` just pre-starts and keeps the managed browser alive for the duration of the verify run.
 
 Auto-start copies auth-relevant files (Cookies, Local Storage, Session Storage, Web Data, Preferences) from the user's default Chrome profile to a temp directory, then launches Chrome with `--remote-debugging-port`. Concurrent auto-start calls are serialized via a filesystem lock. A background watchdog kills idle browsers after 5 minutes.
 
@@ -120,20 +120,21 @@ Transforms captured traffic into a site package. Requires either `--capture-dir`
 ## Verify
 
 ```bash
-openweb verify <site>                        # single site (node-transport, read ops only)
+openweb verify <site>                        # single site (all read-safe ops)
 openweb verify <site> --ops op1,op2          # only verify specific operations
-openweb verify <site> --browser              # include page-transport ops (auto-starts browser)
+openweb verify <site> --browser              # pre-start/keep alive managed browser during verify
 openweb verify <site> --write                # include write/delete ops (transact always excluded)
 openweb verify <site> --browser --write      # full verify: all transports + write ops
 openweb verify --all                         # all sites
-openweb verify --all --report json           # machine-readable drift report
+openweb verify --all --report                # machine-readable drift report
 ```
 
 **Status vocabulary:** `PASS` | `DRIFT` | `FAIL` | `auth_expired` | `bot_blocked`
 
 - `--write` replays write/delete operations (transact always excluded, warning printed to stderr)
-- `--report` only valid with `--all`
-- Exit code 1 if any site has non-PASS status
+- `--browser` does **not** change operation selection; browser-backed ops already auto-start Chrome on demand. It only makes the managed browser available up front and keeps it warm during verify.
+- `--report` is only valid with `--all`. The parser accepts `--report json` or `--report markdown`, but the current implementation always prints JSON.
+- Exit code 1 only for non-pass statuses other than `DRIFT` (`FAIL`, `auth_expired`, `bot_blocked`)
 
 ## Registry
 
@@ -175,7 +176,7 @@ All config from `$OPENWEB_HOME/config.json` (`OPENWEB_HOME` defaults to `~/.open
   "debug": false,                 // verbose debug output
   "timeout": 30000,               // operation timeout (ms)
   "recordingTimeout": 120000,     // compile --script timeout (ms)
-  "userAgent": "...",             // auto-detected from local Chrome; fallback Mac Chrome/134
+  "userAgent": "...",             // default UA for node-side requests; managed Chrome only gets --user-agent when explicitly set in config.json
   "browser": {
     "port": 9222,                 // CDP port
     "headless": true,             // headless mode
@@ -187,11 +188,12 @@ All config from `$OPENWEB_HOME/config.json` (`OPENWEB_HOME` defaults to `~/.open
 
 ## Transports
 
-Configured per-site in the OpenAPI spec, not chosen at runtime:
+HTTP transport is configured per-site/per-operation in the OpenAPI spec, not chosen at runtime:
 
 - **node** — HTTP from Node.js (with or without browser-extracted auth)
-- **page** — HTTP via `page.evaluate()` in the browser context
-- **adapter** — Arbitrary JS in the browser page via `page.evaluate()`
+- **page** — HTTP via `page.evaluate(fetch(...))` in the browser context
+
+`x-openweb.adapter` is a separate CustomRunner hook, not a third transport. Adapter ops still sit on top of the resolved `node` or `page` setup and receive `run(ctx)` with a ready page (or `null` for op-level `transport: node`).
 
 ---
 

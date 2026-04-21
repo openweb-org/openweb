@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
-> Entry point and navigation guide for the codebase.
-> Last updated: 2026-04-20 (404418d)
+> Entry point and navigation guide for the internals.
+> Last updated: 2026-04-21 (647c20c)
 
 ## Quick Start
 
@@ -11,252 +11,118 @@
 | Test | `pnpm test` |
 | Lint | `pnpm lint` |
 | List sites | `pnpm dev sites` |
-| Execute | `pnpm dev <site> exec <op> '{...}'` |
-
----
+| Inspect a site | `pnpm dev <site>` |
+| Execute an operation | `pnpm dev <site> <op> '{...}'` |
 
 ## Documentation Map
 
-```
-doc/main/
-│
-├── README.md              ← You are here (navigation guide)
-│
-├── architecture.md        # System overview, 3-layer model, execution modes
-│
-├── runtime.md             # Execution pipeline: mode dispatch, parameter binding, redirects
-├── primitives/            # L2 primitive resolvers: auth, CSRF, signing, pagination, extraction, page-plan
-│   ├── README.md          #   Overview, taxonomy, resolution pipeline
-│   ├── auth.md            #   Auth primitives (cookie_session, localStorage_jwt, etc.)
-│   ├── signing.md         #   CSRF and signing primitives
-│   └── page-plan.md       #   PagePlan: runtime-owned navigation/readiness/warm
-├── adapters.md            # L3 custom runners: CustomRunner interface, loading, lifecycle
-│
-├── meta-spec.md           # Type system: L2 types, x-openweb extensions, JSON Schema, validation
-│
-├── compiler.md            # Compiler pipeline: capture → analyze → curate → generate → verify
-├── browser-capture.md     # CDP capture module: HAR + WS + state + DOM recording
-│
-└── security.md            # SSRF protection, redirect safety, error model
-
-skills/openweb/                     # Agent-facing operator guide (separate deliverable)
-├── SKILL.md               # Router: 3 routes (use / add-expand-upgrade / fix)
-├── add-site/              # Contributor workflow (10-step: probe-first)
-├── references/            # Lookup: CLI, x-openweb schema, troubleshooting
-└── knowledge/             # Pattern library: archetypes, auth, bot-detection, transport-upgrade, adapter-recipes
-```
-
-The project ships two deliverables: **code** (`src/`) and **skill** (`skills/openweb/`). The skill is the agent-facing interface — it defines how agents discover, use, and extend OpenWeb. These docs (`doc/main/`) describe the internals; the skill docs describe the operator workflow. Both derive from source code and must stay accurate with it.
-
--> See [Skill Documentation](#skill-documentation) for the boundary between these two doc sets.
-
----
+| Path | Purpose |
+|------|---------|
+| [architecture.md](architecture.md) | System model, component boundaries, site-package lifecycle |
+| [runtime.md](runtime.md) | Operation dispatch, browser lifecycle, auth cascade, request construction |
+| [primitives/README.md](primitives/README.md) | Auth, CSRF, signing, extraction, pagination, page-plan primitives |
+| [adapters.md](adapters.md) | `CustomRunner` contract, lifecycle, and when to keep code instead of config |
+| [meta-spec.md](meta-spec.md) | `x-openweb` fields, type system, validation, package format |
+| [compiler.md](compiler.md) | Capture -> analyze -> curate -> generate -> verify pipeline |
+| [browser-capture.md](browser-capture.md) | CDP recording bundle and capture-session behavior |
+| [security.md](security.md) | SSRF, redirects, error model, adapter trust boundary |
+| [../dev/development.md](../dev/development.md) | Practical dev workflow and commands |
+| [../dev/adding-sites.md](../dev/adding-sites.md) | Repo-local add-site workflow companion |
+| [../../skills/openweb/SKILL.md](../../skills/openweb/SKILL.md) | Shipped operator skill: use, add-site, troubleshoot |
 
 ## Code Structure
 
-```
+```text
 src/
-├── cli.ts                      # Entry point, yargs routing
-├── commands/                   # CLI commands
-│   ├── exec.ts                 #   execute operation
-│   ├── show.ts                 #   show site/operation info
-│   ├── compile.ts              #   compile site → skill package
-│   ├── capture.ts              #   CDP browser capture
-│   ├── test.ts                 #   run site tests
-│   ├── sites.ts                #   list available sites
-│   ├── verify.ts               #   verify site and detect drift
-│   ├── registry.ts             #   site registry (archive, install, rollback)
-│   ├── browser.ts              #   managed browser lifecycle
-│   └── init.ts                 #   seed default sites
-│
-├── runtime/                    # Operation execution (HTTP + WS)
-│   ├── executor.ts             #   Re-exports from http-executor (public API)
-│   ├── http-executor.ts        #   Main dispatcher (transport routing, auth cascade)
-│   ├── browser-fetch-executor.ts # browser_fetch mode (page.evaluate)
-│   ├── node-ssr-executor.ts    #   Node SSR execution
-│   ├── ws-executor.ts          #   WebSocket operation execution
-│   ├── ws-connection.ts        #   WS connection manager (7-state machine)
-│   ├── ws-router.ts            #   WS message routing
-│   ├── ws-runtime.ts           #   WS runtime lifecycle
-│   ├── cache-manager.ts        #   Response cache
-│   ├── token-cache.ts          #   Auth token cache (AES-256-GCM vault)
-│   ├── navigator.ts            #   CLI navigation helper (render site/operation info)
-│   └── primitives/             #   L2 primitive resolvers (17 handlers)
-│
-├── types/                      # Meta-spec type system
-│   ├── primitives.ts           #   L2 primitive discriminated unions
-│   ├── primitive-schemas.ts    #   JSON Schema for L2 primitives (AJV)
-│   ├── extensions.ts           #   XOpenWebServer, XOpenWebOperation
-│   ├── adapter.ts              #   CustomRunner + PreparedContext (single adapter contract)
-│   └── index.ts                #   Re-exports
-│
-├── compiler/                   # Site compilation (pipeline v2)
-│   ├── types.ts                #   Core types (RecordedRequestSample, SampleResponse)
-│   ├── types-v2.ts             #   Pipeline v2 contracts (all 5-phase types)
-│   ├── recorder.ts             #   HAR parsing + scripted recording
-│   ├── analyzer/               #   Phase 2: label → normalize → cluster → schema → auth
-│   │   ├── analyze.ts          #     Orchestrator: analyzeCapture() → AnalysisReport
-│   │   ├── labeler.ts          #     Sample categorization (api/static/tracking/off_domain)
-│   │   ├── path-normalize.ts   #     Path template normalization
-│   │   ├── graphql-cluster.ts  #     GraphQL sub-clustering
-│   │   ├── auth-candidates.ts  #     Ranked auth bundling with evidence + CSRF options
-│   │   ├── constant-headers.ts #     Detect constant headers across cluster samples
-│   │   ├── schema-v2.ts        #     Schema inference with enum/format controls
-│   │   ├── example-select.ts   #     Tiered example value selection with PII scrub
-│   │   └── classify.ts         #     Extraction signal detection (SSR, script_json, page_global)
-│   ├── curation/               #   Phase 3: apply-curation.ts, scrub.ts (PII)
-│   ├── generator/              #   Phase 4: generate-v2.ts (OpenAPI + AsyncAPI emission)
-│   └── ws-analyzer/            #   WS capture → classify → cluster → schema
-│
-├── capture/                    # Browser CDP recording
-│   ├── session.ts              #   Capture lifecycle orchestrator
-│   ├── har-capture.ts          #   HTTP traffic capture (body-size-gate, no content filtering)
-│   ├── ws-capture.ts           #   WebSocket frame capture
-│   ├── state-capture.ts        #   localStorage, sessionStorage, cookies
-│   ├── dom-capture.ts          #   Meta tags, hidden inputs, framework globals
-│   ├── bundle.ts               #   Write capture bundle to disk
-│   └── connection.ts           #   CDP connection with retry
-│
-├── lifecycle/                   # Site lifecycle management
-│   ├── verify.ts               #   Verify command (execute examples, check drift)
-│   ├── shape-diff.ts           #   Structural diff for drift detection (response vs schema)
-│   └── registry.ts             #   Site registry (archive, install, rollback)
-│
-├── lib/                        # Shared utilities
-│   ├── site-resolver.ts        #   Site resolution (bundled + user-installed)
-│   ├── spec-loader.ts          #   OpenAPI/AsyncAPI spec loading
-│   ├── site-package.ts         #   Site package abstraction
-│   ├── openapi.ts              #   OpenAPI parsing, URL building
-│   ├── asyncapi.ts             #   AsyncAPI parsing
-│   ├── param-validator.ts      #   Parameter validation
-│   ├── permissions.ts          #   Permission system
-│   ├── permission-derive.ts    #   Permission derivation from specs
-│   ├── ssrf.ts                 #   SSRF validation (mandatory)
-│   ├── errors.ts               #   OpenWebError structured errors
-│   ├── logger.ts               #   Logger utility
-│   ├── config.ts               #   Configuration
-│   ├── cookies.ts              #   Cookie management
-│   └── config/                 #   Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
-│
-└── sites/                      # Site packages (90+ sites)
-    ├── github/                 #   L1 (no x-openweb)
-    ├── instagram/              #   L2 (cookie_session + cookie_to_header)
-    ├── youtube/                #   L2 (innertube API)
-    ├── discord/                #   L2 (webpack_module_walk, page transport)
-    ├── whatsapp/               #   L3 adapter (Meta require() module system)
-    ├── telegram/               #   L3 adapter (teact global state)
-    └── ...                     #   more sites (run `pnpm dev sites` for the full list)
+├── cli.ts
+├── commands/
+│   ├── exec.ts, show.ts, sites.ts, test.ts, verify.ts
+│   ├── browser.ts, capture.ts, compile.ts, registry.ts
+├── runtime/
+│   ├── executor.ts              # public barrel
+│   ├── http-executor.ts         # HTTP dispatcher + protocol router entry
+│   ├── browser-fetch-executor.ts
+│   ├── extraction-executor.ts
+│   ├── node-ssr-executor.ts
+│   ├── adapter-executor.ts
+│   ├── browser-lifecycle.ts, page-plan.ts, warm-session.ts
+│   ├── request-builder.ts, redirect.ts, response-unwrap.ts
+│   ├── operation-context.ts, session-executor.ts, cache-manager.ts, token-cache.ts
+│   ├── ws-cli-executor.ts, ws-executor.ts, ws-runtime.ts, ws-pool.ts, ws-router.ts, ws-connection.ts
+│   └── primitives/
+├── compiler/
+│   ├── analyzer/, curation/, generator/, ws-analyzer/
+│   ├── recorder.ts, types.ts, types-v2.ts
+├── capture/
+│   ├── session.ts, har-capture.ts, ws-capture.ts
+│   ├── state-capture.ts, dom-capture.ts, bundle.ts, connection.ts
+├── lifecycle/
+│   ├── verify.ts, shape-diff.ts, registry.ts
+├── lib/
+│   ├── site-resolver.ts, site-package.ts, spec-loader.ts
+│   ├── param-validator.ts, url-builder.ts, template-resolver.ts
+│   ├── permissions.ts, permission-derive.ts, response-parser.ts
+│   ├── openapi.ts, asyncapi.ts, adapter-helpers.ts
+│   ├── config.ts, manifest.ts, errors.ts, ssrf.ts
+│   └── config/*.json
+├── types/
+│   ├── extensions.ts, primitives.ts, ws-primitives.ts
+│   ├── adapter.ts, manifest.ts, schema.ts, validator.ts
+└── sites/                       # source site packages + per-site docs
 ```
-
----
 
 ## Reading Order
 
-### New to the codebase?
+### New to the codebase
 
-1. [architecture.md](architecture.md) — 3-layer model, execution modes, system overview
-2. [runtime.md](runtime.md) — How operations execute end-to-end
-3. [meta-spec.md](meta-spec.md) — The type system that drives everything
-4. [primitives/](primitives/README.md) — How auth/CSRF/signing are resolved
+1. [architecture.md](architecture.md)
+2. [runtime.md](runtime.md)
+3. [meta-spec.md](meta-spec.md)
+4. [primitives/README.md](primitives/README.md)
 
-### Working on specific areas?
+### Working in a specific area
 
-| Area | Start With |
+| Area | Start here |
 |------|------------|
-| Adding a new site | [primitives/](primitives/README.md), [dev/adding-sites.md](../dev/adding-sites.md) |
-| Runtime execution | [runtime.md](runtime.md), [security.md](security.md) |
-| L2 auth/CSRF/signing | [primitives/](primitives/README.md) |
-| L3 adapters | [adapters.md](adapters.md) |
-| Type system & validation | [meta-spec.md](meta-spec.md) |
-| Compiler pipeline | [compiler.md](compiler.md), [browser-capture.md](browser-capture.md) |
-| Browser capture | [browser-capture.md](browser-capture.md) |
-| Security model | [security.md](security.md) |
-| Dev workflow | [dev/development.md](../dev/development.md) |
-
----
+| Runtime dispatch or browser behavior | [runtime.md](runtime.md), [security.md](security.md) |
+| New auth / CSRF / extraction primitive | [primitives/README.md](primitives/README.md), [meta-spec.md](meta-spec.md) |
+| Custom site code | [adapters.md](adapters.md) |
+| Compiler or capture | [compiler.md](compiler.md), [browser-capture.md](browser-capture.md) |
+| Developer workflow | [../dev/development.md](../dev/development.md) |
+| Adding or expanding a site | [../dev/adding-sites.md](../dev/adding-sites.md), [../../skills/openweb/add-site/guide.md](../../skills/openweb/add-site/guide.md) |
 
 ## Key Concepts
 
-| Concept | Description | Doc |
-|---------|-------------|-----|
-| **3-Layer Model** | L1 structural spec, L2 interaction primitives, L3 code adapters | [architecture.md](architecture.md) |
-| **x-openweb** | OpenAPI extension carrying auth/CSRF/signing/pagination config | [meta-spec.md](meta-spec.md) |
-| **Execution Mode** | `direct_http`, `session_http`, `browser_fetch` — how requests reach the server | [runtime.md](runtime.md) |
-| **Primitive** | Declarative config unit for auth, CSRF, signing, pagination, extraction | [primitives/](primitives/README.md) |
-| **CustomRunner** | L3 escape hatch — single `run(ctx)` entry for sites with signing/module-system/protocol needs | [adapters.md](adapters.md) |
-| **PagePlan** | Runtime-owned page acquisition (entry_url / ready / warm / nav_timeout) — replaces adapter-owned init | [primitives/page-plan.md](primitives/page-plan.md) |
-| **Server variables** | OpenAPI `servers[].variables` — `getServerUrl(spec, op, params)` resolves `{varName}` via caller-param → `variables[].default`. Strict on unresolved | [runtime.md](runtime.md) |
-| **graphql_hash** | Apollo / Relay APQ — emits `extensions.persistedQuery.sha256Hash`; POST (Apollo body) and GET (Relay query-string) flavors auto-selected by HTTP method | [runtime.md](runtime.md) |
-| **response_capture** | Extraction type — installs the response listener before navigation, captures first URL-matched response | [primitives/README.md](primitives/README.md#response_capture) |
-| **script_json (extended)** | Extraction — covers JSON-LD + HTML-comment-wrapped JSON via `strip_comments`, runs under node or page transport | [primitives/README.md](primitives/README.md#script_json) |
-| **Skill Package** | Per-site artifact: openapi.yaml + manifest.json + adapters/ + examples/ | [compiler.md](compiler.md) |
-| **AsyncAPI Package** | Per-site WS artifact: asyncapi.yaml for real-time event channels | [compiler.md](compiler.md) |
-| **Capture Bundle** | Raw recording: traffic.har + websocket_frames.jsonl + state + DOM | [browser-capture.md](browser-capture.md) |
-| **SSRF Protection** | DNS-resolved IP validation on every outgoing request | [security.md](security.md) |
+| Concept | Meaning | Doc |
+|---------|---------|-----|
+| **3-layer model** | L1 package/spec, L2 declarative runtime config, L3 `CustomRunner` escape hatch | [architecture.md](architecture.md) |
+| **Execution path** | `node`, `page`, `extraction`, `adapter`, or `ws` depending on the operation entry and `x-openweb` | [runtime.md](runtime.md) |
+| **`x-openweb`** | OpenAPI/AsyncAPI extension carrying transport, auth, CSRF, signing, extraction, page-plan, and adapter config | [meta-spec.md](meta-spec.md) |
+| **`PagePlan`** | Runtime-owned page acquisition: reuse, navigate, ready selector, settle, warm | [primitives/page-plan.md](primitives/page-plan.md) |
+| **`auth_check`** | Body-shape rules that synthesize `needs_login` even on HTTP 200 responses | [primitives/auth.md](primitives/auth.md) |
+| **Templated params** | Parameter-level `x-openweb.template` for derived wire values | [meta-spec.md](meta-spec.md) |
+| **`dispatchOperation()`** | Top-level protocol router used by CLI exec | [runtime.md](runtime.md) |
+| **Capture bundle** | HAR, WS frames, browser state, and DOM snapshots recorded via CDP | [browser-capture.md](browser-capture.md) |
 
----
+## Source Docs vs Shipped Docs
 
-## Skill Documentation
+There are three different documentation surfaces in this repo:
 
-`skills/openweb/` is the **agent-facing operator guide** — a shipped deliverable like `src/`. It tells agents how to use OpenWeb, add sites, and troubleshoot. `doc/main/` is the **developer-facing architecture docs** — it explains how the system works internally.
+1. `doc/main/` explains the internals and architecture.
+2. `skills/openweb/` is the shipped operator skill. It must stay self-contained and workflow-oriented.
+3. `src/sites/<site>/{SKILL.md,DOC.md,PROGRESS.md}` are source-side site notes used during development.
 
-### Design Boundary
+The runtime contract is narrower than the source tree. At execution time, site loading depends on the site package files (`openapi.yaml`, `manifest.json`, `examples/`, optional `asyncapi.yaml`, optional compiled `adapters/`, and `DOC.md` for notes). The source-side per-site `SKILL.md` and `PROGRESS.md` are authoring artifacts, not runtime-required files.
 
-The skill defines *what* agents should do (workflow, decisions, patterns). The code + doc/main define *how* the system works (runtime, types, security). When an agent needs exact runtime semantics (e.g., how the executor dispatches, how SSRF validation works), those details live here in doc/main. When an agent needs to know which auth pattern to choose or how to curate a spec, that lives in skills/ The skill may reference concepts explained here (e.g., "transport", "primitive"), but the skill docs are self-contained — they do not load doc/main files.
+## Documentation Hygiene
 
-Both derive from source code as the single source of truth. They stay aligned indirectly: both accurate with code means both consistent with each other.
-
-### Governing Principles
-
-These principles govern all skill doc authoring and maintenance:
-
-1. **Token efficiency** — progressive disclosure. Agent reads minimum tokens per task. Each file loaded only when needed.
-2. **Workflow-driven** — folder/file structure follows user intents, not internal modules.
-3. **Self-contained** — skills/does not reference doc/main files. Both derive from source code independently.
-4. **End-user audience** — consumer path (exec) is fast. Contributor path (add site) is guided.
-5. **Load discipline** — one workflow doc at a time. No broad preloads.
-6. **Size budgets** — SKILL.md: <=5K. Workflow/step docs: 3-8K. Knowledge docs: 2-6K. Hard cap: ~8K; split when exceeded.
-7. **Freshness discipline** — only durable guidance that changes agent behavior. Prune resolved items.
-
-### Structure
-
-```
-skills/openweb/
-├── SKILL.md                   # Router: 3 routes (use / add-expand-upgrade / fix)
-├── add-site/                  # Contributor workflow (10-step: probe-first)
-│   ├── guide.md               # Unified flow entry (probe → route → build) + mode hint
-│   ├── probe.md               # CDP probe protocol (Step 2)
-│   ├── capture.md, review.md  # Step-specific docs
-│   ├── curate-operations.md, curate-runtime.md, curate-schemas.md
-│   ├── verify.md, document.md # Document step defines 3-file model (SKILL.md, DOC.md, PROGRESS.md)
-├── references/                # Lookup (CLI, x-openweb, troubleshooting)
-└── knowledge/                 # Pattern library
-    ├── archetypes.md          # Expected operations by category (merged from 5 files)
-    ├── transport-upgrade.md   # Stability ladder, node feasibility, GraphQL discovery
-    ├── adapter-recipes.md     # 5 canonical adapter patterns with code templates
-    ├── auth-routing.md, auth-primitives.md, bot-detection.md, extraction.md, graphql.md
-```
-
-Three loading patterns: `add-site/` is sequential workflow, `references/` is independent lookup, `knowledge/` is decision-point pattern library.
-
-### Alignment Rules
-
-- **Terminology must match.** If doc/main says `exchange_chain`, skills/says `exchange_chain`.
-- **When they disagree**, check source code — code is the ultimate truth. Fix whichever is wrong.
-- **Sync trigger:** changes to doc/main that affect operator-facing behavior must be checked against skills/
-- **Known drift areas:** token cache behavior, browser lifecycle, transport vs adapter semantics, x-openweb field names, verify behavior.
-
--> See: [skills/openweb/SKILL.md](../../skills/openweb/SKILL.md) for the skill entry point.
-
----
+- Prefer stable descriptions over volatile counts.
+- When runtime/auth/transport behavior changes, update both `doc/main/` and `skills/openweb/`.
+- When a source-site workflow changes, update the relevant `src/sites/<site>/` docs in the same pass.
 
 ## Development Workflow
 
--> See: [doc/dev/development.md](../dev/development.md)
-
----
-
-## Guardrails
+Use [../dev/development.md](../dev/development.md) for commands, build/test flow, and repo-local conventions.
 
 normalize-adapter collapsed per-site page/extraction/capture lifecycle into shared runtime primitives (PagePlan, `script_json`/`ssr_next_data`/`html_selector`/`page_global_data`, `response_capture`, CustomRunner). To keep future site work from re-introducing low-level page primitives, a CI guardrail tracks their usage per site:
 

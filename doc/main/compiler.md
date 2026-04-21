@@ -1,11 +1,11 @@
 # Compiler Pipeline
 
 > Capture -> Analyze -> Curate -> Generate -> Verify: turning website observations into skill packages.
-> Last updated: 2026-04-06 (KISS curation cleanup)
+> Last updated: 2026-04-21 (labeler + WS verify sync)
 
 ## Overview
 
-The compiler observes a website's behavior and generates skill packages (OpenAPI spec + AsyncAPI spec + manifest + tests). It operates in 5 phases:
+The compiler observes a website's behavior and generates skill packages (OpenAPI spec + AsyncAPI spec + manifest + examples). It operates in 5 phases:
 
 ```
 Phase 1: Capture      Record HTTP traffic, WebSocket frames, state, DOM
@@ -62,7 +62,7 @@ HAR entries
 - `src/compiler/analyzer/analyze.ts` — orchestrator producing AnalysisReport
 
 **Labeler behavior (replaces v1 filter):**
-- Blocked hosts/paths loaded from `src/lib/config/*.json` (config files, not hardcoded)
+- Host/path blocklists are currently inlined in `labeler.ts` for bundle compatibility (mirroring the reference JSON data under `src/lib/config/`)
 - Static content-types and file extensions classified as `static`
 - Off-domain requests classified as `off_domain` (not silently dropped)
 - Cross-domain API hosts are classified as `off_domain` and can be added back to the spec manually during curation
@@ -139,6 +139,7 @@ For each operation:
       structural diff: response fields vs openapi.yaml schema (type changes + required missing)
 
 WS operations -> verified via live connection (connect, send, wait for response)
+                 current verify checks connectivity/behavior only — not WS schema diff yet
 ```
 
 **ReplaySafety resolution** (3-level chain):
@@ -240,7 +241,7 @@ src/compiler/
     +-- ws-schema.ts        # Infer message schemas
 ```
 
-**Config files:** `src/lib/config/` — blocked-domains.json, blocked-paths.json, tracking-cookies.json, static-extensions.json
+**Reference config data:** `src/lib/config/` — blocked-domains.json, blocked-paths.json, tracking-cookies.json, static-extensions.json. The analyzer's host/path blocklists are currently bundled inline in `labeler.ts`.
 
 ---
 

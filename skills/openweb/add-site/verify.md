@@ -30,7 +30,7 @@ Optional fields:
 - **`order`** — execution order for verify (lower = earlier). Use when operations have dependencies (e.g., addToCart before removeFromCart). Files without `order` run after ordered files, sorted alphabetically.
 - **`replay_safety`** — `"safe_read"` (default) or `"unsafe_mutation"`. `unsafe_mutation` ops are skipped by default and only run when verify is invoked with `--write`.
 
-Files without a `cases` array are silently skipped by verify. For adapter-only
+Files without a `cases` array are treated as malformed example files and fail verify. For adapter-only
 packages where compile doesn't generate examples, create them manually.
 
 ---
@@ -54,13 +54,14 @@ Verify
 
 ```bash
 openweb verify <site>
-openweb verify <site> --browser              # include page-transport ops
+openweb verify <site> --browser              # pre-start/keep alive the managed browser
 openweb verify <site> --ops op1,op2          # only verify specific operations
 openweb verify <site> --ops op1 --browser    # combine filters
 ```
 
-Use `--browser` for sites with `transport: page` — it auto-starts the managed
-browser and verifies page-transport ops that would otherwise fail.
+Browser-backed ops already auto-start Chrome on demand. Use `--browser` when you
+want the managed browser up front and kept alive across the verify run (useful
+for auth cascades, CAPTCHA/manual-login prep, or avoiding browser idle shutdown).
 Use `--ops` to debug individual operations without running the full suite.
 The `--ops` value is a comma-separated list of operation IDs with **no spaces**
 (e.g., `--ops searchStores,getMenu`, not `--ops searchStores, getMenu`).
@@ -74,6 +75,8 @@ The `--ops` value is a comma-separated list of operation IDs with **no spaces**
 | `auth_expired` | Session expired | `openweb login <site>`, `openweb browser restart`, rerun |
 | `FAIL` | Execution failed | Read detail line, fix spec or environment, rerun |
 | `FAIL` (403 + cookies) | CSRF misconfiguration | Check `authCandidates[0].csrfOptions` in analysis.json |
+
+Single-site verify exits non-zero for `FAIL`, `auth_expired`, or `bot_blocked`. `DRIFT` is advisory and still exits 0.
 
 ### Runtime Exec
 
@@ -136,7 +139,7 @@ If AsyncAPI operations are present, verify:
 | **Connection** | WebSocket connects with the detected auth |
 | **Heartbeat** | Interval matches spec config |
 | **Subscribe** | Subscribe operations receive expected event types |
-| **Message shape** | Incoming messages match declared schemas |
+| **Message shape** | Incoming messages are intelligible and match the expected envelope well enough for the site workflow. Current runtime verify does **not** perform WS schema diff yet |
 
 WS failures usually stem from auth or URL issues. Check the connection URL
 template and auth header injection before re-capturing.
@@ -161,7 +164,7 @@ those standards.
 | **Naming** | camelCase verb+noun (`searchProducts`, not `getApiV1Search`) |
 | **Summaries** | Each operation has a summary listing 3-5 key response fields |
 | **Auth** | `x-openweb.auth` matches site's actual pattern; CSRF present if needed |
-| **Transport** | Correct per bot-detection level; page-transport ops have `page_url` |
+| **Transport** | Correct per bot-detection level; browser-backed ops have the needed `page_plan`, and extraction ops have `page_url` when required |
 | **Permissions** | GET → read, mutations → write/delete, GraphQL queries via POST → read |
 | **Schemas** | No bare `type: object` for ops returning structured JSON |
 | **No PII** | No real user data in parameter examples or fixtures |

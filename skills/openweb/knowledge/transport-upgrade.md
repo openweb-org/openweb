@@ -6,7 +6,7 @@ How to choose the right transport tier, diagnose node feasibility, discover APIs
 
 Seven tiers from most fragile to most stable. Each tier eliminates a fragility surface of the tier below it.
 
-> **Note on scope:** Tiers 1 & 4 describe patterns used **inside adapters**, not runtime transport modes. Runtime transport dispatch operates on `node` vs `page` (see `src/runtime/operation-context.ts`); the executor routes via `extraction` (Tiers 2–3) or `browser_fetch` (Tier 5). Tier 6 (module walk) is an **auth resolution primitive** (`src/runtime/primitives/webpack-module-walk.ts`), not a transport tier — it appears here only to show where rotating-token discovery fits in the stability hierarchy.
+> **Note on scope:** Tiers 1 & 4 describe patterns used **inside adapters**, not runtime transport modes. Runtime transport dispatch operates on `node` vs `page` (see `src/runtime/operation-context.ts`); extraction is a separate branch (Tiers 2–3), and Tier 5 maps to the `page` transport implemented by `executeBrowserFetch()`. Tier 6 (module walk) is an **auth resolution primitive** (`src/runtime/primitives/webpack-module-walk.ts`), not a transport tier — it appears here only to show where rotating-token discovery fits in the stability hierarchy.
 
 ### Tier 1 — DOM Action (page.click / page.fill) *(adapter pattern)*
 

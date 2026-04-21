@@ -33,10 +33,12 @@ openweb <site>                       # transport, auth, operations list
 
 ### 3. Read site notes
 
-Read `src/sites/<site>/SKILL.md` BEFORE executing operations.
-SKILL.md contains: overview, workflows, cross-operation data flow, intent mapping, known limitations.
+Prefer site docs when they exist in your workspace:
 
-For internal details (auth, transport, adapter patterns), see `src/sites/<site>/DOC.md`.
+- **Source repo:** read `src/sites/<site>/SKILL.md` for workflows and intent mapping, then `src/sites/<site>/DOC.md` for internals.
+- **Shipped/runtime package:** only `DOC.md`, specs, manifest, examples, and adapters are guaranteed. Per-site `SKILL.md` and `PROGRESS.md` are source-tree docs and are not shipped into `$OPENWEB_HOME/sites/<site>/`.
+
+If only the shipped package is available, rely on `openweb <site>`, `openweb <site> <op>`, examples, and `DOC.md`.
 
 ### 4. Inspect the operation
 

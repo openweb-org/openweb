@@ -173,10 +173,7 @@ One real API endpoint serves multiple logical operations, differentiated by a pa
       - name: type
         in: query
         schema:
-          enum: [product]
-          default: product
-        x-openweb:
-          injected: true   # auto-injected, not user-provided
+          const: product   # fixed site-defined value; caller cannot override
 
 /search/users:
   get:
@@ -190,10 +187,7 @@ One real API endpoint serves multiple logical operations, differentiated by a pa
       - name: type
         in: query
         schema:
-          enum: [user]
-          default: user
-        x-openweb:
-          injected: true
+          const: user
 ```
 
 **In adapter — shared implementation:**
@@ -222,7 +216,7 @@ async run(ctx: PreparedContext) {
 
 ### Common Pitfalls
 
-- **Forgetting `x-openweb.injected`:** If the toggle param leaks to the CLI, users see a confusing required param that should be auto-set.
+- **Using a fake `x-openweb.injected` field:** it does not exist. Use `schema.const` for fixed wire params, or `x-openweb.template` when one param is derived from another.
 - **Response shape divergence:** Even though the endpoint is shared, different toggle values may return different shapes. Validate per-operation, not just per-endpoint.
 - **Spec drift:** When the real endpoint changes, all virtual ops break simultaneously. This is actually a benefit — one fix propagates everywhere.
 

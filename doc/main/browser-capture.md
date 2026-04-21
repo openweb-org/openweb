@@ -1,7 +1,7 @@
 # Browser Capture (CDP)
 
 > Passive browser recording via Chrome DevTools Protocol.
-> Last updated: 2026-03-31 (multi-worker isolation)
+> Last updated: 2026-04-21 (capture bundle wording sync)
 
 ## Overview
 
@@ -34,7 +34,7 @@ Snapshots and DOM extractions are taken at capture start and on each page naviga
 
 ```
 capture/
-├── traffic.har                 # Filtered HTTP traffic (HAR 1.2)
+├── traffic.har                 # Unfiltered HTTP traffic (HAR 1.2, bodies > 1 MB omitted)
 ├── websocket_frames.jsonl      # WebSocket frame log (if any WS connections)
 ├── state_snapshots/
 │   ├── 001_initial.json

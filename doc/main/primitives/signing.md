@@ -63,15 +63,15 @@ Calls a CSRF endpoint and extracts the token from the JSON response.
 ```yaml
 csrf:
   type: api_response
-  endpoint: "/api/csrf"
+  endpoint: "https://example.com/api/csrf"
   method: GET
   extract: "token"
   inject: { header: "X-CSRF-Token" }
 ```
 
-The token fetch runs **inside `page.evaluate(fetch)`** so any rotated cookies in the `Set-Cookie` response stay coherent with the browser jar. A node-side fetch would orphan the rotated cookies — the next API call would present the new CSRF token alongside stale cookies and 401. Only meaningful for `transport: page` ops; node-transport ops fall back to the legacy node fetch via injected `fetchImpl`.
+The token fetch runs **inside `page.evaluate(fetch)`** so any rotated cookies in the `Set-Cookie` response stay coherent with the browser jar. A node-side fetch would orphan the rotated cookies — the next API call would present the new CSRF token alongside stale cookies and 401.
 
-**`endpoint` resolution.** The `endpoint` value is passed directly to `fetch()` — `src/runtime/primitives/api-response.ts` does not resolve it against `serverUrl`. A relative path like `/api/csrf` therefore resolves against whatever origin the browser page is currently on; it only works when the page context is already on the right origin (the common case for `transport: page`). Use an absolute URL (`https://example.com/api/csrf`) when the CSRF endpoint lives on a different origin than the active page or when you want the resolution to be unambiguous.
+**`endpoint` must be an absolute HTTPS URL.** `src/runtime/primitives/api-response.ts` SSRF-validates `config.endpoint` directly, then passes that same string into browser-context `fetch()`. It is **not** resolved against `serverUrl`, and there is no node fallback path.
 
 -> See: `src/runtime/primitives/api-response.ts`
 

@@ -15,7 +15,7 @@ Applied to the server object. Every field here affects ALL operations.
 | `csrf` | CsrfPrimitive + `scope` | No | CSRF token resolution |
 | `signing` | SigningPrimitive | No | Custom request signing |
 | `auth_check` | AuthCheckPrimitive | No | Body-shape patterns that signal "unauthenticated despite HTTP 200" (e.g. empty `data` or specific error messages). Synthesizes a `needs_login` failure so the auth cascade can recover. Disable per-op with `auth_check: false` |
-| `headers` | `Record<string, string>` | No | Constant headers merged into every node-transport request to this server (e.g. per-site User-Agent overrides, API keys) |
+| `headers` | `Record<string, string>` | No | Constant headers merged into the direct/unauthenticated node path for this server (e.g. per-site User-Agent overrides). They are not currently injected by the session executor or `page` transport |
 | `page_plan` | PagePlan | No | Default page-acquisition plan for page-transport operations (entry_url, ready, warm, nav_timeout) |
 | `adapter` | AdapterRef | No | Default adapter for all operations under this server. Op-level `adapter` overrides; `adapter: false` opts out per-op |
 
@@ -39,10 +39,10 @@ Mixed transport: set server-level to `page`, override node-friendly ops at opera
 | `webpack_module_walk` | `chunk_global`, `module_test`, `call`, `app_path?`, `inject` |
 | `exchange_chain` | `steps[]`, `inject` |
 
-`inject` places the resolved token: `header`, `prefix`, `query`, or `json_body_path`.
+`inject` places the resolved token: `header`, `prefix`, or `query`. `json_body_path` is CSRF-only (`api_response`), not an auth inject target.
 `app_path` (on `localStorage_jwt`, `webpack_module_walk`): absolute URL when
 token lives on a different domain than the API.
-Auth is **site-level** — disable per-op with `auth: false`. Never remove site-wide auth.
+Auth is **site-level** — disable per-op with `auth: false`. Never remove site-wide auth. `auth: false` only disables auth; use `csrf: false` / `signing: false` separately when a public op truly needs to bypass those too.
 
 See `knowledge/auth-primitives.md` for detailed config per type.
 
@@ -52,7 +52,7 @@ See `knowledge/auth-primitives.md` for detailed config per type.
 |------|--------|-------------|
 | `cookie_to_header` | `cookie`, `header` | Reads cookie value, sends as header |
 | `meta_tag` | `name`, `header` | Reads `<meta>` tag from page DOM |
-| `api_response` | `endpoint`, `method?`, `extract`, `inject` | Fetches token from a dedicated endpoint |
+| `api_response` | `endpoint`, `method?`, `extract`, `inject` | Fetches token from a dedicated endpoint. `endpoint` must be an absolute HTTPS URL |
 
 `scope` (string array): HTTP methods requiring CSRF, typically `["POST", "PUT", "DELETE"]`.
 
@@ -122,7 +122,7 @@ Runtime-owned page acquisition for browser-backed operations. Merges server-leve
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `entry_url` | string | server URL | Where to navigate before executing. Supports server-variable + caller-param interpolation |
+| `entry_url` | string | server URL | Where to navigate before executing. Supports caller-param interpolation; server URL variables are resolved separately on `serverUrl` |
 | `ready` | string | — | CSS selector awaited after navigation |
 | `wait_until` | string | `load` | Playwright `waitUntil` (`domcontentloaded` / `load` / `networkidle` / `commit`) |
 | `settle_ms` | number | `0` | Extra delay after `ready` (escape hatch — prefer a tighter selector) |
@@ -159,9 +159,11 @@ Dynamic query-id scraping and per-response query-id schemes stay in a CustomRunn
 
 ### Adapter (CustomRunner)
 
-Fields: `name` (required), `operation` (required), `params?`. The runtime resolves PagePlan, auth, CSRF, and signing **before** invoking the runner — a single `run(ctx: PreparedContext)` entry. No separate `init()` / `isAuthenticated()`. Opt out per operation with `adapter: false`.
+Fields: `name` (required), `operation` (required), `params?`. The runtime resolves PagePlan and optional auth **before** invoking the runner — a single `run(ctx: PreparedContext)` entry. No separate `init()` / `isAuthenticated()`. Opt out per operation with `adapter: false`.
 
-Runners must be **self-contained** — no imports from outside the adapter file. Helpers arrive via `ctx.helpers` (`pageFetch`, `graphqlFetch`, `nodeFetch`, `interceptResponse`, `ssrExtract`, `jsonLdExtract`, `domExtract`, `errors`).
+Helpers injected on `ctx.helpers`: `pageFetch`, `graphqlFetch`, `ssrExtract`, `jsonLdExtract`, `domExtract`, `errors`.
+
+`nodeFetch` and `interceptResponse` are helper-library utilities, not injected context members. Source adapters may import them directly from `../../../lib/adapter-helpers.js`; build bundles those imports into the emitted adapter `.js`.
 
 ### Response Unwrap
 
@@ -271,7 +273,7 @@ paths:
 
 ## Pitfalls
 
-1. **Removing site-level auth for verify.** Use `auth: false` per-operation instead.
+1. **Removing site-level auth for verify.** Use `auth: false` per-operation instead. If the public op also must skip signing or CSRF, disable those separately.
 2. **Setting write ops to `permission: read`.** Use `openweb verify --write` instead.
 3. **Editing `build` fields.** Compiler-managed — do not touch.
 4. **Adapter ignoring params.** The runtime only opens the server origin, not the spec path.

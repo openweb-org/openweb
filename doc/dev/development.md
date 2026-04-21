@@ -1,230 +1,210 @@
 # Development Guide
 
-> Build, test, run, and debug OpenWeb.
-> Last updated: 2026-04-20 (9bee470)
+> Build, run, verify, and debug OpenWeb from the repo.
+> Last updated: 2026-04-21 (647c20c)
 
 ## Prerequisites
 
 - Node.js 20+
 - pnpm
-- Google Chrome (for browser-dependent features)
+- Google Chrome
 
-## Quick Start
-
-```bash
-pnpm install        # Install dependencies
-pnpm build          # Build (tsup -> dist/ + compile adapters)
-pnpm test           # Run tests (1,000+ pass)
-pnpm lint           # Biome lint check
-```
-
-## Tech Stack
-
-| Component | Tool | Version |
-|-----------|------|---------|
-| Language | TypeScript (strict, no `any`) | ES2022 |
-| Runtime | Node.js | 20+ |
-| Build | tsup (ESM -> dist/) | 8.x |
-| Test | Vitest | 3.x |
-| Lint | Biome | 1.x |
-| CLI | yargs | 18.x |
-| Browser | Patchright (Playwright fork, CDP stealth) | 1.59+ |
-| Schema | AJV | 8.x |
-| Package mgr | pnpm | -- |
-
-## CLI Usage
-
-### Progressive Navigation
+## Core Scripts
 
 ```bash
-# List sites / show operations / show operation details
-pnpm dev sites
-pnpm dev instagram
-pnpm dev instagram getTimeline
-pnpm dev instagram getTimeline --json     # Machine-readable
-pnpm dev instagram getTimeline --example  # Show example params from fixtures
-
-# Execute (auto-exec: JSON arg triggers exec mode)
-pnpm dev instagram getTimeline '{}'
-pnpm dev instagram getTimeline '{}' --cdp-endpoint http://localhost:9222
-pnpm dev instagram getTimeline '{}' --max-response 8192  # Auto-spill
-pnpm dev instagram getTimeline '{}' --output file        # Always file
-```
-
-### Browser Management
-
-```bash
-pnpm dev browser start                            # Auto-copies Chrome profile, CDP
-pnpm dev browser start --headless                 # No window
-pnpm dev browser stop                             # Stop, preserve token cache
-pnpm dev browser restart                          # Re-copy profile + clear token cache
-pnpm dev browser status                           # Check if running
-pnpm dev login instagram                          # Open site in default browser
-```
-
-### Compile a Site
-
-```bash
-pnpm dev compile https://api.example.com
-pnpm dev compile https://api.example.com --script ./scripts/record.ts
-pnpm dev compile https://api.example.com --capture-dir ./captures/my-site  # Use existing capture
-```
-
-### Run Site Tests / Verify / Registry
-
-```bash
-pnpm dev instagram test
-pnpm dev verify walmart                           # Single site
-pnpm dev verify --all --report markdown           # Batch verify
-pnpm dev registry list                            # List registered
-pnpm dev registry install walmart                 # Archive
-pnpm dev registry rollback walmart                # Revert
-```
-
-## Development Cycle
-
-```
-Code change -> Build -> Test -> Verify with real site
-```
-
-### 1. Build
-
-```bash
+pnpm install
 pnpm build
+pnpm test
+pnpm lint
+pnpm test:integration   # optional, needs a real browser session
 ```
 
-tsup compiles TypeScript to `dist/` (ESM). Adapter `.ts` files in sites are compiled to `.js`.
+`pnpm dev` runs the source CLI through `tsx`. The packaged `openweb` binary runs from `dist/`.
 
-### 2. Test
+## Day-to-Day CLI Usage
+
+### Inspect and execute
 
 ```bash
-pnpm test                             # Full suite
-pnpm test src/types/validator.test.ts # Single file
-pnpm test -- --watch                  # Watch mode
+pnpm dev sites
+pnpm dev <site>
+pnpm dev <site> <op>
+pnpm dev <site> <op> --json
+pnpm dev <site> <op> --example
+
+pnpm dev <site> <op> '{}'
+pnpm dev <site> exec <op> '{}'
+pnpm dev <site> <op> '{}' --cdp-endpoint http://127.0.0.1:9222
+pnpm dev <site> <op> '{}' --max-response 8192
+pnpm dev <site> <op> '{}' --output file
 ```
 
-### 3. Verify with Real Site
+Auto-exec triggers when the third positional arg is a JSON object and no show-mode flags are present.
+
+### Browser lifecycle
 
 ```bash
 pnpm dev browser start
-pnpm dev login instagram               # Log in in Chrome, then:
+pnpm dev browser start --no-headless
+pnpm dev browser stop
 pnpm dev browser restart
-pnpm dev instagram getTimeline '{}'
+pnpm dev browser status
+pnpm dev login <site>
 ```
 
-## Project Structure
+Notes:
 
+- most runtime paths auto-start a managed browser when needed
+- `login` opens the managed browser if one is running, otherwise the system browser
+- `browser restart` re-copies the Chrome profile; it does not directly clear the per-site token cache
+
+### Capture and compile
+
+```bash
+pnpm dev capture start
+pnpm dev capture start --isolate --url https://example.com
+pnpm dev capture stop
+pnpm dev capture stop --session <id>
+
+pnpm dev compile https://example.com --capture-dir ./capture
+pnpm dev compile https://example.com --script ./scripts/record-site.ts
 ```
+
+`compile` requires either `--capture-dir` or `--script`.
+
+Compile artifacts land in:
+
+- `$OPENWEB_HOME/compile/<site>/` for reports
+- `$OPENWEB_HOME/sites/<site>/` for the generated package
+
+### Verify and registry
+
+```bash
+pnpm dev <site> test
+
+pnpm dev verify <site>
+pnpm dev verify <site> --ops op1,op2
+pnpm dev verify <site> --write
+pnpm dev verify <site> --browser
+pnpm dev verify --all --report json
+
+pnpm dev registry list
+pnpm dev registry show <site>
+pnpm dev registry install <site>
+pnpm dev registry rollback <site>
+```
+
+`--browser` pre-starts and keeps the managed browser alive during long verify runs. Page/adapters can still auto-start a browser even without that flag.
+
+## Recommended Loop
+
+```text
+edit -> pnpm test -> pnpm build -> narrow real-site verify
+```
+
+For runtime or site-package work, end with a real CLI execution or `verify` run against the touched site.
+
+## Repo Layout
+
+```text
 src/
-├── cli.ts                    # Entry point, yargs routing
-├── commands/                 # CLI commands (exec, show, browser, login, compile, capture, test, sites, verify, registry)
-├── runtime/                  # Operation execution (HTTP + WS modes)
-├── types/                    # Meta-spec type system
-├── compiler/                 # Site compilation pipeline
-│   ├── analyzer/             #   label → normalize → cluster → schema → auth
-│   ├── generator/            #   openapi.ts, asyncapi.ts, package.ts
-│   └── ws-analyzer/          #   WS capture → classify → cluster → schema
-├── capture/                  # Browser CDP recording
-├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, AsyncAPI, permissions, logger)
-└── sites/                    # Site packages (90+ sites)
+├── cli.ts
+├── commands/
+├── runtime/
+├── compiler/
+├── capture/
+├── lifecycle/
+├── lib/
+├── types/
+└── sites/
+tests/
+├── integration/
+└── benchmark/
 ```
 
--> See: [doc/main/README.md](../main/README.md) -- full code structure with per-file annotations
+See [../main/README.md](../main/README.md) for the full annotated tree.
 
-## Site Resolution
+## Site Resolution Order
 
-1. `$OPENWEB_HOME/sites/<site>/openapi.yaml` -- User-installed (primary, populated by `compile`)
-2. `$OPENWEB_HOME/registry/<site>/current` -> versioned -- Registry
-3. `dist/sites/<site>/openapi.yaml` -- Bundled sites (npm package fallback)
-4. `./src/sites/<site>/openapi.yaml` -- Development fixtures (dev fallback)
+At runtime, a site is resolved in this order:
 
-Site names: `/^[a-z0-9][a-z0-9_-]*$/`.
+1. `$OPENWEB_HOME/sites/<site>/`
+2. `$OPENWEB_HOME/registry/<site>/current`
+3. `dist/sites/<site>/`
+4. `src/sites/<site>/` (dev fallback)
 
-## Fixture Layout
+Site names must match `/^[a-z0-9][a-z0-9_-]*$/`.
 
+## Source Site Package Layout
+
+```text
+src/sites/<site>/
+├── openapi.yaml
+├── asyncapi.yaml            # optional
+├── manifest.json
+├── DOC.md
+├── SKILL.md                 # source-side site guide
+├── PROGRESS.md              # source-side history
+├── adapters/                # optional .ts source, bundled to .js on build
+└── examples/
+    └── <operation>.example.json
 ```
-src/sites/instagram/
-├── openapi.yaml          # OpenAPI spec with x-openweb extensions
-├── manifest.json         # Package metadata
-├── adapters/             # L3 code (WhatsApp, Telegram only)
-└── examples/              # Per-operation example params (PII-scrubbed)
-```
 
-## Test Structure
+Bundled runtime packages are slimmer. `pnpm build` copies the runtime-required subset into `dist/sites/`.
 
-```
-src/**/*.test.ts                      # Unit tests (pnpm test)
-tests/integration/                    # Integration tests (requires CDP)
-src/sites/*/examples/*.example.json  # Per-site example fixtures
-```
+## Example Fixtures
 
-Example fixture format (used by `--example` and `verify`):
+Example fixtures drive `--example` and `verify`:
 
 ```json
 {
-  "operation_id": "search_location",
-  "cases": [{ "input": { "name": "Berlin" }, "assertions": { "status": 200, "response_schema_valid": true } }]
+  "operation_id": "searchProducts",
+  "order": 1,
+  "cases": [
+    {
+      "input": { "query": "laptop" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
 }
 ```
 
-## Benchmark Suite
+Useful fields:
 
-Agent validation benchmarks in `tests/benchmark/` -- 10 tasks covering all execution modes:
+- `order`: execution order for dependent workflows
+- `replay_safety`: `safe_read` or `unsafe_mutation`
 
-| # | Task | Mode |
-|---|------|------|
-| 01 | direct_http (Open-Meteo) | direct_http |
-| 02-04 | session_http (Instagram/GitHub/YouTube) | session_http |
-| 05 | browser_fetch (Discord) | browser_fetch |
-| 06 | L3 adapter (Telegram) | L3 adapter |
-| 07 | Auth failure handling | error recovery |
-| 08-09 | DOM/SSR extraction (HN/Walmart) | extraction |
-| 10 | MSAL auth (Microsoft Word) | sessionStorage_msal |
+## Build and Packaging
 
-## Code Conventions
+`pnpm build` does three things:
 
-- Max 400 lines/file -- extract when larger
-- Immutability by default
-- Explicit error handling, no silent failures
-- TypeScript strict mode, no `any`
-- ESM only (import/export, no require)
-- Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`
+1. bundles the CLI with `tsup`
+2. bundles adapter `.ts` source files into per-site `.js`
+3. syncs bundled site assets into `dist/sites/` and `~/.openweb/sites/`
 
-## Build → Install → Final QA
-
-During development use `pnpm dev` — it runs source directly via tsx. The final deliverable is the `openweb` binary (installed via npm).
+For final QA against the packaged binary:
 
 ```bash
-# 1. Build distributable
-pnpm build                          # tsup → dist/ (ESM), adapters compiled
-
-# 2. Pack and inspect
-pnpm pack:check                     # dry-run, verify tarball contents (~284kB)
-pnpm pack                           # produces openweb-org-openweb-*.tgz
-
-# 3. Global install for final QA
+pnpm build
+pnpm pack:check
 npm install -g ./openweb-org-openweb-*.tgz
 
-# 4. Final QA — use openweb (not pnpm dev)
-openweb sites                       # verify bundled site resolution
-openweb instagram getTimeline '{}'  # verify execution end-to-end
-openweb verify --all                # batch verify all sites
+openweb sites
+openweb <site> <op> '{}'
 ```
-
-When testing the installed binary, replace all `pnpm dev` with `openweb`. The binary resolves sites from `dist/sites/` (bundled read-only) or `$OPENWEB_HOME/sites/` (user-installed).
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| `pnpm dev` fails | Run `pnpm build` first |
-| CDP connection refused | Browser auto-starts; if it fails, run `pnpm dev browser start` |
-| Auth fails on exec | Run `pnpm dev login <site>` then `pnpm dev browser restart` |
-| Permission denied | Update `permissions` in `$OPENWEB_HOME/config.json` or confirm the operation |
-| SSRF validation error | Target URL must be HTTPS + public IP |
-| "Site not found" | Check `src/sites/` or `$OPENWEB_HOME/sites/` |
+| Issue | Check |
+|-------|-------|
+| Browser-dependent op fails | `pnpm dev browser status` |
+| Login still not picked up | `pnpm dev login <site>`, then `pnpm dev browser restart` |
+| Stale auth cache suspicion | remove `$OPENWEB_HOME/tokens/<site>/`, then retry |
+| Site not found | resolution order above; check `src/sites/` and `$OPENWEB_HOME/sites/` |
+| Compile produced weak output | inspect `$OPENWEB_HOME/compile/<site>/analysis-summary.json` first |
 
-## Detailed Documentation
+## Related Docs
 
-- [doc/main/](../main/README.md) -- Architecture and component docs
-- [Adding Sites](adding-sites.md) -- How to add a new site
+- [../main/README.md](../main/README.md)
+- [adding-sites.md](adding-sites.md)
+- [../../skills/openweb/add-site/guide.md](../../skills/openweb/add-site/guide.md)

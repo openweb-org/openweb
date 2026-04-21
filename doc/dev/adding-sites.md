@@ -1,262 +1,164 @@
-# Adding a New Site
+# Adding or Expanding a Site
 
-> How to create a new site — from capture to verified skill package.
-> Last updated: 2026-04-20 (404418d)
+> Repo-local companion to the shipped add-site skill.
+> Last updated: 2026-04-21 (647c20c)
 
-## Decision Tree
+The authoritative workflow lives in [../../skills/openweb/add-site/guide.md](../../skills/openweb/add-site/guide.md). This doc is the short, repo-specific version: which files to touch, which commands to run, and how the repo organizes site packages.
 
-Before writing a site, determine the site's layer:
+## Choose the Lane First
 
-```
-Does the site have a public REST/GraphQL API with API-key auth?
-  └── Yes → L1 (node, no auth) — no browser needed
+Decide the implementation lane before writing files:
 
-Does standard cookie/token/header auth work?
-  └── Yes → L2 (node or page transport)
-       │
-       ├── Does the site check TLS fingerprint or need CORS context?
-       │     └── Yes → page transport
-       │     └── No  → node transport
-       │
-       └── Which auth primitive?
-             ├── Cookie-based login → cookie_session
-             ├── JWT in localStorage → localStorage_jwt
-             ├── Token in window global → page_global
-             ├── Webpack module cache → webpack_module_walk
-             └── Multi-step exchange → exchange_chain
+| Lane | Use when |
+|------|----------|
+| **Replay (`node`)** | stable HTTP API works from Node.js |
+| **Replay (`page`)** | request must run in a real browser page |
+| **Extraction** | data lives in SSR, DOM, script tags, or page globals |
+| **Adapter** | module systems, request signing, binary protocols, or complex page logic |
+| **WS** | the operation is fundamentally WebSocket-based |
 
-None of the above work? Proprietary module system? Custom protocol?
-  └── L3 custom runner — write CustomRunner
-```
+Do the browser-side probe first. The shipped workflow docs in `skills/openweb/add-site/` are the source of truth for that process.
 
-## Step 1: Create Site Directory
+## Repo Files You Usually Touch
 
-```bash
-mkdir -p src/sites/<site>/tests
+```text
+src/sites/<site>/
+├── openapi.yaml
+├── asyncapi.yaml            # optional
+├── manifest.json
+├── DOC.md
+├── SKILL.md
+├── PROGRESS.md
+├── adapters/                # optional
+└── examples/
 ```
 
-## Step 2: Capture Traffic (Optional)
+Common shared files:
 
-If you want to auto-generate the spec:
+- `skills/openweb/` when the workflow or references need updating
+- `doc/main/` or `doc/dev/` when shared runtime/dev behavior changed
 
-```bash
-# Start Chrome
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-  --remote-debugging-port=9222 --no-first-run --user-data-dir=/tmp/openweb-chrome
+## Minimal Authoring Checklist
 
-# Browse to the site, log in
+1. Create `src/sites/<site>/`.
+2. Add `openapi.yaml` (and `asyncapi.yaml` if needed).
+3. Add `manifest.json`.
+4. Add `examples/<operation>.example.json`.
+5. Add `DOC.md`, `SKILL.md`, and `PROGRESS.md`.
+6. Add `adapters/*.ts` only if the site genuinely needs a `CustomRunner`.
 
-# Capture
-pnpm dev capture start --cdp-endpoint http://localhost:9222
-# Browse around, trigger the APIs you want
-# Ctrl+C to stop
+## Minimal Examples
 
-# Compile
-pnpm dev compile <site-url>
-```
-
-Or write the spec by hand (recommended for precision).
-
-## Step 3: Write openapi.yaml
-
-### L1 Example (Open-Meteo)
+### Public or browser-independent HTTP
 
 ```yaml
-openapi: "3.1.0"
-info:
-  title: Open-Meteo
-  version: "1.0.0"
 servers:
-  - url: https://api.open-meteo.com
+  - url: https://api.example.com
+    x-openweb:
+      transport: node
 paths:
-  /v1/forecast:
+  /search:
     get:
-      operationId: getForecast
-      parameters:
-        - name: latitude
-          in: query
-          required: true
-          schema: { type: number }
-        - name: longitude
-          in: query
-          required: true
-          schema: { type: number }
+      operationId: searchItems
+      x-openweb:
+        permission: read
 ```
 
-### L2 Example (Instagram)
+### Browser-backed HTTP
 
 ```yaml
-openapi: "3.1.0"
-info:
-  title: Instagram Private API
-  version: "1.0.0"
 servers:
-  - url: https://i.instagram.com
+  - url: https://api.example.com
     x-openweb:
       transport: page
       auth:
         type: cookie_session
-      csrf:
-        type: cookie_to_header
-        cookie: csrftoken
-        header: X-CSRFToken
-paths:
-  /api/v1/feed/timeline/:
-    post:
-      operationId: getTimeline
-      x-openweb:
-        permission: read
-        stable_id: instagram_getTimeline_v1
+      page_plan:
+        entry_url: https://www.example.com/app
+        ready: "#app"
+        warm: true
 ```
 
-### Extraction Example (Hacker News)
+### Extraction
 
 ```yaml
-openapi: "3.1.0"
-info:
-  title: Hacker News DOM Data
-  version: "1.0.0"
-servers:
-  - url: https://news.ycombinator.com
-    x-openweb:
-      transport: node
 paths:
   /news:
     get:
       operationId: getTopStories
       x-openweb:
         permission: read
-        build:
-          stable_id: hn0001
-          tool_version: 1
         extraction:
           type: html_selector
           page_url: /news
           selectors:
             title: .titleline > a
-            score: .score
-            author: .hnuser
           multiple: true
 ```
 
-### L3 Example (WhatsApp)
+### Adapter
 
 ```yaml
-servers:
-  - url: https://web.whatsapp.com
-    x-openweb:
-      transport: page
-paths:
-  /getChats:
-    get:
-      operationId: getChats
-      x-openweb:
-        adapter:
-          name: whatsapp
-          operation: getChats
+x-openweb:
+  adapter:
+    name: example-web
+    operation: getThing
 ```
 
-## Step 4: Write manifest.json
+## Adapter Rules
 
-```json
-{
-  "name": "<site>",
-  "display_name": "<Site Name>",
-  "version": "1.0.0",
-  "spec_version": "2.0",
-  "site_url": "https://<domain.com>",
-  "description": "<what the site exposes>",
-  "requires_auth": true,
-  "dependencies": {
-    "patchright": "^1.59.1"
-  },
-  "stats": {
-    "operation_count": 1,
-    "l1_count": 0,
-    "l2_count": 1,
-    "l3_count": 0
-  }
-}
-```
+- put adapter source in `src/sites/<site>/adapters/*.ts`
+- prefer `PagePlan` over hand-rolled `page.goto()` / `waitForSelector()` glue
+- use `ctx.helpers` for injected helpers; import `nodeFetch` / `interceptResponse` directly only when needed
+- run `pnpm build` after adapter changes so the bundled `.js` is refreshed
 
-## Step 5: Write Custom Runner (L3 Only)
+See [../main/adapters.md](../main/adapters.md) and [../../skills/openweb/add-site/curate-runtime.md](../../skills/openweb/add-site/curate-runtime.md).
 
-Create `adapters/<name>.ts`:
-
-```typescript
-import type { CustomRunner, PreparedContext } from '../../../types/adapter.js';
-
-const runner: CustomRunner = {
-  name: '<name>',
-  description: '<what it does>',
-  async run(ctx: PreparedContext) {
-    // ctx.page: Page | null (null for transport: node)
-    // ctx.operation: operationId from the spec
-    // ctx.params: validated caller input
-    // ctx.helpers: pageFetch, nodeFetch, graphqlFetch, ssr/jsonLd/domExtract, errors
-    // ctx.auth: pre-resolved from the spec auth primitive
-    // ctx.serverUrl: already interpolated with server variables
-
-    switch (ctx.operation) {
-      case 'getChats':
-        return ctx.page!.evaluate(() => { /* ... */ });
-      default:
-        throw ctx.helpers.errors.unknownOp(ctx.operation);
-    }
-  },
-};
-export default runner;
-```
-
-PagePlan (nav + readiness + warm) runs BEFORE `run()` — do not hand-roll `page.goto` / `waitForSelector` / cookie warmup in the runner. Declare `x-openweb.page_plan` on the operation or server instead.
-
-## Step 6: Write Examples
-
-Create `examples/<operationId>.example.json`:
-
-```json
-{
-  "operation_id": "getTimeline",
-  "cases": [
-    {
-      "input": {},
-      "assertions": {
-        "status": 200,
-        "response_schema_valid": true
-      }
-    }
-  ]
-}
-```
-
-For write operations with dependencies, add `"order": N` to control verify execution order (lower runs first). Example: `addToCart(1)` → `removeFromCart(2)` → `emptyCart(3)`.
-
-## Step 7: Validate & Verify
+## Capture and Compile
 
 ```bash
-# Build (compiles adapter .ts → .js)
-pnpm build
+pnpm dev capture start --isolate --url https://example.com
+pnpm dev capture stop --session <id>
 
-# Run validation tests
+pnpm dev compile https://example.com --capture-dir ./capture-<id>
+pnpm dev compile https://example.com --script ./scripts/record-site.ts
+```
+
+Compile reports are written to `$OPENWEB_HOME/compile/<site>/`.
+
+## Verify
+
+```bash
+pnpm build
 pnpm test
 
-# Verify with real browser
-pnpm --silent dev <site> exec <op> '{}' --cdp-endpoint http://localhost:9222
-
-# Run site tests
-pnpm --silent dev <site> test
-
-# Verify drift detection
-pnpm --silent dev verify <site>
+pnpm dev <site> <op> '{}'
+pnpm dev <site> test
+pnpm dev verify <site>
+pnpm dev verify <site> --write
+pnpm dev verify <site> --ops op1,op2
 ```
 
-## Step 8: Register (Optional)
+Use `--browser` when you want the managed browser started and kept alive before a long verify run.
 
-Archive verified sites to the internal registry for version management:
+## Packaging Notes
 
-```bash
-pnpm --silent dev registry install <site>
-```
+`pnpm build` bundles adapter source and copies runtime assets into `dist/sites/`. The bundled runtime currently relies on:
+
+- `openapi.yaml`
+- optional `asyncapi.yaml`
+- `manifest.json`
+- `DOC.md`
+- `examples/*.example.json`
+- compiled `adapters/*.js`
+
+The source-side `SKILL.md` and `PROGRESS.md` remain development artifacts in `src/sites/`.
+
+## Related Docs
+
+- [../../skills/openweb/add-site/guide.md](../../skills/openweb/add-site/guide.md)
+- [../main/meta-spec.md](../main/meta-spec.md)
+- [../main/adapters.md](../main/adapters.md)
 
 ## Checklist
 

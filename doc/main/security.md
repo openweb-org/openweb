@@ -1,7 +1,7 @@
 # Security Model
 
 > SSRF protection, redirect safety, error handling, and risk tiers.
-> Last updated: 2026-04-03 (pre-release review)
+> Last updated: 2026-04-21 (redirect stripping + transport naming sync)
 
 ## Overview
 
@@ -54,7 +54,7 @@ SSRF validation is enforced across all network paths:
 - **WebSocket connections**: `ws-runtime.ts` converts `wss://` → `https://` for DNS check before connecting
 - **WS HTTP handshake**: validates handshake endpoint URL
 
-**Note:** `src/lib/config/blocked-domains.*` and `blocked-paths.*` are **compile-time** labels consumed by `src/compiler/analyzer/labeler.ts` to categorize captured samples (e.g. tracking, static); they are not runtime SSRF enforcement. Runtime protection relies solely on the IP-based validation above.
+**Note:** The compiler's blocked-domain/path labeling lists are **separate** from runtime SSRF enforcement. They help categorize captured samples (tracking/static/off-domain) during analysis; runtime protection relies solely on the IP-based validation above.
 
 -> See: `src/lib/ssrf.ts`
 
@@ -62,7 +62,7 @@ SSRF validation is enforced across all network paths:
 
 ## Redirect Safety
 
-All modes except `browser_fetch` follow redirects manually with safety checks:
+Node-side HTTP paths follow redirects manually with safety checks:
 
 ```
 HTTP 3xx
@@ -70,11 +70,9 @@ HTTP 3xx
   ├── Extract Location header
   ├── SSRF-validate redirect URL         ← blocks SSRF via redirect
   ├── Cross-origin?
-  │     └── Strip Authorization, Cookie, X-* headers
+  │     └── Strip Cookie, Authorization, X-CSRFToken, X-CSRF-Token
   ├── 303 See Other?
   │     └── Rewrite method to GET, drop body
-  ├── opaqueredirect?
-  │     └── Stop chain, return as-is
   └── Max redirects? (5)
         └── Throw EXECUTION_FAILED
 ```
@@ -87,9 +85,9 @@ HTTP 3xx
 
 ---
 
-## browser_fetch Redirect Handling
+## `page` Transport Redirect Handling
 
-In `browser_fetch` mode, redirects are delegated to the browser's network stack. Only the **initial URL** is SSRF-validated. The browser handles the rest, which is safe because:
+In `page` transport, redirects are delegated to the browser's network stack. Only the **initial URL** is SSRF-validated. The browser handles the rest, which is safe because:
 - The browser is already running in the user's context
 - The browser enforces its own security model (CORS, same-origin, etc.)
 

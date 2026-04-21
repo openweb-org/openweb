@@ -1,15 +1,15 @@
 # L3 Custom Runners
 
 > CustomRunner interface, loading, and execution lifecycle for sites that defy declarative modeling.
-> Last updated: 2026-04-17 (normalize-adapter v2 — CodeAdapter → CustomRunner; PagePlan handles lifecycle)
+> Last updated: 2026-04-21 (PreparedContext + validation/runtime boundary sync)
 
 ## Overview
 
-L3 custom runners are the escape hatch. When a site's internal API is too complex for L2 primitives — proprietary module systems, custom signing, non-HTTP protocols — you write a `CustomRunner`: arbitrary JS that runs in the browser via Patchright, or in Node.js for sites that don't need a browser.
+L3 custom runners are the escape hatch. When a site's internal API is too complex for L2 primitives — proprietary module systems, custom signing, non-HTTP protocols — you write a `CustomRunner`: arbitrary JS that runs in Node and can drive a live Patchright page when the operation needs a browser.
 
-The runtime does all the lifecycle work **before** the runner is invoked: page acquisition and readiness (PagePlan → `acquirePage`), bot-sensor warming, auth/CSRF/signing resolution, server-URL variable interpolation. The runner gets a `PreparedContext` and only owns the site-specific acquisition logic.
+The runtime does the common lifecycle work **before** the runner is invoked: page acquisition and readiness (PagePlan → `acquirePage`), bot-sensor warming, server-URL interpolation, and optional auth resolution into `ctx.auth`. The runner gets a `PreparedContext` and owns the site-specific request/data acquisition logic.
 
-Runners must be **self-contained** — they cannot import from `src/` (after packaging, runners load from the compile cache where relative imports break). All helpers arrive via `ctx.helpers`.
+Keep runners narrowly scoped. The injected helper surface arrives via `ctx.helpers`; the stable direct-import exceptions are helper-library utilities such as `nodeFetch` and `interceptResponse` from `src/lib/adapter-helpers.ts`, which are bundled into the emitted adapter `.js` at build time.
 
 -> See: `src/runtime/adapter-executor.ts`, `src/types/adapter.ts`
 
@@ -74,8 +74,7 @@ The runner is a **single function**. There is no separate `init()` or `isAuthent
 └──────────┬──────────┘
            │
 ┌──────────▼──────────┐
-│ resolveAuth/CSRF/   │  From spec primitives; ctx.auth populated if primitive resolves
-│   Signing           │
+│ resolveAuth         │  From spec primitive; ctx.auth populated if it resolves
 └──────────┬──────────┘
            │
 ┌──────────▼──────────┐
@@ -83,13 +82,14 @@ The runner is a **single function**. There is no separate `init()` or `isAuthent
 └──────────┬──────────┘
            │
            ▼
-      Result (unvalidated against response schema)
+ Result (still passes through auth_check + response-schema validation)
 ```
 
 Key properties:
 - Page is `null` when transport is `node` — runner must do its own HTTP (e.g. global `fetch`); `nodeFetch` is not on `ctx.helpers`.
 - PagePlan settings (entry_url / ready / warm / nav_timeout_ms) run before the runner. Trivial URL checks and simple cookie probes that used to live in `init()`/`isAuthenticated()` are gone.
-- Runner result is **not validated** against the operation's response schema (unlike L1/L2). Writing shape-correct output is the runner's job.
+- `ctx.auth` is the only request material pre-resolved into `PreparedContext`. Server-level CSRF/signing config is not injected into adapter ops automatically.
+- Runner output still goes through the shared post-dispatch path: `auth_check`, response parsing, unwrap, and response-schema validation all still apply after `run(ctx)` returns.
 - Runners are cached by `siteRoot:runnerName`.
 
 ---

@@ -1,319 +1,262 @@
 # Meta-spec: Type System & Validation
 
-> L2 primitive types, x-openweb extensions, JSON Schema, and AJV validation.
-> Last updated: 2026-03-26 (M38)
+> `x-openweb` fields, primitive types, adapter contract, and schema validation.
+> Last updated: 2026-04-21 (647c20c)
 
 ## Overview
 
-The meta-spec is the type system that drives everything in OpenWeb. It defines:
-1. **L2 primitive types** — 16 discriminated union types for auth/CSRF/signing/pagination/extraction
-2. **x-openweb extensions** — Server-level and operation-level OpenAPI extensions
-3. **JSON Schema** — Machine-readable schema for validation
-4. **Validation** — AJV-based validation of specs and manifests
+The meta-spec is the contract between authored site packages and the runtime. It defines:
 
-All types are formalized as TypeScript (source of truth) + JSON Schema (for AJV validation).
+1. the OpenAPI/AsyncAPI extensions OpenWeb understands
+2. the primitive families used for auth, CSRF, signing, pagination, and extraction
+3. the `CustomRunner` contract for code-backed sites
+4. the JSON Schema + AJV validation layer that rejects invalid specs early
 
--> See: `src/types/`
+TypeScript under `src/types/` is the source of truth. JSON Schema mirrors it for validation.
 
----
+## `x-openweb` Extension Levels
 
-## x-openweb Extensions
+### Server-level (`servers[].x-openweb`)
 
-OpenWeb extends OpenAPI 3.1 with `x-openweb` at two levels:
+Applied once and inherited by all operations on that server.
 
-### Server-Level (XOpenWebServer)
-
-```typescript
+```ts
 interface XOpenWebServer {
   transport: 'node' | 'page'
   auth?: AuthPrimitive
   csrf?: CsrfPrimitive & { scope?: string[] }
   signing?: SigningPrimitive
-  auth_check?: AuthCheckPrimitive  // body-shape rules signaling "unauthenticated despite HTTP 200"
-  headers?: Record<string, string>  // constant headers merged into every node request
-  page_plan?: PagePlanConfig        // default page-acquisition plan for page-transport ops
-  adapter?: AdapterRef              // default adapter ref for operations under this server
+  auth_check?: AuthCheckPrimitive
+  headers?: Record<string, string>
+  page_plan?: PagePlanConfig
+  adapter?: AdapterRef
 }
 ```
 
-> **Note:** WebSocket dispatch is not a `transport` value. WS operations are triggered by the presence of an AsyncAPI spec, not the transport field.
+Key fields:
 
-Applied to the **server** object — shared across all operations:
+- `transport`: only `node` or `page`
+- `auth` / `csrf` / `signing`: declarative request augmentation
+- `auth_check`: body-shape rules for “HTTP 200 but actually logged out”
+- `headers`: constant node-transport headers
+- `page_plan`: default page acquisition rules
+- `adapter`: default `CustomRunner` reference for operations under the server
 
-```yaml
-servers:
-  - url: https://api.instagram.com
-    x-openweb:
-      transport: node
-      auth:
-        type: cookie_session
-      csrf:
-        type: cookie_to_header
-        cookie: csrftoken
-        header: X-CSRFToken
-```
+### Operation-level (`paths[].{method}.x-openweb`)
 
-### Operation-Level (XOpenWebOperation)
+Applied per operation and can override or disable server-level behavior.
 
-```typescript
+```ts
 interface XOpenWebOperation {
   permission?: 'read' | 'write' | 'delete' | 'transact'
   safety?: 'safe' | 'caution'
   requires_auth?: boolean
-  build?: {
-    stable_id?: string
-    signature_id?: string
-    tool_version?: number
-    verified?: boolean
-    signals?: string[]
-  }
-  transport?: Transport             // Override server transport
-  auth?: AuthPrimitive | false      // Override server auth (false to disable)
-  csrf?: CsrfPrimitive | false     // Override server CSRF (false to disable)
-  signing?: SigningPrimitive | false // Override server signing (false to disable)
-  auth_check?: AuthCheckPrimitive | false  // Override or disable server auth_check rules
+  build?: XOpenWebBuildMeta
+  transport?: 'node' | 'page'
+  auth?: AuthPrimitive | false
+  csrf?: CsrfPrimitive | false
+  signing?: SigningPrimitive | false
+  auth_check?: AuthCheckPrimitive | false
   pagination?: PaginationPrimitive
   extraction?: ExtractionPrimitive
-  adapter?: AdapterRef
-  actual_path?: string              // Real URL path when spec key is virtual (e.g. GraphQL dedup)
-  unwrap?: string                   // Dot-path into parsed body to extract before returning
-  wrap?: string                     // Wrap non-const request body params under this key (e.g. 'variables' for GraphQL)
-  graphql_query?: string            // GraphQL query string injected at body root when wrap conflicts with a param name
-  graphql_hash?: string             // Apollo APQ hash (raw hex or 'sha256:<hex>')
-  page_plan?: PagePlanConfig        // Per-operation overrides for the page-acquisition plan
-  verify_status?: 'ok' | 'requires_interactive_solve'  // 'requires_interactive_solve' makes verify skip this op (CAPTCHA-gated)
+  adapter?: AdapterRef | false
+  actual_path?: string
+  unwrap?: string
+  wrap?: string
+  graphql_query?: string
+  graphql_hash?: string
+  page_plan?: PagePlanConfig
+  verify_status?: 'ok' | 'requires_interactive_solve'
 }
 ```
 
-Applied to individual operations:
+Important patterns:
 
-```yaml
-paths:
-  /api/v1/feed/timeline:
-    get:
-      operationId: getTimeline
-      x-openweb:
-        permission: read
-        build:
-          stable_id: instagram_getTimeline_v1
-        pagination:
-          type: cursor
-          response_field: next_max_id
-          request_param: max_id
-```
+- `auth: false`, `csrf: false`, `signing: false`, and `adapter: false` are explicit opt-outs
+- `actual_path` lets the spec expose a logical path while sending a different wire path
+- `wrap`, `graphql_query`, and `graphql_hash` shape GraphQL and APQ requests
+- `verify_status: requires_interactive_solve` tells verify to skip CAPTCHA-gated ops
 
--> See: `src/types/extensions.ts`
+### Parameter-level (`parameters[].x-openweb`)
 
-### Parameter-Level (XOpenWebParameter)
+Used for derived wire values.
 
-```typescript
+```ts
 interface XOpenWebParameter {
-  template?: string   // Template literal with {name} placeholders
+  template?: string
 }
 ```
 
-Applied to an operation `parameters[]` entry. The `{name}` placeholders are
-substituted from resolved caller input at validation time (after defaults,
-before request build). Templated parameters are derived — callers cannot
-override them, and a missing referenced parameter raises a fatal
-`INVALID_PARAMS` error.
+`template` replaces `{paramName}` placeholders from the resolved caller input after defaults are applied. Templated params are derived, not caller-overridable. Template-source params that only exist to fill sibling templates are excluded from the outbound URL when they are not part of the path.
 
-```yaml
-parameters:
-- name: id
-  in: query
-  required: true
-  schema: { type: string }
-- name: tags
-  in: query
-  schema: { type: string }
-  x-openweb:
-    template: story,author_{id}   # caller `id=pg` → wire `tags=story,author_pg`
-```
+## Primitive Families
 
-Template-source params (like `id` above — referenced by a sibling's
-`template` and not present in the API path) are automatically excluded from
-the outbound URL by `url-builder.ts`. They're derivation inputs, not wire
-params.
+The runtime currently supports these declarative primitive families:
 
--> See: `src/lib/param-validator.ts` (templating pass), `src/lib/url-builder.ts` (template-source exclusion)
+### Auth
 
----
+- `cookie_session`
+- `localStorage_jwt`
+- `sessionStorage_msal`
+- `page_global`
+- `webpack_module_walk`
+- `exchange_chain`
 
-## L2 Primitive Type Catalog
+### CSRF
 
-17 types organized into 5 categories. Each is a **discriminated union** on the `type` field.
+- `cookie_to_header`
+- `meta_tag`
+- `api_response`
 
-### Auth (6 types)
+### Signing
 
-| Type | Description | Key config |
-|------|-------------|------------|
-| `cookie_session` | Browser cookies | (none) |
-| `localStorage_jwt` | JWT from localStorage | `key`, `path`, `inject` |
-| `sessionStorage_msal` | MSAL token from sessionStorage | `key_pattern`, `scope_filter`, `token_field`, `inject` |
-| `page_global` | Window global expression | `expression`, `inject`, `values[]` |
-| `webpack_module_walk` | Webpack module cache walk | `chunk_global`, `module_test`, `call`, `app_path?`, `inject` |
-| `exchange_chain` | Multi-step token exchange | `steps[]`, `inject` |
+- `sapisidhash`
 
-### CSRF (3 types)
+### Pagination
 
-| Type | Description | Key config |
-|------|-------------|------------|
-| `cookie_to_header` | Cookie value → header | `cookie`, `header` |
-| `meta_tag` | DOM meta tag → header | `name`, `header` |
-| `api_response` | CSRF endpoint → header | `endpoint`, `extract`, `inject` |
+- `cursor`
+- `link_header`
 
-### Signing (1 type)
+### Extraction
 
-| Type | Description | Key config |
-|------|-------------|------------|
-| `sapisidhash` | YouTube SAPISIDHASH | `cookie`, `origin`, `inject` |
+- `ssr_next_data`
+- `html_selector`
+- `script_json`
+- `page_global_data`
+- `response_capture`
 
-### Pagination (2 types)
+`auth_check` is related but separate: it is not a discriminated “primitive type”; it is an array of body-shape rules used between parse/unwrap and schema validation.
 
-| Type | Description | Key config |
-|------|-------------|------------|
-| `cursor` | Cursor-based | `response_field`, `request_param`, `has_more_field`, `items_path` |
-| `link_header` | HTTP Link header | `rel` |
+Source of truth: `src/types/primitives.ts`
 
-`response_field` and `request_param` accept **dotted paths** for nested JSON structures (e.g., `data.actor.entitySearch.results.nextCursor` for reading, `variables.cursor` for writing into GraphQL request bodies).
+## Shared Injection Shape
 
-### Extraction (5 types)
+Several primitives use the shared `Inject` shape:
 
-| Type | Description | Key config |
-|------|-------------|------------|
-| `ssr_next_data` | Next.js SSR data | `page_url`, `path`, `resolve_apollo_refs`, `apollo_cache_path` |
-| `html_selector` | CSS selector | `page_url`, `selectors`, `attribute`, `multiple` |
-| `script_json` | Script tag JSON (supports JSON-LD, `<!-- -->`-wrapped payloads, multi-block pages) | `selector`, `path`, `strip_comments`, `type_filter`, `multi` |
-| `page_global_data` | Window global | `page_url`, `expression`, `path`, `adapter`, `method`, `resolve_apollo_refs`, `apollo_cache_path` |
-| `response_capture` | Intercept first network response during navigation | `match_url` (glob), `unwrap` |
-
-`script_json` with `strip_comments: true` unwraps Yelp-style HTML-comment-wrapped JSON and runs under both page and node transports (generalized via `node-ssr-executor`). `response_capture` always forces a fresh page navigation — the listener is installed before `page.goto` to avoid racing fast responses.
-
--> See: `src/types/primitives.ts` — full TypeScript definitions
-
----
-
-## Inject Schema
-
-Primitives that inject values into requests use the shared `Inject` interface:
-
-```typescript
+```ts
 interface Inject {
-  header?: string       // HTTP header name
-  prefix?: string       // Value prefix (e.g., "Bearer ")
-  query?: string        // Query parameter name
-  json_body_path?: string   // Body field at JSON path
+  header?: string
+  prefix?: string
+  query?: string
+  json_body_path?: string
 }
 ```
 
----
+Not every primitive honors every field. For example, `json_body_path` is meaningful for `api_response`-style injection, while most auth primitives only use `header`, `prefix`, or `query`.
 
-## JSON Schema
+## `PagePlanConfig`
 
-Every type has a parallel JSON Schema definition for AJV validation:
+`PagePlanConfig` is part of the meta-spec because it is declared in the site package, not inferred at runtime:
 
-```
-TypeScript types (src/types/primitives.ts)     ← source of truth
-       ↓ manually mirrored
-JSON Schema (src/types/primitive-schemas.ts)    ← AJV validation
-       ↓
-Composite schema (src/types/schema.ts)          ← server + operation + manifest
-```
-
--> See: `src/types/primitive-schemas.ts`, `src/types/schema.ts`
-
----
-
-## Validation
-
-AJV validates two things. Spec validation runs automatically at load time (`loadOpenApi()`) so unsupported auth types and unknown fields are caught before reaching runtime.
-
-### 1. x-openweb Spec Validation
-
-```typescript
-validateXOpenWebSpec(spec: object): ValidationResult
-```
-
-Validates server-level `x-openweb` (transport, auth, CSRF, signing) and operation-level `x-openweb` (permission, pagination, extraction, adapter). Also detects misplaced fields (e.g., `replay_safety` in x-openweb) and emits targeted hints directing to the correct location.
-
-### 2. Manifest Validation
-
-```typescript
-validateManifest(manifest: object): ValidationResult
-```
-
-Validates `manifest.json` structure (name, version, spec_version, etc.).
-
-```typescript
-interface ValidationResult {
-  valid: boolean
-  errors: ValidationError[]
-}
-
-interface ValidationError {
-  path: string
-  message: string
+```ts
+interface PagePlanConfig {
+  entry_url?: string
+  ready?: string
+  wait_until?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit'
+  settle_ms?: number
+  warm?: boolean
+  nav_timeout_ms?: number
+  warm_origin?: 'page' | 'server' | string
 }
 ```
 
--> See: `src/types/validator.ts`
+Server- and operation-level page plans merge field-by-field. Operation values win even when falsy.
 
----
+## GraphQL-Specific Fields
 
-## Skill Package Format
+GraphQL is modeled as request shaping, not as a separate transport:
 
-A compiled skill package contains:
+- `wrap`: usually `variables`
+- `graphql_query`: literal query string when the runtime should inject it
+- `graphql_hash`: persisted-query hash for Apollo/Relay APQ
+- `unwrap`: often `data` or `0.data`
 
-```
-sites/<site>/
-├── openapi.yaml          # L1 spec + x-openweb L2 extensions
-├── asyncapi.yaml         # AsyncAPI 3.0 for WS channels (optional)
-├── manifest.json         # Package metadata
-├── adapters/             # L3 code (optional)
-│   └── <name>.js
-└── examples/
-    └── <operationId>.example.json
-```
+The runtime auto-selects GET vs POST APQ behavior from the HTTP method.
 
-### manifest.json
+## `CustomRunner` Contract
 
-```json
-{
-  "name": "instagram",
-  "display_name": "Instagram",
-  "version": "1.0.0",
-  "spec_version": "2.0",
-  "site_url": "https://www.instagram.com",
-  "requires_auth": true,
-  "stats": { "operation_count": 3, "l1_count": 0, "l2_count": 3, "l3_count": 0, "ws_count": 0 }
+The runtime contract for code-backed operations is:
+
+```ts
+interface CustomRunner {
+  readonly name: string
+  readonly description: string
+  run(ctx: PreparedContext): Promise<unknown>
+  warmReady?(page: Page): Promise<boolean>
+  warmTimeoutMs?: number
+}
+
+interface PreparedContext {
+  readonly page: Page | null
+  readonly operation: string
+  readonly params: Readonly<Record<string, unknown>>
+  readonly helpers: AdapterHelpers
+  readonly auth: AuthResult | undefined
+  readonly serverUrl: string
 }
 ```
 
--> See: `src/types/manifest.ts`
+`ctx.helpers` currently injects:
 
----
+- `pageFetch`
+- `graphqlFetch`
+- `ssrExtract`
+- `jsonLdExtract`
+- `domExtract`
+- `errors`
 
-## File Structure
+`nodeFetch` and `interceptResponse` are helper-library utilities, but they are not injected on `ctx.helpers`; source adapters import them directly from `src/lib/adapter-helpers.ts`, and `scripts/build-adapters.js` bundles them into the emitted adapter `.js`.
 
+## Validation Model
+
+Validation happens in two layers:
+
+1. **schema construction** under `src/types/schema.ts` and `src/types/primitive-schemas.ts`
+2. **AJV runtime validation** in `src/types/validator.ts`
+
+Spec validation runs automatically during load (`loadOpenApi()`, `loadAsyncApi()`). Manifest validation runs when manifests are loaded or generated.
+
+This catches:
+
+- unknown or misspelled primitive types
+- unsupported field placement
+- invalid page-plan values
+- malformed manifests
+
+## Package Format
+
+Runtime-loaded site packages use this shape:
+
+```text
+<site>/
+├── openapi.yaml
+├── asyncapi.yaml            # optional
+├── manifest.json
+├── DOC.md                   # optional notes surfaced by navigator
+├── examples/
+│   └── <operation>.example.json
+└── adapters/
+    └── <name>.js            # optional, compiled output
 ```
+
+Source packages in `src/sites/<site>/` usually keep additional authoring files such as `SKILL.md` and `PROGRESS.md`.
+
+## File Map
+
+```text
 src/types/
-├── primitives.ts          # 16 L2 primitive discriminated unions
-├── primitive-schemas.ts   # JSON Schema mirrors for AJV
-├── extensions.ts          # XOpenWebServer, XOpenWebOperation, Transport, RequestEncoding, XOpenWebBuildMeta, RiskTier
-├── adapter.ts             # CustomRunner + PreparedContext (single adapter contract)
-├── manifest.ts            # Manifest type
-├── schema.ts              # Composite JSON Schema (server + operation + manifest)
-├── validator.ts           # AJV validation (validateXOpenWebSpec, validateManifest)
-└── index.ts               # Re-exports
+├── primitives.ts, ws-primitives.ts
+├── extensions.ts, ws-extensions.ts
+├── adapter.ts
+├── manifest.ts
+├── primitive-schemas.ts
+├── schema.ts
+└── validator.ts
 ```
-
----
 
 ## Related Docs
 
-- [architecture.md](architecture.md) — Where meta-spec fits
-- [primitives/](primitives/README.md) — How primitives are resolved at runtime
-- [adapters.md](adapters.md) — L3 CustomRunner interface
-- [compiler.md](compiler.md) — How specs are generated
-- `src/types/primitives.ts` — Full L2 type definitions
+- [architecture.md](architecture.md)
+- [runtime.md](runtime.md)
+- [primitives/README.md](primitives/README.md)
+- [adapters.md](adapters.md)

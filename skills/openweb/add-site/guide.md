@@ -40,8 +40,11 @@ When in doubt, don't skip — run the step. Skipping a probe is more expensive t
 
 ### Incremental Mode (Existing Site)
 
-Read `SKILL.md` + `DOC.md` + `openapi.yaml` from `src/sites/<site>/` or
-`$OPENWEB_HOME/sites/<site>/`. Identify gaps against the target intents.
+Read the runtime package first: `DOC.md`, `openapi.yaml`, and `examples/` from
+`src/sites/<site>/` or `$OPENWEB_HOME/sites/<site>/`. If you are in the source
+repo, also read `src/sites/<site>/SKILL.md` and `PROGRESS.md` — those source
+docs are not shipped into `$OPENWEB_HOME/sites/<site>/`. Identify gaps against
+the target intents.
 Only the intent families with gaps re-enter Frame and Probe; everything
 else stays as-is.
 
@@ -212,7 +215,8 @@ openweb capture stop --session <session-id>
 ```
 
 `--isolate` records only the dedicated tab's traffic. Output goes to
-`$OPENWEB_HOME/captures/<session-id>/`.
+`./capture/` by default, or `./capture-<session-id>/` with `--isolate`
+(unless `--output <dir>` overrides it).
 
 Read `add-site/capture.md` for capture modes, auth injection, scripted
 capture, and troubleshooting.
@@ -451,6 +455,8 @@ Install behavior depends on how the package was built:
   confirmation/build step, not a copy step.
 - **Mixed packages:** install only the staged non-adapter artifacts and
   preserve source-authored adapter files.
+- Source-only docs (`SKILL.md`, `PROGRESS.md`) do not come from the staged
+  runtime package; keep editing them in `src/sites/<site>/`.
 
 Do not overwrite `adapters/`. Run `pnpm build` after source edits —
 it syncs FROM `src/sites/` TO cache/dist, overwriting cache edits.

@@ -1,232 +1,103 @@
 # OpenWeb — Architecture Overview
 
-> System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-04-20 (404418d)
+> System model, execution surfaces, package lifecycle, and major components.
+> Last updated: 2026-04-21 (647c20c)
 
 ## Mission
 
-Let any agent access the web easily, fast, and cheap.
+OpenWeb turns real websites into typed operations that agents can inspect, execute, and extend without hand-writing one-off browser scripts for every task. The design bias is consistent throughout the repo:
 
-The goal is to make any agent (Claude Code, OpenClaw, or any agent) access the web easily and smoothly:
-- Easy to use for agent, and also human
-- Fast, accurate, elegant, and cheap
+- prefer declarative specs over code
+- prefer site-local configuration over runtime special cases
+- keep the runtime small and make drift explicit
 
-目标是能一句话就让全天下的agent能用最小的token数，最准的api干browser里能干的所有事情。
+## The Three Layers
 
-Agent-native way to access any website. Bridging agent CLI and human GUI through API.
+| Layer | Role | Typical files |
+|------|------|---------------|
+| **L1: package shape** | OpenAPI / AsyncAPI / manifest describe what exists | `openapi.yaml`, `asyncapi.yaml`, `manifest.json` |
+| **L2: declarative behavior** | `x-openweb` encodes transport, auth, CSRF, signing, extraction, page-plan, pagination, auth-check rules | `src/types/extensions.ts`, `src/types/primitives.ts` |
+| **L3: custom code** | `CustomRunner` handles the cases that cannot be expressed cleanly in L1/L2 | `src/types/adapter.ts`, `src/runtime/adapter-executor.ts`, `src/sites/*/adapters/` |
 
-## Three-Layer Model
+The default path is L1 + L2. L3 exists for genuine site-specific logic: custom module systems, per-request signing, binary protocols, or complex in-page orchestration.
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│  L1: Structural Spec (OpenAPI 3.1 + AsyncAPI)                 │  ~40% of sites
-│  Pure HTTP — no browser needed                                │
-├───────────────────────────────────────────────────────────────┤
-│  L2: Interaction Primitives (17-type DSL)                     │  ~50% of sites
-│  Declarative auth/CSRF/signing/pagination/extraction config   │
-├───────────────────────────────────────────────────────────────┤
-│  L3: Code Adapters (arbitrary JS in browser)                  │  ~10% of sites
-│  Escape hatch for sites that defy declarative modeling        │
-└───────────────────────────────────────────────────────────────┘
-```
+## Execution Surfaces
 
-**Design principle**: Structure is the default, code is the exception.
+OpenWeb has two transport values and three higher-level execution surfaces:
 
-L1+L2 covers ~90% of sites (M22 sweep: 121/144 reachable with current primitives + L2 login).
-Only ~5.6% need L3 code adapters, ~9% need new primitives.
+| Surface | How it is selected | What it does |
+|--------|---------------------|--------------|
+| **`node` transport** | `x-openweb.transport: node` or default | HTTP from Node.js, optionally using browser-derived auth/CSRF/signing |
+| **`page` transport** | `x-openweb.transport: page` | HTTP inside a real browser page via `page.evaluate(fetch(...))` |
+| **Extraction** | `x-openweb.extraction` on the operation | Reads data from page state instead of issuing an HTTP request |
+| **Adapter** | `x-openweb.adapter` on the server or operation | Runs `CustomRunner.run(ctx)` for site-specific code |
+| **WebSocket** | operation entry comes from AsyncAPI/site package | Opens and manages a WS session outside the HTTP transport field |
 
-M22 coverage sweep validated against 144 sites across 15 archetypes.
+`adapter`, `extraction`, and `ws` are not `transport` values. They are dispatch branches layered on top of the site package model.
 
----
+## Request Path
 
-## Execution Flow
-
-```
-                    ┌──────────────┐
-                    │ Agent Skill  │  skills/openweb/SKILL.md
-                    └──────┬───────┘
-                           │ natural language → CLI command
-                    ┌──────────────┐
-                    │  CLI / Agent │
-                    └──────┬───────┘
-                           │ openweb <site> <op> '{...}'
-                           ▼
-                    ┌──────────────┐
-                    │   executor   │  Load spec → find operation → permission gate → resolve transport
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┼────────────┐
-              │            │            │            │
-              ▼            ▼            ▼            ▼
-        ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-        │ adapter  │ │extraction│ │   page   │ │    ws    │
-        │  (L3)    │ │          │ │          │ │          │
-        │          │ │ DOM/JSON │ │ page.    │ │ WebSocket│
-        │ arbitrary│ │ from live│ │ evaluate │ │ real-time│
-        │ JS       │ │ page     │ │ (fetch)  │ │ channels │
-        └──────────┘ └──────────┘ └────┬─────┘ └──────────┘
-                                       │
-                                 ┌─────┴─────┐
-                                 │   node    │
-                                 │           │
-                                 │ HTTP from │
-                                 │ Node.js   │
-                                 │ ± auth    │
-                                 └───────────┘
-
-        ┌───────────────┐
-        │      L3       │  CustomRunner.run(ctx)
-        │ custom runner │  PagePlan handles nav/ready/warm; auth pre-resolved
-        └───────────────┘  Full Patchright access, arbitrary JS
+```text
+Agent intent
+  -> openweb <site> <op> '{...}'
+  -> CLI command layer (src/cli.ts + src/commands/*)
+  -> dispatchOperation(site, op, params)
+  -> site-package lookup (HTTP or WS entry)
+  -> runtime executor
+     -> node transport
+     -> page transport
+     -> extraction
+     -> adapter
+     -> ws
 ```
 
--> See: [runtime.md](runtime.md) — full execution pipeline details
+Important boundary: `src/runtime/executor.ts` is only the public barrel. The real HTTP dispatcher lives in `src/runtime/http-executor.ts`. WS CLI dispatch is delegated from there to `src/runtime/ws-cli-executor.ts`.
 
----
+## Major Components
 
-## Key Components
+| Component | Responsibility | Key paths |
+|-----------|----------------|----------|
+| **CLI** | progressive navigation, exec, compile, capture, verify, registry, browser lifecycle commands | `src/cli.ts`, `src/commands/` |
+| **Site package loader** | resolves bundled, installed, registry, and dev site roots; builds operation map | `src/lib/site-resolver.ts`, `src/lib/site-package.ts` |
+| **Runtime** | executes HTTP and WS operations, manages browser sessions, applies auth/signing/extraction logic | `src/runtime/` |
+| **Compiler** | turns CDP captures into site packages and compile reports | `src/compiler/` |
+| **Capture** | records traffic, WS frames, state, and DOM signals via CDP | `src/capture/` |
+| **Lifecycle** | verify, drift detection, registry management | `src/lifecycle/` |
+| **Shared docs/skill** | developer-facing internals plus shipped operator workflow | `doc/`, `skills/openweb/` |
 
-| Component | What it does | Key files | Status |
-|-----------|-------------|-----------|--------|
-| **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
-| **Runtime** | Reads skill packages, resolves primitives, executes requests (HTTP + WS) | `src/runtime/` | L1 + L2 + L3 + extraction + WS + token cache (M35) |
-| **Browser** | Patchright (Playwright fork) for CDP stealth; headless with UA + blink-features override | `src/runtime/browser-lifecycle.ts` | Auto-managed, patchright (session) |
-| **Compiler** | Captures behavior, analyzes patterns, curates plan, emits skill packages (OpenAPI + AsyncAPI), verifies | `src/compiler/` | Pipeline v2: 5-phase (capture → analyze → curate → generate → verify) |
-| **Capture** | CDP browser recording (HAR + WS + state + DOM), no content filtering, body-size-gate only | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17), unfiltered (v2) |
-| **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skills/openweb/references/` | 2 process docs + 2 deep refs + 7 knowledge files |
-| **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete — npm binary `openweb` (M33) |
-| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `$OPENWEB_HOME/sites/` (installed) | 90+ sites with SKILL.md + DOC.md + PROGRESS.md |
-| **Agent skill** | CLI wrapper for Claude/Codex agents | `skills/openweb/SKILL.md` | 5-intent router (M38) |
+## Site Package Lifecycle
 
----
+The same site concept exists in several places for different reasons:
 
-## Transport Model
+| Location | Role |
+|----------|------|
+| `src/sites/<site>/` | authoring source of truth during development |
+| `dist/sites/<site>/` | bundled runtime assets produced by `pnpm build` |
+| `$OPENWEB_HOME/sites/<site>/` | installed/generated site packages used by the CLI |
+| `$OPENWEB_HOME/registry/<site>/<version>/` | archived versions for rollback/show |
 
-| Transport | Mechanism | Browser needed | When to use |
-|-----------|-----------|---------------|-------------|
-| `node` | HTTP from Node.js. If auth/csrf/signing config present, uses browser cookies. | Only for auth | Public APIs, cookie auth, CSRF, token extraction |
-| `page` | HTTP via `page.evaluate(fetch(...))`. Always needs browser. | Yes (CDP) | Signing, native TLS, CORS-bound APIs |
+Source packages often carry extra authoring docs (`SKILL.md`, `DOC.md`, `PROGRESS.md`). The runtime-required files are narrower: spec, manifest, examples, optional AsyncAPI, optional compiled adapters, and `DOC.md` for notes.
 
-> **Note:** WebSocket dispatch is not a `transport` field value. WS operations (e.g., Discord gateway) are triggered by the presence of an AsyncAPI spec in the site package, not by setting `transport: 'ws'`.
+## Browser and Auth Architecture
 
-**Transport resolution**: operation-level `x-openweb.transport` → server-level `x-openweb.transport` → default `node`
-`x-openweb.extraction` short-circuits HTTP transport dispatch and runs directly against the matching page state.
+The browser model has two distinct pieces:
 
--> See: [runtime.md](runtime.md) — transport dispatch details
+1. **Managed Chrome** is the actual browser process launched by `src/commands/browser.ts`.
+2. **Patchright** is the CDP client used to connect to that browser from the runtime and capture layers.
 
----
+Authenticated node-transport operations use a per-site token cache at `$OPENWEB_HOME/tokens/<site>/vault.json`. On cache miss or auth failure, the runtime falls back to live browser extraction, managed-profile refresh, and finally a user login loop.
 
-## L2 Primitive Pipeline
+## Design Rules
 
-Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
-
-```
-┌────────────────────────────────────────────────────────┐
-│  1. Auth         Cookies + auth headers                │
-│     cookie_session, localStorage_jwt, page_global,     │
-│     webpack_module_walk, exchange_chain, ...            │
-│                                                        │
-│  2. CSRF         Anti-forgery headers (mutations only) │
-│     cookie_to_header, meta_tag, api_response, ...      │
-│                                                        │
-│  3. Signing      Per-request signatures                │
-│     sapisidhash                                        │
-│                                                        │
-│  → All results merged into one headers dict            │
-└────────────────────────────────────────────────────────┘
-```
-
--> See: [primitives/](primitives/README.md) — all 17+ primitive types
-
----
-
-## CLI Interface
-
-```bash
-openweb sites [--json]                         # list compiled sites
-openweb <site> [--json]                        # list operations (tools)
-openweb <site> <op> [--json] [--example]       # show params + response schema
-openweb <site> <op> '{...}'                    # execute operation (auto-exec on JSON arg)
-openweb <site> exec <op> '{...}'               # execute (explicit exec keyword, still supported)
-openweb <site> <op> '{...}' --output file      # always write response to file
-openweb <site> test                            # run site test cases
-openweb browser start [--headless]             # managed Chrome lifecycle
-openweb browser stop / restart / status
-openweb login <site>                           # open site in default browser for auth
-openweb capture start                         # record browser session (--isolate for multi-worker)
-openweb compile <url>                              # generate skill package
-openweb verify <site>                          # verify site and detect drift
-openweb verify --all                           # batch verify all sites
-openweb verify --all --report                  # verify with drift report
-openweb registry list                          # list registered site versions
-openweb registry install <site>                # archive site to registry
-openweb registry rollback <site>               # revert to previous version
-```
-
----
-
-## Permission System (M14)
-
-Operations carry a `permission` category that gates execution:
-
-| Category | HTTP Methods | Default Policy |
-|----------|-------------|----------------|
-| `read` | GET, HEAD | `allow` |
-| `write` | POST, PUT, PATCH | `prompt` |
-| `delete` | DELETE | `prompt` |
-| `transact` | checkout/purchase/payment paths | `deny` |
-
-When absent, the runtime derives permission from HTTP method + API path (fail-closed). Paths matching `/checkout|purchase|payment|order|subscribe/` are auto-escalated to `transact`. Policy is configurable per-site in `$OPENWEB_HOME/config.json`.
-
--> See: `src/lib/permissions.ts`, `src/runtime/executor.ts`
-
----
-
-## Browser Lifecycle (M14+)
-
-The runtime auto-manages browser instances via `ensureBrowser()`. A detached shell watchdog kills Chrome after 5 minutes of idle. **Patchright** (Playwright fork) patches CDP detection signals for headless stealth. `warmSession()` prepares pages for bot-protected sites. A **4-tier auth cascade** (token cache → browser extract → profile refresh → user login) handles authenticated operations.
-
--> See: [runtime.md](runtime.md) — full browser lifecycle, auth cascade, headless stealth details
-
-**Configuration:** All settings in `$OPENWEB_HOME/config.json` (single file). `OPENWEB_HOME` env var is the sole environment variable (defaults to `~/.openweb`).
-
-Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding.
-
--> See: `src/runtime/browser-lifecycle.ts`, `src/lib/config.ts`, `src/runtime/token-cache.ts`
-
----
-
-## Verified Sites (representative)
-
-| Site | Layer | Auth | CSRF | Signing | Extraction | Transport |
-|------|-------|------|------|---------|------------|-----------|
-| Instagram | L2 | cookie_session | cookie_to_header | — | — | page |
-| Bluesky | L2 | localStorage_jwt | — | — | — | node |
-| YouTube | L2 | — | — | — | — | node |
-| GitHub | L2 | cookie_session | meta_tag | — | — | node |
-| Reddit | L1 | — | — | — | — | node |
-| Walmart | L2 | — | — | — | ssr_next_data | node |
-| Hacker News | L2 | — | — | — | html_selector | node |
-| Discord | L2 | webpack_module_walk | — | — | — | page |
-| ChatGPT | L2 | exchange_chain | — | — | — | node |
-| Reddit | L2 | exchange_chain (write ops) | — | — | — | node |
-| LinkedIn | L2 | cookie_session | cookie_to_header | — | — | node |
-| WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
-| Telegram | L3 | adapter | — | — | adapter | adapter (L3) |
-
-90+ sites, 750+ operations. Full list: `pnpm dev sites`
-
-**Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `permission: write`) demonstrating POST-based GraphQL on a public API.
-
----
+- **Spec first.** If an operation can be modeled with `node`/`page` transport plus declarative primitives, do that.
+- **Transport is encoded in the site package.** The runtime does not guess or auto-upgrade between `node` and `page`.
+- **Source docs live with the thing they describe.** Shared runtime behavior belongs in `doc/main/`; operator workflow belongs in `skills/openweb/`; per-site implementation notes belong under `src/sites/<site>/`.
+- **Compile and verify reuse the same runtime.** There is no separate “compiler executor”; compile-time verification runs through the same execution stack as normal CLI use.
 
 ## Related Docs
 
-- [runtime.md](runtime.md) — Execution pipeline details
-- [primitives/](primitives/README.md) — L2 primitive resolvers
-- [adapters.md](adapters.md) — L3 adapter framework
-- [meta-spec.md](meta-spec.md) — Type system and validation
-- [compiler.md](compiler.md) — Compiler pipeline
-- [browser-capture.md](browser-capture.md) — CDP capture module
-- [security.md](security.md) — SSRF protection and error model
-- `src/sites/` — All verified site packages
+- [runtime.md](runtime.md)
+- [meta-spec.md](meta-spec.md)
+- [primitives/README.md](primitives/README.md)
+- [adapters.md](adapters.md)
+- [compiler.md](compiler.md)

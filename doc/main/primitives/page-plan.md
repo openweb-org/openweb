@@ -34,7 +34,7 @@ paths:
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `entry_url` | string | server URL | Where to navigate before executing. Supports server-variable interpolation (`{subdomain}`) and caller-param interpolation (`/{user}/posts`). |
+| `entry_url` | string | server URL | Where to navigate before executing. Supports caller-param interpolation (`/{user}/posts`). Server URL variables are resolved separately on `serverUrl`, not inside `entry_url`. |
 | `ready` | string | — | CSS selector awaited after navigation. |
 | `wait_until` | string | `"load"` | Playwright `waitUntil` (`domcontentloaded` / `load` / `networkidle` / `commit`). |
 | `settle_ms` | number | `0` | Extra delay after `ready`. Escape hatch — prefer a tighter `ready` selector. |
@@ -84,7 +84,7 @@ PagePlan is ignored when the resolved transport doesn't need a browser page:
 
 ```
 1. Resolve PagePlan (operation over server, field merge)
-2. Interpolate entry_url with server variables + caller params
+2. Interpolate entry_url with caller params
 3. Look for a reusable page (origin + entry_url prefix + query match)
 4. If no reuse: new page, page.goto(entry_url, { waitUntil: plan.wait_until })
 5. If ready selector: page.waitForSelector(plan.ready, { timeout: plan.nav_timeout_ms })
