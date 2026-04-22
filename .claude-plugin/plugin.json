@@ -1,7 +1,7 @@
 {
   "name": "openweb",
   "description": "Agent-native way to access any website. Calls the same APIs the website calls — fast, cheap, typed JSON. 90+ sites including Google, Amazon, Reddit, YouTube, GitHub, Instagram, Bloomberg, Zillow. Auth (cookies, JWT, CSRF, signing) auto-resolved per request.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": {
     "name": "openweb-org contributors",
     "url": "https://github.com/openweb-org"
