@@ -132,7 +132,7 @@ pnpm tsx scripts/adapter-pattern-report.ts --check      # exit 1 on regression v
 pnpm tsx scripts/adapter-pattern-report.ts --write-baseline  # refresh after legitimate reductions
 ```
 
-The report counts `page.goto(`, `page.evaluate(fetch(...))`, `page.on('response', ...)`, `querySelector*`, and `__NEXT_DATA__` in `src/sites/*/adapters/*.ts`. The permanent custom bucket (see `projects/active/normalize-adapter/final/design.md`) is declared in the script. Baseline counts live in `scripts/adapter-pattern-baseline.json`; a vitest guard (`src/lib/adapter-patterns.test.ts`) fails CI when any site exceeds its baseline, so normalization ratchets downward only.
+The report counts `page.goto(`, `page.evaluate(fetch(...))`, `page.on('response', ...)`, `querySelector*`, and `__NEXT_DATA__` in `src/sites/*/adapters/*.ts`. The permanent custom bucket is declared in the script itself. Baseline counts live in `scripts/adapter-pattern-baseline.json`; a vitest guard (`src/lib/adapter-patterns.test.ts`) fails CI when any site exceeds its baseline, so normalization ratchets downward only.
 
 Replacements:
 
