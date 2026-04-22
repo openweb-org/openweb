@@ -1,3 +1,21 @@
+## 2026-04-22: Doc / project separation cutover (sibling-repo split)
+
+**What changed:**
+- Sibling docs repo `openweb-docs/` renamed to `openweb-projects/`. Inside it, `todo/` → `active/` (`archive/` was already correctly named); commit `f0fbdba`.
+- `openweb/doc/{todo,archive}` symlinks removed; replaced with a single `openweb/projects → ../openweb-projects` symlink so the project bundles surface at the same `projects/` path every other workspace repo now uses.
+- Runtime `mdPath` constant in `scripts/adapter-inventory.ts` updated to `projects/active/normalize-adapter/inventory.md`. Five comment refs swept (`capture/types.ts`, `lifecycle/verify.ts`, `lib/template-resolver.ts`, `compiler/types-v2.ts`, `scripts/adapter-pattern-report.ts`). `CLAUDE.md` + `doc/main/{adapters.md,README.md}` updated. `AGENTS.md` is a symlink to `CLAUDE.md` (auto-updated).
+- Follow-up `7d211bd0`: two skill knowledge links in `skills/openweb/{knowledge/adapter-recipes.md, add-site/verify.md}` were pointing at design docs that had been *archived before this migration even started* (the `doc/todo/...` paths were already stale). Repointed to their actual archive destinations under `openweb-projects/archive/`.
+
+**Why:**
+- Cross-workspace rollout coordinated from `~/workspace/workflow/projects/archive/20260422_doc-separation/design.md`. openweb's two-repo split needed special handling because `openweb-docs/` was a sibling repo symlinked into `openweb/doc/{todo,archive}`. A straight rename plus symlink replacement was cleaner than collapsing it into the main repo.
+- Splitting `doc/` (stable reference) from `projects/` (workstream) lets the file explorer surface coherent content and unblocks publishing `doc/` as a public artifact later.
+
+**Key files:** `openweb-projects/` (renamed from `openweb-docs/`), `openweb/projects` (new symlink), `scripts/adapter-inventory.ts`, `scripts/adapter-pattern-report.ts`, `src/{capture/types.ts,lifecycle/verify.ts,lib/template-resolver.ts,compiler/types-v2.ts}`, `skills/openweb/{knowledge/adapter-recipes.md,add-site/verify.md}`, `CLAUDE.md`, `doc/main/{adapters.md,README.md}`.
+**Verification:** `grep -rE 'doc/(todo|archive)'` in source code returns empty (excluding `doc/PROGRESS.md` historical entries + `src/sites/**/PROGRESS.md|DOC.md` per-site append-only history). All accept criteria pass: `openweb-projects/` exists, `openweb-docs/` absent, `openweb/projects` symlink resolves, `openweb/doc/{todo,archive}` removed, `openweb/doc/PROGRESS.md` preserved, both skill-link targets `test -f` ed before commit.
+**Commit:** `5a037792` (symlink + sweep) · `7d211bd0` (skill knowledge links). Sibling-repo commit `f0fbdba` in `openweb-projects/`.
+**Next:** None — Phase 0 skill freeze lifted across `~/workspace/*`.
+**Blockers:** None.
+
 ## 2026-04-21: doc sync — main/dev docs and shipped openweb skill aligned to current runtime
 
 **What changed:**
