@@ -3,7 +3,7 @@
  *
  * Lets an example op's `input` reference values from an earlier op's response
  * via `${prev.<opId>.<dot.path[idx]>}`. See
- * doc/todo/write-verify/design/cross-op-templating.md.
+ * projects/active/write-verify/design/cross-op-templating.md.
  */
 
 export type TemplateErrorKind = 'bad_syntax' | 'missing_dependency' | 'missing_path'

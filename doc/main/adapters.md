@@ -213,4 +213,4 @@ src/sites/
 - [primitives/page-plan.md](primitives/page-plan.md) — PagePlan fields + merge semantics
 - [primitives/README.md](primitives/README.md) — L2 alternatives when a runner isn't needed
 - `src/types/adapter.ts` — CustomRunner type definition
-- `doc/todo/normalize-adapter/impl_summary.md` — why the interface changed from CodeAdapter → CustomRunner
+- `projects/active/normalize-adapter/impl_summary.md` — why the interface changed from CodeAdapter → CustomRunner

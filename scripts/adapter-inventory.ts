@@ -384,7 +384,7 @@ function renderMarkdown(entries: OpEntry[]): string {
 function main() {
   const args = process.argv.slice(2)
   let jsonPath = ''
-  let mdPath = 'doc/todo/normalize-adapter/inventory.md'
+  let mdPath = 'projects/active/normalize-adapter/inventory.md'
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--json') jsonPath = args[++i]
     else if (args[i] === '--md') mdPath = args[++i]

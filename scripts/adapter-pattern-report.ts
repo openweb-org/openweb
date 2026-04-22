@@ -39,7 +39,7 @@ export const PATTERNS: readonly PatternDef[] = [
 /**
  * Permanent custom bucket — sites allowed to carry low-level page primitives
  * in their adapter code. Aligned with the design doc:
- *   doc/todo/normalize-adapter/final/design.md § Permanent Custom Bucket.
+ *   projects/active/normalize-adapter/final/design.md § Permanent Custom Bucket.
  *
  * New violations in these sites are allowed (still capped by baseline).
  */

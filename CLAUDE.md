@@ -18,7 +18,7 @@ pnpm dev <site> <op> '{...}'   # execute an operation
 - **Architecture & system docs:** `doc/main/README.md`
 - **Dev workflow & guides:** `doc/dev/development.md`
 - **Progress history:** `doc/PROGRESS.md`
-- **Project docs:** `doc/todo/` (active work) and `doc/archive/` (historical docs), symlinked from the openweb-docs repo, commit separately
+- **Project docs:** `projects/active/` (active work) and `projects/archive/` (historical docs), symlinked from the sibling openweb-projects repo, commit separately
 
 ## Documentation Sync
 

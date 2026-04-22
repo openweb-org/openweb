@@ -227,7 +227,7 @@ export interface CuratedOperation {
   readonly permission: PermissionCategory
   // TODO: Add 'safe_mutation' for idempotent/reversible writes (like, follow, bookmark)
   // that are safe to replay during verify. Currently all non-read ops are unsafe_mutation.
-  // See doc/todo/verify-unify/design.md "Future: safe_mutation and --write flag"
+  // See projects/active/verify-unify/design.md "Future: safe_mutation and --write flag"
   readonly replaySafety: 'safe_read' | 'unsafe_mutation'
   readonly parameters: readonly ParameterDescriptor[]
   readonly responseVariants: readonly ResponseVariant[]
