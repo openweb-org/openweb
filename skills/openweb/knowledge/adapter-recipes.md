@@ -23,7 +23,7 @@ This collapses three categories of would-be runtime work into spec + agent-side 
 
 **Revisit criteria** — open a fresh `/design` only when at least one of: (a) 10+ sites show the same pattern, (b) measurable agent-side failure rate, (c) runtime-level batching / caching / validation makes server-side handling materially cheaper than client-side. Until then these sit as design questions, not backlog tasks.
 
--> See: `doc/todo/normalize-adapter/impl_summary.md` for the full rationale and the cancelled tasks (`na-rt-multicall-composition`, `na-rt-response-transform`, `na-rt-array-reducers`, `na-rt-tiktok-signed-capture`) that this principle resolves.
+-> See: `projects/archive/20260418_normalize-adapter/impl_summary.md` for the full rationale and the cancelled tasks (`na-rt-multicall-composition`, `na-rt-response-transform`, `na-rt-array-reducers`, `na-rt-tiktok-signed-capture`) that this principle resolves.
 
 ## 1. Response Interception
 

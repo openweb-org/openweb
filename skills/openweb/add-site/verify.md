@@ -205,7 +205,7 @@ Verify treats each example's `input` as a **closed input**: there is currently n
 - **Current workarounds** (pick one when documenting a site):
   1. **Pre-seed a stable fixture** in the user account (e.g., trello's `openweb-verify-archiveCard-fixture` card in `cbfa285`) so the destroy op always has a known-real id to operate on.
   2. **Document the workflow** for agent-level use — agents can chain `addToCart` → read response → `removeFromCart` manually even though static verify cannot. Mark the destroy op in SKILL.md Operations notes with "Static `verify --write` cannot replay this — agents chain manually".
-  3. **Wait for cross-op response templating** — proposed `${prev.<opId>.<json-path>}` syntax in example.json `input` would let verify substitute previous op responses (sequenced by `order`). One architectural change unlocks ~8–12 ops. See `doc/todo/write-verify/handoff.md` §4.1.
+  3. **Wait for cross-op response templating** — proposed `${prev.<opId>.<json-path>}` syntax in example.json `input` would let verify substitute previous op responses (sequenced by `order`). One architectural change unlocks ~8–12 ops. See `projects/archive/20260420_write_verify_campaign/handoff.md` §4.1.
 - **Action:** when adding a new write op whose required id is server-generated, do NOT claim "verified" if you can only run the create side. Document the gap in the site's DOC.md Known Issues + SKILL.md Known Limitations and use a pre-seeded fixture if one is feasible.
 
 ---
