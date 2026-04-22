@@ -4,7 +4,7 @@ description: "Typed JSON access to 90+ real websites — Google, Amazon, Reddit,
 license: MIT
 compatibility: "Requires the `openweb` CLI (npm: @openweb-org/openweb). Some sites need a managed Chrome session. See references/cli.md for runtime details."
 metadata:
-  version: "0.1.4"
+  version: "0.1.5"
   openclaw:
     links:
       homepage: "https://getopenweb.com"

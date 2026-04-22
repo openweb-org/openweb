@@ -1,5 +1,7 @@
 # Bot Detection Patterns
 
+> **Scope: legitimate site interoperability for the logged-in user.** Modern bot-detection systems (Cloudflare, Akamai, PerimeterX, etc.) sometimes block legitimate browser API calls — including ones the same user could make manually in their own browser — based on TLS fingerprint, sensor freshness, or request shape. This document explains how those systems work so OpenWeb can route through the right transport (HTTP / browser-fetch / DOM `page.evaluate`) and reuse the user's already-established browser session. It is not guidance for circumventing access controls, ToS, or accounts the user does not own. Equivalent technical content appears in `playwright`, `puppeteer-extra-plugin-stealth`, `patchright`, and `yt-dlp` source.
+
 How major bot detection systems work, their impact on transport and capture strategy, and known workarounds.
 
 ## Detection Systems
