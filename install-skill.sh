@@ -27,6 +27,11 @@ if [ "${1:-}" = "--uninstall" ]; then
       removed+=("${SKILL_NAMES[$i]} → $target")
     fi
   done
+  if command -v openweb &>/dev/null; then
+    echo "Uninstalling openweb CLI..."
+    npm uninstall -g @openweb-org/openweb
+    removed+=("CLI → npm global")
+  fi
   if [ ${#removed[@]} -eq 0 ]; then
     echo "Nothing to uninstall."
   else
@@ -34,8 +39,6 @@ if [ "${1:-}" = "--uninstall" ]; then
     for line in "${removed[@]}"; do
       echo "  ✗ $line"
     done
-    echo ""
-    echo "To also uninstall the CLI: npm uninstall -g @openweb-org/openweb"
   fi
   exit 0
 fi

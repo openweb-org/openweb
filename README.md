@@ -168,9 +168,18 @@ pnpm install && pnpm build
 pnpm test && pnpm lint
 ```
 
-## Disclaimer
+## Trust & Side Effects
 
-> **Platform:** Tested on macOS with Google Chrome. Linux and Windows paths are implemented but not yet tested. Requires Chrome installed.
+What OpenWeb does on your machine:
+
+- **Network:** outbound HTTPS to the websites you ask the agent to use. No telemetry. No openweb-org backend or proxy in the request path. SSRF protection on every request blocks private/internal addresses by default.
+- **Browser process:** a managed Chrome instance (via Chrome DevTools Protocol) auto-starts when a site requires browser-backed fetch. Auth-required sites may open your default browser for login; cookies stay in your browser and OpenWeb reuses your existing session.
+- **Files written:** skill files into the standard skill directory of each detected agent (Claude Code, Codex, OpenCode, OpenClaw). Per-site config and cache live under `$OPENWEB_HOME` (defaults to `~/.openweb`).
+- **Permissions:** every operation is tagged `read` / `write` / `delete` / `transact`. Read runs by default; write and delete throw `permission_required`; transact throws `permission_denied`. Grant by setting the policy in `$OPENWEB_HOME/config.json` (per site or globally).
+- **Platform:** Tested on macOS with Google Chrome. Linux is lightly tested for basic functionality. Windows paths are implemented but not yet tested. Requires Chrome installed.
+- **Uninstall:** `bash install-skill.sh --uninstall` removes the skill files and the global CLI.
+
+## Disclaimer
 
 OpenWeb is for lawful use — personal automation, research, accessibility, and building agents on accounts and data you own or are authorized to access. **You are solely responsible** for complying with each site's Terms of Service, applicable laws (including computer-misuse and data-protection statutes), and the acceptable-use policies of any account you authenticate with.
 

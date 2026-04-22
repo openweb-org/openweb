@@ -14,7 +14,6 @@
     "api",
     "agent",
     "sites",
-    "scraping",
     "browser",
     "auth",
     "json"
