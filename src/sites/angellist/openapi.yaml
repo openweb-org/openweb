@@ -1,0 +1,412 @@
+openapi: '3.1.0'
+info:
+  title: AngelList Venture
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: true
+servers:
+- url: https://venture.angellist.com
+  x-openweb:
+    transport: page
+    auth:
+      type: cookie_session
+paths:
+  /internal/listInvites:
+    get:
+      operationId: listInvites
+      summary: Current deal invites — name, syndicate, status, invest URL
+      x-openweb:
+        permission: read
+        build:
+          stable_id: al0001
+          tool_version: 1
+          verified: false
+        adapter:
+          name: angellist
+          operation: listInvites
+      parameters: []
+      responses:
+        '200':
+          description: Array of current deal invites.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    invitedAt:
+                      type: integer
+                      description: Unix timestamp.
+                    lastViewedAt:
+                      type:
+                      - integer
+                      - 'null'
+                    passedExplicitly:
+                      type: boolean
+                    dealName:
+                      type: string
+                    dealSlug:
+                      type: string
+                    virtualDealId:
+                      type: string
+                      description: Used as input for getInvite.
+                    canInvest:
+                      type: boolean
+                    hasStopped:
+                      type: boolean
+                    closeDate:
+                      type:
+                      - string
+                      - 'null'
+                    syndicateName:
+                      type: string
+                    syndicateSlug:
+                      type: string
+                    investUrl:
+                      type: string
+                    avatarUrl:
+                      type: string
+
+  /internal/getInvite:
+    get:
+      operationId: getInvite
+      summary: 'Deal data room — memo, deck, slides, attachments'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: al0002
+          tool_version: 1
+          verified: false
+        adapter:
+          name: angellist
+          operation: getInvite
+      parameters:
+      - name: virtualDealId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'From listInvites → virtualDealId.'
+      responses:
+        '200':
+          description: Data room with sections (memo, deck, files).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  senderOrgHandle:
+                    type: string
+                  dataRoomHandle:
+                    type: string
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                        header:
+                          type: string
+                        internalKey:
+                          type:
+                          - string
+                          - 'null'
+                        content:
+                          type: object
+                          description: ProseMirror document (memo text).
+                        files:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              filename:
+                                type: string
+                              mimeType:
+                                type: string
+                              extension:
+                                type: string
+                              thumbnail:
+                                type:
+                                - string
+                                - 'null'
+
+  /internal/listMessages:
+    get:
+      operationId: listMessages
+      summary: Message threads — participants, last message, unread status
+      x-openweb:
+        permission: read
+        build:
+          stable_id: al0003
+          tool_version: 1
+          verified: false
+        adapter:
+          name: angellist
+          operation: listMessages
+      parameters:
+      - name: searchQuery
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+        description: Filter threads by keyword.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Pagination cursor from previous response endCursor.
+      responses:
+        '200':
+          description: Paginated list of message threads.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasNextPage:
+                    type: boolean
+                  endCursor:
+                    type:
+                    - string
+                    - 'null'
+                  conversations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Conversation ID — use as conversationId in getMessage.
+                        participants:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              userId:
+                                type: string
+                        lastMessage:
+                          type:
+                          - object
+                          - 'null'
+                          properties:
+                            id:
+                              type: string
+                            text:
+                              type: string
+                            sentAt:
+                              type: integer
+                            sentBy:
+                              type: string
+                        isUnread:
+                          type: boolean
+
+  /internal/getMessage:
+    get:
+      operationId: getMessage
+      summary: Full message thread with all messages
+      x-openweb:
+        permission: read
+        build:
+          stable_id: al0004
+          tool_version: 1
+          verified: false
+        adapter:
+          name: angellist
+          operation: getMessage
+      parameters:
+      - name: conversationId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'From listMessages → conversations[].id.'
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 25
+        description: Max messages to return.
+      responses:
+        '200':
+          description: Conversation with full message history.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  participants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        userId:
+                          type: string
+                        isSelf:
+                          type: boolean
+                  hasNextPage:
+                    type: boolean
+                  endCursor:
+                    type:
+                    - string
+                    - 'null'
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        text:
+                          type: string
+                        sentAt:
+                          type: integer
+                          description: Unix timestamp.
+                        sentBy:
+                          type: string
+                        isSelf:
+                          type: boolean
+
+  /internal/listPosts:
+    get:
+      operationId: listPosts
+      summary: Syndicate posts — title, author, date
+      x-openweb:
+        permission: read
+        build:
+          stable_id: al0005
+          tool_version: 1
+          verified: false
+        adapter:
+          name: angellist
+          operation: listPosts
+      parameters:
+      - name: searchQuery
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+        description: Filter posts by keyword.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Pagination cursor from previous response endCursor.
+      responses:
+        '200':
+          description: Paginated list of syndicate posts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasNextPage:
+                    type: boolean
+                  endCursor:
+                    type:
+                    - string
+                    - 'null'
+                  posts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Post ID — use as postId in getPost.
+                        title:
+                          type: string
+                        fromName:
+                          type: string
+                        publishAt:
+                          type: integer
+                          description: Unix timestamp.
+                        avatarUrl:
+                          type: string
+                        hasAttachments:
+                          type: boolean
+                        isUnread:
+                          type: boolean
+
+  /internal/getPost:
+    get:
+      operationId: getPost
+      summary: 'Full post — title, body, syndicate, documents'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: al0006
+          tool_version: 1
+          verified: false
+        adapter:
+          name: angellist
+          operation: getPost
+      parameters:
+      - name: postId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'From listPosts → posts[].id.'
+      responses:
+        '200':
+          description: Full post with body and metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  fromName:
+                    type: string
+                  body:
+                    type: string
+                    description: HTML body content.
+                  publishAt:
+                    type: integer
+                  avatarUrl:
+                    type: string
+                  syndicateName:
+                    type:
+                    - string
+                    - 'null'
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                  isUnread:
+                    type: boolean

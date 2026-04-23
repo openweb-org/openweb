@@ -1,5 +1,7 @@
 # Adapter Recipes
 
+> **Scope: site-package author mode.** Recipes here describe how to write adapter code that ships *inside* an OpenWeb site package — code authored by the site maintainer, reviewed in source, and shipped via `src/sites/<site>/adapters/`. References to `page.evaluate(...)` describe author-controlled JavaScript that runs against a site you are explicitly integrating with, in the same way a Playwright/Puppeteer script does. OpenWeb does not download, fetch, or execute remote JavaScript payloads at runtime; adapter code is part of the published package and visible to anyone reviewing the site directory.
+
 5 canonical patterns with decision boundaries, code templates, and pitfalls.
 
 > **Important (as of 2026-04-17 normalize-adapter v2):** Prefer spec primitives over adapter code when they cover your case. In particular:

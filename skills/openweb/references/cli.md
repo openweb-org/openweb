@@ -51,6 +51,8 @@ openweb <site> exec <op> '{}' --max-response 8192
 
 ## Browser Management
 
+> **Scope: act as the logged-in user, on the user's machine.** OpenWeb reuses the user's existing browser session so it can call site APIs the user is already authenticated for — the same pattern as the official Claude Code Playwright plugin, `yt-dlp`, `browser-cookie3`, and most browser-automation tooling. Auth-relevant files are copied from the user's Chrome profile to a **local temp directory** so the managed instance can present the same identity; nothing is transmitted off the machine, and no telemetry is sent. See § Trust & Boundaries below for the full data-locality statement.
+
 The CLI auto-starts a managed headless Chrome when an operation requires browser access. No manual setup needed — `exec`, browser-backed auth/transport flows, and `capture start` all launch Chrome on demand and connect automatically. `verify --browser` just pre-starts and keeps the managed browser alive for the duration of the verify run.
 
 Auto-start copies auth-relevant files (Cookies, Local Storage, Session Storage, Web Data, Preferences) from the user's default Chrome profile to a temp directory, then launches Chrome with `--remote-debugging-port`. Concurrent auto-start calls are serialized via a filesystem lock. A background watchdog kills idle browsers after 5 minutes.
