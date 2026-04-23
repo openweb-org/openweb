@@ -1,7 +1,7 @@
 # L3 Custom Runners
 
 > CustomRunner interface, loading, and execution lifecycle for sites that defy declarative modeling.
-> Last updated: 2026-04-21 (PreparedContext + validation/runtime boundary sync)
+> Last updated: 2026-04-23 (AngelList example + patchright isolated-world caveat)
 
 ## Overview
 
@@ -92,6 +92,25 @@ Key properties:
 - Runner output still goes through the shared post-dispatch path: `auth_check`, response parsing, unwrap, and response-schema validation all still apply after `run(ctx)` returns.
 - Runners are cached by `siteRoot:runnerName`.
 
+### Patchright Isolated-World Caveat
+
+Patchright's `page.evaluate()` runs in an **isolated execution context** (utility world), not the page's main world. This means `window.__APOLLO_CLIENT__`, `window.__NEXT_DATA__` (as a JS global), and other page-injected globals are **not visible** from `page.evaluate()`. DOM access (e.g. `document.querySelector('#__NEXT_DATA__').textContent`) still works since the DOM is shared across worlds.
+
+When a runner needs main-world access (e.g. calling the site's Apollo client), use `CDPSession`:
+
+```typescript
+const cdp = await page.context().newCDPSession(page)
+const result = await cdp.send('Runtime.evaluate', {
+  expression: 'window.__APOLLO_CLIENT__ && ...',
+  awaitPromise: true,
+  returnByValue: true,
+})
+```
+
+This was discovered during the AngelList Venture adapter build. `page.waitForFunction(() => !!window.__APOLLO_CLIENT__)` succeeds (polls via CDP under the hood) but `page.evaluate(() => window.__APOLLO_CLIENT__)` returns `undefined`. The CDPSession workaround provides reliable main-world access.
+
+-> See: `src/sites/angellist/adapters/angellist.ts` for the full pattern
+
 ---
 
 ## How Custom Runners Are Referenced
@@ -145,6 +164,12 @@ Telegram Web uses teact with a global state store. The runner finds `getGlobal()
 Patches `window.fetch` with X-Bogus / X-Gnarly / msToken / ztca-dpop signing. Read intercepts go through the patched fetch.
 
 -> See: `src/sites/tiktok/adapters/tiktok-web.ts`
+
+### AngelList Venture (Apollo client + CDPSession main-world eval)
+
+Venture.angellist.com uses an `x-al-gql` per-request signing header injected by Apollo's link chain. Raw `page.evaluate(fetch(...))` returns 403. The runner loads a GraphQL parser via dynamic import from esm.sh, then calls `__APOLLO_CLIENT__.query()` — but this requires main-world access (see caveat below). Uses `CDPSession.send('Runtime.evaluate')` for venture ops. Cross-origin invite detail uses the response-intercept pattern against portal.angellist.com.
+
+-> See: `src/sites/angellist/adapters/angellist.ts`
 
 ---
 

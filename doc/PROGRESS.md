@@ -1,3 +1,20 @@
+## 2026-04-23: AngelList Venture site package — 6 read-only ops
+
+**What changed:**
+- New adapter-only site `angellist` for venture.angellist.com: `listInvites`, `getInvite`, `listMessages`, `getMessage`, `listPosts`, `getPost`.
+- All venture ops use Apollo `client.query()` via CDPSession main-world evaluation to bypass the `x-al-gql` per-request signing header (injected by Apollo's link chain; raw fetch returns 403).
+- `getInvite` uses the response-intercept pattern against portal.angellist.com (cross-origin data room redirect).
+- Discovered patchright isolated-world behavior: `page.evaluate()` cannot access `window.__APOLLO_CLIENT__` or other page-injected globals. `CDPSession.send('Runtime.evaluate')` is the workaround. Documented in `doc/main/adapters.md`.
+
+**Why:**
+- User needs programmatic access to AngelList Venture deal pipeline, messages, and syndicate posts. No existing site package covered this surface.
+
+**Key files:** `src/sites/angellist/{adapters/angellist.ts,openapi.yaml,manifest.json,SKILL.md,DOC.md,PROGRESS.md}`, `doc/main/adapters.md`, `scripts/adapter-pattern-baseline.json`.
+**Verification:** `pnpm build` (94 sites), `pnpm test` 1049/1049 PASS. All 6 ops verified live: `listInvites` (122 invites), `getInvite` (fund + company deal types), `listMessages`, `getMessage` (thread 419088), `listPosts`, `getPost` (post 89544). Error path verified: `getPost` with non-existent ID returns ApolloError "Not found".
+**Commit:** `a628326b`
+**Next:** Potential write ops (pass/commit on deals), additional invite detail coverage for different deal types.
+**Blockers:** None.
+
 ## 2026-04-22: Doc / project separation cutover (sibling-repo split)
 
 **What changed:**
