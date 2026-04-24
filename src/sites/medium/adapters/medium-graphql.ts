@@ -38,6 +38,72 @@ type Errors = {
   needsLogin(): Error
 }
 
+/* ---------- trimming helpers ---------- */
+
+function stripTypenames<T>(obj: T): T {
+  if (obj === null || obj === undefined || typeof obj !== 'object') return obj
+  if (Array.isArray(obj)) return obj.map(stripTypenames) as T
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    if (k === '__typename') continue
+    out[k] = stripTypenames(v)
+  }
+  return out as T
+}
+
+type AnyObj = Record<string, unknown>
+
+function trimCreator(c: AnyObj): AnyObj {
+  return { id: c.id, name: c.name, username: c.username }
+}
+
+function trimCollection(c: AnyObj | null | undefined): AnyObj | undefined {
+  if (!c) return undefined
+  return { id: c.id, name: c.name, slug: c.slug, domain: c.domain }
+}
+
+function trimPost(p: AnyObj): AnyObj {
+  const creator = p.creator as AnyObj | undefined
+  const collection = p.collection as AnyObj | null | undefined
+  const preview = p.extendedPreviewContent as AnyObj | undefined
+  const responses = p.postResponses as AnyObj | undefined
+  return {
+    id: p.id,
+    title: p.title,
+    subtitle: preview?.subtitle ?? '',
+    mediumUrl: p.mediumUrl,
+    isLocked: p.isLocked,
+    clapCount: p.clapCount,
+    responseCount: responses?.count ?? 0,
+    readingTime: p.readingTime,
+    firstPublishedAt: p.firstPublishedAt,
+    creator: creator ? trimCreator(creator) : undefined,
+    collection: trimCollection(collection),
+  }
+}
+
+function trimPublisher(node: AnyObj): AnyObj {
+  const stats = node.socialStats as AnyObj | undefined
+  if (node.username !== undefined) {
+    return {
+      id: node.id,
+      type: 'user',
+      name: node.name,
+      username: node.username,
+      bio: node.bio,
+      followerCount: stats?.followerCount,
+    }
+  }
+  return {
+    id: node.id,
+    type: 'publication',
+    name: node.name,
+    slug: node.slug,
+    domain: node.domain,
+    description: node.description,
+  }
+}
+
 /* ---------- helpers ---------- */
 
 async function graphqlFetch(
@@ -91,22 +157,67 @@ async function searchArticles(page: Page, params: Record<string, unknown>, _erro
   const articles = await page.evaluate(() => {
     const results: Array<Record<string, unknown>> = []
     const articleEls = document.querySelectorAll('article')
+
     for (const el of articleEls) {
       const titleEl = el.querySelector('h2')
+      if (!titleEl) continue
       const subtitleEl = el.querySelector('h3')
-      const linkEl = el.querySelector('a[href*="medium.com"], a[data-testid]')
-      const authorEl = el.querySelector('p a, span a')
-      const timeEl = el.querySelector('time')
 
-      if (titleEl) {
-        results.push({
-          title: titleEl.textContent?.trim() ?? '',
-          subtitle: subtitleEl?.textContent?.trim() ?? '',
-          url: linkEl?.getAttribute('href') ?? '',
-          author: authorEl?.textContent?.trim() ?? '',
-          publishedAt: timeEl?.getAttribute('datetime') ?? '',
-        })
+      // Article URL: the link wrapping the h2 title
+      const titleLink = titleEl.closest('a')
+      let articleUrl = titleLink?.getAttribute('href') ?? ''
+      if (articleUrl?.startsWith('/')) {
+        articleUrl = `https://medium.com${articleUrl}`
       }
+      // Strip ?source= tracking params
+      articleUrl = articleUrl.replace(/\?source=.*$/, '')
+
+      // Post ID: last 12 hex chars of path
+      const idMatch = articleUrl.match(/[/-]([0-9a-f]{8,12})(?:\?|$)/)
+      const postId = idMatch?.[1] ?? ''
+
+      // Author: link whose href starts with /@
+      const authorLinks = el.querySelectorAll('a[href*="/@"]')
+      let author = ''
+      let authorUsername = ''
+      for (const a of authorLinks) {
+        const p = a.querySelector('p')
+        const text = (p?.textContent ?? a.textContent ?? '').trim()
+        if (text && !text.includes('clap') && !text.includes('icon')) {
+          author = text
+          const m = a.getAttribute('href')?.match(/@([^?/]+)/)
+          if (m) authorUsername = m[1]
+          break
+        }
+      }
+
+      // Clap count: SVG with "clap" text content → sibling span has count
+      let clapCount = ''
+      const svgs = el.querySelectorAll('svg')
+      for (const svg of svgs) {
+        if (svg.textContent?.toLowerCase().includes('clap')) {
+          const sibling = svg.nextElementSibling
+          if (sibling) {
+            clapCount = sibling.textContent?.trim().replace(/"/g, '') ?? ''
+          }
+          break
+        }
+      }
+
+      // Member-only indicator
+      const isLocked = !!el.querySelector('button[class*="star"], [aria-label*="Member"]') ||
+        el.textContent?.includes('Member-only story') === true
+
+      results.push({
+        postId,
+        title: titleEl.textContent?.trim() ?? '',
+        subtitle: subtitleEl?.textContent?.trim() ?? '',
+        url: articleUrl,
+        author,
+        authorUsername,
+        clapCount,
+        isLocked,
+      })
     }
     return results
   })
@@ -122,7 +233,8 @@ async function getArticle(page: Page, params: Record<string, unknown>, errors: E
     postId,
   }, errors)) as Record<string, unknown>
 
-  return data.postResult ?? null
+  const post = data.postResult as AnyObj | undefined
+  return post ? trimPost(post) : null
 }
 
 async function getTagFeed(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
@@ -137,8 +249,8 @@ async function getTagFeed(page: Page, params: Record<string, unknown>, errors: E
 
   return {
     tagSlug,
-    posts: edges.map((e) => e.node),
-    pageInfo: posts?.pageInfo,
+    posts: edges.map((e) => trimPost(e.node as AnyObj)),
+    pageInfo: stripTypenames(posts?.pageInfo),
   }
 }
 
@@ -154,7 +266,16 @@ async function getTagCuratedLists(page: Page, params: Record<string, unknown>, e
 
   return {
     tagSlug,
-    lists: edges.map((e) => e.node),
+    lists: edges.map((e) => {
+      const node = e.node as AnyObj
+      const creator = node.creator as AnyObj | undefined
+      const itemsConn = node.itemsConnection as AnyObj | undefined
+      const items = ((itemsConn?.items ?? []) as AnyObj[]).map((it) => {
+        const entity = it.entity as AnyObj | undefined
+        return entity ? trimPost(entity) : null
+      }).filter(Boolean)
+      return { id: node.id, name: node.name, creator: creator ? trimCreator(creator) : undefined, posts: items }
+    }),
   }
 }
 
@@ -175,8 +296,8 @@ async function getTagWriters(page: Page, params: Record<string, unknown>, errors
 
   return {
     tagSlug,
-    publishers: edges.map((e) => e.node),
-    pageInfo: publishers?.pageInfo,
+    publishers: edges.map((e) => trimPublisher(e.node as AnyObj)),
+    pageInfo: stripTypenames(publishers?.pageInfo),
   }
 }
 
@@ -193,11 +314,11 @@ async function getRecommendedFeed(page: Page, params: Record<string, unknown>, e
 
   return {
     posts: items.map((item) => ({
-      ...item.post as Record<string, unknown>,
+      ...trimPost(item.post as AnyObj),
       feedId: item.feedId,
       reason: item.reason,
     })),
-    pagingInfo: feed?.pagingInfo,
+    pagingInfo: stripTypenames(feed?.pagingInfo),
   }
 }
 
@@ -239,7 +360,7 @@ async function getRecommendedWriters(page: Page, _params: Record<string, unknown
   const edges = (publishers?.edges ?? []) as Array<Record<string, unknown>>
 
   return {
-    publishers: edges.map((e) => e.node),
+    publishers: edges.map((e) => trimPublisher(e.node as AnyObj)),
   }
 }
 

@@ -47,21 +47,25 @@ paths:
                     items:
                       type: object
                       properties:
+                        postId:
+                          type: string
                         title:
                           type: string
                         subtitle:
                           type: string
                         url:
                           type: string
-                          nullable: true
                         author:
                           type: string
-                          nullable: true
-                        publishedAt:
+                        authorUsername:
                           type: string
-                          nullable: true
+                        clapCount:
+                          type: string
+                        isLocked:
+                          type: boolean
                       required:
                         - title
+                        - url
                   totalResults:
                     type: integer
                 required:
@@ -100,19 +104,19 @@ paths:
                     type: string
                   title:
                     type: string
-                  mediumUrl:
+                  subtitle:
                     type: string
-                  visibility:
+                  mediumUrl:
                     type: string
                   isLocked:
                     type: boolean
                   clapCount:
                     type: integer
+                  responseCount:
+                    type: integer
                   readingTime:
                     type: number
                   firstPublishedAt:
-                    type: integer
-                  latestPublishedAt:
                     type: integer
                   creator:
                     type: object
@@ -143,23 +147,6 @@ paths:
                       - id
                       - name
                       - slug
-                  extendedPreviewContent:
-                    type: object
-                    properties:
-                      subtitle:
-                        type: string
-                      isFullContent:
-                        type: boolean
-                    required:
-                      - subtitle
-                      - isFullContent
-                  postResponses:
-                    type: object
-                    properties:
-                      count:
-                        type: integer
-                    required:
-                      - count
                 required:
                   - id
                   - title
@@ -204,23 +191,25 @@ paths:
                           type: string
                         title:
                           type: string
+                        subtitle:
+                          type: string
                         mediumUrl:
                           type: string
                         isLocked:
                           type: boolean
                         clapCount:
                           type: integer
+                        responseCount:
+                          type: integer
                         readingTime:
                           type: number
+                        firstPublishedAt:
+                          type: integer
                         creator:
                           type: object
                         collection:
                           type: object
                           nullable: true
-                        extendedPreviewContent:
-                          type: object
-                        postResponses:
-                          type: object
                       required:
                         - id
                         - title
@@ -289,19 +278,10 @@ paths:
                           required:
                             - id
                             - name
-                        itemsConnection:
-                          type: object
-                          properties:
-                            items:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  entity:
-                                    type: object
-                                    nullable: true
-                          required:
-                            - items
+                        posts:
+                          type: array
+                          items:
+                            type: object
                       required:
                         - id
                         - name
@@ -359,6 +339,9 @@ paths:
                       properties:
                         id:
                           type: string
+                        type:
+                          type: string
+                          enum: [user, publication]
                         name:
                           type: string
                         bio:
@@ -367,17 +350,22 @@ paths:
                         username:
                           type: string
                           nullable: true
-                        socialStats:
-                          type: object
+                        followerCount:
+                          type: integer
                           nullable: true
-                          properties:
-                            followerCount:
-                              type: integer
-                          required:
-                            - followerCount
+                        slug:
+                          type: string
+                          nullable: true
+                        domain:
+                          type: string
+                          nullable: true
+                        description:
+                          type: string
+                          nullable: true
                       required:
                         - id
                         - name
+                        - type
                   pageInfo:
                     type: object
                     properties:
@@ -431,14 +419,20 @@ paths:
                           type: string
                         title:
                           type: string
+                        subtitle:
+                          type: string
                         mediumUrl:
                           type: string
                         isLocked:
                           type: boolean
                         clapCount:
                           type: integer
+                        responseCount:
+                          type: integer
                         readingTime:
                           type: number
+                        firstPublishedAt:
+                          type: integer
                         creator:
                           type: object
                         collection:
@@ -573,6 +567,9 @@ paths:
                       properties:
                         id:
                           type: string
+                        type:
+                          type: string
+                          enum: [user, publication]
                         name:
                           type: string
                         bio:
@@ -581,9 +578,19 @@ paths:
                         username:
                           type: string
                           nullable: true
+                        slug:
+                          type: string
+                          nullable: true
+                        domain:
+                          type: string
+                          nullable: true
+                        description:
+                          type: string
+                          nullable: true
                       required:
                         - id
                         - name
+                        - type
                 required:
                   - publishers
   /post/{postId}/clap:

@@ -1,3 +1,24 @@
+## 2026-04-24 — QA: search fix + response trimming for all read ops
+
+**Personas tested:** PM (search → article detail → claps), Developer (tag feed → writers → article), Writer (search → recommended tags → curated lists).
+
+**searchArticles (DOM scraping) — 3 bugs fixed:**
+- URLs were empty for most results: selector `a[href*="medium.com"]` missed relative article links. Fixed to find the `<a>` wrapping the `<h2>` title, then absolutize + strip `?source=` tracking params.
+- Author field returned "A clap icon201" garbage: selector `p a, span a` captured clap icon accessibility text. Fixed to target `a[href*="/@"]` and filter out non-text elements.
+- Clap count was empty: searched for `img[alt="A clap icon"]` but clap icon is an `<svg>` in the DOM. Fixed to find SVGs with "clap" text content and read sibling span.
+- Added `postId` extraction from article URL (last 8-12 hex chars), `authorUsername`, `isLocked` to search results.
+
+**Response trimming — all GraphQL ops:**
+Added `stripTypenames`, `trimPost`, `trimCreator`, `trimCollection`, `trimPublisher` helpers. All read ops now return clean responses:
+- Removed `__typename` from all nested objects
+- Removed `imageId`, `previewImage`, `visibility`, `latestPublishedAt` from posts
+- Flattened `extendedPreviewContent.subtitle` → `subtitle`, `postResponses.count` → `responseCount`
+- Flattened `socialStats.followerCount` → `followerCount` for publishers
+- Added `type: "user" | "publication"` discriminator to publisher objects
+- `getTagCuratedLists`: flattened `itemsConnection.items[].entity` → `posts[]`
+
+**Spec updated:** OpenAPI schema aligned to new trimmed response shapes. All 9 read ops pass `verify medium`.
+
 ## 2026-04-18 — Write-op verify: clapArticle + unsaveArticle fixed
 
 **clapArticle:** Spec was missing `numClaps` query param. Adapter accepted the
