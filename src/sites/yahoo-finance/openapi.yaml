@@ -20,6 +20,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: searchTickers
         build:
           verified: true
           stable_id: yf0001
@@ -124,6 +127,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: getChart
         build:
           verified: true
           stable_id: yf0003
@@ -285,6 +291,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: getSparkline
         build:
           verified: true
           stable_id: yf0004
@@ -392,6 +401,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: getScreener
         build:
           verified: true
           stable_id: yf0005
@@ -496,43 +508,34 @@ paths:
                                     type: string
                                   shortName:
                                     type: string
+                                  quoteType:
+                                    type: string
+                                  exchange:
+                                    type: string
                                   regularMarketPrice:
-                                    type: object
-                                    properties:
-                                      raw:
-                                        type: number
-                                      fmt:
-                                        type: string
+                                    type: number
                                   regularMarketChange:
-                                    type: object
-                                    properties:
-                                      raw:
-                                        type: number
-                                      fmt:
-                                        type: string
+                                    type: number
                                   regularMarketChangePercent:
-                                    type: object
-                                    properties:
-                                      raw:
-                                        type: number
-                                      fmt:
-                                        type: string
+                                    type: number
                                   regularMarketVolume:
-                                    type: object
-                                    properties:
-                                      raw:
-                                        type: integer
-                                      fmt:
-                                        type: string
-                                      longFmt:
-                                        type: string
+                                    type: integer
                                   marketCap:
-                                    type: object
-                                    properties:
-                                      raw:
-                                        type: integer
-                                      fmt:
-                                        type: string
+                                    type: integer
+                                  fiftyTwoWeekHigh:
+                                    type: number
+                                  fiftyTwoWeekLow:
+                                    type: number
+                                  trailingPE:
+                                    type: [number, 'null']
+                                  forwardPE:
+                                    type: [number, 'null']
+                                  dividendYield:
+                                    type: [number, 'null']
+                                  averageAnalystRating:
+                                    type: [string, 'null']
+                                  marketState:
+                                    type: string
   /v2/ratings/top/{symbol}:
     get:
       operationId: getRatings
@@ -540,6 +543,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: getRatings
         build:
           verified: true
           stable_id: yf0006
@@ -684,6 +690,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: getInsights
         build:
           verified: true
           stable_id: yf0007
@@ -734,7 +743,7 @@ paths:
                         type: array
                         items:
                           type: object
-                          required: [symbol, instrumentInfo, companySnapshot, recommendation]
+                          required: [symbol, instrumentInfo]
                           properties:
                             symbol:
                               type: string
@@ -855,6 +864,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: getTimeSeries
         build:
           verified: true
           stable_id: yf0008
@@ -977,6 +989,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: getCalendarEvents
         build:
           verified: true
           stable_id: yf0009
@@ -1018,16 +1033,48 @@ paths:
                       result:
                         type: object
                         properties:
+                          earnings:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                timestampString:
+                                  type: string
+                                count:
+                                  type: integer
+                                totalCount:
+                                  type: integer
+                                records:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      ticker:
+                                        type: string
+                                      companyShortName:
+                                        type: string
+                                      startDateTime:
+                                        type: integer
+                                      fiscalYear:
+                                        type: string
+                                      quarter:
+                                        type: string
+                                      epsActual:
+                                        type: [number, 'null']
+                                      epsEstimate:
+                                        type: [number, 'null']
+                                      surprisePercent:
+                                        type: [number, 'null']
                           ipoEvents:
                             type: array
                             items:
                               type: object
                               properties:
-                                timestamp:
-                                  type: integer
                                 timestampString:
                                   type: string
                                 count:
+                                  type: integer
+                                totalCount:
                                   type: integer
                                 records:
                                   type: array
@@ -1044,52 +1091,58 @@ paths:
                                         type: integer
                                       dealType:
                                         type: string
-                          earnings:
+                          secReports:
                             type: array
                             items:
                               type: object
                               properties:
-                                timestamp:
-                                  type: integer
                                 timestampString:
                                   type: string
                                 count:
+                                  type: integer
+                                totalCount:
                                   type: integer
                                 records:
                                   type: array
                                   items:
                                     type: object
                                     properties:
+                                      type:
+                                        type: string
                                       ticker:
                                         type: string
-                                      companyShortName:
+                                      companyName:
                                         type: string
-                          splits:
+                                      filingDate:
+                                        type: integer
+                                      category:
+                                        type: string
+                          economicEvents:
                             type: array
                             items:
                               type: object
                               properties:
-                                timestamp:
-                                  type: integer
                                 timestampString:
                                   type: string
                                 count:
+                                  type: integer
+                                totalCount:
                                   type: integer
                                 records:
                                   type: array
                                   items:
                                     type: object
                                     properties:
-                                      ticker:
+                                      event:
                                         type: string
-                                      companyShortName:
+                                      countryCode:
                                         type: string
-                                      splitFrom:
+                                      eventTime:
+                                        type: integer
+                                      period:
                                         type: string
-                                      splitTo:
-                                        type: string
-                                      optionableDate:
-                                        type: string
+                                      prior:
+                                        type: [string, 'null']
                 required:
                 - finance
       servers:
@@ -1105,6 +1158,9 @@ paths:
       x-openweb:
         transport: node
         permission: read
+        adapter:
+          name: yahoo-finance
+          operation: getQuoteType
         build:
           verified: true
           stable_id: yf0010

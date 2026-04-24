@@ -1,5 +1,31 @@
 # Yahoo Finance Fixture — Progress
 
+## 2026-04-24: Userflow QA — adapter trimming + schema fix
+
+**What changed:**
+- Added trimming adapter (`adapters/yahoo-finance.ts`) for all 9 ops
+  - getScreener: 88 fields/quote → 16 essential fields, flattened `{raw,fmt}` → raw values
+  - getCalendarEvents: 293KB → 28KB (capped to 7 days per event type, trimmed record fields)
+  - getInsights: 43KB → compact (capped secReports to 10, dropped upsell/reports/events noise)
+  - getSparkline: trimmed meta (dropped tradingPeriods, validRanges, currentTradingPeriod)
+  - searchTickers, getChart, getRatings, getTimeSeries, getQuoteType: pass-through (already compact)
+- Fixed getInsights schema: `companySnapshot` and `recommendation` made optional (ETFs don't have them)
+- Updated getScreener schema to match flattened output (raw values, not `{raw,fmt}` objects)
+- Updated getCalendarEvents schema: added economicEvents, trimmed record schemas, removed old splits
+
+**Userflow QA — 3 blind persona tests:**
+1. **Retail investor** (NVDA): search → quote type → chart 1mo → ratings → insights → time series → calendar — all PASS
+2. **Portfolio manager**: screener (most_actives, day_gainers, day_losers) → sparkline (^GSPC,^DJI,^IXIC) → calendar — all PASS
+3. **Student** (S&P 500 ETF): search "S&P 500 ETF" → quote type SPY → chart 5y → insights SPY → sparkline (SPY,VOO,IVV) — all PASS
+
+**Known limitations:**
+- getRatings returns 404 for non-equities (ETFs, indices) — Yahoo API limitation, not fixable
+- getTimeSeries returns empty data for ETFs (no fundamental metrics) — expected behavior
+
+**Verification:** `pnpm dev verify yahoo-finance` — 9/9 PASS
+
+---
+
 ## 2026-04-13: Verify fix — x-openweb.headers + inter-op delay
 
 **What changed:**
