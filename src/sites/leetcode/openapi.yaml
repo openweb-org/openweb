@@ -405,7 +405,7 @@ paths:
                               type: integer
                 required:
                 - userContestRankingHistory
-  /problems/{questionSlug}/submissions:
+  /problems/{titleSlug}/submissions:
     get:
       operationId: getSubmissions
       summary: Get submission history for a problem — statusDisplay, lang, runtime, memory (requires login)
@@ -422,7 +422,7 @@ paths:
           name: leetcode-graphql
           operation: getSubmissions
       parameters:
-      - name: questionSlug
+      - name: titleSlug
         in: path
         required: true
         schema:
@@ -483,7 +483,7 @@ paths:
                           type: string
                 required:
                 - submissions
-  /problems/{questionSlug}/solutions:
+  /problems/{titleSlug}/solutions:
     get:
       operationId: getSolutionArticles
       summary: Get community solution articles for a problem — title, author, summary, vote count
@@ -500,7 +500,7 @@ paths:
           name: leetcode-graphql
           operation: getSolutionArticles
       parameters:
-      - name: questionSlug
+      - name: titleSlug
         in: path
         required: true
         schema:
@@ -543,8 +543,6 @@ paths:
                     items:
                       type: object
                       properties:
-                        uuid:
-                          type: string
                         title:
                           type: string
                         slug:
@@ -556,32 +554,16 @@ paths:
                           properties:
                             realName:
                               type: string
-                            userAvatar:
-                              type: string
                             userSlug:
                               type: string
                         createdAt:
                           type: string
                         hitCount:
                           type: integer
-                        hasVideoArticle:
-                          type: boolean
-                        reactions:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              count:
-                                type: integer
-                              reactionType:
-                                type: string
-                        topic:
-                          type: object
-                          properties:
-                            id:
-                              type: integer
-                            topLevelCommentCount:
-                              type: integer
+                        upvotes:
+                          type: integer
+                        commentCount:
+                          type: integer
                         tags:
                           type: array
                           items:
@@ -697,7 +679,7 @@ paths:
                           type: integer
                 required:
                 - contests
-  /contests/{contestSlug}/questions:
+  /contests/{titleSlug}/questions:
     get:
       operationId: getContestQuestions
       summary: Get questions for a specific contest — credit, title, titleSlug, questionId
@@ -714,7 +696,7 @@ paths:
           name: leetcode-graphql
           operation: getContestQuestions
       parameters:
-      - name: contestSlug
+      - name: titleSlug
         in: path
         required: true
         schema:
@@ -796,7 +778,7 @@ paths:
                         timestamp:
                           type: string
                           description: Unix timestamp as string.
-  /contests/{contestSlug}/ranking:
+  /contests/{titleSlug}/ranking:
     get:
       operationId: getContestRanking
       summary: Get contest leaderboard — ranks, scores, finish times
@@ -813,7 +795,7 @@ paths:
           name: leetcode-graphql
           operation: getContestRanking
       parameters:
-      - name: contestSlug
+      - name: titleSlug
         in: path
         required: true
         schema:
@@ -853,7 +835,5 @@ paths:
                         finishTime:
                           type: integer
                           description: Unix timestamp of last submission.
-                        avatarUrl:
-                          type: string
                 required:
                 - rankings

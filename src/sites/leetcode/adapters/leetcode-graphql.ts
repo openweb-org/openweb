@@ -253,7 +253,24 @@ async function getProblemList(page: Page, params: Record<string, unknown>, error
     filtersV2: filters,
   }, errors)) as Record<string, unknown>
 
-  return data.problemsetQuestionListV2
+  const raw = data.problemsetQuestionListV2 as Record<string, unknown> | undefined
+  if (!raw) return data.problemsetQuestionListV2
+  const questions = (raw.questions as Array<Record<string, unknown>> | undefined) ?? []
+  return {
+    questions: questions.map((q) => ({
+      id: q.id,
+      questionFrontendId: q.questionFrontendId,
+      title: q.title,
+      titleSlug: q.titleSlug,
+      difficulty: q.difficulty,
+      paidOnly: q.paidOnly,
+      acRate: q.acRate,
+      topicTags: ((q.topicTags as Array<Record<string, unknown>>) ?? []).map((t) => ({ name: t.name, slug: t.slug })),
+    })),
+    totalLength: raw.totalLength,
+    finishedLength: raw.finishedLength,
+    hasMore: raw.hasMore,
+  }
 }
 
 async function getDailyChallenge(page: Page, _params: Record<string, unknown>, errors: Errors): Promise<unknown> {
@@ -275,11 +292,15 @@ async function getUserContestRanking(page: Page, params: Record<string, unknown>
   const data = (await graphqlFetch(page, 'userContestRankingInfo', USER_CONTEST_RANKING_QUERY, {
     username,
   }, errors)) as Record<string, unknown>
-  return data
+  const history = (data.userContestRankingHistory as Array<Record<string, unknown>> | undefined) ?? []
+  return {
+    userContestRanking: data.userContestRanking,
+    userContestRankingHistory: history.filter((h) => h.attended),
+  }
 }
 
 async function getSubmissions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  const questionSlug = String(params.questionSlug ?? params.slug)
+  const questionSlug = String(params.titleSlug ?? params.questionSlug ?? params.slug)
   const offset = Number(params.offset ?? 0)
   const limit = Number(params.limit ?? 20)
 
@@ -294,7 +315,7 @@ async function getSubmissions(page: Page, params: Record<string, unknown>, error
 }
 
 async function getSolutionArticles(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  const questionSlug = String(params.questionSlug ?? params.slug)
+  const questionSlug = String(params.titleSlug ?? params.questionSlug ?? params.slug)
   const skip = Number(params.skip ?? 0)
   const first = Number(params.first ?? 15)
   const orderBy = String(params.orderBy ?? 'HOT')
@@ -312,7 +333,23 @@ async function getSolutionArticles(page: Page, params: Record<string, unknown>, 
   const edges = (result?.edges ?? []) as Array<Record<string, unknown>>
   return {
     totalNum: result?.totalNum,
-    articles: edges.map((e) => e.node),
+    articles: edges.map((e) => {
+      const n = e.node as Record<string, unknown>
+      const reactions = (n.reactions as Array<Record<string, unknown>>) ?? []
+      const upvotes = reactions.find((r) => r.reactionType === 'UPVOTE')
+      const author = n.author as Record<string, unknown> | undefined
+      return {
+        title: n.title,
+        slug: n.slug,
+        summary: n.summary,
+        author: author ? { realName: author.realName, userSlug: author.userSlug } : undefined,
+        createdAt: n.createdAt,
+        hitCount: n.hitCount,
+        upvotes: upvotes?.count ?? 0,
+        commentCount: (n.topic as Record<string, unknown>)?.topLevelCommentCount,
+        tags: ((n.tags as Array<Record<string, unknown>>) ?? []).map((t) => ({ name: t.name, slug: t.slug })),
+      }
+    }),
   }
 }
 
@@ -335,7 +372,7 @@ async function getContestHistory(page: Page, params: Record<string, unknown>, er
 }
 
 async function getContestQuestions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  const contestSlug = String(params.contestSlug ?? params.slug)
+  const contestSlug = String(params.titleSlug ?? params.contestSlug ?? params.slug)
   const data = (await graphqlFetch(page, 'contestQuestionList', CONTEST_QUESTIONS_QUERY, {
     contestSlug,
   }, errors)) as Record<string, unknown>
@@ -355,7 +392,7 @@ async function getRecentSubmissions(page: Page, params: Record<string, unknown>,
 /* ---------- contest ranking (REST) ---------- */
 
 async function getContestRanking(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  const contestSlug = String(params.contestSlug ?? params.slug)
+  const contestSlug = String(params.titleSlug ?? params.contestSlug ?? params.slug)
   const pageNum = Number(params.page ?? 1)
   const url = `https://leetcode.com/contest/api/ranking/${contestSlug}/?pagination=${pageNum}&region=global_v2`
 
@@ -379,7 +416,6 @@ async function getContestRanking(page: Page, params: Record<string, unknown>, er
       rank: r.rank,
       score: r.score,
       finishTime: r.finish_time,
-      avatarUrl: r.avatar_url,
     })),
   }
 }

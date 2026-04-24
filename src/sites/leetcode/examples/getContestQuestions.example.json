@@ -4,7 +4,7 @@
   "cases": [
     {
       "input": {
-        "contestSlug": "weekly-contest-438"
+        "titleSlug": "weekly-contest-438"
       },
       "assertions": {
         "status": 200,

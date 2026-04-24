@@ -1,5 +1,22 @@
 # LeetCode Fixture — Progress
 
+## 2026-04-24: Userflow QA — param naming + response trimming
+
+**What changed:**
+- Renamed path params `questionSlug`→`titleSlug` (getSubmissions, getSolutionArticles) and `contestSlug`→`titleSlug` (getContestQuestions, getContestRanking) so output `titleSlug` chains directly as input
+- Added response trimming in adapter: getProblemList strips `__typename`/`frequency`/`isInMyFavorites`/`contestPoint`/`status`; getContestRanking drops `avatarUrl`; getSolutionArticles flattens reactions to `upvotes` count, drops `author.userAvatar`/`uuid`/`hasVideoArticle`; getUserContestRanking filters to attended contests only
+- Updated OpenAPI schema for getSolutionArticles (simplified article shape) and getContestRanking (removed avatarUrl)
+- Updated 4 example files with new param names
+
+**Why:**
+- Blind userflow QA with 3 personas (interview prepper, competitive programmer, recruiter) revealed that `titleSlug` from one op's output couldn't be passed directly to another op — users had to know to rename it to `questionSlug`/`contestSlug`
+- getProblemList returned GraphQL noise (`__typename`, null fields) that bloated responses; getSolutionArticles included avatar URLs and reaction arrays that added ~40% size without agent value
+
+**Verification:** 12/12 PASS. Three multi-step persona workflows verified end-to-end:
+1. getDailyChallenge → getSolutionArticles (titleSlug chains)
+2. getContestHistory → getContestQuestions → getContestRanking (titleSlug chains)
+3. getUserProfile → getUserContestRanking → getRecentSubmissions (username chains)
+
 ## 2026-03-30: Schema fixes + full QA
 
 **What changed:**
