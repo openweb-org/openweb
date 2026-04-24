@@ -25,3 +25,12 @@
 **Changes:** Refactored `adapters/reuters-api.ts` to use the injected `pageFetch` helper (browser-origin fetch through patchright Page) instead of inline `page.evaluate(fetch(...))`. All 4 ops stay on the adapter. Commit `6ceadc5`.
 **Verification:** 4/4 PASS
 **Key discovery:** Full spec extraction migration blocked because the DataDome-gated PF API requires browser-origin fetch, and the `page_global_data` extraction primitive blocks any `fetch(` call.
+
+## 2026-04-24 — Userflow QA: response trimming
+
+**Context:** Blind persona testing (financial analyst, geopolitics researcher, journalist) revealed massive response bloat — 16-25KB for 5 articles due to internal PF API fields (revision_id, display_* booleans, ad_topics, kicker, content_code, source, headline_feature) and deeply nested author/thumbnail objects.
+**Changes:**
+- Added `trimArticle`/`trimListResponse` — strips 20+ internal fields per article, slims authors to name+topic_url, thumbnails to url+caption+alt_text, pagination to size+total_size
+- Added `trimArticleBody` — strips Reuters boilerplate ("Reporting by...", "Our Standards: Thomson Reuters Trust Principles...")
+- Added `trimDetailAuthors` — filters spurious "/sitemap/authors/" nav element from getArticleDetail
+**Verification:** 4/4 PASS. Response sizes: getTopNews 25KB→5.4KB, getTopicArticles 18KB→5KB, searchArticles 16KB→5.3KB (67-78% reduction). getArticleDetail body clean, authors correct.

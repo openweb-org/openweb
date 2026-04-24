@@ -2,13 +2,9 @@ import type { Page } from 'patchright'
 
 import type { AdapterHelpers, CustomRunner } from '../../../types/adapter.js'
 
-/* Reuters — thin adapter.
- * Reuters' internal PF API (/pf/api/v3/content/fetch/*) is DataDome-protected
- * and only responds to same-origin browser fetches. Spec-based
- * page_global_data expressions cannot call fetch(), so PF API ops stay here
- * using the pageFetch helper.
- * getArticleDetail stays here too because article_url contains slashes that
- * would be percent-encoded by the spec's page_url template substitution. */
+/* Reuters — adapter with response trimming.
+ * PF API is DataDome-protected, same-origin browser fetch only.
+ * getArticleDetail navigates to article URL (path contains slashes). */
 
 async function isDataDomeBlocked(page: Page): Promise<boolean> {
   try {
@@ -59,14 +55,78 @@ async function pfFetch(
   throw helpers.errors.fatal(`Reuters API returned ${status}`)
 }
 
+/* ── trimming ── */
+
+type R = Record<string, unknown>
+
+function trimAuthor(a: R): R {
+  return { name: (a.name as string) || '', topic_url: (a.topic_url as string) || '' }
+}
+
+function trimThumbnail(t: R): R {
+  return {
+    url: (t.url as string) || '',
+    caption: (t.caption as string) || '',
+    alt_text: (t.alt_text as string) || '',
+  }
+}
+
+function trimArticle(raw: R): R {
+  const authors = ((raw.authors as R[]) ?? []).map(trimAuthor)
+  const thumb = raw.thumbnail as R | undefined
+  return {
+    id: raw.id,
+    title: raw.title || raw.basic_headline,
+    description: raw.description,
+    canonical_url: raw.canonical_url,
+    published_time: raw.published_time,
+    updated_time: raw.updated_time ?? null,
+    word_count: raw.word_count ?? null,
+    read_minutes: raw.read_minutes ?? null,
+    authors,
+    thumbnail: thumb ? trimThumbnail(thumb) : null,
+  }
+}
+
+function trimListResponse(raw: unknown): unknown {
+  const data = raw as R
+  const result = (data.result ?? data) as R
+  const articles = ((result.articles as R[]) ?? []).map(trimArticle)
+  const pagination = result.pagination as R | undefined
+  return {
+    result: {
+      pagination: pagination
+        ? { size: pagination.size, total_size: pagination.total_size }
+        : undefined,
+      articles,
+    },
+  }
+}
+
+const BOILERPLATE_RE = /(?:\n+(?:Reporting by .+|(?:Our Standards|Compiled by): .+))+\s*$/
+
+function trimArticleBody(body: string): string {
+  return body.replace(BOILERPLATE_RE, '').trim()
+}
+
+function trimDetailAuthors(authors: R[]): R[] {
+  return authors
+    .filter((a) => {
+      const url = (a.topic_url as string) || ''
+      return !url.includes('/sitemap/')
+    })
+    .map(trimAuthor)
+}
+
 async function searchArticles(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
   const keyword = String(params.keyword ?? '')
   if (!keyword) throw helpers.errors.missingParam('keyword')
   const offset = Number(params.offset ?? 0)
   const size = Number(params.size ?? 10)
-  return pfFetch(page, helpers, 'articles-by-search-v2', {
+  const raw = await pfFetch(page, helpers, 'articles-by-search-v2', {
     keyword, offset, orderby: 'display_date:desc', size, website: 'reuters',
   })
+  return trimListResponse(raw)
 }
 
 async function getTopicArticles(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
@@ -74,16 +134,18 @@ async function getTopicArticles(page: Page, params: Record<string, unknown>, hel
   if (!sectionId) throw helpers.errors.missingParam('section_id')
   const offset = Number(params.offset ?? 0)
   const size = Number(params.size ?? 10)
-  return pfFetch(page, helpers, 'articles-by-section-alias-or-id-v1', {
+  const raw = await pfFetch(page, helpers, 'articles-by-section-alias-or-id-v1', {
     section_id: sectionId, offset, size, website: 'reuters',
   })
+  return trimListResponse(raw)
 }
 
 async function getTopNews(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
   const size = Number(params.size ?? 10)
-  return pfFetch(page, helpers, 'articles-by-section-alias-or-id-v1', {
+  const raw = await pfFetch(page, helpers, 'articles-by-section-alias-or-id-v1', {
     section_id: '/home', offset: 0, size, website: 'reuters',
   })
+  return trimListResponse(raw)
 }
 
 async function getArticleDetail(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
@@ -186,6 +248,8 @@ async function getArticleDetail(page: Page, params: Record<string, unknown>, hel
   })
 
   if (!article.title) throw helpers.errors.fatal('Could not extract article content from page')
+  if (article.body) article.body = trimArticleBody(article.body)
+  if (article.authors) article.authors = trimDetailAuthors(article.authors as unknown as R[])
   return { result: article }
 }
 
@@ -198,7 +262,7 @@ const operations: Record<string, (page: Page, params: Record<string, unknown>, h
 
 const adapter: CustomRunner = {
   name: 'reuters-api',
-  description: 'Reuters — PF API ops (DataDome-gated same-origin fetch) + getArticleDetail (page.goto with path slashes)',
+  description: 'Reuters — response trimming for all 4 read ops, DataDome-gated PF API + article detail page extraction',
 
   async run(ctx) {
     const { page, operation, params, helpers } = ctx
