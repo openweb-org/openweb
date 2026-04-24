@@ -18,7 +18,7 @@ async function interceptApi(
   page: Page,
   navigateUrl: string,
   urlPatterns: string[],
-  opts?: { scroll?: boolean; deadline?: number },
+  opts?: { scroll?: boolean; scrollSteps?: number; deadline?: number },
 ): Promise<Record<string, unknown> | null> {
   let captured: unknown = null
   const handler = async (resp: PwResponse) => {
@@ -35,8 +35,11 @@ async function interceptApi(
     await wait(3000)
 
     if (opts?.scroll) {
-      await page.evaluate(() => window.scrollBy(0, 500)).catch(() => {})
-      await wait(2000)
+      for (let i = 0; i < (opts.scrollSteps ?? 1); i++) {
+        if (captured) break
+        await page.evaluate(() => window.scrollBy(0, 600)).catch(() => {})
+        await wait(1500)
+      }
     }
 
     const deadline = Date.now() + (opts?.deadline ?? 15_000)
@@ -149,6 +152,94 @@ function normalizeUserDetail(data: Record<string, unknown>): Record<string, unkn
 
 /* ── read ops ────────────────────────────────────────────────── */
 
+async function searchVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const keyword = String(params.keyword || '')
+  if (!keyword) throw errors.missingParam('keyword')
+  const count = Number(params.count) || 12
+
+  const url = `${BASE}/search?q=${encodeURIComponent(keyword)}`
+  const data = await interceptApi(page, url, ['/api/search/general/full/'])
+  if (!data) return { status_code: 0, data: [], cursor: 0, has_more: 0 }
+
+  const items = (data.data || []) as Array<Record<string, unknown>>
+  return {
+    status_code: 0,
+    data: items.slice(0, count).map((d) => ({
+      type: d.type,
+      item: normalizeVideoItem((d.item || d) as Record<string, unknown>),
+    })),
+    cursor: data.cursor || 0,
+    has_more: data.has_more || 0,
+  }
+}
+
+async function searchUsers(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const keyword = String(params.keyword || '')
+  if (!keyword) throw errors.missingParam('keyword')
+
+  const url = `${BASE}/search/user?q=${encodeURIComponent(keyword)}`
+  const data = await interceptApi(page, url, ['/api/search/user/full/'])
+  if (!data) return { user_list: [], has_more: 0 }
+
+  const list = (data.user_list || []) as Array<Record<string, unknown>>
+  return {
+    user_list: list.map((u) => {
+      const info = (u.user_info || {}) as Record<string, unknown>
+      return {
+        user_info: {
+          uid: info.uid || '',
+          unique_id: info.unique_id || '',
+          nickname: info.nickname || '',
+          follower_count: Number(info.follower_count) || 0,
+          signature: info.signature || '',
+        },
+      }
+    }),
+    cursor: data.cursor || '0',
+    has_more: data.has_more || 0,
+  }
+}
+
+async function getHashtagDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const name = String(params.challengeName || params.hashtag || '')
+  if (!name) throw errors.missingParam('challengeName')
+
+  const data = await interceptApi(page, `${BASE}/tag/${encodeURIComponent(name)}`, ['/api/challenge/detail/'])
+  if (!data) {
+    const ssrResult = await page.evaluate(() => {
+      const root = (window as Record<string, unknown>).__$UNIVERSAL_DATA$__ as Record<string, unknown> | undefined
+      const scope = (root?.__DEFAULT_SCOPE__ as Record<string, unknown>)?.[
+        'webapp.challenge-detail'
+      ] as Record<string, unknown> | undefined
+      return scope ?? null
+    })
+    if (!ssrResult) throw errors.retriable(`Hashtag "${name}" not found`)
+    return trimHashtagDetail(ssrResult)
+  }
+  return trimHashtagDetail(data)
+}
+
+function trimHashtagDetail(data: Record<string, unknown>): Record<string, unknown> {
+  const info = (data.challengeInfo || {}) as Record<string, unknown>
+  const challenge = (info.challenge || {}) as Record<string, unknown>
+  const stats = (info.stats || challenge.stats || {}) as Record<string, unknown>
+  return {
+    challengeInfo: {
+      challenge: {
+        id: challenge.id || '',
+        title: challenge.title || '',
+        desc: challenge.desc || '',
+        isCommerce: challenge.isCommerce || false,
+      },
+      stats: {
+        videoCount: Number(stats.videoCount) || 0,
+        viewCount: Number(stats.viewCount) || 0,
+      },
+    },
+    status_code: data.status_code ?? data.statusCode ?? 0,
+  }
+}
+
 async function getVideoDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
@@ -219,9 +310,49 @@ async function getVideoComments(page: Page, params: Record<string, unknown>, err
   const handle = username.startsWith('@') ? username : `@${username}`
   const url = `${BASE}/${handle}/video/${videoId}`
 
-  const data = await interceptApi(page, url, ['/api/comment/list/', '/comment/list'], { scroll: true })
-  if (!data) return { comments: [], total: 0, hasMore: false }
+  let captured: unknown = null
+  const handler = async (resp: PwResponse) => {
+    if (captured) return
+    const rUrl = resp.url()
+    if (rUrl.includes('/api/comment/list/') || rUrl.includes('/comment/list')) {
+      try { captured = await resp.json() } catch { /* ignore */ }
+    }
+  }
 
+  page.on('response', handler)
+  try {
+    await page.goto(url, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+    await wait(3000)
+
+    // Click the comment icon to trigger comment loading
+    if (!captured) {
+      const clicked = await page.evaluate(() => {
+        const btn = document.querySelector('[data-e2e="comment-icon"]') as HTMLElement | null
+        if (btn) { btn.click(); return true }
+        const spans = Array.from(document.querySelectorAll('span[data-e2e="comment-count"]'))
+        if (spans[0]) { (spans[0] as HTMLElement).click(); return true }
+        return false
+      }).catch(() => false)
+      if (clicked) await wait(3000)
+    }
+
+    // Scroll to trigger lazy loading if click didn't work
+    for (let i = 0; i < 4 && !captured; i++) {
+      await page.evaluate(() => window.scrollBy(0, 600)).catch(() => {})
+      await wait(1500)
+    }
+
+    const deadline = Date.now() + 10_000
+    while (!captured && Date.now() < deadline) {
+      await wait(500)
+    }
+  } finally {
+    page.off('response', handler)
+  }
+
+  if (!captured) return { comments: [], total: 0, hasMore: false }
+
+  const data = captured as Record<string, unknown>
   const commentsList = (data.comments || []) as Array<Record<string, unknown>>
   return {
     comments: commentsList.map(normalizeComment),
@@ -284,15 +415,38 @@ async function getHashtagVideos(page: Page, params: Record<string, unknown>, err
   const hashtag = String(params.hashtag || '')
   if (!hashtag) throw errors.missingParam('hashtag')
 
-  const data = await interceptApi(page, `${BASE}/tag/${encodeURIComponent(hashtag)}`, ['/api/challenge/item_list/'])
-  if (!data) return { items: [], hasMore: false }
+  const tagUrl = `${BASE}/tag/${encodeURIComponent(hashtag)}`
+  const data = await interceptApi(page, tagUrl, ['/api/challenge/item_list/', '/api/search/item/'], { scroll: true, scrollSteps: 3 })
 
-  const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
-  return {
-    items: items.map(normalizeVideoItem),
-    hasMore: data.hasMore === true || data.has_more === 1,
-    cursor: data.cursor || '',
+  if (data) {
+    const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
+    return {
+      items: items.map(normalizeVideoItem),
+      hasMore: data.hasMore === true || data.has_more === 1,
+      cursor: data.cursor || '',
+    }
   }
+
+  const ssrResult = await page.evaluate(() => {
+    const root = (window as Record<string, unknown>).__$UNIVERSAL_DATA$__ as Record<string, unknown> | undefined
+    const scope = (root?.__DEFAULT_SCOPE__ as Record<string, unknown>)?.[
+      'webapp.challenge-detail'
+    ] as Record<string, unknown> | undefined
+    return scope ?? null
+  })
+
+  if (ssrResult) {
+    const itemList = (ssrResult as Record<string, unknown>).itemList as Array<Record<string, unknown>> | undefined
+    if (Array.isArray(itemList) && itemList.length > 0) {
+      return {
+        items: itemList.map(normalizeVideoItem),
+        hasMore: false,
+        cursor: '',
+      }
+    }
+  }
+
+  return { items: [], hasMore: false }
 }
 
 async function getRelatedVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
@@ -532,11 +686,14 @@ async function unblockUser(page: Page, params: Record<string, unknown>, errors: 
 /* ── runner export ───────────────────────────────────────────── */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
+  searchVideos,
+  searchUsers,
   getVideoDetail,
   getUserProfile,
   getVideoComments,
   getHomeFeed,
   getUserVideos,
+  getHashtagDetail,
   getHashtagVideos,
   getRelatedVideos,
   likeVideo,

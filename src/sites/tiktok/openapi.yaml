@@ -19,6 +19,9 @@ paths:
       summary: "Search videos by keyword — title, description, author, play count, likes, shares, video URLs, music info"
       x-openweb:
         permission: read
+        adapter:
+          name: tiktok-web
+          operation: searchVideos
         build:
           stable_id: f04932b312a0b4fe
           tool_version: 2
@@ -126,19 +129,15 @@ paths:
                                   description: Aspect ratio label
                                 cover:
                                   type: string
-                                  format: uri
                                   description: Thumbnail URL
                                 originCover:
                                   type: string
-                                  format: uri
                                   description: Original cover image URL
                                 playAddr:
                                   type: string
-                                  format: uri
                                   description: Video playback URL
                                 downloadAddr:
                                   type: string
-                                  format: uri
                                   description: Video download URL
                                 format:
                                   type: string
@@ -164,7 +163,7 @@ paths:
                                   description: Display name
                                 avatarThumb:
                                   type: string
-                                  format: uri
+
                                   description: Avatar thumbnail URL
                                 signature:
                                   type: string
@@ -189,7 +188,7 @@ paths:
                                   description: Track title
                                 playUrl:
                                   type: string
-                                  format: uri
+
                                   description: Music playback URL
                                 authorName:
                                   type: string
@@ -331,15 +330,15 @@ paths:
                         description: Duration in seconds
                       cover:
                         type: string
-                        format: uri
+
                         description: Thumbnail URL
                       playAddr:
                         type: string
-                        format: uri
+
                         description: Video playback URL
                       downloadAddr:
                         type: string
-                        format: uri
+
                         description: Video download URL
                   author:
                     type: object
@@ -359,7 +358,7 @@ paths:
                         description: Display name
                       avatarThumb:
                         type: string
-                        format: uri
+
                         description: Avatar thumbnail URL
                       signature:
                         type: string
@@ -384,7 +383,7 @@ paths:
                         description: Music artist name
                       playUrl:
                         type: string
-                        format: uri
+
                         description: Music playback URL
                       duration:
                         type: integer
@@ -484,11 +483,9 @@ paths:
                     description: Display name
                   avatarThumb:
                     type: string
-                    format: uri
                     description: Avatar thumbnail URL
                   avatarMedium:
                     type: string
-                    format: uri
                     description: Medium-size avatar URL
                   signature:
                     type: string
@@ -607,7 +604,7 @@ paths:
                               description: Commenter display name
                             avatarThumb:
                               type: string
-                              format: uri
+      
                               description: Commenter avatar URL
                   total:
                     type: integer
@@ -684,11 +681,11 @@ paths:
                               description: Duration in seconds
                             cover:
                               type: string
-                              format: uri
+      
                               description: Thumbnail URL
                             playAddr:
                               type: string
-                              format: uri
+      
                               description: Video playback URL
                         author:
                           type: object
@@ -708,7 +705,7 @@ paths:
                               description: Author display name
                             avatarThumb:
                               type: string
-                              format: uri
+      
                               description: Author avatar URL
                             verified:
                               type: boolean
@@ -1135,11 +1132,11 @@ paths:
                               description: Video asset ID
                             cover:
                               type: string
-                              format: uri
+      
                               description: Thumbnail URL
                             playAddr:
                               type: string
-                              format: uri
+      
                               description: Video playback URL
                         author:
                           type: object
@@ -1186,6 +1183,9 @@ paths:
       summary: "Search users by keyword — username, nickname, follower count, verified status"
       x-openweb:
         permission: read
+        adapter:
+          name: tiktok-web
+          operation: searchUsers
         build:
           stable_id: tk_searchUsers_v1
           tool_version: 2
@@ -1525,6 +1525,9 @@ paths:
       summary: "Get hashtag/challenge details — description, video count, view count"
       x-openweb:
         permission: read
+        adapter:
+          name: tiktok-web
+          operation: getHashtagDetail
         build:
           stable_id: tk_getHashtagDetail_v1
           tool_version: 2
