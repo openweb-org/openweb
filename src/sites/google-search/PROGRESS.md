@@ -1,5 +1,34 @@
 # Google Search — Progress
 
+## 2026-04-24: Userflow QA — fix stale selectors for news, shopping, videos
+
+**What changed:**
+- searchNews: snippet selector `.GI74Re` stale → replaced with `.UqSP2b` (fallback to old)
+- searchShopping: complete rewrite — `.pla-unit` container gone, Google Shopping now
+  uses `g-inner-card` elements with new inner selectors (`.gkQHve` title, `.lmQWe` price,
+  `.DoCHT` original price, `.RDApEe` reviews); added `waitForFunction` for price load
+- searchVideos: snippet selector `.VwiC3b`/`[data-sncf]` stale → replaced with `.ITZIwc`
+- searchLocal: swapped primary/fallback order for rating (`.yi40Hd` first) and reviews
+  (`.RDApEe` first); stale `.MW4etd`/`.UY7F9` kept as fallbacks
+
+**Why:**
+- Blind userflow QA across 3 personas (Researcher, Shopper, Local searcher) revealed
+  4 operations returning empty/zero data due to Google DOM changes since last verification.
+
+**Personas tested:**
+1. Researcher — "climate change economic impact 2026": searchWeb (10), searchNews (10 w/ snippets),
+   searchSuggestions (15), getKnowledgePanel (null — expected), getPeopleAlsoAsk (4), getRelatedSearches (8)
+2. Shopper — "best wireless earbuds 2026": searchWeb (10), searchShopping (65), searchVideos (10 w/ snippets),
+   searchImages (100)
+3. Local searcher — "dentist near me San Jose": searchLocal (3), searchWeb (8), getPeopleAlsoAsk (4)
+
+**Known issues:**
+- searchLocal first result sometimes includes Google's "Duplicate information" notice in name text
+- searchLocal address may include distance + phone depending on Google's rendering variant
+
+**Key files:** `adapters/google-search.ts`
+**Verification:** All 10 ops return data; searchNews/searchVideos snippets populated; searchShopping 65 products
+
 ## 2026-04-02: Fix adapter navigation, trim to 9 verified ops
 
 **What changed:**

@@ -91,7 +91,7 @@ async function searchNews(page: Page, params: Record<string, unknown>): Promise<
     for (const div of containers) {
       const linkEl = div.querySelector('a.WlydOe')
       const titleEl = div.querySelector('.n0jPhd')
-      const snippetEl = div.querySelector('.GI74Re')
+      const snippetEl = div.querySelector('.UqSP2b') || div.querySelector('.GI74Re')
       const sourceContainer = div.querySelector('.MgUUmf')
       const sourceNameEl = sourceContainer?.querySelector('.WJMUdc') || sourceContainer?.querySelector('span')
       const timeEl = div.querySelector('.OSrXXb span[data-ts]')
@@ -126,7 +126,7 @@ async function searchVideos(page: Page, params: Record<string, unknown>): Promis
       const h3 = div.querySelector('h3')
       const anchor = div.querySelector('a[href]')
       const cite = div.querySelector('cite')
-      const snippetEl = div.querySelector('.VwiC3b, [data-sncf]')
+      const snippetEl = div.querySelector('.ITZIwc') || div.querySelector('.VwiC3b, [data-sncf]')
       if (h3 && anchor) {
         items.push({
           title: h3.textContent?.trim() || '',
@@ -149,25 +149,25 @@ async function searchVideos(page: Page, params: Record<string, unknown>): Promis
 
 async function searchShopping(page: Page, params: Record<string, unknown>): Promise<unknown> {
   await navigateToSearch(page, String(params.q ?? ''), { udm: '28' })
+  await page.waitForFunction(() => /\$\d/.test(document.body.innerText), { timeout: 10_000 }).catch(() => {})
   return page.evaluate(() => {
     const items: Array<{ title: string; price: string; originalPrice: string; merchant: string; reviewCount: string }> = []
-    const units = document.querySelectorAll('.pla-unit')
-    for (const unit of units) {
-      const titleDiv = unit.querySelector('.bXPcId div')
-      const priceEl = unit.querySelector('.VbBaOe')
-      const origPriceEl = unit.querySelector('.tWaJ3e')
-      const merchantEl = unit.querySelector('.UsGWMe') || unit.querySelector('.WJMUdc')
-      const reviewEl = unit.querySelector('.yoARA')
-      const title = titleDiv?.textContent?.trim() || ''
-      if (title) {
-        items.push({
-          title,
-          price: priceEl?.textContent?.trim() || '',
-          originalPrice: origPriceEl?.textContent?.trim() || '',
-          merchant: merchantEl?.textContent?.trim() || merchantEl?.getAttribute('aria-label')?.replace(/^From /, '') || '',
-          reviewCount: reviewEl?.textContent?.trim() || '',
-        })
-      }
+    const cards = document.querySelectorAll('g-inner-card')
+    for (const card of cards) {
+      const titleEl = card.querySelector('.gkQHve') || card.querySelector('.bXPcId div')
+      const title = titleEl?.textContent?.trim() || ''
+      if (!title) continue
+      const priceEl = card.querySelector('.lmQWe') || card.querySelector('.VbBaOe')
+      const origPriceEl = card.querySelector('.DoCHT') || card.querySelector('.tWaJ3e')
+      const merchantEl = card.querySelector('.WJMUdc') || card.querySelector('.UsGWMe')
+      const reviewEl = card.querySelector('.RDApEe') || card.querySelector('.yoARA')
+      items.push({
+        title,
+        price: priceEl?.textContent?.trim() || '',
+        originalPrice: origPriceEl?.textContent?.trim() || '',
+        merchant: merchantEl?.textContent?.trim() || '',
+        reviewCount: reviewEl?.textContent?.trim().replace(/[()]/g, '') || '',
+      })
     }
     const input = document.querySelector('textarea[name=q]') || document.querySelector('input[name=q]')
     return {
@@ -248,15 +248,12 @@ async function searchLocal(page: Page, params: Record<string, unknown>): Promise
     for (const card of cards) {
       const details = card.querySelector('.rllt__details')
       if (!details) continue
-      const nameEl = details.querySelector('[role="heading"], .dbg0pd, .OSrXXb')
-      const ratingEl = details.querySelector('.MW4etd, .yi40Hd')
-      const reviewsEl = details.querySelector('.UY7F9, .RDApEe')
-      // Structure: div[0]=name, div[1]=rating row, div[2]=type/price, div[3]=address
-      // Type/price/address are in the last two child divs after name and rating
+      const nameEl = details.querySelector('.OSrXXb') || details.querySelector('[role="heading"], .dbg0pd')
+      const ratingEl = details.querySelector('.yi40Hd') || details.querySelector('.MW4etd')
+      const reviewsEl = details.querySelector('.RDApEe') || details.querySelector('.UY7F9')
       const divs = Array.from(details.children) as HTMLElement[]
       const name = nameEl?.textContent?.trim() || ''
       if (name) {
-      // div[1] has "rating · price · type" inline; extract type from after last " · "
       const infoText = divs[1]?.textContent?.trim() || ''
       const infoParts = infoText.split(/\s*·\s*/)
       const type = infoParts.length > 1 ? infoParts[infoParts.length - 1] : ''
