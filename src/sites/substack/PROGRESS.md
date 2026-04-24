@@ -58,3 +58,48 @@ adapter accidentally avoided the trap by using a same-origin relative path.
 `pnpm dev verify medium notion bluesky` — no regressions from the redirect
 rewrite or iframe-fetch change.
 
+## 2026-04-24 — Userflow QA: fix broken search, add response trimming, switch to node transport
+
+**Context:** Userflow QA across 3 personas (investor, tech enthusiast, writer).
+Ran all 4 ops blind and found two critical issues.
+
+**Findings:**
+1. `searchPosts` completely broken — the `/api/v1/post/search` endpoint returns
+   empty results for every query (via both browser and curl). Substack migrated
+   search to `/api/v1/top/search` with a different response envelope (`items[]`
+   of typed entities with `post`, `publication` nested inside).
+2. Massive response bloat on all ops — getArchive returned 62 keys per post
+   (spec declares 14), getPost was ~139KB for a single article, getPostComments
+   was 551KB for 97 comments (35 keys per comment vs 8 in spec). All responses
+   truncated by the output gate.
+3. Substack's REST API works via plain HTTP (no browser needed) — `curl` returns
+   identical data. The `page` transport was unnecessary overhead.
+
+**Changes:**
+- New `adapters/substack.ts` TypeScript adapter using `nodeFetch`:
+  - `searchPosts`: hits `/api/v1/top/search`, extracts post items from the feed
+    envelope, trims to spec fields (11 keys including nested publication/bylines).
+  - `getArchive`: trims from 62 → 14 keys per post, strips body_html/body_json
+    from listing results.
+  - `getPost`: trims to 16 keys, caps body_html at 80KB.
+  - `getPostComments`: trims from 35 → 8 keys per comment, recursively trims
+    nested children.
+- `openapi.yaml`: switched transport from `page` to `node`, wired adapter for
+  all 4 ops (`adapter: { name: substack, operation: ... }`), updated searchPosts
+  path to `/api/v1/top/search`, bumped tool_version to 4, removed per-operation
+  server blocks (adapter handles subdomain routing).
+- Removed legacy `adapters/substack-api.js` (unused since 2026-04-18).
+- Updated DOC.md and SKILL.md (removed getTrending references, documented node
+  transport).
+
+**Size reduction:**
+| Operation | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| searchPosts | 0 results (broken) | 20 results, 10KB | fixed |
+| getArchive (5 posts) | 40KB, 62 keys/post | ~4KB, 14 keys/post | ~90% |
+| getPost | 139KB | ~82KB (body-dominated) | ~41% |
+| getPostComments (97) | 551KB, 35 keys/comment | 179KB, 8 keys/comment | ~68% |
+
+**Verification:** `pnpm dev verify substack` → 4/4 PASS. Lint clean (no new
+errors). All 3 persona workflows validated end-to-end.
+

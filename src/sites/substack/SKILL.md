@@ -18,10 +18,6 @@ Newsletter and long-form content platform. Content platform archetype.
 1. `getArchive(subdomain, search="keyword")` → filtered posts with `slug`
 2. `getPost(subdomain, slug)` → full article
 
-### Discover trending content
-1. `getTrending(limit)` → popular posts with `slug`, `canonical_url` (subdomain from URL host)
-2. `getPost(subdomain, slug)` → full article with `body_html`
-
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -30,7 +26,6 @@ Newsletter and long-form content platform. Content platform archetype.
 | getArchive | list/search posts in a publication | subdomain ← searchPosts (or known) | id, title, slug, post_date, audience | paginated (offset, limit) |
 | getPost | read full article | subdomain, slug ← searchPosts / getArchive | title, body_html, word_count, reaction_count | slug from search or archive |
 | getPostComments | read discussion | subdomain, postId ← getArchive / getPost | body, name, date, reaction_count, children | nested replies via children |
-| getTrending | discover popular posts | limit | title, slug, post_date, canonical_url | entry point; subdomain from canonical_url |
 
 ## Quick Start
 
@@ -46,7 +41,4 @@ openweb substack exec getPost '{"subdomain":"astralcodexten","slug":"open-thread
 
 # Get comments on a post
 openweb substack exec getPostComments '{"subdomain":"astralcodexten","postId":158504113}'
-
-# See what's trending
-openweb substack exec getTrending '{"limit":10}'
 ```

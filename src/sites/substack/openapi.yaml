@@ -4,23 +4,26 @@ info:
   version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
-    compiled_at: '2026-04-01T00:00:00Z'
+    compiled_at: '2026-04-24T00:00:00Z'
     requires_auth: false
 servers:
 - url: https://substack.com
   x-openweb:
-    transport: page
+    transport: node
 paths:
-  /api/v1/post/search:
+  /api/v1/top/search:
     get:
       operationId: searchPosts
       summary: Search posts across all of Substack by keyword — returns title, subtitle, slug, post_date, canonical_url, publication info, reaction/comment counts
       x-openweb:
+        transport: node
         permission: read
-        adapter: false
+        adapter:
+          name: substack
+          operation: searchPosts
         build:
           stable_id: ss0001
-          tool_version: 3
+          tool_version: 4
       parameters:
       - name: query
         in: query
@@ -92,27 +95,22 @@ paths:
     get:
       operationId: getArchive
       summary: List or search posts in a publication — title, subtitle, slug, post_date, audience, reaction/comment counts, cover image
-      servers:
-      - url: https://{subdomain}.substack.com
-        variables:
-          subdomain:
-            default: astralcodexten
-            description: Publication subdomain (e.g. "astralcodexten", "platformer", "mattstoller").
-        x-openweb:
-          transport: page
       x-openweb:
+        transport: node
         permission: read
-        adapter: false
+        adapter:
+          name: substack
+          operation: getArchive
         build:
           stable_id: ss0002
-          tool_version: 3
+          tool_version: 4
       parameters:
       - name: subdomain
         in: query
         required: true
         schema:
           type: string
-        description: Publication subdomain — also used as server variable. Ignored as a query parameter by Substack.
+        description: Publication subdomain (e.g. "astralcodexten", "platformer", "mattstoller").
       - name: sort
         in: query
         required: false
@@ -163,7 +161,6 @@ paths:
                       type: string
                     post_date:
                       type: string
-                      format: date-time
                     canonical_url:
                       type: string
                     audience:
@@ -194,27 +191,22 @@ paths:
     get:
       operationId: getPost
       summary: Get full post/article by slug — title, body_html, word_count, post_date, audience, reaction/comment counts, author bylines, cover image
-      servers:
-      - url: https://{subdomain}.substack.com
-        variables:
-          subdomain:
-            default: astralcodexten
-            description: Publication subdomain (e.g. "astralcodexten").
-        x-openweb:
-          transport: page
       x-openweb:
+        transport: node
         permission: read
-        adapter: false
+        adapter:
+          name: substack
+          operation: getPost
         build:
           stable_id: ss0003
-          tool_version: 3
+          tool_version: 4
       parameters:
       - name: subdomain
         in: query
         required: true
         schema:
           type: string
-        description: Publication subdomain — also used as server variable. Ignored as a query parameter by Substack.
+        description: Publication subdomain (e.g. "astralcodexten", "platformer").
       - name: slug
         in: path
         required: true
@@ -241,7 +233,6 @@ paths:
                     type: string
                   post_date:
                     type: string
-                    format: date-time
                   canonical_url:
                     type: string
                   audience:
@@ -281,27 +272,22 @@ paths:
     get:
       operationId: getPostComments
       summary: Get comments on a post — body, author name, date, reaction count, nested children
-      servers:
-      - url: https://{subdomain}.substack.com
-        variables:
-          subdomain:
-            default: astralcodexten
-            description: Publication subdomain.
-        x-openweb:
-          transport: page
       x-openweb:
+        transport: node
         permission: read
-        adapter: false
+        adapter:
+          name: substack
+          operation: getPostComments
         build:
           stable_id: ss0004
-          tool_version: 3
+          tool_version: 4
       parameters:
       - name: subdomain
         in: query
         required: true
         schema:
           type: string
-        description: Publication subdomain — also used as server variable. Ignored as a query parameter by Substack.
+        description: Publication subdomain (e.g. "astralcodexten").
       - name: postId
         in: path
         required: true

@@ -56,25 +56,19 @@ No auth required for public read operations. Paywalled posts return truncated
 `body_html`. Login required only for subscriber-only content.
 
 ## Transport
-`page` — pure spec, no adapter. Per-publication ops (getArchive, getPost,
-getPostComments) use operation-level `servers: - url: https://{subdomain}.substack.com`
-with the `subdomain` param consumed as a server variable. The runtime acquires a
-page on the resolved subdomain, then `page.evaluate(fetch())` runs same-origin.
-searchPosts stays on the default `substack.com` server.
+`node` — TypeScript adapter with `nodeFetch`. The adapter handles URL
+construction for each operation: `searchPosts` hits `substack.com/api/v1/top/search`,
+while per-publication ops (getArchive, getPost, getPostComments) hit
+`{subdomain}.substack.com/api/v1/*`. All responses are trimmed to spec-declared
+fields, eliminating ~75% of raw API bloat.
 
-Many publication subdomains (`{pub}.substack.com`) redirect to the publication's
-custom domain (`www.{pub}.com`). The runtime's browser-fetch path detects the
-redirect and rewrites the absolute API URL to the page's actual origin so the
-call stays same-origin (substack serves `/api/v1/*` on both hosts). Without this
-rewrite the absolute URL becomes cross-origin from the redirected page and
-fails CORS as `TypeError: Failed to fetch`.
+Custom domain redirects (e.g., `astralcodexten.substack.com` →
+`www.astralcodexten.com`) are followed automatically by `nodeFetch`.
 
 ## Known Issues
-- `searchPosts` returns empty results in headless browser context — likely bot detection on the search endpoint. Use `getArchive` with `search` param as a workaround for per-publication search.
 - `/api/v1/publication` returns 403 on some publications (not available for all pubs).
 - Custom domain publications (e.g., platformer.news) redirect from `*.substack.com`.
-  The runtime uses `{subdomain}.substack.com` which follows redirects automatically.
+  The adapter follows redirects automatically.
 - Paywalled posts (`audience: "only_paid"`) have truncated content in `body_html`.
 - `getTrending` was removed: the public `/api/v1/trending` endpoint now returns
-  HTTP 404 from every host (substack.com and publication subdomains). No
-  documented replacement; revisit if Substack ships a new discovery endpoint.
+  HTTP 404 from every host. No documented replacement.
