@@ -44,20 +44,19 @@ paths:
                     id:
                       type: string
                     title:
-                      type: string
+                      type: [string, 'null']
                     type:
                       type: string
                       enum: [chatTypePrivate, chatTypeBasicGroup, chatTypeSuperGroup, chatTypeChannel]
                     membersCount:
                       type: integer
+                    unreadCount:
+                      type: integer
                     lastMessageDate:
-                      oneOf:
-                        - type: string
-                        - type: integer
-                      description: Unix timestamp of the last message (may be string or integer)
+                      type: integer
+                      description: Unix timestamp of the last message
                   required:
                     - id
-                    - title
                     - type
 
   /internal/messages:
@@ -171,7 +170,7 @@ paths:
                     chatId:
                       type: string
                     chatTitle:
-                      type: string
+                      type: [string, 'null']
                     date:
                       type: integer
                     text:
@@ -266,9 +265,7 @@ paths:
                   lastName:
                     type: string
                   username:
-                    oneOf:
-                      - type: string
-                      - type: integer
+                    type: [string, 'null']
                   phoneNumber:
                     type: string
                   isPremium:

@@ -1,3 +1,32 @@
+## 2026-04-24 — Userflow QA: response trimming and fixes
+
+**Context:** Blind persona QA (crypto trader, news junkie, family member) across read ops: getChats, getMessages, searchMessages, getUserInfo, getMe, getContacts.
+**Findings:**
+- `getChats`: empty `title: ""` for private chats with no name, `lastMessageDate` always missing (broken data path — adapter read `chat.lastMessage.date` which TG Web A doesn't populate), self-chat showed user's name instead of "Saved Messages"
+- `getMessages`/`searchMessages`: `senderName: ""` empty string leaked instead of omission for unknown senders, `chatTitle: "unknown"` for private chats
+- `getUserInfo`/`getMe`/`getContacts`: undefined fields serialized (e.g. `phoneNumber: ""`, `status: undefined`) — should be omitted
+- Session drops after ~2 CLI invocations: page close (owned=true) corrupts Telegram's IndexedDB session on page reopen
+
+**Changes (adapter):**
+- `getChats`: derive `lastMessageDate` from `messages.byChatId[id]` when `chat.lastMessage.date` missing; show "Saved Messages" for self-chat; add `unreadCount` from chat state; omit zero-value `membersCount`
+- `getMessages`: omit `senderId`/`senderName` when absent instead of empty strings
+- `searchMessages`: omit empty `chatTitle`/`senderId`/`senderName`; added `usernames` to user type for fallback resolution
+- `getUserInfo`: spread-conditional pattern — only include fields with truthy values
+- `getMe`: same spread-conditional cleanup
+- `getContacts`: same spread-conditional cleanup; omit empty `phoneNumber`/`status`
+
+**Changes (spec):**
+- `getMe.username`: fixed schema from `oneOf: [string, integer]` → `type: [string, 'null']`
+- `getChats.title`: made optional (some private chats have no identifiable title)
+- `getChats.lastMessageDate`: simplified from `oneOf: [string, integer]` → `type: integer`
+- `searchMessages.chatTitle`: changed to nullable
+- Added `unreadCount` field to getChats schema
+- `manifest.json`: corrected `operation_count` from 7 → 13
+
+**Known issue (architecture):** Telegram session drops after ~2 CLI invocations. Root cause: `acquirePage` creates an owned page that gets closed in the finally block after each call. Page close triggers Telegram's session cleanup in IndexedDB, so subsequent calls find the session expired. This is a runtime-level issue (page ownership model) not adapter-specific — affects any SPA that stores auth in IndexedDB with cleanup-on-close handlers.
+
+**Verification:** Fresh-browser getChats, getMessages, getUserInfo, getContacts all return clean trimmed responses with no schema warnings.
+
 ## 2026-04-20 — deleteMessage fixture chained in Saved Messages (handoff5)
 
 **Context:** `deleteMessage` was the last unchained write op — fixture pinned `chatId: "8259810574"` (a real peer) with `messageId: "latest"`, which is fragile (peer can leave/archive) and risked deleting cross-account history. `sendMessage` had no `order:` field, so the resolver could see no outgoing messages and the op silently no-op'd or hit "no outgoing messages".

@@ -169,9 +169,11 @@ async function getChats(page: Page, params: Readonly<Record<string, unknown>>) {
     const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
     if (!getGlobal) throw new Error('getGlobal not found')
     const global = getGlobal() as {
-      chats: { byId: Record<string, { id: string; title?: string; type: string; membersCount?: number; lastMessage?: { date?: number } }>
+      currentUserId?: string
+      chats: { byId: Record<string, { id: string; title?: string; type: string; membersCount?: number; unreadCount?: number; lastMessage?: { date?: number } }>
         listIds?: { active?: string[] } }
       users: { byId: Record<string, { id: string; firstName?: string; lastName?: string; usernames?: Array<{ username: string }> }> }
+      messages: { byChatId: Record<string, { byId: Record<string, { date: number }> }> }
     }
     const chats = global.chats?.byId ?? {}
     const users = global.users?.byId ?? {}
@@ -179,12 +181,28 @@ async function getChats(page: Page, params: Readonly<Record<string, unknown>>) {
     return orderedIds.slice(0, args.limit).map((id) => {
       const chat = chats[id]
       const user = users[id]
+      const isSelf = id === global.currentUserId
+      const userName = [user?.firstName, user?.lastName].filter(Boolean).join(' ')
+      const title = isSelf ? 'Saved Messages'
+        : chat?.title ?? (userName || user?.usernames?.[0]?.username || undefined)
+
+      let lastMessageDate = chat?.lastMessage?.date
+      if (!lastMessageDate) {
+        const msgs = global.messages?.byChatId?.[id]?.byId
+        if (msgs) {
+          for (const m of Object.values(msgs)) {
+            if (!lastMessageDate || m.date > lastMessageDate) lastMessageDate = m.date
+          }
+        }
+      }
+
       return {
         id,
-        title: chat?.title ?? ([user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'unknown'),
+        title: title || undefined,
         type: chat?.type ?? 'unknown',
-        membersCount: chat?.membersCount,
-        lastMessageDate: chat?.lastMessage?.date,
+        ...(chat?.membersCount ? { membersCount: chat.membersCount } : {}),
+        ...(chat?.unreadCount ? { unreadCount: chat.unreadCount } : {}),
+        ...(lastMessageDate ? { lastMessageDate } : {}),
       }
     })
   }, { fnSrc: FIND_GET_GLOBAL_SRC, limit })
@@ -214,11 +232,12 @@ async function getMessages(page: Page, params: Readonly<Record<string, unknown>>
     return msgIds.slice(0, args.limit).map((id) => {
       const msg = chatMsgs[id]
       const sender = msg.senderId ? users[msg.senderId] : undefined
+      const senderName = sender ? [sender.firstName, sender.lastName].filter(Boolean).join(' ') || undefined : undefined
       return {
         id: msg.id, chatId: msg.chatId, date: msg.date,
         text: msg.content?.text?.text ?? '',
-        senderId: msg.senderId,
-        senderName: sender ? [sender.firstName, sender.lastName].filter(Boolean).join(' ') : undefined,
+        ...(msg.senderId ? { senderId: msg.senderId } : {}),
+        ...(senderName ? { senderName } : {}),
         isOutgoing: msg.isOutgoing ?? false,
       }
     })
@@ -236,9 +255,9 @@ async function searchMessages(page: Page, params: Readonly<Record<string, unknow
         id: number; chatId: string; date: number; senderId?: string; content?: { text?: { text?: string } }
       }> }> }
       chats: { byId: Record<string, { title?: string }> }
-      users: { byId: Record<string, { firstName?: string; lastName?: string }> }
+      users: { byId: Record<string, { firstName?: string; lastName?: string; usernames?: Array<{ username: string }> }> }
     }
-    const results: Array<{ id: number; chatId: string; chatTitle: string; date: number; text: string; senderId?: string; senderName?: string }> = []
+    const results: Array<{ id: number; chatId: string; chatTitle?: string; date: number; text: string; senderId?: string; senderName?: string }> = []
     const q = args.query.toLowerCase()
     const chatIds = args.chatId ? [args.chatId] : Object.keys(global.messages?.byChatId ?? {})
     for (const cid of chatIds) {
@@ -248,10 +267,13 @@ async function searchMessages(page: Page, params: Readonly<Record<string, unknow
         if (text.toLowerCase().includes(q)) {
           const chat = global.chats?.byId?.[cid]
           const sender = msg.senderId ? global.users?.byId?.[msg.senderId] : undefined
+          const senderName = sender ? [sender.firstName, sender.lastName].filter(Boolean).join(' ') || undefined : undefined
           results.push({
-            id: msg.id, chatId: cid, chatTitle: chat?.title ?? 'unknown',
-            date: msg.date, text, senderId: msg.senderId,
-            senderName: sender ? [sender.firstName, sender.lastName].filter(Boolean).join(' ') : undefined,
+            id: msg.id, chatId: cid,
+            ...(chat?.title ? { chatTitle: chat.title } : {}),
+            date: msg.date, text,
+            ...(msg.senderId ? { senderId: msg.senderId } : {}),
+            ...(senderName ? { senderName } : {}),
           })
         }
       }
@@ -276,9 +298,14 @@ async function getUserInfo(page: Page, params: Readonly<Record<string, unknown>>
     const user = global.users?.byId?.[args.userId]
     if (!user) return null
     return {
-      id: user.id, firstName: user.firstName, lastName: user.lastName,
-      username: user.usernames?.[0]?.username, phoneNumber: user.phoneNumber,
-      type: user.type, status: user.status?.type, isPremium: user.isPremium,
+      id: user.id,
+      ...(user.firstName ? { firstName: user.firstName } : {}),
+      ...(user.lastName ? { lastName: user.lastName } : {}),
+      ...(user.usernames?.[0]?.username ? { username: user.usernames[0].username } : {}),
+      ...(user.phoneNumber ? { phoneNumber: user.phoneNumber } : {}),
+      ...(user.type ? { type: user.type } : {}),
+      ...(user.status?.type ? { status: user.status.type } : {}),
+      ...(user.isPremium != null ? { isPremium: user.isPremium } : {}),
     }
   }, { fnSrc: FIND_GET_GLOBAL_SRC, userId })
 }
@@ -297,9 +324,12 @@ async function getMe(page: Page) {
     const userId = global.currentUserId
     const user = global.users?.byId?.[userId]
     return {
-      id: userId, firstName: user?.firstName, lastName: user?.lastName,
-      username: user?.usernames?.[0]?.username, phoneNumber: user?.phoneNumber,
-      isPremium: user?.isPremium,
+      id: userId,
+      ...(user?.firstName ? { firstName: user.firstName } : {}),
+      ...(user?.lastName ? { lastName: user.lastName } : {}),
+      ...(user?.usernames?.[0]?.username ? { username: user.usernames[0].username } : {}),
+      ...(user?.phoneNumber ? { phoneNumber: user.phoneNumber } : {}),
+      ...(user?.isPremium != null ? { isPremium: user.isPremium } : {}),
     }
   }, FIND_GET_GLOBAL_SRC)
 }
@@ -320,9 +350,12 @@ async function getContacts(page: Page) {
     return contactIds.map(id => {
       const u = users[id]
       return {
-        id, firstName: u?.firstName, lastName: u?.lastName,
-        username: u?.usernames?.[0]?.username, phoneNumber: u?.phoneNumber,
-        status: u?.status?.type,
+        id,
+        ...(u?.firstName ? { firstName: u.firstName } : {}),
+        ...(u?.lastName ? { lastName: u.lastName } : {}),
+        ...(u?.usernames?.[0]?.username ? { username: u.usernames[0].username } : {}),
+        ...(u?.phoneNumber ? { phoneNumber: u.phoneNumber } : {}),
+        ...(u?.status?.type ? { status: u.status.type } : {}),
       }
     }).filter(c => c.firstName || c.lastName)
   }, FIND_GET_GLOBAL_SRC)
