@@ -293,14 +293,18 @@ const getPlaylist: Handler = async (page, params, helpers) => {
     helpers, page, 'browse', { context, browseId }, config,
   ) as Record<string, unknown>
 
-  // Parse playlist header
-  const header = resp.header as Record<string, unknown> | undefined
-  const headerRenderer = header?.playlistHeaderRenderer as Record<string, unknown> | undefined
+  // Parse playlist metadata — YouTube replaced playlistHeaderRenderer with
+  // pageHeaderRenderer (2025+). Primary data now lives in the sidebar's
+  // playlistSidebarPrimaryInfoRenderer and metadata.playlistMetadataRenderer.
+  const sidebarItems = dig(resp, 'sidebar', 'playlistSidebarRenderer', 'items') as Array<Record<string, unknown>> | undefined
+  const primaryInfo = sidebarItems?.[0]?.playlistSidebarPrimaryInfoRenderer as Record<string, unknown> | undefined
+  const secondaryInfo = sidebarItems?.[1]?.playlistSidebarSecondaryInfoRenderer as Record<string, unknown> | undefined
+  const metadataRenderer = dig(resp, 'metadata', 'playlistMetadataRenderer') as Record<string, unknown> | undefined
 
-  const title = textRuns(headerRenderer?.title)
-  const description = textRuns(headerRenderer?.descriptionText)
-  const ownerName = textRuns(dig(headerRenderer, 'ownerText'))
-  const stats = (headerRenderer?.stats as Array<unknown> | undefined)?.map(textRuns) || []
+  const title = textRuns(primaryInfo?.title) || (metadataRenderer?.title as string) || ''
+  const description = textRuns(primaryInfo?.description) || (metadataRenderer?.description as string) || ''
+  const ownerName = textRuns(dig(secondaryInfo, 'videoOwner', 'videoOwnerRenderer', 'title'))
+  const stats = (primaryInfo?.stats as Array<unknown> | undefined)?.map(textRuns) || []
   const videoCountText = stats[0] || ''
   const viewCountText = stats[1] || ''
 
@@ -582,85 +586,72 @@ const getTranscript: Handler = async (page, params, helpers) => {
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
 
-  // Navigate to the video page to get player response with caption tracks
-  const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
-  if (!page.url().includes(`watch?v=${videoId}`)) {
-    await page.goto(videoUrl, { waitUntil: 'load', timeout: 15000 })
-    await page.waitForTimeout(2000)
-  }
+  const config = await getYtConfig(page)
+  const context = makeContext(config)
 
-  // Extract caption track URLs from ytInitialPlayerResponse
-  const captionData = await page.evaluate(() => {
-    const w = window as unknown as Record<string, unknown>
-    const player = w.ytInitialPlayerResponse as Record<string, unknown> | undefined
-    if (!player) return null
-    const captions = player.captions as Record<string, unknown> | undefined
-    const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined
-    if (!renderer) return null
-    const tracks = renderer.captionTracks as Array<Record<string, unknown>> | undefined
-    if (!Array.isArray(tracks) || tracks.length === 0) return null
-    return tracks.map(t => ({
-      baseUrl: String(t.baseUrl || ''),
-      languageCode: String(t.languageCode || ''),
-      kind: String(t.kind || ''),
-    }))
-  })
-
-  if (!captionData || captionData.length === 0) {
-    return { videoId, segments: [], note: 'No transcript available for this video' }
-  }
-
-  // Select best track: prefer manual captions, then first available
-  const lang = String(params.lang || '')
-  let track = captionData[0]
-  if (lang) {
-    const exact = captionData.find(t => t.languageCode === lang)
-    if (exact) track = exact
-  } else {
-    const manual = captionData.find(t => t.kind !== 'asr')
-    if (manual) track = manual
-  }
-
-  // Fetch the timedtext via browser navigation (not fetch API — avoids bot detection)
-  const separator = track.baseUrl.includes('?') ? '&' : '?'
-  const timedTextUrl = `${track.baseUrl}${separator}fmt=json3`
-  await page.goto(timedTextUrl, { waitUntil: 'load', timeout: 15000 })
-  const rawContent = await page.evaluate(() => document.body?.innerText || '')
-
-  if (!rawContent.trim()) {
-    return { videoId, segments: [], note: 'Timedtext endpoint returned empty response' }
-  }
-
-  let timedText: Record<string, unknown>
-  try {
-    timedText = JSON.parse(rawContent) as Record<string, unknown>
-  } catch {
-    throw errors.fatal('YouTube timedtext returned invalid JSON')
-  }
-
-  // Parse JSON3 events into segments
-  const events = timedText.events as Array<Record<string, unknown>> | undefined
-  const segments: Array<Record<string, unknown>> = []
-  if (Array.isArray(events)) {
-    for (const event of events) {
-      const segs = event.segs as Array<Record<string, unknown>> | undefined
-      if (!Array.isArray(segs)) continue
-      const text = segs.map(s => String(s.utf8 || '')).join('')
-      if (!text.trim()) continue
-      const startMs = Number(event.tStartMs || 0)
-      const durationMs = Number(event.dDurationMs || 0)
-      segments.push({
-        startMs: String(startMs),
-        endMs: String(startMs + durationMs),
-        text: text.trim(),
-      })
+  // Step 1: get transcript params token from the video detail engagement panels
+  const nextResp = await innertubePost(helpers, page, 'next', { context, videoId }, config) as Record<string, unknown>
+  const panels = nextResp.engagementPanels as Array<Record<string, unknown>> | undefined
+  let transcriptParams = ''
+  if (Array.isArray(panels)) {
+    for (const p of panels) {
+      const id = dig(p, 'engagementPanelSectionListRenderer', 'panelIdentifier')
+      if (id !== 'engagement-panel-searchable-transcript') continue
+      transcriptParams = dig(p, 'engagementPanelSectionListRenderer', 'content', 'continuationItemRenderer', 'continuationEndpoint', 'getTranscriptEndpoint', 'params') as string || ''
+      break
     }
   }
 
+  if (!transcriptParams) {
+    return { videoId, segments: [], note: 'No transcript available for this video' }
+  }
+
+  // Step 2: fetch transcript via get_transcript endpoint
+  let transcriptResp: Record<string, unknown>
+  try {
+    transcriptResp = await innertubePost(helpers, page, 'get_transcript', { context, params: transcriptParams }, config) as Record<string, unknown>
+  } catch {
+    return { videoId, segments: [], note: 'Transcript fetch failed — endpoint may require browser session context' }
+  }
+
+  // Parse transcript from the response
+  const body = dig(transcriptResp, 'actions', '0', 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'body', 'transcriptBodyRenderer') as Record<string, unknown> | undefined
+  const cueGroups = body?.cueGroups as Array<Record<string, unknown>> | undefined
+  const segments: Array<Record<string, unknown>> = []
+
+  if (Array.isArray(cueGroups)) {
+    for (const group of cueGroups) {
+      const cues = dig(group, 'transcriptCueGroupRenderer', 'cues') as Array<Record<string, unknown>> | undefined
+      if (!Array.isArray(cues)) continue
+      for (const cue of cues) {
+        const renderer = cue.transcriptCueRenderer as Record<string, unknown> | undefined
+        if (!renderer) continue
+        const text = textRuns(renderer.cue) || (renderer.cue as Record<string, unknown>)?.simpleText as string || ''
+        if (!text.trim()) continue
+        segments.push({
+          startMs: String(renderer.startOffsetMs || '0'),
+          endMs: String(Number(renderer.startOffsetMs || 0) + Number(renderer.durationMs || 0)),
+          text: text.trim(),
+        })
+      }
+    }
+  }
+
+  // Detect language from transcript header
+  const header = dig(transcriptResp, 'actions', '0', 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'header', 'transcriptHeaderRenderer') as Record<string, unknown> | undefined
+  const langMenu = dig(header, 'languageMenu', 'sortFilterSubMenuRenderer', 'subMenuItems') as Array<Record<string, unknown>> | undefined
+  let languageCode = ''
+  if (Array.isArray(langMenu)) {
+    const selected = langMenu.find(i => i.selected)
+    if (selected) languageCode = textRuns(selected.title) || (selected.title as string) || ''
+  }
+
+  const lang = String(params.lang || '')
+
   return {
     videoId,
-    languageCode: track.languageCode,
-    isAutoGenerated: track.kind === 'asr',
+    languageCode: languageCode || lang || 'en',
+    isAutoGenerated: languageCode.toLowerCase().includes('auto'),
     segments,
   }
 }
@@ -741,7 +732,278 @@ const unsubscribeChannel: Handler = async (page, params, helpers) => {
   return innertubeAuthPost(helpers, page, 'subscription/unsubscribe', { context, channelIds }, config)
 }
 
+// --- response trim helpers ---
+function trimVideoRenderer(v: Record<string, unknown>): Record<string, unknown> {
+  return {
+    videoId: v.videoId || '',
+    title: textRuns(v.title),
+    channelName: textRuns(v.longBylineText || v.shortBylineText || v.ownerText),
+    channelId: dig(v, 'longBylineText', 'runs', '0', 'navigationEndpoint', 'browseEndpoint', 'browseId') || '',
+    viewCount: textRuns(v.viewCountText),
+    duration: textRuns(v.lengthText),
+    publishedTime: textRuns(v.publishedTimeText),
+    thumbnail: dig(v, 'thumbnail', 'thumbnails', '0', 'url') || '',
+    description: textRuns(v.detailedMetadataSnippets?.[0]
+      ? (v.detailedMetadataSnippets as Array<Record<string, unknown>>)[0].snippetText
+      : v.descriptionSnippet),
+  }
+}
+
+function trimRichItem(item: Record<string, unknown>): Record<string, unknown> | null {
+  const v = dig(item, 'richItemRenderer', 'content', 'videoRenderer') as Record<string, unknown> | undefined
+  if (v) return trimVideoRenderer(v)
+  const shorts = dig(item, 'richItemRenderer', 'content', 'reelItemRenderer') as Record<string, unknown> | undefined
+  if (shorts) return { videoId: shorts.videoId || '', title: textRuns(shorts.headline), type: 'short' }
+  return null
+}
+
+// --- searchVideos ---
+const searchVideos: Handler = async (page, params, helpers) => {
+  const { errors } = helpers
+  const query = String(params.query || '')
+  if (!query) throw errors.missingParam('query')
+
+  const config = await getYtConfig(page)
+  const context = makeContext(config)
+  const resp = await innertubePost(helpers, page, 'search', { context, query }, config) as Record<string, unknown>
+
+  const estimatedResults = (resp.estimatedResults as string) || '0'
+  const sections = dig(resp, 'contents', 'twoColumnSearchResultsRenderer', 'primaryContents', 'sectionListRenderer', 'contents') as Array<Record<string, unknown>> | undefined
+  const results: Array<Record<string, unknown>> = []
+
+  if (Array.isArray(sections)) {
+    for (const section of sections) {
+      const items = (section.itemSectionRenderer as Record<string, unknown> | undefined)?.contents as Array<Record<string, unknown>> | undefined
+      if (!Array.isArray(items)) continue
+      for (const item of items) {
+        if (item.videoRenderer) {
+          results.push(trimVideoRenderer(item.videoRenderer as Record<string, unknown>))
+        } else if (item.playlistRenderer) {
+          const p = item.playlistRenderer as Record<string, unknown>
+          results.push({
+            type: 'playlist',
+            playlistId: p.playlistId || '',
+            title: textRuns(p.title),
+            videoCount: textRuns(p.videoCount || p.videoCountText),
+            channelName: textRuns(p.longBylineText || p.shortBylineText),
+            thumbnail: dig(p, 'thumbnails', '0', 'thumbnails', '0', 'url') || '',
+          })
+        } else if (item.channelRenderer) {
+          const c = item.channelRenderer as Record<string, unknown>
+          results.push({
+            type: 'channel',
+            channelId: c.channelId || '',
+            title: textRuns(c.title),
+            subscriberCount: textRuns(c.subscriberCountText),
+            description: textRuns(c.descriptionSnippet),
+            thumbnail: dig(c, 'thumbnail', 'thumbnails', '0', 'url') || '',
+          })
+        }
+      }
+    }
+  }
+
+  return { query, estimatedResults, results }
+}
+
+// --- getVideoDetail ---
+const getVideoDetail: Handler = async (page, params, helpers) => {
+  const { errors } = helpers
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+
+  const config = await getYtConfig(page)
+  const context = makeContext(config)
+  const resp = await innertubePost(helpers, page, 'next', { context, videoId }, config) as Record<string, unknown>
+
+  const resultContents = dig(resp, 'contents', 'twoColumnWatchNextResults', 'results', 'results', 'contents') as Array<Record<string, unknown>> | undefined
+
+  let primaryInfo: Record<string, unknown> | undefined
+  let secondaryInfo: Record<string, unknown> | undefined
+  if (Array.isArray(resultContents)) {
+    for (const item of resultContents) {
+      if (item.videoPrimaryInfoRenderer) primaryInfo = item.videoPrimaryInfoRenderer as Record<string, unknown>
+      if (item.videoSecondaryInfoRenderer) secondaryInfo = item.videoSecondaryInfoRenderer as Record<string, unknown>
+    }
+  }
+
+  const title = textRuns(primaryInfo?.title)
+  const viewCount = textRuns(dig(primaryInfo, 'viewCount', 'videoViewCountRenderer', 'viewCount'))
+  const dateText = textRuns(primaryInfo?.dateText)
+  const channelName = textRuns(dig(secondaryInfo, 'owner', 'videoOwnerRenderer', 'title'))
+  const channelId = dig(secondaryInfo, 'owner', 'videoOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId') as string || ''
+  const subscriberCount = textRuns(dig(secondaryInfo, 'owner', 'videoOwnerRenderer', 'subscriberCountText'))
+  const description = (dig(secondaryInfo, 'attributedDescription', 'content') as string)
+    || textRuns(dig(secondaryInfo, 'description'))
+
+  // Like count from the menu buttons
+  const topLevelButtons = dig(primaryInfo, 'videoActions', 'menuRenderer', 'topLevelButtons') as Array<Record<string, unknown>> | undefined
+  let likeCount = ''
+  if (Array.isArray(topLevelButtons)) {
+    for (const btn of topLevelButtons) {
+      const toggle = btn.segmentedLikeDislikeButtonViewModel || btn.toggleButtonRenderer
+      if (!toggle) continue
+      const likeText = dig(toggle, 'likeButtonViewModel', 'likeButtonViewModel', 'toggleButtonViewModel', 'toggleButtonViewModel', 'defaultButtonViewModel', 'buttonViewModel', 'title') as string
+        || textRuns(dig(toggle, 'defaultText'))
+      if (likeText) { likeCount = likeText; break }
+    }
+  }
+
+  // Recommendations from secondary results — browser response wraps items in
+  // itemSectionRenderer, while curl returns lockupViewModel items directly.
+  const rawSecondaryItems = dig(resp, 'contents', 'twoColumnWatchNextResults', 'secondaryResults', 'secondaryResults', 'results') as Array<Record<string, unknown>> | undefined
+  let recItems: Array<Record<string, unknown>> = []
+  if (Array.isArray(rawSecondaryItems)) {
+    for (const item of rawSecondaryItems) {
+      if (item.lockupViewModel || item.compactVideoRenderer) {
+        recItems.push(item)
+      } else if (item.itemSectionRenderer) {
+        const nested = (item.itemSectionRenderer as Record<string, unknown>).contents as Array<Record<string, unknown>> | undefined
+        if (Array.isArray(nested)) recItems.push(...nested)
+      }
+    }
+  }
+  const recommendations: Array<Record<string, unknown>> = []
+  for (const item of recItems.slice(0, 10)) {
+    const lvm = item.lockupViewModel as Record<string, unknown> | undefined
+    if (lvm) {
+      const meta = dig(lvm, 'metadata', 'lockupMetadataViewModel') as Record<string, unknown> | undefined
+      const metaRows = dig(meta, 'metadata', 'contentMetadataViewModel', 'metadataRows') as Array<Record<string, unknown>> | undefined
+      const parts = metaRows?.flatMap(r => (r.metadataParts as Array<Record<string, unknown>> || [])) || []
+      const partTexts = parts.map(p => (p.text as Record<string, unknown>)?.content as string || '')
+      recommendations.push({
+        videoId: lvm.contentId || '',
+        title: (dig(meta, 'title', 'content') as string) || '',
+        channelName: partTexts[0] || '',
+        viewCount: partTexts[1] || '',
+        duration: (dig(lvm, 'contentImage', 'thumbnailViewModel', 'overlays', '0', 'thumbnailBottomOverlayViewModel', 'badges', '0', 'thumbnailBadgeViewModel', 'text') as string) || '',
+        thumbnail: (dig(lvm, 'contentImage', 'thumbnailViewModel', 'image', 'sources', '0', 'url') as string) || '',
+      })
+      continue
+    }
+    const cr = item.compactVideoRenderer as Record<string, unknown> | undefined
+    if (!cr) continue
+    recommendations.push({
+      videoId: cr.videoId || '',
+      title: textRuns(cr.title),
+      channelName: textRuns(cr.longBylineText || cr.shortBylineText),
+      viewCount: textRuns(cr.viewCountText),
+      duration: textRuns(cr.lengthText),
+      thumbnail: dig(cr, 'thumbnail', 'thumbnails', '0', 'url') || '',
+    })
+  }
+  const panels = resp.engagementPanels as Array<Record<string, unknown>> | undefined
+  let hasTranscript = false
+  if (Array.isArray(panels)) {
+    hasTranscript = panels.some(p =>
+      dig(p, 'engagementPanelSectionListRenderer', 'panelIdentifier') === 'engagement-panel-searchable-transcript')
+  }
+
+  return {
+    videoId,
+    title,
+    channelName,
+    channelId,
+    subscriberCount,
+    viewCount,
+    dateText,
+    likeCount,
+    description: description.slice(0, 2000),
+    hasTranscript,
+    recommendations,
+  }
+}
+
+// --- browseContent ---
+const browseContent: Handler = async (page, params, helpers) => {
+  const { errors } = helpers
+  const browseId = String(params.browseId || '')
+  if (!browseId) throw errors.missingParam('browseId')
+
+  if (browseId === 'FEtrending' || browseId === 'FEexplore') {
+    throw errors.fatal('FEtrending/FEexplore browse IDs are no longer supported by YouTube. Use searchVideos with a topical query instead.')
+  }
+
+  const config = await getYtConfig(page)
+  const context = makeContext(config)
+  const body: Record<string, unknown> = { context, browseId }
+  if (params.params) body.params = String(params.params)
+
+  const resp = await innertubePost(helpers, page, 'browse', body, config) as Record<string, unknown>
+
+  const metadata = resp.metadata as Record<string, unknown> | undefined
+  const meta = metadata ? Object.values(metadata)[0] as Record<string, unknown> | undefined : undefined
+
+  const tabs = dig(resp, 'contents', 'twoColumnBrowseResultsRenderer', 'tabs') as Array<Record<string, unknown>> | undefined
+  const trimmedTabs: Array<Record<string, unknown>> = []
+
+  if (Array.isArray(tabs)) {
+    for (const tab of tabs) {
+      const renderer = tab.tabRenderer as Record<string, unknown> | undefined
+      if (!renderer) continue
+      const tabTitle = textRuns(renderer.title) || (renderer.title as string) || ''
+      const content = renderer.content as Record<string, unknown> | undefined
+      if (!content) { trimmedTabs.push({ title: tabTitle, selected: !!renderer.selected }); continue }
+
+      const videos: Array<Record<string, unknown>> = []
+
+      // richGridRenderer (homepage, channel videos tab)
+      const richGrid = content.richGridRenderer as Record<string, unknown> | undefined
+      if (richGrid) {
+        const gridItems = richGrid.contents as Array<Record<string, unknown>> | undefined
+        if (Array.isArray(gridItems)) {
+          for (const item of gridItems.slice(0, 50)) {
+            const trimmed = trimRichItem(item)
+            if (trimmed) videos.push(trimmed)
+          }
+        }
+      }
+
+      // sectionListRenderer (channel home, playlists)
+      const sectionList = content.sectionListRenderer as Record<string, unknown> | undefined
+      if (sectionList) {
+        const sections = sectionList.contents as Array<Record<string, unknown>> | undefined
+        if (Array.isArray(sections)) {
+          for (const section of sections) {
+            const shelf = dig(section, 'itemSectionRenderer', 'contents', '0', 'shelfRenderer') as Record<string, unknown> | undefined
+            if (shelf) {
+              const shelfItems = dig(shelf, 'content', 'horizontalListRenderer', 'items')
+                || dig(shelf, 'content', 'expandedShelfContentsRenderer', 'items')
+              if (Array.isArray(shelfItems)) {
+                for (const item of (shelfItems as Array<Record<string, unknown>>).slice(0, 20)) {
+                  const gr = item.gridVideoRenderer as Record<string, unknown> | undefined
+                  if (gr) videos.push(trimVideoRenderer(gr))
+                }
+              }
+            }
+            // Direct video items in sections
+            const sectionItems = dig(section, 'itemSectionRenderer', 'contents') as Array<Record<string, unknown>> | undefined
+            if (Array.isArray(sectionItems)) {
+              for (const item of sectionItems) {
+                if (item.videoRenderer) videos.push(trimVideoRenderer(item.videoRenderer as Record<string, unknown>))
+                if (item.gridVideoRenderer) videos.push(trimVideoRenderer(item.gridVideoRenderer as Record<string, unknown>))
+              }
+            }
+          }
+        }
+      }
+
+      trimmedTabs.push({ title: tabTitle, selected: !!renderer.selected, videos })
+    }
+  }
+
+  return {
+    browseId,
+    title: (meta?.title as string) || textRuns(dig(resp, 'header', 'pageHeaderRenderer', 'pageTitle')) || '',
+    description: (meta?.description as string) || '',
+    tabs: trimmedTabs,
+  }
+}
+
 const OPERATIONS: Record<string, Handler> = {
+  searchVideos,
+  getVideoDetail,
+  browseContent,
   getComments,
   getPlaylist,
   addComment,
@@ -755,7 +1017,7 @@ const OPERATIONS: Record<string, Handler> = {
 
 const runner: CustomRunner = {
   name: 'youtube-innertube',
-  description: 'YouTube — comments and playlist composition via InnerTube API',
+  description: 'YouTube — search, detail, browse, comments, playlist, transcript via InnerTube API',
 
   async run(ctx: PreparedContext): Promise<unknown> {
     const { page, operation, params, helpers } = ctx

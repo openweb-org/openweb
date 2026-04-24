@@ -4,8 +4,6 @@
   "cases": [
     {
       "input": {
-        "key": "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
-        "context": {"client": {"clientName": "WEB", "clientVersion": "2.20260325.08.00"}},
         "browseId": "FEwhat_to_watch"
       },
       "assertions": {

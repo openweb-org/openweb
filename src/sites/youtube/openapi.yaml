@@ -22,79 +22,69 @@ paths:
           verified: true
           signals:
             - status-match
+        adapter:
+          name: youtube-innertube
+          operation: searchVideos
       parameters:
-        - name: key
+        - name: query
           in: query
           required: true
-          description: "Innertube API key (injected by page_global auth)"
+          description: "Search query"
           schema:
             type: string
-          example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
-        - name: prettyPrint
-          in: query
-          required: false
-          description: "Disable pretty-printing for smaller payloads."
-          schema:
-            type: string
-          example: "false"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - context
-                - query
-              properties:
-                context:
-                  type: object
-                  description: "InnerTube client context — required on every request."
-                  properties:
-                    client:
-                      type: object
-                      description: "Client identification block."
-                      required:
-                        - clientName
-                        - clientVersion
-                      properties:
-                        clientName:
-                          type: string
-                          description: "Client name identifier."
-                          example: WEB
-                        clientVersion:
-                          type: string
-                          description: "Client version string (changes with YouTube deploys)."
-                          example: "2.20260325.08.00"
-                query:
-                  type: string
-                  description: "Search query"
-                  example: "machine learning tutorial"
+          example: "machine learning tutorial"
       responses:
         "200":
-          description: Search results with videos, channels, and playlists.
+          description: Trimmed search results with videos, channels, and playlists.
           content:
             application/json:
               schema:
                 type: object
                 required:
-                  - contents
-                  - estimatedResults
+                  - query
+                  - results
                 properties:
-                  contents:
-                    type: object
-                    description: "Search results in twoColumnSearchResultsRenderer — contains videoRenderer items with title, videoId, viewCount, duration, thumbnail."
+                  query:
+                    type: string
+                    description: "The search query."
                   estimatedResults:
                     type: string
                     description: "Estimated total result count as a numeric string."
-                  responseContext:
-                    type: object
-                    description: "Server response metadata (service tracking params, visitor data)."
+                  results:
+                    type: array
+                    description: "Search result items — videos, playlists, and channels."
+                    items:
+                      type: object
+                      properties:
+                        videoId:
+                          type: string
+                          description: "Video ID (present for video results)."
+                        title:
+                          type: string
+                          description: "Video/playlist/channel title."
+                        channelName:
+                          type: string
+                          description: "Channel name."
+                        viewCount:
+                          type: string
+                          description: "View count text (e.g. '9,976,380 views')."
+                        duration:
+                          type: string
+                          description: "Video duration (e.g. '27:14')."
+                        publishedTime:
+                          type: string
+                          description: "Relative publish time (e.g. '2 years ago')."
+                        thumbnail:
+                          type: string
+                          description: "Thumbnail URL."
+                        type:
+                          type: string
+                          description: "Result type — absent for videos, 'playlist' or 'channel' for others."
 
   /youtubei/v1/browse:
     post:
       operationId: browseContent
-      summary: "Browse content by ID — homepage (FEwhat_to_watch), channel (UC...), trending (FEtrending), subscriptions. Returns video grids, channel info, tabs"
+      summary: "Browse content by ID — homepage (FEwhat_to_watch), channel (UC...), subscriptions. Returns video grids, channel info, tabs"
       x-openweb:
         permission: read
         build:
@@ -103,79 +93,73 @@ paths:
           verified: true
           signals:
             - status-match
+        adapter:
+          name: youtube-innertube
+          operation: browseContent
       parameters:
-        - name: key
+        - name: browseId
           in: query
           required: true
-          description: "InnerTube API key."
+          description: "Browse target — FEwhat_to_watch (home), channel ID (UC...), VL + playlist ID, FEsubscriptions"
           schema:
             type: string
-          example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
-        - name: prettyPrint
+          example: "FEwhat_to_watch"
+        - name: params
           in: query
           required: false
-          description: "Disable pretty-printing for smaller payloads."
+          description: "Optional browse parameters (base64 encoded, e.g. for channel Videos tab)"
           schema:
             type: string
-          example: "false"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - context
-                - browseId
-              properties:
-                context:
-                  type: object
-                  description: "InnerTube client context — required on every request."
-                  properties:
-                    client:
-                      type: object
-                      description: "Client identification block."
-                      required:
-                        - clientName
-                        - clientVersion
-                      properties:
-                        clientName:
-                          type: string
-                          description: "Client name identifier."
-                          example: WEB
-                        clientVersion:
-                          type: string
-                          description: "Client version string (changes with YouTube deploys)."
-                          example: "2.20260325.08.00"
-                browseId:
-                  type: string
-                  description: "Browse target — FEwhat_to_watch (home), FEtrending, channel ID (UC...), VL + playlist ID, FEsubscriptions"
-                  example: "FEwhat_to_watch"
-                params:
-                  type: string
-                  description: "Optional browse parameters (base64 encoded, e.g. for channel Videos tab)"
       responses:
         "200":
-          description: Browse results — video grids, channel tabs, or feed content.
+          description: Trimmed browse results — video grids, channel tabs, or feed content.
           content:
             application/json:
               schema:
                 type: object
                 required:
-                  - contents
+                  - browseId
+                  - tabs
                 properties:
-                  header:
-                    type: object
-                    description: "Page header — channel banner, title, subscriber count (present for channel/playlist browseIds)."
-                  contents:
-                    type: object
-                    description: "Main content — video grids in twoColumnBrowseResultsRenderer with richGridRenderer or sectionListRenderer."
-                  metadata:
-                    type: object
-                    description: "Page metadata — channel/playlist title, description, URLs."
-                  responseContext:
-                    type: object
-                    description: "Server response metadata."
+                  browseId:
+                    type: string
+                    description: "The browse ID that was requested."
+                  title:
+                    type: string
+                    description: "Page title (channel name, playlist title, etc.)."
+                  description:
+                    type: string
+                    description: "Page description."
+                  tabs:
+                    type: array
+                    description: "Content tabs — each with trimmed video items."
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                          description: "Tab title (e.g. 'Home', 'Videos', 'Playlists')."
+                        selected:
+                          type: boolean
+                          description: "Whether this tab is currently selected."
+                        videos:
+                          type: array
+                          description: "Trimmed video items in this tab."
+                          items:
+                            type: object
+                            properties:
+                              videoId:
+                                type: string
+                              title:
+                                type: string
+                              channelName:
+                                type: string
+                              viewCount:
+                                type: string
+                              duration:
+                                type: string
+                              thumbnail:
+                                type: string
 
   /youtubei/v1/next:
     post:
@@ -189,79 +173,76 @@ paths:
           verified: true
           signals:
             - status-match
+        adapter:
+          name: youtube-innertube
+          operation: getVideoDetail
       parameters:
-        - name: key
+        - name: videoId
           in: query
           required: true
-          description: "InnerTube API key."
+          description: "YouTube video ID (11 characters, e.g. dQw4w9WgXcQ)"
           schema:
             type: string
-          example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
-        - name: prettyPrint
-          in: query
-          required: false
-          description: "Disable pretty-printing for smaller payloads."
-          schema:
-            type: string
-          example: "false"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - context
-                - videoId
-              properties:
-                context:
-                  type: object
-                  description: "InnerTube client context — required on every request."
-                  properties:
-                    client:
-                      type: object
-                      description: "Client identification block."
-                      required:
-                        - clientName
-                        - clientVersion
-                      properties:
-                        clientName:
-                          type: string
-                          description: "Client name identifier."
-                          example: WEB
-                        clientVersion:
-                          type: string
-                          description: "Client version string (changes with YouTube deploys)."
-                          example: "2.20260325.08.00"
-                videoId:
-                  type: string
-                  description: "YouTube video ID (11 characters, e.g. dQw4w9WgXcQ)"
-                  example: "dQw4w9WgXcQ"
+          example: "dQw4w9WgXcQ"
       responses:
         "200":
-          description: Video metadata, comments, and recommendations.
+          description: Trimmed video metadata with recommendations.
           content:
             application/json:
               schema:
                 type: object
                 required:
-                  - contents
+                  - videoId
+                  - title
                 properties:
-                  contents:
-                    type: object
-                    description: "Video watch page — twoColumnWatchNextResults with primary info (title, views, likes, description) and secondary results (recommendations)."
-                  engagementPanels:
+                  videoId:
+                    type: string
+                    description: "The video ID."
+                  title:
+                    type: string
+                    description: "Video title."
+                  channelName:
+                    type: string
+                    description: "Channel display name."
+                  channelId:
+                    type: string
+                    description: "Channel ID (UC...)."
+                  subscriberCount:
+                    type: string
+                    description: "Channel subscriber count text."
+                  viewCount:
+                    type: string
+                    description: "View count text (e.g. '9,976,380 views')."
+                  dateText:
+                    type: string
+                    description: "Publish date text."
+                  likeCount:
+                    type: string
+                    description: "Like count text."
+                  description:
+                    type: string
+                    description: "Video description (truncated to 2000 chars)."
+                  hasTranscript:
+                    type: boolean
+                    description: "Whether getTranscript is available for this video."
+                  recommendations:
                     type: array
-                    description: "Engagement panels including transcript params — look for panelIdentifier 'engagement-panel-searchable-transcript' to extract transcript params token."
+                    description: "Up to 10 recommended videos."
                     items:
                       type: object
-                      description: "Individual engagement panel (transcript, chapters, clips)."
-                  currentVideoEndpoint:
-                    type: object
-                    description: "Endpoint metadata for the current video (videoId, watchEndpoint)."
-                  responseContext:
-                    type: object
-                    description: "Server response metadata."
+                      properties:
+                        videoId:
+                          type: string
+                        title:
+                          type: string
+                        channelName:
+                          type: string
+                        viewCount:
+                          type: string
+                        duration:
+                          type: string
+                        thumbnail:
+                          type: string
 
   /youtubei/v1/player:
     post:
