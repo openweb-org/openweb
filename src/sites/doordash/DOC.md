@@ -18,8 +18,9 @@
 
 ## Extraction
 - Direct JSON from GraphQL `data.<rootField>` (declarative `unwrap: data`)
-- Search adapter normalizes nested `FacetV2` structure, parses `custom` JSON for `store_id`
-- Menu and order data returned as-is from GraphQL
+- **Search adapter** (`doordash-read.ts`): parses nested `FacetV2` structure and `custom` JSON string, extracts `store_id`, `result_type`, `rating` into a flat `results[]` array
+- **Menu adapter** (`doordash-read.ts`): trims response from ~36KB to ~28KB by dropping empty/null optional fields and unused GQL fields
+- Order history and write ops returned as-is from GraphQL
 
 ## Known Issues
 - `formattedAddress` in order history is often null.

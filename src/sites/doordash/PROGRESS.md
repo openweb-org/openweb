@@ -55,3 +55,27 @@
 - `~/.openweb/sites/doordash` is a *copy* of `src/sites/doordash` (not a symlink), populated by `registry install` or first-load. Edits to `src/` aren't seen by verify until that copy is refreshed (or symlinked) — multi-worker contention also re-creates the dir mid-session. Symlinking `~/.openweb/sites/doordash → src/sites/doordash` is the fastest dev loop while iterating on a spec.
 - Ran behind several sibling `w-fix-*` workers also touching managed Chrome — port 9222 PID flips frequently. Verify failure mode "Port 9222 is already bound by external process" is a coordination artifact, not a site bug; restart the browser and retry.
 
+## 2026-04-24 — Userflow QA: adapter + response trimming
+
+**Context:** Blind persona testing revealed two issues: (1) `searchRestaurants` returns a nested `custom` JSON string that agents must parse to extract `store_id`, `result_type`, and `rating` — not agent-friendly; (2) `getRestaurantMenu` response is ~36KB with empty arrays (`dietaryTagsList: []`), null display strings, `reviewPreview`, and redundant fields like `coverImgUrl` alongside `coverSquareImgUrl`.
+
+**Personas tested:**
+- Office worker: `"restaurants near 94105"` — returned empty (expected: DoorDash search is keyword-based, location comes from account delivery address)
+- Late-night snacker: `"pizza open now"` — returned only query suggestions, no stores (autocomplete API doesn't filter by availability)
+- Health-conscious: `"salad bowls"` — returned query suggestions only (same behavior)
+- Keyword search: `"pizza"` — returned 5 stores + 5 suggestions, confirming single-word food queries work best
+
+**Changes:**
+- Created `adapters/doordash-read.ts` covering `searchRestaurants` and `getRestaurantMenu`
+- **searchRestaurants**: parses `custom` JSON string, extracts `storeId`, `resultType`, `rating`, `ratingCount`; flattens nested `body[].body[]` into a flat `results[]` array with `title`, `subtitle`, `description`, `imageUrl`, `storeId`, `resultType`, `rating`, `ratingCount`
+- **getRestaurantMenu**: trims GQL query (dropped `coverImgUrl`, `lat`/`lng`, `numRatings`, `isNewlyAdded`, `businessTags.link`, `dietaryTagsList`, `dynamicLabelDisplayString`, `calloutDisplayString`, `reviewPreview`); adapter strips empty optional fields from items — response dropped from 36KB to 28KB
+- Updated `openapi.yaml`: wired adapter refs, simplified request schemas (removed `operationName`/`query` const fields), updated response schemas to match adapter output
+- `getOrderHistory` left unchanged — response is 3.5KB for 5 orders, already lean
+
+**Verification:** `pnpm dev verify doordash` → 3/3 PASS (adapter-verified reads). Build clean.
+
+**Key observations:**
+- DoorDash autocomplete search is keyword-based, not location-aware — location comes from account delivery address. Queries like "near 94105" or "open now" return only suggestions, not stores.
+- The `custom` JSON-in-JSON pattern is a DoorDash antipattern: agents must parse a JSON string inside a JSON field to get `store_id`. Adapter eliminates this.
+- Write ops (`addToCart`, `removeFromCart`) untouched — they still use the declarative spec with `wrap: variables` / `unwrap: data`.
+
