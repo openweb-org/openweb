@@ -1,3 +1,28 @@
+## 2026-04-24: Userflow QA — response trimming and fixes
+
+**What changed:**
+- searchHomes: full absolute URLs (was relative paths), dropped redundant fields
+  (name, city, state, latitude, longitude, currency), reduced to 15 listings to
+  fit 4096-byte inline gate
+- getPropertyDetails: proper HTML entity decoding (handles `&frac34;`, numeric
+  entities), description capped at 400 chars, availability normalized from
+  schema.org URL to human-readable value (e.g. "InStock")
+- getMarketData: removed `neighborhood`, `marketType`, `summary` fields — always
+  null via node transport (client-side rendered only)
+- Updated openapi.yaml schema to match all adapter changes
+- Synced redfin-dom.js fallback adapter to match
+
+**Why:**
+- searchHomes returned relative URLs (agent can't use directly), response
+  exceeded 4096-byte inline threshold causing temp-file spill
+- `&frac34;` left raw in descriptions (regex `&[a-z]+;` missed entities with
+  digits)
+- Three getMarketData fields always null because Redfin renders market insights
+  client-side only — dead weight in the response
+
+**Key files:** `adapters/redfin.ts`, `adapters/redfin-dom.js`, `openapi.yaml`
+**Verification:** searchHomes Seattle 15 listings inline (3143 bytes); getPropertyDetails `&frac34;` → `¾`; getMarketData clean 7-field response
+
 ## 2026-04-02: Fix adapter navigation
 
 **What changed:**

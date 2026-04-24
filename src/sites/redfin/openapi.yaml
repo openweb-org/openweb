@@ -57,34 +57,17 @@ paths:
                 properties:
                   resultCount:
                     type: integer
-                  description:
-                    type: string
                   listings:
                     type: array
                     items:
                       type: object
                       properties:
-                        name:
-                          type: string
-                          description: Full address of the property.
                         url:
                           type: string
                         streetAddress:
                           type: string
-                        city:
-                          type: string
-                        state:
-                          type: string
                         zip:
                           type: string
-                        latitude:
-                          type:
-                          - number
-                          - 'null'
-                        longitude:
-                          type:
-                          - number
-                          - 'null'
                         rooms:
                           type:
                           - integer
@@ -98,8 +81,6 @@ paths:
                           - number
                           - 'null'
                           description: Listing price in USD.
-                        currency:
-                          type: string
                         propertyType:
                           type: string
   /{state}/{city}/{address}/home/{propertyId}:
@@ -280,18 +261,6 @@ paths:
                     - number
                     - 'null'
                   competitiveness:
-                    type:
-                    - string
-                    - 'null'
-                  neighborhood:
-                    type:
-                    - string
-                    - 'null'
-                  marketType:
-                    type:
-                    - string
-                    - 'null'
-                  summary:
                     type:
                     - string
                     - 'null'

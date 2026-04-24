@@ -12,6 +12,23 @@ function parseStingray(text: string): { resultCode: number; errorMessage: string
   return JSON.parse(text.replace(/^\{\}&&/, ''))
 }
 
+const ENTITY_MAP: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  frac12: '½', frac14: '¼', frac34: '¾', ndash: '–', mdash: '—',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+}
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&([a-z][a-z0-9]*);/gi, (m, name) => ENTITY_MAP[name.toLowerCase()] ?? m)
+}
+
+function trimText(s: string, max: number): string {
+  if (s.length <= max) return s
+  return `${s.slice(0, max - 1)}…`
+}
+
 /** Property type enum → human-readable string. */
 const PROPERTY_TYPES: Record<number, string> = {
   1: 'Single Family Residential', 2: 'Condo/Co-op', 3: 'Townhouse',
@@ -27,7 +44,7 @@ async function searchHomes(
   const { regionId, state, city } = params as { regionId: string; state: string; city: string }
   const market = city.toLowerCase().replace(/\s+/g, '-')
   const qs = new URLSearchParams({
-    al: '1', market, num_homes: '20', ord: 'redfin-recommended-asc',
+    al: '1', market, num_homes: '15', ord: 'redfin-recommended-asc',
     page_number: '1', region_id: regionId, region_type: '6',
     sf: '1,2,3,5,6,7', status: '9', uipt: '1,2,3,4,5,6,7,8', v: '8',
   })
@@ -39,22 +56,16 @@ async function searchHomes(
 
   const homes: any[] = data.payload.homes || []
   const listings = homes.map((h: any) => ({
-    name: h.streetLine?.value || '',
-    url: h.url || '',
+    url: h.url ? `${BASE}${h.url}` : '',
     streetAddress: h.streetLine?.value || '',
-    city: h.city || '',
-    state: h.state || '',
     zip: h.zip || h.postalCode?.value || '',
-    latitude: h.latLong?.value?.latitude ?? null,
-    longitude: h.latLong?.value?.longitude ?? null,
     rooms: h.beds ?? null,
     sqft: h.sqFt?.value ?? null,
     price: h.price?.value ?? null,
-    currency: 'USD',
     propertyType: PROPERTY_TYPES[h.uiPropertyType] || PROPERTY_TYPES[h.propertyType] || '',
   }))
 
-  return { resultCount: listings.length, description: `${listings.length} homes for sale in ${city}, ${state}`, listings }
+  return { resultCount: listings.length, listings }
 }
 
 // ── getPropertyDetails: fetch HTML → parse JSON-LD ───
@@ -94,7 +105,7 @@ async function getPropertyDetails(
 
       return {
         name: data.name || '',
-        description: (data.description || '').replace(/&[a-z]+;/g, ' ').trim(),
+        description: trimText(decodeEntities(data.description || ''), 400),
         url: data.url || '',
         datePosted: data.datePosted || '',
         streetAddress: addr.streetAddress || '',
@@ -110,7 +121,9 @@ async function getPropertyDetails(
         propertyType: entity.accommodationCategory || entity['@type'] || '',
         price: Number(offer.price) || null,
         currency: offer.priceCurrency || 'USD',
-        availability: offer.availability || '',
+        availability: typeof offer.availability === 'string'
+          ? offer.availability.replace(/^https?:\/\/schema\.org\//, '')
+          : '',
         amenities,
         imageCount: images.length,
         primaryImage: images[0] || '',
@@ -164,22 +177,6 @@ async function getMarketData(
   const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
   const location = h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : ''
 
-  // Market insights from data attribute section
-  const insightsMatch = html.match(/data-rf-test-id="market-insights-expandable-preview"[^>]*>([\s\S]*?)<\/div>/i)
-  let neighborhood: string | null = null
-  let marketType: string | null = null
-  let summary: string | null = null
-
-  if (insightsMatch) {
-    const sectionText = insightsMatch[1].replace(/<[^>]+>/g, '\n').trim()
-    const lines = sectionText.split('\n').map(l => l.trim()).filter(Boolean)
-    const marketLine = lines.find(l => /is a (seller|buyer)/i.test(l)) || ''
-    const neighborhoodMatch = marketLine.match(/^(.+?) is a/i)
-    neighborhood = neighborhoodMatch ? neighborhoodMatch[1] : null
-    marketType = /seller/i.test(marketLine) ? 'seller' : /buyer/i.test(marketLine) ? 'buyer' : 'neutral'
-    summary = lines.find(l => /inventory|competition|balanced/i.test(l)) || null
-  }
-
   return {
     location,
     medianSalePrice: medianMatch ? `$${medianMatch[1]}` : null,
@@ -188,9 +185,6 @@ async function getMarketData(
     yoyChange: yoyMatch ? { direction: yoyMatch[1].toLowerCase(), percent: Number(yoyMatch[2]) } : null,
     saleToListPercent: saleToListMatch ? Number(saleToListMatch[1]) : null,
     competitiveness: competitiveMatch ? competitiveMatch[1] : null,
-    neighborhood,
-    marketType,
-    summary,
   }
 }
 
