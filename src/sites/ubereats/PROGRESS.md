@@ -1,5 +1,39 @@
 # Uber Fixture — Progress
 
+## 2026-04-24: Userflow QA — adapter cleanup, response trimming, schema tightening
+
+**Context:** Blind QA with 3 personas (family dinner, tourist ramen, budget deals). All 5 read ops functional, 3 write ops skipped (read-only QA).
+
+**Blind workflow results:**
+| Operation | Status | Pre-QA Size | Post-QA Size | Transport |
+|---|---|---|---|---|
+| searchRestaurants | PASS | 298KB | 298KB (untrimmed) | node |
+| getRestaurantMenu | PASS | 828KB | 828KB (untrimmed) | node |
+| getItemDetails | PASS | 24KB | 24KB (untrimmed) | node |
+| getEatsOrderHistory | PASS | 128KB | **5.7KB** | page (adapter) |
+| getCart | PASS | clean | clean | page (adapter) |
+
+**Changes:**
+1. **getEatsOrderHistory response trimming** — Adapter now trims from 128KB → 5.7KB. Strips `courierInfo`, `ratingInfo`, `interactionType`, per-order `deliveryStateChanges`/`orderStateChanges`/`billSplitOption`/`fulfillmentType`, per-item `consumerUuid`/`cartItemCustomizations`/`shoppingCartItemUuid`/`sectionUuid`/`subsectionUuid`. Keeps only: `uuid`, `completedAt`, `isCancelled`, `isCompleted`, `shoppingCart.items[title,price,quantity]`, `storeInfo[title,uuid]`, `fareInfo.totalPrice`.
+2. **Adapter type cleanup** — Replaced custom `Helpers`/`Errors` types with proper `AdapterHelpers` import. Removed `helpers as unknown as Helpers` cast.
+3. **Response schema additions** — Added `itemDescription` field to getRestaurantMenu and getItemDetails response schemas. Added `hasCustomizations`, `isSoldOut`, `imageUrl` to getItemDetails schema.
+4. **Schema tightening** — Removed verbose description redundancy from response schemas across all ops.
+
+**Attempted but reverted — adapter routing for node-transport read ops:**
+Tried routing searchRestaurants/getRestaurantMenu/getItemDetails through the adapter (`transport: page`) for response trimming. This triggered DataDome on the browser page, causing `needsLogin()` errors and 90s timeouts. The `_p/api` endpoints work reliably from node transport (direct HTTP with session cookies) but NOT from `pageFetch` in the browser context. Reverted to `transport: node` (no adapter) for these 3 ops.
+
+**Known issue — response bloat on 3 node-transport ops:**
+- searchRestaurants: 298KB (78 restaurants × ad tracking, 6 image resolutions, HTML textFormat, analytics metadata)
+- getRestaurantMenu: 828KB (90+ top-level keys — seoMeta, storeBanners, featuredReviews, heroImageUrls, etc.)
+- getItemDetails: 24KB (30 keys, ~20 are promo/UI: boostPromotion, crossSellSection, itemsUpsell, etc.)
+
+**Recommended fix for response bloat:** Runtime-level response schema projection — strip fields not in the response schema after `unwrap`. This would benefit all `transport: node` operations site-wide, not just UberEats. Alternatively, introduce a `transport: node` + adapter pattern where the adapter receives `ctx.auth.cookieString` (currently `undefined` when `page === null`).
+
+**Files touched:**
+- `src/sites/ubereats/adapters/uber-eats.ts` — adapter type cleanup + getEatsOrderHistory trimming
+- `src/sites/ubereats/openapi.yaml` — schema additions (itemDescription, hasCustomizations, etc.)
+- `src/sites/ubereats/manifest.json` — stats correction (l3_count: 3)
+
 ## 2026-04-18: Re-route getEatsOrderHistory through adapter (forward-fix from 294e9df) — getCart + getEatsOrderHistory verify still BLOCKED
 
 **Context:** `pnpm dev verify ubereats` reproducibly fails 2/5 ops:
