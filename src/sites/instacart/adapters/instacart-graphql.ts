@@ -9,31 +9,26 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
   const query = String(params.query ?? '')
   const limit = Number(params.limit ?? 10)
 
-  let suggestions: Array<Record<string, unknown>> = []
-  try {
-    const data = (await graphqlGet(page, 'CrossRetailerSearchAutosuggestions', {
-      query,
-      limit,
-      retailerIds: [],
-      zoneId: '',
-      autosuggestionSessionId: crypto.randomUUID(),
-    }, errors)) as Record<string, unknown>
-    suggestions = (data.crossRetailerSearchAutosuggestions ?? []) as Array<Record<string, unknown>>
-  } catch { /* autosuggestions optional — proceed to page-based product search */ }
-
-  // Navigate to search results page to trigger Items query via response interception
+  const suggestions: Array<Record<string, unknown>> = []
   const items: unknown[] = []
+
   const handler = async (response: { url(): string; json(): Promise<unknown> }) => {
-    if (response.url().includes('operationName=Items')) {
-      try {
+    const url = response.url()
+    try {
+      if (url.includes('operationName=CrossRetailerSearchAutosuggestions') && suggestions.length === 0) {
+        const body = (await response.json()) as { data?: { crossRetailerSearchAutosuggestions?: Array<Record<string, unknown>> } }
+        if (body.data?.crossRetailerSearchAutosuggestions) {
+          suggestions.push(...body.data.crossRetailerSearchAutosuggestions.slice(0, limit))
+        }
+      } else if (url.includes('operationName=Items')) {
         const body = (await response.json()) as { data?: { items?: unknown[] } }
         if (body.data?.items) {
           for (const item of body.data.items) {
             items.push(normalizeItem(item as Record<string, unknown>))
           }
         }
-      } catch { /* ignore parse errors from non-JSON responses */ }
-    }
+      }
+    } catch { /* ignore parse errors from non-JSON responses */ }
   }
 
   page.on('response', handler)

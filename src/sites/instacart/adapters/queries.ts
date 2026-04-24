@@ -62,8 +62,11 @@ export function normalizeItem(item: Record<string, unknown>): unknown {
   const price = item.price as Record<string, unknown> | undefined
   const priceSection = price?.viewSection as Record<string, unknown> | undefined
   const itemCard = priceSection?.itemCard as Record<string, unknown> | undefined
+  const itemDetails = priceSection?.itemDetails as Record<string, unknown> | undefined
   const availability = item.availability as Record<string, unknown> | undefined
   const avSection = availability?.viewSection as Record<string, unknown> | undefined
+  const viewSection = item.viewSection as Record<string, unknown> | undefined
+  const itemImage = viewSection?.itemImage as Record<string, unknown> | undefined
 
   return {
     id: item.id,
@@ -72,8 +75,8 @@ export function normalizeItem(item: Record<string, unknown>): unknown {
     size: item.size,
     brandName: item.brandName,
     price: itemCard?.priceString ?? null,
-    pricePerUnit: itemCard?.pricePerUnitString ?? null,
-    imageUrl: item.evergreenUrl ?? null,
+    pricePerUnit: itemCard?.pricePerUnitString ?? itemDetails?.pricePerUnitString ?? null,
+    imageUrl: itemImage?.url ?? null,
     available: availability?.available ?? null,
     stockLevel: avSection?.stockLevelLabelString ?? null,
   }
