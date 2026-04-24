@@ -1,3 +1,33 @@
+## 2026-04-25: Userflow QA — response trimming, host profile fix
+
+**Personas tested:**
+1. Family beach vacation — search Santa Cruz, 4 guests, July
+2. Digital nomad — search Lisbon, 1-month stay
+3. Couple weekend getaway — search Napa Valley, 2 guests
+
+**Issues found & fixed:**
+
+| Severity | Issue | Fix |
+|----------|-------|-----|
+| CRITICAL | `getHostProfile` returned raw page config (API keys, tracking, Google Maps URLs) instead of actual profile data. Host profile page uses `data-injector-instances` SSR, not `data-deferred-state`. | Rewrote extraction to parse `data-injector-instances` → `NiobeClientToken` → `UserProfileLegacyQuery` → `userProfileContainer.userProfile`. Switched from browser to node fetch. |
+| HIGH | `searchListings` response 200–260KB. 11 noise top-level keys (`loggingMetadata`, `filters`, `seo`, `pricingToggle`, `mapToasts`, `sectionConfiguration`, `announcements`, etc.) | Added `trimSearch()` — keep only `searchResults` + `paginationInfo`. Now 72–85KB. |
+| HIGH | `getListingDetail` response 150–238KB. 32 sections including 17 UI-chrome sections, plus `sectionsV2`/`screens`/`flows`/`sbuiData` noise. | Added `trimDetail()` — drop UI-chrome sections, strip section wrappers, cap hero images to 10, remove empty sections. Now 37–52KB. |
+| MEDIUM | `__typename` on every object at every level across all adapter responses. | Added recursive `trimResponse()` stripping `__typename` and other GraphQL/logging artifacts. |
+| LOW | Example fixture used inaccessible host ID (70270073 → redirects to login). | Updated example and spec to use publicly accessible host ID 95592328. |
+
+**Response size before/after:**
+- `searchListings`: 232KB → 72KB (−69%)
+- `getListingDetail`: 238KB → 37KB (−84%)
+- `getHostProfile`: broken → 13KB (fixed, node SSR)
+- `getListingReviews`: 88KB (spec-driven, no adapter trim)
+- `getListingAvailability`: 31KB (spec-driven, no adapter trim)
+
+**Known remaining:**
+- `getListingReviews` and `getListingAvailability` still have `__typename` in responses (spec-driven ops, trimming would require runtime-level stripping)
+- Server-level transport is still `page` although all adapter ops now use node fetch internally; browser still launched but unused for adapter ops
+
+---
+
 ## 2026-04-17: Run-export blocker on 3 adapter-based ops
 
 **Status:** `getListingReviews` and `getListingAvailability` migrated to graphql_hash GET

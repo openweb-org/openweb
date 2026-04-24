@@ -406,7 +406,7 @@ paths:
           schema:
             type: string
           description: Host user ID from listing detail host section.
-          example: '70270073'
+          example: '95592328'
       responses:
         '200':
           description: Host profile data from browser SSR extraction.
