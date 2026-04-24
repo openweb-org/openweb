@@ -16,6 +16,9 @@ paths:
       summary: "Search cryptocurrencies by name or symbol — id, name, symbol, market cap rank, thumb"
       x-openweb:
         permission: read
+        adapter:
+          name: coingecko
+          operation: searchCoins
         build:
           stable_id: coingecko_searchCoins_v1
           tool_version: 1
@@ -106,6 +109,9 @@ paths:
       summary: "Get coin details — price, market cap, description, links, developer stats"
       x-openweb:
         permission: read
+        adapter:
+          name: coingecko
+          operation: getCoinDetail
         build:
           stable_id: coingecko_getCoinDetail_v1
           tool_version: 1
@@ -195,12 +201,8 @@ paths:
                       type: string
                     description: "Coin categories"
                   description:
-                    type: object
-                    properties:
-                      en:
-                        type: string
-                        description: "English description (may contain HTML)"
-                    required: [en]
+                    type: string
+                    description: "English description (may contain HTML, trimmed to 2000 chars)"
                   links:
                     type: object
                     properties:
@@ -323,6 +325,9 @@ paths:
       summary: "Get market data for top coins — price, market cap, volume, price change"
       x-openweb:
         permission: read
+        adapter:
+          name: coingecko
+          operation: getMarketData
         build:
           stable_id: coingecko_getMarketData_v1
           tool_version: 1
@@ -485,6 +490,9 @@ paths:
       summary: "Get trending coins and searches — top 7 trending coins by search volume"
       x-openweb:
         permission: read
+        adapter:
+          name: coingecko
+          operation: getTrending
         build:
           stable_id: coingecko_getTrending_v1
           tool_version: 1
@@ -551,6 +559,9 @@ paths:
       summary: "Get simple price for coins — current price in specified currencies"
       x-openweb:
         permission: read
+        adapter:
+          name: coingecko
+          operation: getPrice
         build:
           stable_id: coingecko_getPrice_v1
           tool_version: 1
