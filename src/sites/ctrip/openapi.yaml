@@ -20,6 +20,9 @@ paths:
         stops, duration, price per cabin class, booking token
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: searchFlights
         build:
           stable_id: ct0001
           tool_version: 1
@@ -33,7 +36,6 @@ paths:
               type: object
               required:
               - searchCriteria
-              - Head
               properties:
                 mode:
                   type: integer
@@ -113,11 +115,6 @@ paths:
                       default: []
                 Head:
                   type: object
-                  required:
-                  - Locale
-                  - Currency
-                  - Group
-                  - Source
                   properties:
                     Locale:
                       type: string
@@ -214,6 +211,7 @@ paths:
         entertainment system, power outlet, aircraft type
       x-openweb:
         permission: read
+        adapter: false
         build:
           stable_id: ct0003
           tool_version: 1
@@ -306,6 +304,9 @@ paths:
         notices, saved preferences
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: getGeneralInfo
         build:
           stable_id: ct0004
           tool_version: 1
@@ -402,6 +403,9 @@ paths:
           transport: page
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: getHotDestinations
         build:
           stable_id: ct0005
           tool_version: 1
@@ -479,6 +483,9 @@ paths:
         duration, seat types with availability and prices
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: searchTrains
         build:
           stable_id: ct0006
           tool_version: 1
@@ -570,6 +577,9 @@ paths:
         for use as input to searchTrains
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: getTrainStations
         build:
           stable_id: ct0007
           tool_version: 1
@@ -637,6 +647,9 @@ paths:
         country, district ID, for use as autocomplete in flight/hotel/train search
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: searchPOI
         build:
           stable_id: ct0008
           tool_version: 1
@@ -721,6 +734,9 @@ paths:
           transport: page
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: getDestinationInfo
         build:
           stable_id: ct0009
           tool_version: 1
@@ -919,6 +935,9 @@ paths:
           transport: page
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: searchAttractions
         build:
           stable_id: ct0010
           tool_version: 1
@@ -1049,6 +1068,9 @@ paths:
         departure time ranges, cabin classes, price ranges
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: getFlightFilters
         build:
           stable_id: ct0011
           tool_version: 1
@@ -1124,6 +1146,9 @@ paths:
           transport: page
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: getAttractionDetail
         build:
           stable_id: ct0012
           tool_version: 1
@@ -1216,6 +1241,9 @@ paths:
         price per day, route info for schedule planning
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: getTrainCalendar
         build:
           stable_id: ct0013
           tool_version: 1
@@ -1294,6 +1322,9 @@ paths:
           transport: page
       x-openweb:
         permission: read
+        adapter:
+          name: ctrip
+          operation: getCityList
         build:
           stable_id: ct0014
           tool_version: 1

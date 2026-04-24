@@ -1,5 +1,55 @@
 # Ctrip / Trip.com Fixture — Progress
 
+## 2026-04-25: Userflow QA — adapter + session context investigation
+
+**Workflows tested:**
+1. "Cheapest flight SHA→TYO next month": searchPOI → searchFlights → getFlightComfort → getFlightFilters
+2. "Train trip Shanghai→Beijing": getTrainStations → getTrainCalendar → searchTrains
+3. "Explore Bangkok attractions": getHotDestinations → getCityList → searchAttractions → getAttractionDetail → getDestinationInfo
+
+**Findings — most operations return error/empty data despite HTTP 200:**
+
+| Operation | Status | Response |
+|-----------|--------|----------|
+| getHotDestinations | OK | 5 destinations, clean data |
+| getGeneralInfo | OK | Sparse (`savedTips:false`) |
+| searchFlights | DEGRADED | "locale cannot be blank" → "grade is null" after Head enrichment |
+| searchPOI | DEGRADED | "SourceEnum cannot be null" — empty after null strip |
+| getFlightComfort | DEGRADED | "SourceEnum cannot be null" |
+| searchTrains | BROKEN | 609 "Something went wrong" |
+| getTrainStations | BROKEN | 609 "Something went wrong" |
+| getTrainCalendar | BLOCKED | HTTP 403 |
+| getAttractionDetail | BLOCKED | HTTP 403 |
+| getCityList | BLOCKED | HTTP 403 |
+| getDestinationInfo | DEGRADED | Returns `{result:1}` — no data |
+| searchAttractions | DEGRADED | Empty list or 5000 NPE error |
+| getFlightFilters | UNTESTED | Requires token from searchFlights |
+
+**Root cause: IP-based geo-redirect corrupts session context.**
+
+Trip.com's server detects the headless browser's IP region and redirects to `locale=es-us`. Confirmed by navigating to `us.trip.com/flights` → redirect to `us.trip.com/?locale=es-us`. Trip.com's JS framework injects `SourceEnum`, locale, `Channel`, `ClientID` into API request bodies. Without a properly initialized session, most APIs return error messages inside HTTP 200 responses.
+
+**What changed:**
+
+1. **Added adapter `adapters/ctrip.ts`:**
+   - Enriches `Head` (uppercase) with `Channel`, `SessionId`, `PvId` for flight/POI services
+   - Enriches `head` (lowercase) with `syscode`, `lang`, `cver`, `sid`, `source` for train/destination services
+   - Applies nested defaults for searchFlights (`grade`, `realGrade`, `passengerInfoType`)
+   - Strips `ResponseStatus` and `responseHead` metadata from all responses
+   - 30s pageFetch timeout; enabled for 12/13 ops (getFlightComfort `adapter: false`)
+
+2. **Schema fix:** Removed `required: [Head]` from searchFlights body schema — adapter provides defaults.
+
+**Response size (getHotDestinations):** 918B → 584B (ResponseStatus stripped).
+
+**Verification:** 9/9 PASS (`pnpm dev verify ctrip`). Adapter pattern baseline updated.
+
+**Known issues:**
+- APIs return HTTP 200 with error content when session context is stale — verify passes on status but data quality is degraded.
+- www.trip.com endpoints (getCityList, getAttractionDetail, getTrainCalendar) return 403 — WAF blocks headless browsers.
+- Train services (31699, 36040) return 609 — possibly geo-restricted.
+- Fix requires: US-based proxy, or reverse-engineering Trip.com SOA framework header injection.
+
 ## 2026-03-24: Initial discovery — 10 operations
 
 **What changed:**
