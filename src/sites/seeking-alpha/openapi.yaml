@@ -11,16 +11,16 @@ servers:
     x-openweb:
       transport: page
 paths:
-  /api/v3/searches/all:
+  /api/v3/searches:
     get:
       operationId: searchArticles
-      summary: Search for articles, analysis, and tickers by keyword — title, url, company, quant rating
+      summary: Search for articles, news, or tickers — returns results under the type key (articles[], symbols[], news[])
       x-openweb:
         permission: read
         adapter: false
         build:
           stable_id: sa0001
-          tool_version: 3
+          tool_version: 4
           verified: true
           signals:
             - adapter-verified
@@ -32,6 +32,15 @@ paths:
           schema:
             type: string
           example: AAPL
+        - name: filter[type]
+          in: query
+          required: false
+          description: Result type — articles, symbols, or news.
+          schema:
+            type: string
+            default: articles
+            enum: [articles, symbols, news]
+          example: articles
         - name: page[size]
           in: query
           required: false
@@ -56,17 +65,9 @@ paths:
             type: string
             default: quarter
           example: quarter
-        - name: filter[list]
-          in: query
-          required: false
-          description: Result list type.
-          schema:
-            type: string
-            default: all
-          example: all
       responses:
         '200':
-          description: Raw Seeking Alpha search response. Contains data[] entries (symbol/article/news) plus meta/links/included.
+          description: Results keyed by type — articles[], symbols[], or news[]. Each entry has id, url, name, content, score; articles also include author, date, comments_count.
           content:
             application/json:
               schema:

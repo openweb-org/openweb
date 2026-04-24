@@ -1,3 +1,18 @@
+## 2026-04-24: Userflow QA — fix searchArticles endpoint
+
+**Context:** Blind QA with 3 investor personas (value, dividend, growth).
+
+**Gap found:** `searchArticles` used `/api/v3/searches/all` which only returns symbols and pages, never articles. The operation name promised article search but delivered ticker lookup.
+
+**Fix:** Switched endpoint to `/api/v3/searches` with new `filter[type]` parameter (articles/symbols/news, default articles). Dropped unused `filter[list]` param. Updated response description and example.
+
+**Persona results:**
+- Value investor (AAPL): searchArticles, getStockAnalysis, getEarnings, getArticle — all PASS
+- Dividend investor (T, VZ): getStockAnalysis — PASS, div_yield_fwd present
+- Growth investor (NVDA, AI stocks): searchArticles now returns actual articles, getStockAnalysis — PASS
+
+**Verification:** `pnpm dev verify seeking-alpha` → 4/4 PASS
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**
