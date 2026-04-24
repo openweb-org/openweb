@@ -16,9 +16,13 @@ paths:
       summary: Search tracks by keyword — title, artist, duration, play count, likes, waveform URL
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: soundcloud
+          operation: searchTracks
         build:
           stable_id: sc0001
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: q
           in: query
@@ -27,13 +31,6 @@ paths:
             type: string
           description: Search query (keyword, artist name, or phrase).
           example: lofi beats
-        - name: client_id
-          in: query
-          required: true
-          schema:
-            type: string
-            const: EsIST4DWFy7hEa8mvPoVwdjZ4NTZqmei
-          description: SoundCloud API client ID (public, embedded in page JS).
         - name: limit
           in: query
           required: false
@@ -93,15 +90,19 @@ paths:
                           description: Waveform image URL.
                         playback_count:
                           type: integer
+                          nullable: true
                           description: Total play count.
                         likes_count:
                           type: integer
+                          nullable: true
                           description: Total likes.
                         comment_count:
                           type: integer
+                          nullable: true
                           description: Total comments.
                         reposts_count:
                           type: integer
+                          nullable: true
                           description: Total reposts.
                         created_at:
                           type: string
@@ -134,9 +135,13 @@ paths:
       summary: Get track details — title, artist, duration, plays, likes, comments, waveform, genre
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: soundcloud
+          operation: getTrack
         build:
           stable_id: sc0002
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: id
           in: path
@@ -145,13 +150,6 @@ paths:
             type: integer
           description: Track ID (from searchTracks results).
           example: 899253886
-        - name: client_id
-          in: query
-          required: true
-          schema:
-            type: string
-            const: EsIST4DWFy7hEa8mvPoVwdjZ4NTZqmei
-          description: SoundCloud API client ID (public, embedded in page JS).
       responses:
         '200':
           description: Full track metadata.
@@ -196,18 +194,23 @@ paths:
                     description: Waveform image URL.
                   playback_count:
                     type: integer
+                    nullable: true
                     description: Total play count.
                   likes_count:
                     type: integer
+                    nullable: true
                     description: Total likes.
                   comment_count:
                     type: integer
+                    nullable: true
                     description: Total comments.
                   reposts_count:
                     type: integer
+                    nullable: true
                     description: Total reposts.
                   download_count:
                     type: integer
+                    nullable: true
                     description: Total downloads.
                   created_at:
                     type: string
@@ -237,9 +240,13 @@ paths:
       summary: Get user/artist profile — username, bio, followers, tracks count, playlists, verified status
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: soundcloud
+          operation: getUser
         build:
           stable_id: sc0003
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: id
           in: path
@@ -248,13 +255,6 @@ paths:
             type: integer
           description: User ID (from track or search results).
           example: 336200682
-        - name: client_id
-          in: query
-          required: true
-          schema:
-            type: string
-            const: EsIST4DWFy7hEa8mvPoVwdjZ4NTZqmei
-          description: SoundCloud API client ID (public, embedded in page JS).
       responses:
         '200':
           description: User profile metadata.
@@ -326,9 +326,13 @@ paths:
       summary: Get playlist details and track list — title, description, track count, duration, creator
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: soundcloud
+          operation: getPlaylist
         build:
           stable_id: sc0004
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: id
           in: path
@@ -337,13 +341,6 @@ paths:
             type: integer
           description: Playlist ID (from search or user playlists).
           example: 1710939930
-        - name: client_id
-          in: query
-          required: true
-          schema:
-            type: string
-            const: EsIST4DWFy7hEa8mvPoVwdjZ4NTZqmei
-          description: SoundCloud API client ID (public, embedded in page JS).
       responses:
         '200':
           description: Playlist metadata with embedded tracks.
@@ -424,6 +421,7 @@ paths:
                           description: Public URL on SoundCloud.
                         playback_count:
                           type: integer
+                          nullable: true
                           description: Total play count.
                         user:
                           type: object

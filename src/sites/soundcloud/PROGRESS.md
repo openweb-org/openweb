@@ -1,3 +1,24 @@
+## 2026-04-24: Userflow QA — response trimming and fixes
+
+**What changed:**
+- Added `soundcloud` adapter with `trimResponse()` — strips `media`, `publisher_metadata`, `track_authorization`, `monetization_model`, `policy`, `station_*`, `badges`, `creator_subscription*`, `visuals`, and 20+ other noise fields across all 4 operations
+- Fixed nullable fields in openapi.yaml: `playback_count`, `likes_count`, `comment_count`, `reposts_count`, `download_count` on tracks; `playback_count` on playlist tracks (API returns null for some tracks)
+- Removed `client_id` as a user-facing parameter — adapter injects it internally
+- Added `transport: node` at operation level for adapter dispatch
+
+**Size reductions:**
+- searchTracks: 106KB → ~35KB (67% reduction)
+- getPlaylist: 36KB → 9KB (75% reduction)
+- getTrack: inline (no truncation)
+- getUser: inline (no truncation)
+
+**Personas tested:**
+1. Producer — search "lo-fi beat" → getTrack → getUser chain
+2. DJ — search "house remix 2026"
+3. Podcast host — search "true crime podcast"
+
+**Verification:** `pnpm --silent dev verify soundcloud`
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**
