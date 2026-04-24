@@ -1,25 +1,43 @@
 import type { Page, Response as PwResponse } from 'patchright'
 
 import type { CustomRunner } from '../../../types/adapter.js'
-/**
- * Expedia L3 adapter — GraphQL APQ via browser fetch.
- *
- * Expedia serves all data through a single GraphQL endpoint using
- * Automatic Persisted Queries (APQ): only sha256 hashes, no query text.
- * Heavy Akamai bot detection → page transport required.
- */
 
 const GRAPHQL_URL = 'https://www.expedia.com/graphql'
 
-/* ---------- APQ hashes (captured 2026-04-01) ---------- */
+/* ---------- APQ hashes ---------- */
 
 const HASHES = {
   PropertyListingQuery: '82abb7da6738db4c904e4d10130072236a751b5a315f6dfaf92474793597bc33',
   PropertyDetailsBasicQuery: 'd84aa742ff292a7a866582569e4ecc143ba5cdb28d11e76e0c94d65957ae972c',
-  PropertyRatesDateSelectorQuery: '4ff3b2253a967d392964e0e2827ec4c1c0c6ea28096f4d75594dc4d22204aee1',
-  FlightsSearchResultsLoadedQuery: 'f9c3e8bd42ba4953543034718f090c9bb847344c5e46dceeeb4de157815b24e5',
-  FlightsUniversalSortAndFiltersQuery: '5b55478286daf34b3639f41b6c915c10ed361c06c37446570ca7d00aa46cb45a',
 } as const
+
+/* ---------- response trimming ---------- */
+
+const STRIP_KEYS = new Set([
+  '__typename', 'analyticsEvents', 'clickstream', 'clickstreamEvents',
+  'impressionAnalytics', 'intersectionAnalytics', 'renderAnalytics',
+  'adaptexSuccessActionTracking', 'shoppingInvokeFunctionParams',
+  'clientSideAnalytics', 'propertyListingAdaptexAnalyticsSuccessEvents',
+  'tnlFields', 'dataAttributes', 'clickActionId',
+  'egcsClickAnalytics', 'egcsDisplayAnalytics', 'flightsOfferAnalytics',
+  'onClickAnalyticsList', 'sponsoredAirline', 'sponsoredUpsell',
+  'stepIndicatorJcid', 'shoppingJoinListContainer', 'compareSection',
+  'saveTripItem', 'shoppingShareLinks', 'directFeedback',
+])
+
+function trimResponse(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj
+  if (Array.isArray(obj)) return obj.map(trimResponse)
+  if (typeof obj === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      if (STRIP_KEYS.has(k)) continue
+      out[k] = trimResponse(v)
+    }
+    return out
+  }
+  return obj
+}
 
 /* ---------- shared types ---------- */
 
@@ -166,7 +184,7 @@ async function searchHotels(page: Page, params: Record<string, unknown>, errors:
     'shopping-pwa,unknown,us-east-1',
     errors,
   )) as Record<string, unknown>
-  return data?.propertySearch
+  return trimResponse(data?.propertySearch)
 }
 
 async function getHotelDetail(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
@@ -206,7 +224,7 @@ async function getHotelDetail(page: Page, params: Record<string, unknown>, error
     string,
     unknown
   >
-  return data?.propertyInfo
+  return trimResponse(data?.propertyInfo)
 }
 
 async function searchFlights(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
@@ -214,71 +232,69 @@ async function searchFlights(page: Page, params: Record<string, unknown>, errors
   const destination = String(params.destination ?? params.to ?? 'Los Angeles (LAX-Los Angeles Intl.)')
   const departureDate = String(params.departureDate ?? params.departure ?? '2026-05-10')
   const returnDate = params.returnDate ?? params.return
-  const cabinClass = String(params.cabinClass ?? 'COACH')
+  const cabinClass = String(params.cabinClass ?? 'COACH').toLowerCase()
   const adults = Number(params.adults ?? 1)
-  const offset = Number(params.offset ?? 0)
-  const limit = Number(params.limit ?? 25)
 
-  const duaid = await getDuaid(page)
+  const leg1 = `from:${encodeURIComponent(origin)},to:${encodeURIComponent(destination)},departure:${departureDate}TANYT`
+  let url = `https://www.expedia.com/Flights-Search?leg1=${leg1}&passengers=adults:${adults}&options=cabinclass:${cabinClass}&mode=search`
 
-  const journeyCriteria = [
-    {
-      departureDate: parseDate(departureDate),
-      destination,
-      origin,
-      originAirportLocationType: 'UNSPECIFIED',
-      destinationAirportLocationType: 'UNSPECIFIED',
-    },
-  ]
-
-  // Add return leg for round trips
   if (returnDate) {
-    journeyCriteria.push({
-      departureDate: parseDate(String(returnDate)),
-      destination: origin,
-      origin: destination,
-      originAirportLocationType: 'UNSPECIFIED',
-      destinationAirportLocationType: 'UNSPECIFIED',
-    })
+    const leg2 = `from:${encodeURIComponent(destination)},to:${encodeURIComponent(origin)},departure:${String(returnDate)}TANYT`
+    url += `&leg2=${leg2}`
   }
 
-  const variables = {
-    faresSeparationType: 'BASE_AND_UPSELL',
-    searchFilterValuesList: [],
-    flightsSearchContext: {
-      tripType: returnDate ? 'ROUND_TRIP' : 'ONE_WAY',
-      previousOriginalBookingId: null,
-      journeysContinuationId: null,
-      hasCreditRedemptionIntent: null,
-      originalBookingId: null,
-      searchId: crypto.randomUUID(),
-    },
-    journeyCriteria,
-    searchPreferences: { cabinClass },
-    sortOption: null,
-    travelerDetails: [{ travelerType: 'ADULT', count: adults }],
-    searchPagination: { size: limit, startingIndex: offset },
-    flightsSearchComponentCriteria: { queryParams: [] },
-    shoppingContext: null,
-    virtualAgentContext: null,
-    context: buildContext(duaid),
-    queryState: 'LOADED',
+  let captured: unknown = null
+  const handler = async (resp: PwResponse) => {
+    if (captured) return
+    try {
+      const req = resp.request()
+      if (!req.url().includes('/graphql') || req.method() !== 'POST') return
+      const postData = req.postData() ?? ''
+      if (!postData.includes('Flight')) return
+      const json = await resp.json()
+      const entries = Array.isArray(json) ? json : [json]
+      for (const entry of entries) {
+        const search = entry?.data?.flightsSearch
+        if (search?.listingResult) {
+          captured = search
+          return
+        }
+      }
+    } catch { /* ignore parse errors */ }
   }
 
-  const data = (await apqFetch(
-    page,
-    'FlightsSearchResultsLoadedQuery',
-    variables,
-    'flights-shopping-pwa,unknown,us-east-1',
-    errors,
-  )) as Record<string, unknown>
-  return data?.flightsSearch
+  page.on('response', handler)
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 }).catch(() => {})
+    const deadline = Date.now() + 30_000
+    while (!captured && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 500))
+    }
+  } finally {
+    page.off('response', handler)
+  }
+
+  if (!captured) {
+    throw errors.apiError('searchFlights', 'No flight data captured — page may not have loaded results')
+  }
+
+  const result = trimResponse(captured) as Record<string, unknown>
+  const listings = (result?.listingResult as Record<string, unknown>)?.listings
+  if (Array.isArray(listings)) {
+    for (const listing of listings) {
+      const journeys = (listing as Record<string, unknown>)?.journeys
+      if (Array.isArray(journeys)) {
+        for (const j of journeys) {
+          delete (j as Record<string, unknown>).detailsAndFares
+          delete (j as Record<string, unknown>).dialogSheet
+        }
+      }
+    }
+  }
+  return result
 }
 
 async function getFlightDetail(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
-  // Flight detail uses the same search query with specific filters
-  // In Expedia's model, flight "detail" = search results with filter refinement
-  // The detailed info (fares, segments) is in the search response itself
   return searchFlights(page, params, errors)
 }
 
@@ -322,7 +338,7 @@ async function getHotelPrices(page: Page, params: Record<string, unknown>, error
   }
 
   const data = captured as Record<string, unknown>
-  return data?.propertyRatesDateSelector ?? data?.propertyOffers ?? data
+  return trimResponse(data?.propertyRatesDateSelector ?? data?.propertyOffers ?? data)
 }
 
 async function getHotelReviews(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
@@ -419,7 +435,7 @@ async function getHotelReviews(page: Page, params: Record<string, unknown>, erro
   }
 
   const data = captured as Record<string, unknown>
-  return data?.propertyInfo?.reviewInfo ?? data?.propertyReviews ?? data
+  return trimResponse(data?.propertyInfo?.reviewInfo ?? data?.propertyReviews ?? data)
 }
 
 /* ---------- helpers ---------- */

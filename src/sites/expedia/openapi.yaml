@@ -546,7 +546,6 @@ paths:
                         description: Flight result listings.
                         items:
                           type: object
-                          required: [__typename]
                           properties:
                             __typename:
                               type: string
@@ -575,7 +574,7 @@ paths:
                               nullable: true
                               description: Promotion or feature badges.
                       moreListingsAvailable:
-                        type: boolean
+                        type: [boolean, string]
                         nullable: true
                         description: Whether more results are available for pagination.
                   pageTitle:
@@ -659,7 +658,6 @@ paths:
                         description: Flight result listings with complete details.
                         items:
                           type: object
-                          required: [__typename]
                           properties:
                             __typename:
                               type: string
@@ -680,7 +678,7 @@ paths:
                               nullable: true
                               description: Price rows with per-person fare.
                       moreListingsAvailable:
-                        type: boolean
+                        type: [boolean, string]
                         nullable: true
                         description: Whether more results are available for pagination.
                   pageTitle:
