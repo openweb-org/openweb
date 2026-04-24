@@ -215,7 +215,6 @@ paths:
 
                 required:
                 - contents
-                - background
   /browse/artist:
     post:
       operationId: getArtist

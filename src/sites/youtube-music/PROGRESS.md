@@ -1,3 +1,19 @@
+## 2026-04-24: Userflow QA — schema fix
+
+**Personas tested:**
+1. Commuter — searchMusic "workout motivation playlist" → getAlbum → getSong → getPlaylist → getUpNext
+2. Music Explorer — searchMusic "indie rock 2026" → getArtist → getAlbum → getSearchSuggestions
+3. DJ — browseCharts → getPlaylist (trending) → getSong → getUpNext → browseHome
+
+**Issues found & fixed:**
+- getPlaylist schema mismatch: `background` was required but album-backed playlists (VLOLAK…) omit it → made optional
+
+**Noted (not fixed):**
+- getSong returns `playabilityStatus: UNPLAYABLE` without auth — expected, schema documents it
+- Responses are 100KB–1MB raw InnerTube JSON; no L3 adapters exist for response trimming (pipeline gap)
+
+**All 9 ops verified green, no regressions.**
+
 ## 2026-04-01: Initial discovery — 9 operations via InnerTube API
 
 **What changed:**
