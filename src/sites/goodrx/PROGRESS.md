@@ -40,3 +40,23 @@
 **Verification:** `pnpm dev verify goodrx --browser` → 3/3 PASS against production goodrx.com
 **Key discovery:** PagePlan's `warm: true` was insufficient on its own — `warmSession` previously only did a fixed 3 s delay and let PerimeterX-blocked pages through. Extended `warmSession` with post-warm bot detection + clearCookies/re-navigate retry (default 3 attempts). This generalizes the adapter's hand-coded `navigateWithPxRetry` so any spec-only site using `warm: true` inherits PX recovery.
 **Pitfalls encountered:** First verify pass returned `bot_blocked 0/3` because the runtime had no retry loop. Adding the `botRetries` extension to `warmSession` flipped it to PASS without per-site code.
+
+## 2026-04-25 — Userflow QA: Blocked by PerimeterX CAPTCHA
+
+**Context:** Userflow QA — designed 3 blind persona workflows to validate end-to-end:
+1. **Caregiver**: searchDrugs("metformin") → getDrugPrices → getPharmacies (find cheapest pharmacy)
+2. **Parent**: searchDrugs("amoxicillin") → getDrugPrices → getPharmacies(94102) (urgent Rx near SF)
+3. **Multi-Rx patient**: getPharmacies(60601) → searchDrugs × 2 (lisinopril, atorvastatin) → getDrugPrices × 2 (cross-pharmacy comparison in Chicago)
+
+**Result:** All 3 operations blocked by PerimeterX CAPTCHA (`#px-captcha` detected on page). No workflow could complete.
+
+**Investigation:**
+- `warmSession` retry loop functions correctly: 3 cookie-clear + re-navigate retries per attempt, executor adds 2 more retries on top (12 total navigations per call)
+- PerimeterX blocks every attempt regardless of cookie state
+- Root cause: Chromium 147 headless (`--headless=new`) exposes `HeadlessChrome/147.0.0.0` in the User-Agent string — this is the primary detection signal. The runtime only overrides UA when explicitly configured in `config.json`
+- The warm-session PX mitigation (added 2026-04-17) relies on cookie poisoning being the blocking mechanism; headless fingerprinting is a deeper layer that cookie-clearing cannot resolve
+- `pnpm dev verify goodrx` confirms: `bot_blocked 0/3 ops`
+
+**Comparison to 2026-04-17:** Verify passed 3/3 on that date. Either PerimeterX tightened headless detection since then, or the IP/fingerprint was flagged after repeated automated access.
+
+**Blocker:** PerimeterX headless browser detection. Cannot resolve without either (a) UA masking at browser launch, or (b) a non-headless browser path. No code changes made — the extraction logic and spec are sound; this is a bot-detection infrastructure issue.
