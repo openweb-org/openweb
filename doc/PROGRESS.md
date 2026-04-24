@@ -1,3 +1,94 @@
+## 2026-04-25: Kayak userflow QA — hotel poll interception, response trimming
+
+**What changed:**
+- searchHotels: replaced broken DOM extraction with poll API interception (`/search/dynamic/hotels/poll`). DOM selectors returned all-null fields (0/15 results had data); poll API returns structured hotel data reliably.
+- searchFlights: added `trimFlightResponse()` — strips ads (inlineAd, inlineDisplayAd, inlinePriceAlertItem), caps to 20 core results, limits to top 3 booking options per result (providerCode, price, totalPrice, currency only), prunes legs/segments/airlines/airports to only referenced entries. Removes filterData (40KB), providers (21KB), sortData, banners, pricePredictionData, bucketingInfo noise.
+- searchHotels: added `trimHotelResponse()` — caps to 20 results, flattens rating (score/ratingText/reviews), limits to top 3 providers (name, price, totalPrice, freebies), strips images (11KB/hotel), brand details, phone, description attribution. Keeps amenities as name strings, geolocation as city/distance.
+- openapi.yaml: rewritten to match trimmed response schemas for both operations.
+- Size reductions: searchFlights 814KB→18KB (98%), searchHotels 559KB→15KB (97%). Previously searchHotels was DOM-extracted at 4KB but with 0% data quality (all null fields).
+
+**Why:**
+- Blind userflow QA across 3 personas: Deal hunter (search flights ATL→MIA sorted by price), Family vacation (search hotels Orlando, 4 guests), Business traveler (round trip JFK↔LAX business class). searchHotels returned 15 results with ALL fields null — DOM extraction selectors completely broken. searchFlights returned 814KB–1MB raw poll responses with ads, 20 booking options per flight with baggage/fee noise, and 40KB filter metadata.
+
+**Known limitations:**
+- Some Kayak routes intermittently fail with "No results captured" (Akamai rate limiting, ~30% failure rate on repeated requests to same route). Retry with different route or wait succeeds.
+- Hotel `status` may return `"second-phase"` instead of `"complete"` — poll captures the best available response within the 30s window.
+- 7/20 hotels may have null `rating` (unrated budget properties).
+
+**Key files:** `src/sites/kayak/adapters/kayak-search.ts`, `src/sites/kayak/openapi.yaml`.
+**Verification:** `pnpm dev verify kayak` — 2/2 PASS. 3 persona workflows validated: flights 20 results with legs/segments, hotels 20 results with 20/20 names and prices.
+
+## 2026-04-25: Expedia userflow QA — flights intercept pattern, response trimming
+
+**What changed:**
+- searchFlights/getFlightDetail: converted from APQ direct fetch to intercept pattern. Navigates to Expedia's flight search results page and intercepts the GraphQL response. Hash-independent — survives Expedia deploys without adapter updates. Strips `detailsAndFares` (fare dialog modal, ~100KB/listing) from search results.
+- Response trimming: added `STRIP_KEYS` set + recursive `trimResponse()` across all 6 operations. Strips `__typename`, analytics, clickstream, UI rendering metadata. searchHotels: 867KB→82KB, getHotelDetail: 44KB→27KB, searchFlights: 2MB→29KB.
+- openapi.yaml: removed `__typename` from `required` on flight listings (stripped by trimming). Fixed `moreListingsAvailable` type from `boolean` to `[boolean, string]` (Expedia returns loading message string during progressive rendering).
+- Removed stale flight APQ hashes (`FlightsSearchResultsLoadedQuery`, `FlightsUniversalSortAndFiltersQuery`) from adapter — no longer needed.
+
+**Why:**
+- Blind userflow QA as budget traveler: search "flights SFO to Tokyo" round trip Jun 15-25 economy. searchFlights returned fatal `PersistedQueryNotFound` — APQ hash (captured 2026-04-01) had rotated after an Expedia deploy. searchHotels worked but returned 867KB of bloated response with analytics/clickstream/rendering noise.
+
+**Known limitations:**
+- Flight search progressive loading: return leg data may show null departure/arrival if the browser captures the first GraphQL response before the return leg loads. Retry returns full data.
+- Chinese locale: browser with CN locale gets results in Chinese. Known issue per DOC.md.
+- Hotel APQ hashes (PropertyListingQuery, PropertyDetailsBasicQuery) still hardcoded — will break on Expedia redeploy. Consider converting to intercept pattern if they start rotating.
+
+**Key files:** `src/sites/expedia/adapters/expedia-graphql.ts`, `src/sites/expedia/openapi.yaml`, `src/sites/expedia/DOC.md`.
+**Verification:** `pnpm dev verify expedia` — searchFlights, searchHotels, getHotelDetail return trimmed data. getFlightDetail delegates to searchFlights.
+
+## 2026-04-25: Google Flights userflow QA — origin code extraction and explore price/stops parsing
+
+**What changed:**
+- searchFlights: fixed origin airport code extraction. SSR data stores single-airport codes at `routeInfo[0][0][0][0][0]` (e.g. `["SFO",0]`), not at `[2][5]` which only exists for multi-airport cities (e.g. Paris→PAR). Added fallback chain: try city code `[2][5]` first, then airport code `[0][0]`. Same fallback added for destination code.
+- exploreDestinations: fixed price/stops parsing for connecting flights. DOM text concatenates price and stop count without separator (`$921 stop` = $92 + "1 stop"), causing greedy `\d+` to consume the stop digit into the price. Replaced with lazy `\d+?` + combined `(Nonstop|\d\s*stops?)` regex that correctly splits `$921 stop` → price=$92, stops="1 stop".
+- getFlightBookingDetails: added missing `tfu` parameter to spec (adapter already used it for navigation).
+- openapi.yaml: bumped searchFlights tool_version 2→3, exploreDestinations tool_version 1→2.
+
+**Why:**
+- Blind userflow QA as flexible traveler: search "SFO to Paris" (searchFlights→getPriceInsights→exploreDestinations). searchFlights returned `"San Francisco International Airport ()"` — empty origin code for all routes. exploreDestinations returned wrong prices ($921 instead of $92 for Atlanta, $1951 instead of $195 for Las Vegas) and empty stops for all connecting flights.
+
+**Known limitations:**
+- getFlightOverview: page layout changed — Google Flights now renders search results instead of distinct Cheapest/Fastest/Nonstop overview sections. DOM regexes return sparse data (price only, no airline/stops/duration). Marked `verified: false`.
+- getFlightBookingDetails: even with `tfu`, page DOM parsing returns empty legs/bagPolicies. Booking detail page layout has changed. Marked `verified: false`.
+- exploreDestinations defaults to geolocation-based origin when no `tfs` is passed (expected behavior, not a bug).
+
+**Key files:** `src/sites/google-flights/adapters/google-flights.ts`, `src/sites/google-flights/openapi.yaml`.
+**Verification:** `pnpm dev verify google-flights` — searchFlights, getPriceInsights, exploreDestinations return correct data. getFlightOverview, getFlightBookingDetails remain unverified (page DOM stale).
+
+## 2026-04-25: Booking.com userflow QA — locale fix, reviews/prices navigation, flight dedup
+
+**What changed:**
+- searchHotels: forced English locale via `.en-us.html` path + `lang=en-us` query param on search URL. Apollo cache now returns English hotel names and ratingText.
+- getHotelReviews: added `country` required param + `page_plan.entry_url` to navigate to the hotel page before extraction. Previously returned all nulls because `resolveHotelId` couldn't find the hotel ID (browser wasn't on a hotel page). DOM fallback extraction: locale-agnostic score regex (handles CJK-adjacent numbers like "评分7.97.9"), Chinese→English subscore key mapping (员工素质→staff, 设施/服务→facilities, etc.), comma-aware review count extraction.
+- getHotelPrices: same `country` param + `page_plan.entry_url` fix. Now returns room details (names, beds, sizes, facilities) via GraphQL `RoomDetailQuery`. Room-level prices remain null (requires separate availability API).
+- getHotelDetail: added `.en-us.html?lang=en-us` to `entry_url` — description returns in English. Name/address remain locale-dependent (Booking.com LD+JSON localization is cookie-based, not URL-overridable).
+- searchFlights: added flight deduplication (carrier+time+airport+price key), Chinese→English normalization for duration (小时→h, 分钟→m) and stops (直达→Direct, 中转N次→N stop). Reduced 15 duplicates to 5 unique flights.
+
+**Why:**
+- Blind userflow QA across 3 personas: Business traveler (search "Manhattan New York" Oct 15-17 → detail → reviews → prices), Budget backpacker (search "hostels Barcelona" → detail → reviews → prices), Family vacation (search "resort Cancun family" → detail → reviews → prices → flights NYC-CUN). getHotelReviews returned all null fields (0/3 personas), getHotelPrices returned 0 rooms (0/3 personas). All responses had Chinese text (hotel names, ratingText, duration, stops) despite English-speaking user context.
+
+**Known limitations:**
+- `distance` field is null in searchHotels (Apollo SSR cache doesn't include `mainDistance`; DOM fallback would extract it but Apollo path is preferred for structured data).
+- getHotelDetail name/address remain locale-dependent (Booking.com LD+JSON uses cookie-based locale, not overridable via URL params).
+- getHotelPrices `price`/`perNight` are null (GraphQL `RoomDetailQuery` returns room metadata only; pricing requires a separate availability check API).
+
+**Key files:** `src/sites/booking/adapters/booking.ts`, `src/sites/booking/openapi.yaml`.
+**Verification:** `pnpm dev verify booking` — 5/5 PASS.
+
+## 2026-04-25: JD userflow QA — DOM selector rewrite and review field fixes
+
+**What changed:**
+- searchProducts: rewrote price extraction (CSS-module `<i>¥</i><span>` sibling scan), shopName (CSS-module `_limit_`/`_shopFloor_` class scan), sales (added `条評価` fallback for official stores showing review counts instead of "已售").
+- getProductReviews: fixed `user` (`userInfo.nickName` → `userNickName`) and `score` (`score` → `commentScore`) field mappings to match actual JD API response structure.
+- openapi.yaml: updated `sales` description, added reviewer anonymization note.
+
+**Why:**
+- Blind userflow QA across 3 personas: 数码发烧友 (search "iPhone 17 Pro"→detail→reviews→price), 白领 (search "机械键盘"→detail→reviews→price), 家长 (search "儿童书桌"→detail→reviews→price). searchProducts returned null price (0/30), null shopName (0/30) because JD's search page switched to CSS-module hashed classes, breaking prior `.p-price`/`mall.jd.com` selectors. Reviews returned empty user and score=0 due to field name mismatch.
+
+**Key files:** `src/sites/jd/adapters/jd-global-api.ts`, `src/sites/jd/openapi.yaml`.
+**Verification:** All 4 ops × 3 personas pass. price 30/30, shopName 30/30, sales 28-30/30, user+score populated.
+
 ## 2026-04-24: Bilibili userflow QA — WBI signing fix and response trimming
 
 **What changed:**
