@@ -6,7 +6,7 @@ import { resolveSiteRoot } from '../lib/site-resolver.js'
 import { type JsonSchema, getRequestBodyParameters, isArraySchema, findOperation, listOperations, loadOpenApi } from '../lib/spec-loader.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import { type OperationEntry, loadSitePackage } from '../lib/site-package.js'
-import type { PermissionCategory } from '../types/extensions.js'
+import type { PermissionCategory, XOpenWebParameter } from '../types/extensions.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { resolveAllParameters } from './request-builder.js'
 
@@ -21,6 +21,11 @@ function formatParamType(type: string | string[] | undefined): string {
     return 'array'
   }
   return type
+}
+
+function paramDisplayName(param: { name: string; 'x-openweb'?: unknown }): string {
+  const ext = param['x-openweb'] as XOpenWebParameter | undefined
+  return ext?.alias ?? param.name
 }
 
 function summarizeSchema(schema: unknown): string {
@@ -184,7 +189,7 @@ export async function renderOperation(site: string, operationId: string, full: b
       const required = parameter.required ? '[required]' : ''
       const loc = location === 'query' ? '' : `[${location}] `
       const desc = parameter.description ?? ''
-      lines.push(`  ${parameter.name.padEnd(12)} ${itemType.padEnd(9)} ${loc}${desc} ${required}`.trimEnd())
+      lines.push(`  ${paramDisplayName(parameter).padEnd(12)} ${itemType.padEnd(9)} ${loc}${desc} ${required}`.trimEnd())
     }
   }
 
@@ -195,7 +200,7 @@ export async function renderOperation(site: string, operationId: string, full: b
       const itemType = isArraySchema(parameter.schema) ? `${formatParamType(parameter.schema?.items?.type)}[]` : formatParamType(parameter.schema?.type)
       const required = parameter.required ? '[required]' : ''
       const desc = parameter.description ?? ''
-      lines.push(`  ${parameter.name.padEnd(12)} ${itemType.padEnd(9)} ${desc} ${required}`.trimEnd())
+      lines.push(`  ${paramDisplayName(parameter).padEnd(12)} ${itemType.padEnd(9)} ${desc} ${required}`.trimEnd())
     }
   }
 
@@ -280,7 +285,7 @@ export async function renderOperationJson(site: string, operationId: string): Pr
     path: opPath,
     permission: (opExt?.permission as string | undefined) ?? derivePermissionFromMethod(method, opPath),
     parameters: [...allParams, ...bodyParams].map((p) => ({
-      name: p.name,
+      name: paramDisplayName(p),
       in: p.in,
       required: !!p.required,
       type: formatParamType(p.schema?.type),

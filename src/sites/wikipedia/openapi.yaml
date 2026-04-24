@@ -43,6 +43,8 @@ paths:
         schema:
           type: string
         description: Search query.
+        x-openweb:
+          alias: query
       - name: srlimit
         in: query
         required: false
@@ -50,6 +52,8 @@ paths:
           type: integer
           default: 10
         description: Maximum number of results (max 500).
+        x-openweb:
+          alias: limit
       - name: sroffset
         in: query
         required: false
@@ -57,6 +61,8 @@ paths:
           type: integer
           default: 0
         description: Offset for pagination.
+        x-openweb:
+          alias: offset
       - name: format
         in: query
         required: true
@@ -145,6 +151,8 @@ paths:
         schema:
           type: string
         description: Page title (underscores for spaces).
+        x-openweb:
+          alias: title
       - name: prop
         in: query
         required: true
@@ -159,6 +167,8 @@ paths:
           type: integer
           default: 10
         description: Maximum number of categories (max 500).
+        x-openweb:
+          alias: limit
       - name: format
         in: query
         required: true
@@ -242,6 +252,8 @@ paths:
         schema:
           type: string
         description: Page title (underscores for spaces).
+        x-openweb:
+          alias: title
       - name: prop
         in: query
         required: true
@@ -256,6 +268,8 @@ paths:
           type: integer
           default: 10
         description: Maximum number of links (max 500).
+        x-openweb:
+          alias: limit
       - name: format
         in: query
         required: true
@@ -346,6 +360,8 @@ paths:
         schema:
           type: string
         description: Page title to find backlinks for (underscores for spaces).
+        x-openweb:
+          alias: title
       - name: bllimit
         in: query
         required: false
@@ -353,6 +369,8 @@ paths:
           type: integer
           default: 10
         description: Maximum number of backlinks (max 500).
+        x-openweb:
+          alias: limit
       - name: format
         in: query
         required: true
@@ -427,6 +445,8 @@ paths:
         schema:
           type: string
         description: Page title (underscores for spaces).
+        x-openweb:
+          alias: title
       - name: prop
         in: query
         required: true
@@ -441,6 +461,8 @@ paths:
           type: integer
           default: 10
         description: Maximum number of language links (max 500).
+        x-openweb:
+          alias: limit
       - name: format
         in: query
         required: true
@@ -524,6 +546,8 @@ paths:
         schema:
           type: string
         description: Page title (underscores for spaces).
+        x-openweb:
+          alias: title
       - name: prop
         in: query
         required: true
@@ -610,6 +634,8 @@ paths:
         schema:
           type: string
         description: Page title (underscores for spaces).
+        x-openweb:
+          alias: title
       - name: prop
         in: query
         required: true
@@ -870,7 +896,7 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [title, type, section_id]
+                      required: [type, section_id]
                       properties:
                         title:
                           type: string
@@ -1249,8 +1275,6 @@ paths:
                                     type: integer
                                   height:
                                     type: integer
-                required:
-                - events
   /api/rest_v1/feed/featured/{YYYY}/{MM}/{DD}:
     get:
       operationId: getFeaturedContent

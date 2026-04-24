@@ -18,9 +18,20 @@ export function validateParams(
   parameters: OpenApiParameter[],
   inputParams: Record<string, unknown>,
 ): Record<string, unknown> {
-  const result = { ...inputParams }
+  // Resolve aliases: map user-friendly names to wire names before validation
+  const aliasToWire = new Map<string, string>()
+  for (const param of parameters) {
+    const alias = paramExt(param)?.alias
+    if (alias) aliasToWire.set(alias, param.name)
+  }
+  const resolved: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(inputParams)) {
+    resolved[aliasToWire.get(key) ?? key] = value
+  }
+
+  const result = { ...resolved }
   const knownNames = new Set(parameters.map((p) => p.name))
-  const unknownNames = Object.keys(inputParams).filter((n) => !knownNames.has(n))
+  const unknownNames = Object.keys(resolved).filter((n) => !knownNames.has(n))
 
   if (unknownNames.length > 0) {
     throw new OpenWebError({

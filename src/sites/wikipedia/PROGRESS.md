@@ -1,3 +1,31 @@
+## 2026-04-24: Userflow QA — param aliases, schema fixes
+
+**Workflows tested (blind, from user perspective):**
+1. Student: searchArticles → getPageExtract → getPageLinks (research "quantum entanglement")
+2. Trivia: searchArticles → getPageSummary → getPageInfo → getPageMediaList (verify "Burj Khalifa")
+3. Historian: searchArticles → getPageRevisions → getOnThisDay (trace "Apollo 11")
+
+**Issues found and fixed:**
+
+| # | Gap type | Description | Fix |
+|---|----------|-------------|-----|
+| 1 | param opacity | searchArticles: `srsearch` is raw MediaWiki jargon — user guesses `query` | Added `x-openweb.alias: query` on srsearch |
+| 2 | param opacity | getPageBacklinks: `bltitle` is opaque — user guesses `title` | Added `x-openweb.alias: title` on bltitle |
+| 3 | param inconsistency | Action API ops use `titles` (plural) vs REST ops use `title` (singular) | Added `x-openweb.alias: title` on all 5 `titles` params |
+| 4 | param opacity | `srlimit`/`sroffset`/`bllimit`/`cllimit`/`pllimit`/`lllimit` — prefix jargon | Added `x-openweb.alias: limit` and `offset` aliases |
+| 5 | schema mismatch | getPageMediaList: `title` required but timeline images omit it | Removed `title` from required |
+| 6 | schema mismatch | getOnThisDay: `events` required but `type=selected` only returns `selected` | Removed `events` from required |
+
+**Platform changes:**
+- Added `x-openweb.alias` to XOpenWebParameter type
+- Added alias resolution in param-validator.ts (resolves before unknown-name check)
+- Updated navigator.ts to display alias name instead of wire name
+
+**Not fixed (gap, not bug):**
+- No operation to get article citation references (external sources). getPageLinks returns internal wikilinks only. A student wanting bibliography/citations can only parse getPageSource wikitext.
+
+**Verification:** All 14 ops tested live. All 1049 tests pass. Lint clean.
+
 ## 2026-04-01: Expand to 14 operations, page transport, full curation
 
 **What changed:**

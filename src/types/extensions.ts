@@ -38,6 +38,10 @@ export interface XOpenWebParameter {
    *  Example: `tags` with template `story,author_{id}` → when caller passes
    *  `{id: "pg"}`, the emitted value becomes `story,author_pg`. */
   readonly template?: string
+  /** User-friendly alias for an opaque wire-name param. Callers can use the
+   *  alias instead of the wire name; it's resolved before validation. The wire
+   *  name still drives the HTTP request. */
+  readonly alias?: string
 }
 
 export interface AdapterRef {
