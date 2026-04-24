@@ -1,3 +1,17 @@
+## 2026-04-24: Userflow QA — extraction fixes
+
+**What changed:**
+- searchPapers & getCitations: fixed `authors` containing venue info and `venueYear` showing domain instead of venue — root cause: Google Scholar uses ` ` (non-breaking space) before the first ` - ` separator, so `.split(' - ')` only matched the second separator. Fixed via `String.fromCharCode(160)` normalization.
+- getAuthorProfile: fixed all publication `citedBy` returning 0 — selector `.gsc_a_ac a` expected an `<a>` tag, but citation counts are plain text in `.gsc_a_ac`.
+- searchPapers & getCitations: added snippet truncation to ~200 chars.
+
+**Personas tested:**
+1. PhD student — searchPapers "attention is all you need" → getCitations
+2. Professor — searchPapers "author:hinton geoffrey" → getAuthorProfile (Hinton)
+3. Journalist — searchPapers "CRISPR gene editing human embryos" → verify authors
+
+**Verification:** `pnpm --silent dev verify google-scholar`
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**

@@ -29,18 +29,20 @@ paths:
           page_url: /scholar
           expression: |
             (() => {
+              const NBSP = String.fromCharCode(160);
+              const clip = (s, n) => s.length <= n ? s : s.slice(0, s.lastIndexOf(' ', n) || n) + '…';
               const results = document.querySelectorAll('.gs_r.gs_or.gs_scl');
               const items = [...results].map(r => {
                 const titleEl = r.querySelector('.gs_rt a');
                 const title = titleEl?.textContent?.trim() || '';
                 const url = titleEl?.href || '';
-                const authLine = r.querySelector('.gs_a')?.textContent?.trim() || '';
+                const authLine = (r.querySelector('.gs_a')?.textContent || '').split(NBSP).join(' ').trim();
                 const parts = authLine.split(' - ');
                 const authors = (parts[0] || '').trim();
-                const venueYear = (parts[1] || '').trim();
+                const venueYear = (parts.length > 2 ? parts[1] : parts[1] || '').trim();
                 const yearMatch = authLine.match(/,\s*(\d{4})\s*-/);
                 const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
-                const snippet = r.querySelector('.gs_rs')?.textContent?.trim() || '';
+                const snippet = clip(r.querySelector('.gs_rs')?.textContent?.trim() || '', 200);
                 const flLinks = r.querySelectorAll('.gs_fl.gs_flb a');
                 let citedBy = 0;
                 let cites = null;
@@ -140,18 +142,20 @@ paths:
           page_url: /scholar
           expression: |
             (() => {
+              const NBSP = String.fromCharCode(160);
+              const clip = (s, n) => s.length <= n ? s : s.slice(0, s.lastIndexOf(' ', n) || n) + '…';
               const results = document.querySelectorAll('.gs_r.gs_or.gs_scl');
               const items = [...results].map(r => {
                 const titleEl = r.querySelector('.gs_rt a');
                 const title = titleEl?.textContent?.trim() || '';
                 const url = titleEl?.href || '';
-                const authLine = r.querySelector('.gs_a')?.textContent?.trim() || '';
+                const authLine = (r.querySelector('.gs_a')?.textContent || '').split(NBSP).join(' ').trim();
                 const parts = authLine.split(' - ');
                 const authors = (parts[0] || '').trim();
-                const venueYear = (parts[1] || '').trim();
+                const venueYear = (parts.length > 2 ? parts[1] : parts[1] || '').trim();
                 const yearMatch = authLine.match(/,\s*(\d{4})\s*-/);
                 const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
-                const snippet = r.querySelector('.gs_rs')?.textContent?.trim() || '';
+                const snippet = clip(r.querySelector('.gs_rs')?.textContent?.trim() || '', 200);
                 const flLinks = r.querySelectorAll('.gs_fl.gs_flb a');
                 let citedBy = 0;
                 for (const a of flLinks) {
@@ -267,7 +271,7 @@ paths:
                 const title = titleEl?.textContent?.trim() || '';
                 const authors = row.querySelector('.gs_gray')?.textContent?.trim() || '';
                 const venue = row.querySelectorAll('.gs_gray')[1]?.textContent?.trim() || '';
-                const citedBy = parseInt(row.querySelector('.gsc_a_ac a')?.textContent?.trim() || '0', 10) || 0;
+                const citedBy = parseInt(row.querySelector('.gsc_a_ac')?.textContent?.trim() || '0', 10) || 0;
                 const year = row.querySelector('.gsc_a_y span')?.textContent?.trim() || '';
                 return { title, authors, venue, citedBy, year };
               });
