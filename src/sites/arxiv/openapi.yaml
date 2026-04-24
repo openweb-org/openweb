@@ -16,17 +16,21 @@ paths:
       summary: Search arXiv papers by keyword, author, or category — returns titles, authors, abstracts, categories, links
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: arxiv
+          operation: searchPapers
         build:
           stable_id: arxiv0001
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: search_query
           in: query
           required: true
           schema:
             type: string
-          description: 'Search query using arXiv query syntax. Prefix with field: all, ti (title), au (author), abs (abstract), cat (category). Examples: "all:transformer", "au:hinton", "cat:cs.AI".'
-          example: 'all:transformer'
+          description: 'Search query using arXiv query syntax. Prefix with field: all, ti (title), au (author), abs (abstract), cat (category). Multi-word queries are auto-ANDed. Examples: "all:diffusion models", "ti:attention mechanism", "au:hinton", "cat:cs.AI", "ti:BERT AND cat:cs.CL".'
+          example: 'all:diffusion models'
         - name: max_results
           in: query
           required: false
@@ -61,12 +65,18 @@ paths:
           example: descending
       responses:
         '200':
-          description: Atom XML feed containing matching papers with metadata.
+          description: Search results with paper metadata.
           content:
-            application/xml:
+            application/json:
               schema:
-                type: string
-                description: Atom XML feed. Each <entry> contains id, title, summary (abstract), author(s), published, updated, category, and links to abstract page and PDF.
+                type: object
+                properties:
+                  total_results:
+                    type: integer
+                  papers:
+                    type: array
+                    items:
+                      type: object
   /query:
     get:
       operationId: getPaper
@@ -77,9 +87,13 @@ paths:
             transport: node
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: arxiv
+          operation: getPaper
         build:
           stable_id: arxiv0002
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: id_list
           in: query
@@ -90,12 +104,15 @@ paths:
           example: '1706.03762'
       responses:
         '200':
-          description: Atom XML feed containing metadata for the requested paper(s).
+          description: Paper metadata for the requested ID(s). Single ID returns an object, multiple IDs return an array.
           content:
-            application/xml:
+            application/json:
               schema:
-                type: string
-                description: Atom XML with <entry> elements. Each entry has id, title, summary (abstract), author/name, published, updated, arxiv:primary_category, and link elements (rel=alternate for abstract, title=pdf for PDF).
+                oneOf:
+                  - type: object
+                  - type: array
+                    items:
+                      type: object
   /abs/{arxiv_id}:
     get:
       operationId: getAbstract
@@ -106,9 +123,13 @@ paths:
             transport: node
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: arxiv
+          operation: getAbstract
         build:
           stable_id: arxiv0003
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: arxiv_id
           in: path
@@ -119,9 +140,8 @@ paths:
           example: '1706.03762'
       responses:
         '200':
-          description: HTML abstract page containing paper title, authors, abstract, categories, and links.
+          description: Paper metadata extracted from the abstract page.
           content:
-            text/html:
+            application/json:
               schema:
-                type: string
-                description: HTML page. Key elements include the paper title, author list, abstract text, subject categories, submission/revision dates, and links to PDF and other formats.
+                type: object
