@@ -173,11 +173,6 @@ paths:
                         text:
                           type: string
                           description: Review text content.
-                        authorName:
-                          type:
-                          - string
-                          - 'null'
-                          description: Reviewer display name.
                         authorUrl:
                           type:
                           - string
@@ -188,11 +183,6 @@ paths:
                           - number
                           - 'null'
                           description: Individual review star rating (1-5).
-                        relativeTime:
-                          type:
-                          - string
-                          - 'null'
-                          description: When the review was posted (e.g. "2 months ago").
                 required:
                 - name
                 - reviews
@@ -246,13 +236,9 @@ paths:
                         name:
                           type: string
                           description: Route name (e.g. "I-5 S").
-                        distanceMeters:
-                          type: integer
                         distanceText:
                           type: string
                           description: Human-readable distance (e.g. "383 miles").
-                        durationSeconds:
-                          type: integer
                         durationText:
                           type: string
                           description: Human-readable duration (e.g. "5 hr 53 min").
@@ -321,10 +307,6 @@ paths:
                       properties:
                         text:
                           type: string
-                        authorName:
-                          type:
-                          - string
-                          - 'null'
                         authorUrl:
                           type:
                           - string
@@ -334,11 +316,6 @@ paths:
                           - number
                           - 'null'
                           description: Individual review star rating (1-5).
-                        relativeTime:
-                          type:
-                          - string
-                          - 'null'
-                          description: When the review was posted (e.g. "2 months ago").
   /internal/getPlacePhotos:
     get:
       operationId: getPlacePhotos

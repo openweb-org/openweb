@@ -152,7 +152,8 @@ async function getPlaceDetails(page: Page, params: Readonly<Record<string, unkno
   const info = await fetchPlaceInfo(page, placeId, query, errors)
 
   const name = dig(info, 11) as string | null
-  const address = (dig(info, 18) as string | null) ?? (dig(info, 39) as string | null)
+  let address = (dig(info, 18) as string | null) ?? (dig(info, 39) as string | null)
+  if (address && name && address.startsWith(`${name}, `)) address = address.slice(name.length + 2)
   const coords = dig(info, 9) as number[] | null
   const lat = coords?.[2] ?? null
   const lng = coords?.[3] ?? null
@@ -165,15 +166,15 @@ async function getPlaceDetails(page: Page, params: Readonly<Record<string, unkno
   const description = dig(info, 154, 0, 0) as string | null
   const hoursText = dig(info, 203, 1, 4, 0) as string | null
 
-  // Extract reviews from [6][31][1]
   const reviewsArr = dig(info, 31, 1) as unknown[][] | null
-  const reviews: Array<{ text: string; authorUrl: string | null }> = []
+  const reviews: Array<{ text: string; authorUrl: string | null; rating: number | null }> = []
   if (Array.isArray(reviewsArr)) {
     for (const r of reviewsArr) {
       if (!Array.isArray(r)) continue
       const text = dig(r, 1) as string | null
       const authorUrl = dig(r, 0, 0) as string | null
-      if (text) reviews.push({ text, authorUrl })
+      const reviewRating = typeof dig(r, 9) === 'number' ? (dig(r, 9) as number) : null
+      if (text) reviews.push({ text, authorUrl, rating: reviewRating })
     }
   }
 
@@ -217,21 +218,11 @@ async function getPlaceReviews(page: Page, params: Readonly<Record<string, unkno
       const text = dig(r, 1) as string | null
       if (!text) continue
       const authorUrl = dig(r, 0, 0) as string | null
-      const authorName = dig(r, 0, 1) as string | null
-      // Rating index may shift — try [4], fall back to [2], [3]
-      const rawRating = dig(r, 4)
-      const reviewRating = typeof rawRating === 'number' ? rawRating
-        : typeof dig(r, 2) === 'number' ? (dig(r, 2) as number)
-        : typeof dig(r, 3) === 'number' ? (dig(r, 3) as number)
-        : null
-      const rawTime = dig(r, 57) ?? dig(r, 5) ?? dig(r, 27)
-      const relativeTime = typeof rawTime === 'string' ? rawTime : null
+      const reviewRating = typeof dig(r, 9) === 'number' ? (dig(r, 9) as number) : null
       reviews.push({
         text,
-        authorName,
         authorUrl,
         rating: reviewRating,
-        relativeTime,
       })
     }
   }
@@ -251,20 +242,26 @@ async function getPlacePhotos(page: Page, params: Readonly<Record<string, unknow
 
   // Try [6][37][0] then [6][171][0] for photo arrays
   const photos: Array<Record<string, unknown>> = []
-  for (const path of [[37, 0], [171, 0]] as const) {
+  for (const idx of [37, 171] as const) {
     if (photos.length > 0) break
-    const arr = dig(info, ...path) as unknown[][] | null
-    if (!Array.isArray(arr)) continue
-    for (const p of arr) {
-      if (!Array.isArray(p)) continue
-      const url = (dig(p, 0, 6, 0) as string | null) ?? (dig(p, 0, 0) as string | null) ?? (dig(p, 0) as string | null)
-      if (url && typeof url === 'string' && url.startsWith('http')) {
-        photos.push({
-          url,
-          width: dig(p, 0, 6, 2) as number | null,
-          height: dig(p, 0, 6, 1) as number | null,
-        })
+    const categories = info[idx] as unknown[][] | null
+    if (!Array.isArray(categories)) continue
+    for (const category of categories) {
+      if (!Array.isArray(category)) continue
+      for (const p of category) {
+        if (!Array.isArray(p)) continue
+        const url = (dig(p, 6, 0) as string | null) ?? (dig(p, 0) as string | null)
+        if (url && typeof url === 'string' && url.startsWith('http')) {
+          const dims = dig(p, 6, 2) as number[] | null
+          photos.push({
+            url,
+            width: Array.isArray(dims) && typeof dims[0] === 'number' ? dims[0] : null,
+            height: Array.isArray(dims) && typeof dims[1] === 'number' ? dims[1] : null,
+          })
+          if (photos.length >= 10) break
+        }
       }
+      if (photos.length > 0) break
     }
   }
 
@@ -346,14 +343,15 @@ async function getAutocompleteSuggestions(page: Page, params: Readonly<Record<st
 /* ---------- directions (shared helper) ---------- */
 
 /** Parse the /maps/preview/directions response into route objects.
- *  Routes live at data[0][1][i][0] with structure [mode, name, [meters, text], [seconds, text]]. */
+ *  Routes live at data[0][1][i][0] with structure [mode, name|null, [meters, text], [seconds, text]]. */
 function parseDirectionsResponse(raw: string, requestedMode: number): Array<Record<string, unknown>> {
   const cleaned = raw.replace(/^\)\]\}'\n/, '')
   const data = JSON.parse(cleaned)
   const routeContainer = dig(data, 0, 1) as unknown[][] | null
   if (!Array.isArray(routeContainer)) return []
 
-  const results: Array<Record<string, unknown>> = []
+  const allRoutes: Array<Record<string, unknown>> = []
+  const modeRoutes: Array<Record<string, unknown>> = []
   for (const route of routeContainer) {
     if (!Array.isArray(route)) continue
     const summary = route[0] as unknown[] | null
@@ -364,20 +362,23 @@ function parseDirectionsResponse(raw: string, requestedMode: number): Array<Reco
     const distArr = summary[2] as unknown[] | null
     const durArr = summary[3] as unknown[] | null
 
-    if (typeof mode !== 'number' || typeof name !== 'string') continue
+    if (typeof mode !== 'number') continue
     if (!Array.isArray(distArr) || !Array.isArray(durArr)) continue
     if (typeof distArr[0] !== 'number' || typeof durArr[0] !== 'number') continue
 
-    // Filter to only the requested mode (driving=0, bicycling=1, walking=2, transit=3)
-    if (mode !== requestedMode) continue
-
-    results.push({
-      name: name || 'Route',
+    const entry = {
+      name: (typeof name === 'string' ? name : null) || 'Route',
       distanceText: (distArr[1] as string) || '',
       durationText: (durArr[1] as string) || '',
-      summary: results.length === 0 ? 'Fastest route' : null,
-    })
+      summary: null as string | null,
+    }
+    allRoutes.push(entry)
+    if (mode === requestedMode) modeRoutes.push(entry)
   }
+
+  // Prefer routes matching the requested mode; fall back to all (short routes may only have walking)
+  const results = modeRoutes.length > 0 ? modeRoutes : allRoutes
+  if (results.length > 0) results[0].summary = 'Fastest route'
   return results
 }
 
@@ -423,16 +424,15 @@ async function getPlaceHours(page: Page, params: Readonly<Record<string, unknown
   const info = await fetchPlaceInfo(page, placeId, query, errors)
   const placeName = dig(info, 11) as string | null
   const statusText = dig(info, 203, 1, 4, 0) as string | null
-  const hoursArr = dig(info, 203, 1, 0) as unknown[][] | null
+  const hoursArr = dig(info, 203, 0) as unknown[][] | null
   const schedule: Array<{ day: string; hours: string }> = []
   if (Array.isArray(hoursArr)) {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     for (const entry of hoursArr) {
       if (!Array.isArray(entry)) continue
-      const dayIdx = entry[0] as number
-      const timeStr = dig(entry, 1, 0) as string | null
-      if (typeof dayIdx === 'number' && days[dayIdx]) {
-        schedule.push({ day: days[dayIdx], hours: timeStr ?? 'Closed' })
+      const dayName = entry[0] as string | null
+      const timeStr = dig(entry, 3, 0, 0) as string | null
+      if (typeof dayName === 'string') {
+        schedule.push({ day: dayName, hours: timeStr ?? 'Closed' })
       }
     }
   }
@@ -480,12 +480,15 @@ async function getPlaceAbout(page: Page, params: Readonly<Record<string, unknown
   if (!placeId) throw errors.missingParam('placeId')
 
   const info = await fetchPlaceInfo(page, placeId, query, errors)
+  const placeName = dig(info, 11) as string | null
+  let address = (dig(info, 18) as string | null) ?? (dig(info, 39) as string | null)
+  if (address && placeName && address.startsWith(`${placeName}, `)) address = address.slice(placeName.length + 2)
   return {
-    placeName: dig(info, 11) as string | null,
+    placeName,
     placeId: (dig(info, 10) as string | null) ?? placeId,
     description: dig(info, 154, 0, 0) as string | null,
     category: dig(info, 76, 0, 0) as string | null,
-    address: (dig(info, 18) as string | null) ?? (dig(info, 39) as string | null),
+    address,
     priceLevel: dig(info, 4, 2) as string | null,
     rating: dig(info, 4, 7) as number | null,
     reviewCount: dig(info, 4, 8) as number | null,
