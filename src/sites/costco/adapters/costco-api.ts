@@ -492,7 +492,7 @@ async function browseCategory(page: Page, params: Record<string, unknown>, error
 
   const body = {
     visitorId: '0',
-    query: '',
+    query: category,
     pageSize,
     offset,
     orderBy: null,
@@ -597,11 +597,16 @@ async function getDeliveryOptions(page: Page, params: Record<string, unknown>, e
   const priceData = (item.priceData as Record<string, string>) ?? {}
   const additionalData = (item.additionalFieldData as Record<string, unknown>) ?? {}
   const desc = (item.description as Record<string, string>) ?? {}
-  const programTypes = (item.programTypes as string[]) ?? []
+  const programTypesRaw = item.programTypes as string | string[] | undefined
+  const programTypes = Array.isArray(programTypesRaw)
+    ? programTypesRaw
+    : typeof programTypesRaw === 'string'
+      ? programTypesRaw.split(',')
+      : []
 
   const options: Array<Record<string, unknown>> = []
 
-  if (programTypes.includes('SHIPPING')) {
+  if (programTypes.includes('ShipIt')) {
     options.push({
       type: 'shipping',
       label: 'Standard Shipping',
@@ -609,7 +614,15 @@ async function getDeliveryOptions(page: Page, params: Record<string, unknown>, e
       available: item.buyable === 1,
     })
   }
-  if (programTypes.includes('BD')) {
+  if (programTypes.includes('2DayDelivery')) {
+    options.push({
+      type: '2day_shipping',
+      label: '2-Day Delivery',
+      zipCode,
+      available: item.buyable === 1,
+    })
+  }
+  if (programTypes.includes('WarehouseDelivery')) {
     options.push({
       type: 'business_delivery',
       label: 'Business Delivery',
@@ -617,7 +630,7 @@ async function getDeliveryOptions(page: Page, params: Record<string, unknown>, e
       available: true,
     })
   }
-  if (programTypes.includes('WH')) {
+  if (programTypes.includes('InWarehouse')) {
     options.push({
       type: 'warehouse_pickup',
       label: 'Warehouse Pickup',
@@ -630,7 +643,7 @@ async function getDeliveryOptions(page: Page, params: Record<string, unknown>, e
     title: desc.shortDescription ?? null,
     price: priceData.price ? Number.parseFloat(priceData.price) : null,
     available: item.buyable === 1,
-    membershipRequired: additionalData.membershipReqd === 'Y',
+    membershipRequired: additionalData.membershipReqd === 'Y' || additionalData.membershipReqd === 1,
     maxQuantity: additionalData.maxItemOrderQty != null ? Number(additionalData.maxItemOrderQty) : null,
     options,
   }
@@ -780,7 +793,7 @@ async function checkWarehouseStock(page: Page, params: Record<string, unknown>, 
     product: {
       title: desc.shortDescription ?? null,
       price: priceData.price ? Number.parseFloat(priceData.price) : null,
-      membershipRequired: additionalData.membershipReqd === 'Y',
+      membershipRequired: additionalData.membershipReqd === 'Y' || additionalData.membershipReqd === 1,
       maxQuantity: additionalData.maxItemOrderQty != null ? Number(additionalData.maxItemOrderQty) : null,
     },
   }

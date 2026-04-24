@@ -81,3 +81,22 @@
 - **`productBeanId` (addToCart response) ≠ `catalogEntryId` (cart page).** Off-by-one (2908797 vs 2908798) for the same line. Don't try to derive — scrape `catalogEntryId_N` from cart page each call.
 - **45s op timeout is fatal for cold starts.** A first-call addToCart needs PDP nav (~5s) + Akamai sensor (~3s) + auth/SKU scrape + POST. Pre-warming via `page_plan.entry_url` makes acquired-page reuse much faster on subsequent calls; without it, fresh-page navigation can exceed the verify wrapper's 45s timeout.
 - **Fresh-Chrome sessionStorage is empty** until the user navigates to costco.com. `refreshProfile()` copies cookies but the JWT in sessionStorage is per-tab — the runtime's PDP nav is what populates it.
+
+## 2026-04-24 — Userflow QA: delivery options and category browsing fixes
+
+**Context:** Blind userflow QA with 3 personas (small business → printer paper, party planner → paper plates, health shopper → organic quinoa). All 11 read ops exercised. Two broken response shapes found.
+
+**Findings:**
+1. `getDeliveryOptions` always returned empty `options: []` despite `available: true` — the adapter cast `programTypes` as `string[]` but the GraphQL API returns a **comma-separated string** (`"3rdPartyDelivery,2DayDelivery,GoogleGrocery,LocationControlledInventory,InWarehouse,WarehouseDelivery,ShipIt"`). The code also checked wrong enum values (`SHIPPING`/`BD`/`WH` vs actual `ShipIt`/`WarehouseDelivery`/`InWarehouse`).
+2. `browseCategory` returned unrelated items (sewing machines, gold bars for "grocery") — the `pageCategories` field in the search API body is silently ignored; the API returns default popular items when `query` is empty.
+3. `membershipReqd` returned as number `0`/`1`, not string `"Y"` — the `=== 'Y'` check never matched.
+
+**Changes:**
+- `costco-api.ts` `getDeliveryOptions`: split comma-separated `programTypes` string, mapped correct values (`ShipIt` → shipping, `2DayDelivery` → 2day_shipping, `WarehouseDelivery` → business_delivery, `InWarehouse` → warehouse_pickup). Also handles the array case defensively.
+- `costco-api.ts` `browseCategory`: pass `category` as both `query` (effective filter) and `pageCategories` (retained as hint). Results now match the category.
+- `costco-api.ts`: `membershipReqd` check accepts both `'Y'` and `1`.
+- `openapi.yaml`: added `2day_shipping` to delivery type description.
+
+**Verification:** All 11 read ops return correct data across the 3 persona workflows. `getDeliveryOptions` now returns 4 options (shipping, 2day_shipping, business_delivery, warehouse_pickup). `browseCategory "grocery"` returns Grocery & Household Essentials items.
+
+**Key files:** `src/sites/costco/adapters/costco-api.ts`, `src/sites/costco/openapi.yaml`.

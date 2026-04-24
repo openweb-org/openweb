@@ -537,7 +537,7 @@ paths:
                       properties:
                         type:
                           type: string
-                          description: Delivery type (shipping, business_delivery, warehouse_pickup).
+                          description: Delivery type (shipping, 2day_shipping, business_delivery, warehouse_pickup).
                         label:
                           type: string
                         zipCode:
