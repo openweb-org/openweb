@@ -1,3 +1,32 @@
+## 2026-04-25: Userflow QA batch 2 (desktop) — 10 sites, 89/94 complete
+
+**Environment:** First desktop run (Ubuntu 18.04, Chrome 114→Chromium 147 upgrade mid-session via snap + wrapper at `/usr/local/bin/google-chrome`).
+
+**Sites completed with fixes:**
+| Site | Key changes | Verify |
+|------|------------|--------|
+| bloomberg | Adapter for 4 ops (headlines 20KB→7.6KB, stock chart 512→112 points) | 7/7 PASS (all PerimeterX-gated) |
+| glassdoor | getReviews trimming (pros/cons capped 500 chars, ~15KB→~4KB), getSalaries prefix fix | 0/4 (Cloudflare after ~6 loads) |
+| uber | Type fix (needsLogin() declaration). searchLocations clean 700-1100B | 1/3 (ride ops need login) |
+| ctrip | Adapter for response trimming (strips ResponseStatus/responseHead metadata) | 9/9 PASS |
+| xueqiu | Adapter for 10 ops (getTimeline 29KB→3.2KB, 89%). WAF bypass via page transport for 3 ops | 7/7 PASS |
+| boss | Adapter for 3 ref data ops (getCities 934KB→16KB, 57x). Schema updates | 7/7 PASS |
+| angellist | Auth error hardening (ERR_TOO_MANY_REDIRECTS→needsLogin()), 6 verify examples, site_url in manifest | 0/6 (session expired) |
+
+**Sites blocked by bot detection:**
+| Site | Blocker |
+|------|---------|
+| indeed | Cloudflare Bot Management (Chrome 114) |
+| tripadvisor | DataDome CAPTCHA (Chrome 114) |
+| goodrx | PerimeterX headless fingerprinting (Chromium 147) |
+
+**Login-required (skipped — desktop Chrome profile not viable):**
+robinhood, fidelity, notion, todoist, trello
+
+**Test fixes:** Migrated executor.test.ts from boss/getCities to wikipedia/getPageInfo (boss got adapter). Updated navigator.test.ts (youtube adapter changes rendering). All 1049 tests pass.
+
+**Running total:** 89/94 sites QA'd. 5 login-required deferred to laptop session.
+
 ## 2026-04-25: Kayak userflow QA — hotel poll interception, response trimming
 
 **What changed:**
