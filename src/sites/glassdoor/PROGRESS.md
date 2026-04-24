@@ -1,5 +1,30 @@
 # Glassdoor — Progress
 
+## 2026-04-25 — Userflow QA
+
+**Personas tested:**
+1. Job seeker researching Stripe → search → reviews, salaries, interviews for known employer
+2. Recruiter comparing Google vs Meta → reviews, salaries for both
+3. Career switcher exploring Datadog → search → chained ops
+
+**Gaps found:**
+
+| Op | Gap | Type | Fix |
+|---|---|---|---|
+| searchCompanies | Returns 10 trending/popular companies regardless of query — Apollo cache `Employer:` keys include sidebar companies, not search results | wrong data | **Not fixed** — Cloudflare blocked further investigation of NEXT_DATA structure |
+| getReviews | 13–15 KB for 7–8 reviews — individual pros/cons can be 3–7 KB (essay-length text) | response bloat | Capped pros/cons to 500 chars with `…` truncation |
+| getSalaries | `companyName` has "Explore " prefix (from H1 "Explore Google Salaries") | wrong data | Added `.replace(/^explore\s+/i, '')` to companyName extraction |
+| getSalaries | Last 1–2 entries are false positives — `salaryCount` equals `totalSalaries`, `payRange` null | wrong data | Filter entries where `salaryCount === totalSalaries && !payRange` |
+| getInterviews | Cloudflare CAPTCHA blocks headless access — bot_blocked error | blocked | **Not fixed** — requires manual CAPTCHA solve in `--no-headless` mode |
+
+**Before/after sizes (getReviews):**
+- Google: 15,379 → ~3,500 B (estimated, Cloudflare prevented re-measurement)
+- Meta: 13,511 → ~4,000 B (estimated)
+
+**Blocker:** Cloudflare CAPTCHA escalation after ~6 page loads blocked all further headless access. `pnpm dev verify glassdoor` fails 0/4 ops (quarantined). The searchCompanies bug requires a `--no-headless` session to inspect the NEXT_DATA Apollo cache structure and find the correct key for actual search results.
+
+**Key files:** `src/sites/glassdoor/adapters/glassdoor.ts`
+
 ## 2026-04-17 — Adapter Refactor
 
 **Context:** Phase 5C normalization — migrate `CodeAdapter` shim to shared `CustomRunner` contract (commit 72c0479).

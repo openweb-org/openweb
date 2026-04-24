@@ -6,8 +6,14 @@ const GD_ORIGIN = 'https://www.glassdoor.com'
 const GRAPHQL_URL = `${GD_ORIGIN}/graph`
 const CF_POLL_MS = 2_000
 const CF_MAX_WAIT_MS = 30_000
+const MAX_TEXT_LEN = 500
 
 type Errors = AdapterHelpers['errors']
+
+function cap(text: string | null | undefined, max = MAX_TEXT_LEN): string | null {
+  if (!text) return null
+  return text.length <= max ? text : `${text.slice(0, max)}…`
+}
 
 async function isCloudflareBlocked(page: Page): Promise<boolean> {
   try {
@@ -201,8 +207,8 @@ async function getReviews(page: Page, params: Readonly<Record<string, unknown>>,
           title: (item.summary as string) ?? null,
           jobTitle: ((item.jobTitle as Record<string, unknown>)?.text as string) ?? null,
           employeeStatus: null,
-          pros: (item.pros as string) ?? null,
-          cons: (item.cons as string) ?? null,
+          pros: cap(item.pros as string),
+          cons: cap(item.cons as string),
         })
       }
     } catch {
@@ -226,7 +232,7 @@ async function getSalaries(page: Page, params: Readonly<Record<string, unknown>>
     const h1 = document.querySelector('h1')
     const titleText = h1?.textContent?.trim() ?? ''
 
-    const companyName = titleText.replace(/\s*salaries$/i, '').replace(/^how much does\s*/i, '').replace(/\s*pay.*$/i, '') || null
+    const companyName = titleText.replace(/\s*salaries$/i, '').replace(/^how much does\s*/i, '').replace(/\s*pay.*$/i, '').replace(/^explore\s+/i, '') || null
     const countMatch = document.title.match(/\(([\d,]+)\s+Salaries?\)/i)
     const totalSalaries = countMatch ? countMatch[1] : null
 
@@ -249,7 +255,9 @@ async function getSalaries(page: Page, params: Readonly<Record<string, unknown>>
         payRange: rangeMatch ? rangeMatch[1] : null,
       })
     }
-    return { companyName, totalSalaries, salaries }
+
+    const filtered = salaries.filter(s => s.payRange || s.salaryCount !== totalSalaries)
+    return { companyName, totalSalaries, salaries: filtered }
   })
 }
 
@@ -352,7 +360,7 @@ async function getInterviews(page: Page, params: Readonly<Record<string, unknown
       offerStatus: dom?.offerStatus ?? null,
       experience: dom?.experience ?? null,
       difficulty: dom?.difficulty ?? null,
-      description: gql?.description ?? null,
+      description: cap(gql?.description),
     })
   }
 
