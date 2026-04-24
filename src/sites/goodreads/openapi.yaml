@@ -16,6 +16,7 @@ paths:
       operationId: searchBooks
       summary: Search books by title, author, or ISBN — title, author, rating, cover image
       x-openweb:
+        transport: node
         permission: read
         build:
           verified: true
@@ -86,8 +87,9 @@ paths:
   /book/show/{bookId}:
     get:
       operationId: getBook
-      summary: Get book details — raw Apollo SSR cache (apolloState with __ref pointers resolved) keyed by TypeName:id
+      summary: Get book details — title, author, rating, description, genres, page count, series, awards
       x-openweb:
+        transport: node
         permission: read
         build:
           verified: true
@@ -95,11 +97,10 @@ paths:
           signature_id: gr0002s
           tool_version: 2
           signals:
-            - ssr-extraction
-        extraction:
-          type: ssr_next_data
-          path: props.pageProps.apolloState
-          resolve_apollo_refs: true
+            - adapter-verified
+        adapter:
+          name: goodreads
+          operation: getBook
       parameters:
         - name: bookId
           in: path
@@ -110,18 +111,68 @@ paths:
           example: 44767458-dune
       responses:
         '200':
-          description: Raw Apollo cache. Entries are keyed by TypeName:id (e.g. `Book:44767458`, `Contributor:123`, `Work:456`). `__ref` pointers are resolved in place, so nested entity references appear inlined.
+          description: Success.
           content:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
-                description: Apollo cache object. Look up the primary book via the `Book:<numericId>` key.
+                required: [title, author]
+                properties:
+                  title:
+                    type: string
+                    description: Full book title.
+                  series:
+                    type: [string, 'null']
+                    description: 'Series name and position (e.g. "Silo #1").'
+                  author:
+                    type: string
+                    description: Primary author name.
+                  authorId:
+                    type: string
+                    description: Numeric author ID for use with getAuthor.
+                  ratingValue:
+                    type: [number, 'null']
+                    description: Average rating (0-5 scale).
+                  ratingsCount:
+                    type: [integer, 'null']
+                    description: Total number of ratings.
+                  reviewsCount:
+                    type: [integer, 'null']
+                    description: Total number of text reviews.
+                  description:
+                    type: [string, 'null']
+                    description: Book description/summary text.
+                  genres:
+                    type: array
+                    items:
+                      type: string
+                  pageCount:
+                    type: [integer, 'null']
+                    description: Number of pages.
+                  format:
+                    type: [string, 'null']
+                    description: 'Book format (e.g. "Paperback", "Kindle Edition").'
+                  publishDate:
+                    type: [string, 'null']
+                    description: Publication date or "First published YYYY-MM-DD".
+                  isbn:
+                    type: [string, 'null']
+                    description: ISBN-13 or ISBN.
+                  language:
+                    type: [string, 'null']
+                    description: Book language.
+                  awards:
+                    type: [string, 'null']
+                    description: Comma-separated awards won.
+                  coverImageUrl:
+                    type: [string, 'null']
+                    description: URL to the book cover image.
   /book/show/{bookId}/reviews:
     get:
       operationId: getReviews
       summary: Get reviews for a book — reviewer name, rating, review text, date, likes
       x-openweb:
+        transport: node
         permission: read
         build:
           verified: true
@@ -180,6 +231,7 @@ paths:
       operationId: getAuthor
       summary: Get author profile — name, bio, born/died dates, average rating, bibliography
       x-openweb:
+        transport: node
         permission: read
         build:
           verified: true
