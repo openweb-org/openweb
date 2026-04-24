@@ -114,8 +114,10 @@ async function getNoteDetail(page: Page, params: Record<string, unknown>, errors
     const entry = map[id]
     if (!entry) return null
     const detail = entry.note ?? entry
+    const rawTitle = detail.title || detail.displayTitle || ''
+    const title = rawTitle || (detail.desc ? String(detail.desc).split(/[#\n]/)[0].trim().slice(0, 80) : '')
     return {
-      noteId: detail.noteId, title: detail.title, desc: detail.desc, type: detail.type,
+      noteId: detail.noteId, title, desc: detail.desc, type: detail.type,
       time: detail.time, lastUpdateTime: detail.lastUpdateTime,
       user: detail.user ? { userId: detail.user.userId, nickname: detail.user.nickname, avatar: detail.user.avatar } : null,
       interactInfo: detail.interactInfo ? {
@@ -290,23 +292,33 @@ async function bookmarkNote(page: Page, params: Record<string, unknown>, errors:
 }
 
 async function getHotSearch(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
+  const trendingPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/search/querytrending') && resp.status() === 200,
+    { timeout: 15000 },
+  ).catch(() => null)
   await page.goto(`${BASE}/explore`, { waitUntil: 'domcontentloaded', timeout: 30000 })
-  await page.waitForTimeout(3000)
-  return page.evaluate(() => {
-    const state = (window as XhsWindow).__INITIAL_STATE__
-    if (!state?.search) return { items: [], count: 0 }
-    for (const key of ['hotSearch', 'searchHotSpots', 'searchCardHotSpots']) {
-      const ref = (state.search as Record<string, SsrNode>)[key]
-      const arr: SsrNode[] = ref?._rawValue ?? ref ?? []
-      if (Array.isArray(arr) && arr.length > 0) {
-        const items = arr.map((h: SsrNode, i: number) => ({
-          keyword: h.name ?? h.word ?? h.keyword ?? '', score: h.score ?? null, rank: h.rank ?? i + 1,
+  await page.waitForTimeout(2000)
+  const searchInput = page.locator('#search-input, .search-input').first()
+  await searchInput.click({ timeout: 5000 }).catch(() => null)
+  await page.waitForTimeout(1000)
+  const trendingResp = await trendingPromise
+  if (trendingResp) {
+    try {
+      const json = (await trendingResp.json()) as Record<string, unknown>
+      const data = asRecord(json.data)
+      const candidates = [data.items, data.list, data.trendings]
+      const firstArrayKey = Object.keys(data).find(k => Array.isArray(data[k]))
+      if (firstArrayKey) candidates.push(data[firstArrayKey] as Array<Record<string, unknown>>)
+      const rawItems = candidates.find(c => Array.isArray(c) && c.length > 0) as Array<Record<string, unknown>> | undefined
+      if (rawItems) {
+        const items = rawItems.map((h: SsrNode, i: number) => ({
+          keyword: h.name ?? h.word ?? h.keyword ?? h.title ?? '', score: h.score ?? h.hot_value ?? null, rank: h.rank ?? i + 1,
         }))
-        return { items, count: items.length }
+        return { items: items.filter(it => it.keyword), count: items.filter(it => it.keyword).length }
       }
-    }
-    return { items: [], count: 0 }
-  })
+    } catch { /* fall through */ }
+  }
+  return { items: [], count: 0 }
 }
 
 async function getNoteComments(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
@@ -350,8 +362,30 @@ async function getUserCollections(page: Page, params: Record<string, unknown>, e
   if (page.url().includes('login')) throw errors.needsLogin()
   if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(3000)
+  const collectApiPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/user/collect') && resp.status() === 200,
+    { timeout: 10000 },
+  ).catch(() => null)
   await page.click('[class*="tab"]:has-text("收藏")', { timeout: 5000 }).catch(() => null)
   await page.waitForTimeout(2000)
+  const collectResp = await collectApiPromise
+  if (collectResp) {
+    try {
+      const json = (await collectResp.json()) as Record<string, unknown>
+      const data = asRecord(json.data)
+      const rawNotes = data.notes as Array<Record<string, unknown>> | undefined
+      if (Array.isArray(rawNotes) && rawNotes.length > 0) {
+        const notes = rawNotes.map((item: SsrNode) => ({
+          noteId: item.note_id ?? item.id, xsecToken: item.xsec_token ?? null,
+          type: item.type, displayTitle: item.display_title ?? '',
+          user: item.user ? { userId: item.user.user_id ?? item.user.userId, nickname: item.user.nickname, avatar: item.user.avatar } : null,
+          likedCount: item.interact_info?.liked_count ?? item.liked_count ?? null,
+          cover: item.cover ? { url: item.cover.url ?? item.cover.urlDefault, width: item.cover.width, height: item.cover.height } : null,
+        }))
+        return { notes, count: notes.length }
+      }
+    } catch { /* fall through to SSR */ }
+  }
   return page.evaluate(() => {
     const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.user) return { notes: [], count: 0 }
@@ -386,8 +420,30 @@ async function getUserLiked(page: Page, params: Record<string, unknown>, errors:
   if (page.url().includes('login')) throw errors.needsLogin()
   if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(3000)
+  const likedApiPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/user/like') && resp.status() === 200,
+    { timeout: 10000 },
+  ).catch(() => null)
   await page.click('[class*="tab"]:has-text("赞过")', { timeout: 5000 }).catch(() => null)
   await page.waitForTimeout(2000)
+  const likedResp = await likedApiPromise
+  if (likedResp) {
+    try {
+      const json = (await likedResp.json()) as Record<string, unknown>
+      const data = asRecord(json.data)
+      const rawNotes = data.notes as Array<Record<string, unknown>> | undefined
+      if (Array.isArray(rawNotes) && rawNotes.length > 0) {
+        const notes = rawNotes.map((item: SsrNode) => ({
+          noteId: item.note_id ?? item.id, xsecToken: item.xsec_token ?? null,
+          type: item.type, displayTitle: item.display_title ?? '',
+          user: item.user ? { userId: item.user.user_id ?? item.user.userId, nickname: item.user.nickname, avatar: item.user.avatar } : null,
+          likedCount: item.interact_info?.liked_count ?? item.liked_count ?? null,
+          cover: item.cover ? { url: item.cover.url ?? item.cover.urlDefault, width: item.cover.width, height: item.cover.height } : null,
+        }))
+        return { notes, count: notes.length }
+      }
+    } catch { /* fall through to SSR */ }
+  }
   return page.evaluate(() => {
     const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.user) return { notes: [], count: 0 }
@@ -419,10 +475,6 @@ async function getRelatedNotes(page: Page, params: Record<string, unknown>, erro
   const noteId = String(params.noteId ?? params.note_id ?? '')
   if (!noteId) throw errors.missingParam('noteId')
   const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
-  const recommendPromise = page.waitForResponse(
-    (resp) => resp.url().includes('/api/sns/web/v1/note/recommend') && resp.status() === 200,
-    { timeout: 15000 },
-  ).catch(() => null)
   const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
   await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForFunction(
@@ -433,42 +485,78 @@ async function getRelatedNotes(page: Page, params: Record<string, unknown>, erro
       return !!(map && typeof map === 'object' && map[id])
     }, noteId, { timeout: 10000 },
   ).catch(() => null)
-  const recommendResp = await recommendPromise
-  if (recommendResp) {
+  const tagKeyword = await page.evaluate((id: string) => {
+    const state = (window as XhsWindow).__INITIAL_STATE__
+    if (!state?.note) return null
+    const mapRef = state.note.noteDetailMap
+    const map: Record<string, SsrNode> = mapRef?._rawValue ?? mapRef ?? {}
+    const entry = map[id]
+    if (!entry) return null
+    const detail = entry.note ?? entry
+    const tags: SsrNode[] = detail.tagList ?? []
+    if (Array.isArray(tags) && tags.length > 0) {
+      const topicTag = tags.find((t: SsrNode) => t.type === 'topic')
+      return String((topicTag ?? tags[0]).name ?? '')
+    }
+    const desc = String(detail.desc ?? '')
+    const hashMatch = desc.match(/#([^#\[]+)/)
+    return hashMatch?.[1]?.trim() ?? null
+  }, noteId)
+  if (!tagKeyword) return { notes: [], count: 0 }
+  const searchApiPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/search/notes') && resp.status() === 200,
+    { timeout: 15000 },
+  ).catch(() => null)
+  await page.goto(
+    `${BASE}/search_result?keyword=${encodeURIComponent(tagKeyword)}&source=web_search_result_notes`,
+    { waitUntil: 'domcontentloaded', timeout: 30000 },
+  )
+  await page.waitForTimeout(4000)
+  const ssrResult = await page.evaluate((excludeId: string) => {
+    const state = (window as XhsWindow).__INITIAL_STATE__
+    if (!state?.search) return null
+    const feedsRef = state.search.feeds
+    const feeds: SsrNode[] = feedsRef?._rawValue ?? feedsRef ?? []
+    if (!Array.isArray(feeds) || feeds.length === 0) return null
+    const notes = feeds
+      .filter((f: SsrNode) => f.modelType === 'note' && f.noteCard && String(f.id) !== excludeId)
+      .slice(0, 10)
+      .map((f: SsrNode) => {
+        const card = f.noteCard
+        return {
+          noteId: f.id, xsecToken: f.xsecToken, type: card.type, displayTitle: card.displayTitle,
+          user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
+          likedCount: card.interactInfo?.likedCount ?? null,
+          cover: card.cover ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height } : null,
+        }
+      })
+    return notes.length > 0 ? { notes, count: notes.length } : null
+  }, noteId)
+  if (ssrResult) return ssrResult
+  const searchResp = await searchApiPromise
+  if (searchResp) {
     try {
-      const json = (await recommendResp.json()) as Record<string, unknown>
+      const json = (await searchResp.json()) as Record<string, unknown>
       const data = asRecord(json.data)
-      const rawNotes = data.items as Array<Record<string, unknown>> | undefined
-      if (Array.isArray(rawNotes) && rawNotes.length > 0) {
-        const notes = rawNotes.map((item: SsrNode) => ({
-          noteId: item.id ?? item.note_id, xsecToken: item.xsec_token ?? null,
-          type: item.note_card?.type ?? item.type, displayTitle: item.note_card?.display_title ?? item.title ?? '',
-          user: item.note_card?.user ? { userId: item.note_card.user.user_id, nickname: item.note_card.user.nickname, avatar: item.note_card.user.avatar } : null,
-          likedCount: item.note_card?.interact_info?.liked_count ?? null,
-          cover: item.note_card?.cover ? { url: item.note_card.cover.url, width: item.note_card.cover.width, height: item.note_card.cover.height } : null,
-        }))
+      const items = data.items as Array<Record<string, unknown>> | undefined
+      if (Array.isArray(items) && items.length > 0) {
+        const notes = items
+          .filter((item: SsrNode) => item.model_type === 'note' && String(item.id) !== noteId)
+          .slice(0, 10)
+          .map((item: SsrNode) => {
+            const card = item.note_card
+            return {
+              noteId: item.id, xsecToken: item.xsec_token, type: card?.type, displayTitle: card?.display_title ?? '',
+              user: card?.user ? { userId: card.user.user_id, nickname: card.user.nickname, avatar: card.user.avatar } : null,
+              likedCount: card?.interact_info?.liked_count ?? null,
+              cover: card?.cover ? { url: card.cover.url_default ?? card.cover.url, width: card.cover.width, height: card.cover.height } : null,
+            }
+          })
         return { notes, count: notes.length }
       }
-    } catch { /* fall through to SSR state */ }
+    } catch { /* fall through */ }
   }
-  return page.evaluate(() => {
-    const state = (window as XhsWindow).__INITIAL_STATE__
-    if (!state?.note) return { notes: [], count: 0 }
-    const relatedRef = state.note.relatedNotes ?? state.note.recommendNotes
-    const related: SsrNode[] = relatedRef?._rawValue ?? relatedRef ?? []
-    if (!Array.isArray(related) || related.length === 0) return { notes: [], count: 0 }
-    const notes = related.map((f: SsrNode) => {
-      const card = f.noteCard ?? f
-      return {
-        noteId: f.id ?? card.noteId, xsecToken: f.xsecToken ?? null, type: card.type,
-        displayTitle: card.displayTitle ?? card.title ?? '',
-        user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
-        likedCount: card.interactInfo?.likedCount ?? null,
-        cover: card.cover ? { url: card.cover.urlDefault ?? card.cover.url, width: card.cover.width, height: card.cover.height } : null,
-      }
-    })
-    return { notes, count: notes.length }
-  })
+  return { notes: [], count: 0 }
 }
 
 async function followUser(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
