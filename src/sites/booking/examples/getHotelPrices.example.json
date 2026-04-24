@@ -2,7 +2,7 @@
   "operation_id": "getHotelPrices",
   "cases": [
     {
-      "input": { "slug": "riverside-tower" },
+      "input": { "country": "us", "slug": "riverside-tower" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

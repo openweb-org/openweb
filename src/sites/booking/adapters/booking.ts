@@ -70,12 +70,13 @@ async function extractApolloCache(page: Page): Promise<Record<string, unknown> |
 /* ---------- Hotel search ---------- */
 
 async function searchHotels(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const url = new URL('https://www.booking.com/searchresults.html')
+  const url = new URL('https://www.booking.com/searchresults.en-us.html')
   url.searchParams.set('ss', String(params.ss ?? ''))
   if (params.checkin) url.searchParams.set('checkin', String(params.checkin))
   if (params.checkout) url.searchParams.set('checkout', String(params.checkout))
   url.searchParams.set('group_adults', String(params.group_adults ?? 2))
   url.searchParams.set('no_rooms', String(params.no_rooms ?? 1))
+  url.searchParams.set('lang', 'en-us')
 
   await page.goto(url.toString(), { waitUntil: 'load', timeout: 30_000 })
   await page.waitForSelector('[data-testid="property-card"], script[type="application/json"]', { timeout: 10_000 }).catch(() => {})
@@ -235,12 +236,12 @@ async function getHotelReviews(
     const reviewResult = data?.reviewScores as Record<string, unknown>
     const scores = reviewResult?.reviewScores as { name: string; value: number; count: number; translatedName: string }[] ?? []
 
-    // Build subscores map
     const subscores: Record<string, string> = {}
     let totalScore = 0
     let totalCount = 0
     for (const s of scores) {
-      const key = s.name?.toLowerCase().replace(/\s+/g, '_') ?? ''
+      const key = s.translatedName?.toLowerCase().replace(/\s+/g, '_')
+        ?? s.name?.toLowerCase().replace(/\s+/g, '_') ?? ''
       if (key) subscores[key] = String(Math.round(s.value * 10) / 10)
       totalScore += s.value
       totalCount = Math.max(totalCount, s.count)
@@ -272,19 +273,24 @@ async function resolveHotelId(page: Page, params: Record<string, unknown>): Prom
   })
 }
 
-/** DOM fallback for reviews — same logic as old adapter. */
-async function extractReviewsFromDom(page: Page): Promise<unknown> {
-  return page.evaluate(() => {
-    const scoreComponent = document.querySelector('[data-testid="review-score-component"]')
-    const scoreText = scoreComponent?.textContent?.trim() ?? ''
-    const scoreMatch = scoreText.match(/Scored\s+([\d.]+)\s+([\d.]+)/)
-    const countMatch = scoreText.match(/([\d,]+)\s*reviews/)
+const SUBSCORE_ZH_EN: Record<string, string> = {
+  '员工素质': 'staff', '设施/服务': 'facilities', '清洁程度': 'cleanliness',
+  '舒适程度': 'comfort', '性价比': 'value_for_money', '位置': 'location',
+  '免费wifi': 'free_wifi', '免费WiFi': 'free_wifi', '免费无线网络': 'free_wifi',
+  'Free WiFi': 'free_wifi',
+}
 
-    const subscores: Record<string, string> = {}
+/** DOM fallback for reviews — locale-agnostic regex. */
+async function extractReviewsFromDom(page: Page): Promise<unknown> {
+  const raw = await page.evaluate(() => {
+    const scoreEl = document.querySelector('[data-testid="review-score-component"]')
+    const scoreText = scoreEl?.textContent?.trim() ?? ''
+
+    const subscores: { key: string; value: string }[] = []
     for (const el of document.querySelectorAll('[data-testid="review-subscore"]')) {
       const text = el.textContent?.trim() ?? ''
       const match = text.match(/^(.+?)\s*([\d.]+)$/)
-      if (match) subscores[match[1].toLowerCase().replace(/\s+/g, '_')] = match[2]
+      if (match) subscores.push({ key: match[1].trim(), value: match[2] })
     }
 
     const featured = [...document.querySelectorAll('[data-testid="featuredreview"]')].slice(0, 5).map((el) => {
@@ -299,13 +305,25 @@ async function extractReviewsFromDom(page: Page): Promise<unknown> {
       }
     })
 
-    return {
-      score: scoreMatch?.[2] ?? null,
-      reviewCount: countMatch?.[1]?.replace(/,/g, '') ?? null,
-      subscores: Object.keys(subscores).length > 0 ? subscores : null,
-      featured,
-    }
+    return { scoreText, subscores, featured }
   })
+
+  const ratingMatch = raw.scoreText.match(/(\d\.\d)/)
+  const allNumbers = [...raw.scoreText.matchAll(/([\d,]+)/g)].map(m => parseInt(m[1].replace(/,/g, ''), 10))
+  const reviewCount = allNumbers.find(n => n > 100) ?? allNumbers.find(n => n > 10) ?? null
+
+  const subscores: Record<string, string> = {}
+  for (const { key, value } of raw.subscores) {
+    const en = SUBSCORE_ZH_EN[key] ?? key.toLowerCase().replace(/\s+/g, '_')
+    subscores[en] = value
+  }
+
+  return {
+    score: ratingMatch?.[1] ?? null,
+    reviewCount: reviewCount != null ? String(reviewCount) : null,
+    subscores: Object.keys(subscores).length > 0 ? subscores : null,
+    featured: raw.featured,
+  }
 }
 
 /* ---------- Hotel prices — GraphQL page.evaluate(fetch) ---------- */
@@ -486,7 +504,17 @@ async function searchFlights(page: Page, params: Record<string, unknown>): Promi
   await page.waitForSelector('[data-testid="searchresults_card"]', { timeout: 15_000 }).catch(() => {})
 
   return page.evaluate(() => {
+    const normalize = (text: string | null): string | null => {
+      if (!text) return null
+      return text
+        .replace(/(\d+)小时\s*/g, '$1h ')
+        .replace(/(\d+)分钟/g, '$1m')
+        .replace(/直达/g, 'Direct')
+        .replace(/中转(\d+)次/g, '$1 stop')
+        .trim()
+    }
     const cards = document.querySelectorAll('[data-testid="searchresults_card"]')
+    const seen = new Set<string>()
     const flights: {
       carrier: string | null; departureTime: string | null; arrivalTime: string | null
       departureAirport: string | null; arrivalAirport: string | null
@@ -495,16 +523,18 @@ async function searchFlights(page: Page, params: Record<string, unknown>): Promi
     for (const card of cards) {
       const priceEl = card.querySelector('[data-testid="upt_price"]')
       const priceText = priceEl?.textContent?.trim() ?? ''
-      flights.push({
-        carrier: card.querySelector('[data-testid="flight_card_carriers"]')?.textContent?.trim() ?? null,
-        departureTime: card.querySelector('[data-testid="flight_card_segment_departure_time_0"]')?.textContent?.trim() ?? null,
-        arrivalTime: card.querySelector('[data-testid="flight_card_segment_destination_time_0"]')?.textContent?.trim() ?? null,
-        departureAirport: card.querySelector('[data-testid="flight_card_segment_departure_airport_0"]')?.textContent?.trim() ?? null,
-        arrivalAirport: card.querySelector('[data-testid="flight_card_segment_destination_airport_0"]')?.textContent?.trim() ?? null,
-        duration: card.querySelector('[data-testid="flight_card_segment_duration_0"]')?.textContent?.trim() ?? null,
-        stops: card.querySelector('[data-testid="flight_card_segment_stops_0"]')?.textContent?.trim() ?? null,
-        price: priceText.match(/\$[\d,]+/)?.[0] ?? null,
-      })
+      const carrier = card.querySelector('[data-testid="flight_card_carriers"]')?.textContent?.trim() ?? null
+      const departureTime = card.querySelector('[data-testid="flight_card_segment_departure_time_0"]')?.textContent?.trim() ?? null
+      const arrivalTime = card.querySelector('[data-testid="flight_card_segment_destination_time_0"]')?.textContent?.trim() ?? null
+      const departureAirport = card.querySelector('[data-testid="flight_card_segment_departure_airport_0"]')?.textContent?.trim() ?? null
+      const arrivalAirport = card.querySelector('[data-testid="flight_card_segment_destination_airport_0"]')?.textContent?.trim() ?? null
+      const duration = normalize(card.querySelector('[data-testid="flight_card_segment_duration_0"]')?.textContent?.trim() ?? null)
+      const stops = normalize(card.querySelector('[data-testid="flight_card_segment_stops_0"]')?.textContent?.trim() ?? null)
+      const price = priceText.match(/\$[\d,]+/)?.[0] ?? null
+      const key = `${carrier}|${departureTime}|${arrivalTime}|${departureAirport}|${arrivalAirport}|${price}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      flights.push({ carrier, departureTime, arrivalTime, departureAirport, arrivalAirport, duration, stops, price })
     }
     return { count: flights.length, flights: flights.slice(0, 30) }
   })

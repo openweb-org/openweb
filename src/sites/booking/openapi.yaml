@@ -115,7 +115,7 @@ paths:
           selector: script[type="application/ld+json"]
           type_filter: Hotel
         page_plan:
-          entry_url: https://www.booking.com/hotel/{country}/{slug}.html
+          entry_url: https://www.booking.com/hotel/{country}/{slug}.en-us.html?lang=en-us
           ready: 'script[type="application/ld+json"]'
           wait_until: domcontentloaded
       parameters:
@@ -216,13 +216,23 @@ paths:
         adapter:
           name: booking
           operation: getHotelReviews
+        page_plan:
+          entry_url: https://www.booking.com/hotel/{country}/{slug}.en-us.html?lang=en-us
+          ready: '[data-testid="review-score-component"], script'
+          wait_until: load
       parameters:
+      - name: country
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Country code from the hotel URL (e.g. "us", "es", "mx").
       - name: slug
         in: query
         required: true
         schema:
           type: string
-        description: Hotel URL slug — page must be on this hotel's page.
+        description: Hotel URL slug (e.g. "riverside-tower").
       responses:
         '200':
           description: Review summary extracted from the hotel page.
@@ -284,13 +294,23 @@ paths:
         adapter:
           name: booking
           operation: getHotelPrices
+        page_plan:
+          entry_url: https://www.booking.com/hotel/{country}/{slug}.en-us.html?lang=en-us
+          ready: 'table.hprt-table, script'
+          wait_until: load
       parameters:
+      - name: country
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Country code from the hotel URL (e.g. "us", "es", "mx").
       - name: slug
         in: query
         required: true
         schema:
           type: string
-        description: Hotel URL slug — page must be on this hotel's page.
+        description: Hotel URL slug (e.g. "riverside-tower").
       responses:
         '200':
           description: Room types and pricing from the availability table.
