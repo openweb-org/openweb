@@ -1,3 +1,19 @@
+## 2026-04-24 — Userflow QA
+
+**Context:** Blind 3-persona QA (Couple/SF fine dining, Business/NYC steakhouse, Foodie/SF ramen).
+**Findings & fixes:**
+- **searchRestaurants location ignored** — `location` param was captured but never added to the search URL; all results came from server's geo-IP default (Durham NC). Fix: concatenate `term` + `location` into the `term` query param.
+- **Slug extraction** — some slugs retained the full `https://www.opentable.com/` prefix (only `/r/` prefix was stripped). Fix: strip both `/r/` and bare domain prefixes.
+- **getRestaurant photos empty** — SSR state migrated from `photos.gallery` to `photos.galleryV3`; photo objects have `url` directly instead of `thumbnails[0].url`. Fix: use `galleryV3 ?? gallery` fallback, extract `p.url ?? p.thumbnails?.[0]?.url`.
+- **getRestaurant HTML in text fields** — `description` and `hoursOfOperation` contained raw `<br />` tags. Fix: strip HTML, convert `<br>` to newlines.
+- **getReviews always empty** — GQL response path changed from `data.reviewSearchResults` to `data.restaurant.reviewSearchResults`; `rating` became an object `{overall, food, ...}` instead of a number; `user.displayName` moved to `user.nickname`. Fix: try both response paths, handle rating as number or object, prefer `nickname`.
+- **getReviews null photos** — review photo objects sometimes have null `url`. Fix: filter nulls with `.filter(Boolean)`.
+- **Removed `parkingDetails`** from getRestaurant response (not in schema).
+- **Search photos** — updated to use `galleryV3` with same fallback pattern.
+
+**Verification:** `pnpm dev verify opentable` — 4/4 PASS
+**Key file:** `src/sites/opentable/adapters/opentable.ts`
+
 ## 2026-04-17 — Adapter Refactor
 
 **Context:** Phase 5C normalization — migrate adapter from `CodeAdapter` (multi-method) to `CustomRunner` (single `run(ctx)`).

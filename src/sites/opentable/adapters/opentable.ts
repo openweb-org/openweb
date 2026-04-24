@@ -77,7 +77,7 @@ const OPERATIONS: Record<string, Handler> = {
     const metroId = params.metroId ? String(params.metroId) : ''
 
     const url = new URL('/s', SITE)
-    url.searchParams.set('term', term)
+    url.searchParams.set('term', `${term} ${location}`)
     if (date) {
       url.searchParams.set('dateTime', `${date}T${time.replace(':', '%3A')}`)
     }
@@ -92,23 +92,35 @@ const OPERATIONS: Record<string, Handler> = {
         const ms = state?.multiSearch
         if (!ms?.restaurants) return { restaurants: [], totalResults: 0 }
 
-        const restaurants = ms.restaurants.map((r: any) => ({
-          restaurantId: r.restaurantId,
-          name: r.name,
-          slug: r.urls?.profileLink?.link?.replace('https://www.opentable.com/r/', '') ?? null,
-          cuisine: r.primaryCuisine?.name ?? null,
-          priceBand: r.priceBand?.name ?? null,
-          priceSymbol: r.priceBand?.currencySymbol
-            ? r.priceBand.currencySymbol.repeat(r.priceBand.priceBandId ?? 1)
-            : null,
-          neighborhood: r.neighborhood?.name ?? null,
-          rating: r.statistics?.reviews?.ratings?.overall?.rating ?? null,
-          reviewCount: r.statistics?.reviews?.allTimeTextReviewCount ?? null,
-          photos: r.photos?.gallery?.photos?.slice(0, 2).map((p: any) => p.thumbnails?.[0]?.url) ?? [],
-          latitude: r.coordinates?.latitude ?? null,
-          longitude: r.coordinates?.longitude ?? null,
-          isPromoted: r.isPromoted ?? false,
-        }))
+        function slug(link: string | null | undefined): string | null {
+          if (!link) return null
+          return link.replace('https://www.opentable.com/r/', '').replace('https://www.opentable.com/', '')
+        }
+
+        function photo(raw: string): string {
+          return raw.startsWith('//') ? `https:${raw}` : raw
+        }
+
+        const restaurants = ms.restaurants.map((r: any) => {
+          const gallery = r.photos?.galleryV3 ?? r.photos?.gallery
+          return {
+            restaurantId: r.restaurantId,
+            name: r.name,
+            slug: slug(r.urls?.profileLink?.link),
+            cuisine: r.primaryCuisine?.name ?? null,
+            priceBand: r.priceBand?.name ?? null,
+            priceSymbol: r.priceBand?.currencySymbol
+              ? r.priceBand.currencySymbol.repeat(r.priceBand.priceBandId ?? 1)
+              : null,
+            neighborhood: r.neighborhood?.name ?? null,
+            rating: r.statistics?.reviews?.ratings?.overall?.rating ?? null,
+            reviewCount: r.statistics?.reviews?.allTimeTextReviewCount ?? null,
+            photos: gallery?.photos?.slice(0, 2).map((p: any) => photo(p.url ?? p.thumbnails?.[0]?.url ?? '')) ?? [],
+            latitude: r.coordinates?.latitude ?? null,
+            longitude: r.coordinates?.longitude ?? null,
+            isPromoted: r.isPromoted ?? false,
+          }
+        })
 
         return {
           restaurants,
@@ -132,11 +144,21 @@ const OPERATIONS: Record<string, Handler> = {
       const r = state?.restaurantProfile?.restaurant
       if (!r) return null
 
+      function strip(s: string | null | undefined): string | null {
+        if (!s) return null
+        return s.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim()
+      }
+
+      function photo(raw: string): string {
+        return raw.startsWith('//') ? `https:${raw}` : raw
+      }
+
       const stats = r.statistics?.reviews
+      const gallery = r.photos?.galleryV3 ?? r.photos?.gallery
       return {
         restaurantId: r.restaurantId,
         name: r.name,
-        description: r.description ?? null,
+        description: strip(r.description),
         cuisine: r.primaryCuisine?.name ?? null,
         cuisines: r.cuisines?.map((c: any) => c.name) ?? [],
         priceBand: r.priceBand?.name ?? null,
@@ -155,9 +177,8 @@ const OPERATIONS: Record<string, Handler> = {
         website: r.website ?? null,
         latitude: r.coordinates?.latitude ?? null,
         longitude: r.coordinates?.longitude ?? null,
-        hoursOfOperation: r.hoursOfOperation ?? null,
+        hoursOfOperation: strip(r.hoursOfOperation),
         dressCode: r.dressCode ?? null,
-        parkingDetails: r.parkingDetails ?? null,
         executiveChef: r.executiveChef ?? null,
         rating: stats?.ratings?.overall?.rating ?? null,
         reviewCount: stats?.allTimeTextReviewCount ?? null,
@@ -178,8 +199,7 @@ const OPERATIONS: Record<string, Handler> = {
               maxPartySize: r.features.reservationMaxPartySize ?? null,
             }
           : null,
-        photos:
-          r.photos?.gallery?.photos?.slice(0, 5).map((p: any) => p.thumbnails?.[0]?.url) ?? [],
+        photos: gallery?.photos?.slice(0, 5).map((p: any) => photo(p.url ?? p.thumbnails?.[0]?.url ?? '')) ?? [],
       }
     })
   },
@@ -217,7 +237,6 @@ const OPERATIONS: Record<string, Handler> = {
     const avail = data?.availability
     if (!avail) return { restaurantId, date, time, partySize, slots: [] }
 
-    // The response is indexed (0, 1, 2...) — get first restaurant
     const entry = avail['0'] ?? Object.values(avail)[0] as any
     if (!entry?.availabilityDays?.[0]) {
       return { restaurantId, date, time, partySize, slots: [] }
@@ -253,18 +272,21 @@ const OPERATIONS: Record<string, Handler> = {
       highlightFormat: 'index',
     }, HASHES.ReviewSearchResults)) as any
 
-    const rsr = data?.reviewSearchResults
+    const rsr = data?.restaurant?.reviewSearchResults ?? data?.reviewSearchResults
     if (!rsr) return { reviews: [], totalCount: 0, totalPages: 0, page: pageNum }
 
-    const reviews = (rsr.reviews || []).map((r: any) => ({
-      reviewId: r.reviewId,
-      rating: r.rating,
-      text: r.text ?? null,
-      displayName: r.user?.displayName ?? null,
-      submittedDate: r.submittedDateTime ?? null,
-      dinedDate: r.dinedDateTime ?? null,
-      photos: r.photos?.map((p: any) => p.url) ?? [],
-    }))
+    const reviews = (rsr.reviews || []).map((r: any) => {
+      const rat = r.rating
+      return {
+        reviewId: r.reviewId ?? null,
+        rating: typeof rat === 'number' ? rat : rat?.overall ?? null,
+        text: r.text ?? null,
+        displayName: r.user?.nickname ?? r.user?.displayName ?? null,
+        submittedDate: r.submittedDateTime ?? null,
+        dinedDate: r.dinedDateTime ?? null,
+        photos: (r.photos || []).map((p: any) => p?.url).filter(Boolean),
+      }
+    })
 
     return {
       reviews,
