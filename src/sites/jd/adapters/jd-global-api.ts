@@ -95,31 +95,78 @@ async function searchProducts(
 				const skuId = item.getAttribute("data-sku");
 				if (!skuId) continue;
 
-				const titleEl = item.querySelector("[title]");
+				const titleEl = item.querySelector("span[title]");
 				const name = titleEl?.getAttribute("title")?.trim() || null;
 
+				// Price: find <i>¥</i> then grab adjacent <span> with digits
 				let price: string | null = null;
-				const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT);
-				let node: Node | null = walker.nextNode();
-				while (node) {
-					const match = node.textContent?.match(/[¥￥]([\d,.]+)/);
-					if (match) { price = match[1]; break; }
-					node = walker.nextNode();
-				}
-
-				let shopName: string | null = null;
-				for (const link of item.querySelectorAll("a")) {
-					const href = link.getAttribute("href") || "";
-					if (href.includes("mall.jd.com") || href.includes("shop.jd.com")) {
-						shopName = link.textContent?.trim() || null;
+				for (const iEl of item.querySelectorAll("i")) {
+					if (iEl.textContent?.trim() === "¥") {
+						const nextSpan = iEl.nextElementSibling;
+						if (nextSpan) {
+							const t = nextSpan.textContent?.trim() || "";
+							if (/^[\d,.]+$/.test(t)) { price = t; break; }
+						}
+						const parent = iEl.parentElement;
+						if (!price && parent) {
+							const sibSpan = parent.querySelector("span");
+							if (sibSpan) {
+								const t = sibSpan.textContent?.trim() || "";
+								if (/^[\d,.]+$/.test(t)) { price = t; break; }
+							}
+						}
 						break;
 					}
 				}
 
-				let sales: string | null = null;
+				// Shop name: CSS-module class with _limit_ or _name_ inside _shopFloor_
+				let shopName: string | null = null;
 				for (const span of item.querySelectorAll("span")) {
-					const text = span.getAttribute("title") || "";
-					if (text.match(/已售[\d万+]+/)) { sales = text.replace("已售", ""); break; }
+					const cls = span.className || "";
+					if (cls.includes("_limit_") || cls.includes("_name_")) {
+						const parent = span.closest("[class*='_shopFloor_']") || span.closest("[class*='_shop_']");
+						if (parent) {
+							shopName = span.textContent?.trim() || null;
+							if (shopName) break;
+						}
+					}
+				}
+				if (!shopName) {
+					for (const link of item.querySelectorAll("a")) {
+						const href = link.getAttribute("href") || "";
+						if (href.includes("mall.jd.com") || href.includes("shop.jd.com")) {
+							shopName = link.textContent?.trim() || null;
+							if (shopName) break;
+						}
+					}
+				}
+
+				// Sales: "已售X万+" or fallback to "X万+条评价"
+				let sales: string | null = null;
+				for (const span of item.querySelectorAll("span[title]")) {
+					const title = span.getAttribute("title") || "";
+					if (/^已售/.test(title)) {
+						sales = title.replace("已售", "");
+						break;
+					}
+				}
+				if (!sales) {
+					for (const span of item.querySelectorAll("span")) {
+						const text = span.textContent?.trim() || "";
+						if (/^已售[\d万+]+/.test(text)) {
+							sales = text.replace("已售", "");
+							break;
+						}
+					}
+				}
+				if (!sales) {
+					for (const span of item.querySelectorAll("span[title]")) {
+						const title = span.getAttribute("title") || "";
+						if (/条评价/.test(title)) {
+							sales = title;
+							break;
+						}
+					}
 				}
 
 				const img = item.querySelector("img");
@@ -212,9 +259,9 @@ async function getProductReviews(
 
 	const commentInfoList = (commentData.commentInfoList as Array<Record<string, unknown>>) || [];
 	const reviews = commentInfoList.map((c) => ({
-		user: String((c.userInfo as Record<string, unknown>)?.nickName || ""),
+		user: String(c.userNickName || ""),
 		content: String(c.commentData || ""),
-		score: Number(c.score) || 0,
+		score: Number(c.commentScore) || 0,
 	}));
 
 	return {

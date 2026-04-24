@@ -72,7 +72,7 @@ paths:
                           description: Seller store name.
                         sales:
                           type: ['string', 'null']
-                          description: Sales volume (e.g. "800+").
+                          description: Sales volume (e.g. "1万+") or review count (e.g. "100万+条评价").
                         image:
                           type: ['string', 'null']
                           description: Product image URL.
@@ -201,6 +201,7 @@ paths:
                       properties:
                         user:
                           type: string
+                          description: Reviewer nickname (may be anonymized).
                         content:
                           type: string
                         score:
