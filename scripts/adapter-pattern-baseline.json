@@ -121,7 +121,7 @@
     "quora": {
       "page_goto": 1,
       "page_on_response": 1,
-      "query_selector": 9
+      "query_selector": 16
     },
     "reuters": {
       "page_goto": 1,
@@ -155,7 +155,7 @@
       "query_selector": 2
     },
     "xiaohongshu": {
-      "page_goto": 12
+      "page_goto": 13
     },
     "youtube": {
       "page_goto": 4,
