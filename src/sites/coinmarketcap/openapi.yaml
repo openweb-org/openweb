@@ -16,7 +16,11 @@ paths:
       operationId: getListings
       summary: "Get top cryptocurrencies ranked by market cap — name, symbol, price, market cap, volume, percent change"
       x-openweb:
+        transport: node
         permission: read
+        adapter:
+          name: coinmarketcap
+          operation: getListings
         build:
           stable_id: coinmarketcap_getListings_v1
           tool_version: 1
@@ -95,8 +99,10 @@ paths:
                               type: string
                               description: "URL slug (e.g., bitcoin)"
                             cmcRank:
-                              type: integer
-                              description: "Market cap ranking"
+                              type:
+                                - integer
+                                - "null"
+                              description: "Market cap ranking (null for sponsored/index tokens)"
                             circulatingSupply:
                               type:
                                 - number
@@ -112,26 +118,6 @@ paths:
                                 - number
                                 - "null"
                               description: "Maximum supply (null if unlimited)"
-                            ath:
-                              type:
-                                - number
-                                - "null"
-                              description: "All-time high price"
-                            atl:
-                              type:
-                                - number
-                                - "null"
-                              description: "All-time low price"
-                            high24h:
-                              type:
-                                - number
-                                - "null"
-                              description: "24h high price"
-                            low24h:
-                              type:
-                                - number
-                                - "null"
-                              description: "24h low price"
                             lastUpdated:
                               type: string
                               description: "ISO 8601 timestamp of last update"
@@ -209,7 +195,11 @@ paths:
       operationId: getQuote
       summary: "Get price and market data for a specific coin — price, market cap, volume, supply, percent changes, ATH/ATL"
       x-openweb:
+        transport: node
         permission: read
+        adapter:
+          name: coinmarketcap
+          operation: getQuote
         build:
           stable_id: coinmarketcap_getQuote_v1
           tool_version: 1
@@ -430,7 +420,11 @@ paths:
       operationId: getTrending
       summary: "Get trending and most-searched cryptocurrencies — name, symbol, price, volume, percent change"
       x-openweb:
+        transport: node
         permission: read
+        adapter:
+          name: coinmarketcap
+          operation: getTrending
         build:
           stable_id: coinmarketcap_getTrending_v1
           tool_version: 1
