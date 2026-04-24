@@ -16,7 +16,9 @@ paths:
       summary: Search NPR articles by keyword — returns title, summary, author, date, image, audio info
       x-openweb:
         permission: read
-        unwrap: hits
+        adapter:
+          name: npr
+          operation: searchArticles
         build:
           stable_id: npr0001
           tool_version: 1
@@ -117,8 +119,10 @@ paths:
                         type: string
                       description: Topic tags (Health, Politics, World, etc.).
                     image:
-                      type: object
-                      description: Lead image for the article.
+                      type:
+                        - object
+                        - 'null'
+                      description: Lead image for the article, or null if unavailable.
                       properties:
                         url:
                           type: string
@@ -144,6 +148,9 @@ paths:
       summary: Get full NPR article — title, full body text, author, date, topics, image
       x-openweb:
         permission: read
+        adapter:
+          name: npr
+          operation: getArticle
         build:
           stable_id: npr0002
           tool_version: 1
@@ -226,8 +233,10 @@ paths:
                           type: string
                     description: Associated NPR shows.
                   image:
-                    type: object
-                    description: Lead image for the article.
+                    type:
+                      - object
+                      - 'null'
+                    description: Lead image for the article, or null if unavailable.
                     properties:
                       url:
                         type: string
@@ -265,7 +274,9 @@ paths:
       summary: Get latest NPR top stories — returns title, summary, author, date, topic for front-page headlines
       x-openweb:
         permission: read
-        unwrap: hits
+        adapter:
+          name: npr
+          operation: getTopStories
         actual_path: /1/indexes/nprorg-cds
         build:
           stable_id: npr0003
@@ -367,8 +378,10 @@ paths:
                         type: string
                       description: Topic tags (Health, Politics, World, etc.).
                     image:
-                      type: object
-                      description: Lead image for the article.
+                      type:
+                        - object
+                        - 'null'
+                      description: Lead image for the article, or null if unavailable.
                       properties:
                         url:
                           type: string
