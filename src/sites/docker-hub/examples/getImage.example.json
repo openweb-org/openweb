@@ -2,7 +2,7 @@
   "operation_id": "getImage",
   "cases": [
     {
-      "input": { "namespace": "library", "name": "nginx" },
+      "input": { "image": "nginx" },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]
