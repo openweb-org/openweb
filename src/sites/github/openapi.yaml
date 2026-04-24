@@ -26,6 +26,10 @@ paths:
       summary: Get repository details — full_name, description, stargazers_count, forks_count, language, default_branch
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: github-read
+          operation: getRepo
         build:
           stable_id: gh0001
           tool_version: 1
@@ -57,8 +61,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: integer
                   full_name:
                     type: string
                   description:
@@ -77,13 +79,35 @@ paths:
                     type: integer
                   default_branch:
                     type: string
+                  topics:
+                    type: array
+                    items:
+                      type: string
+                  license:
+                    type: string
+                    nullable: true
+                  homepage:
+                    type: string
+                    nullable: true
+                  archived:
+                    type: boolean
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                  pushed_at:
+                    type: string
                   owner:
                     type: object
                     properties:
                       login:
                         type: string
+                      avatar_url:
+                        type: string
+                      html_url:
+                        type: string
                 required:
-                - id
+                - full_name
                 - description
   /repos/{owner}/{repo}/issues:
     get:
@@ -91,6 +115,10 @@ paths:
       summary: List repository issues — title, state, user, labels, created_at
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: github-read
+          operation: listIssues
         build:
           stable_id: gh0002
           tool_version: 1
@@ -138,8 +166,6 @@ paths:
                 items:
                   type: object
                   properties:
-                    id:
-                      type: integer
                     number:
                       type: integer
                     title:
@@ -148,6 +174,7 @@ paths:
                       type: string
                     user:
                       type: object
+                      nullable: true
                       properties:
                         login:
                           type: string
@@ -158,10 +185,18 @@ paths:
                         properties:
                           name:
                             type: string
+                          color:
+                            type: string
                     created_at:
                       type: string
+                    updated_at:
+                      type: string
+                    comments:
+                      type: integer
+                    html_url:
+                      type: string
                   required:
-                  - id
+                  - number
                   - title
     post:
       operationId: createIssue
@@ -607,6 +642,10 @@ paths:
       summary: Search repositories by keyword — total_count, full_name, description, stargazers_count, language
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: github-read
+          operation: searchRepos
         build:
           stable_id: gh0005
           tool_version: 1
@@ -669,15 +708,28 @@ paths:
                     items:
                       type: object
                       properties:
-                        id:
-                          type: integer
                         full_name:
                           type: string
                         description:
                           type: string
+                          nullable: true
                         stargazers_count:
                           type: integer
+                        forks_count:
+                          type: integer
                         language:
+                          type: string
+                          nullable: true
+                        topics:
+                          type: array
+                          items:
+                            type: string
+                        license:
+                          type: string
+                          nullable: true
+                        updated_at:
+                          type: string
+                        html_url:
                           type: string
                 required:
                 - items
@@ -687,6 +739,10 @@ paths:
       summary: Get user profile — login, name, bio, public_repos, followers, following
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: github-read
+          operation: getUserProfile
         build:
           stable_id: gh0006
           tool_version: 1
@@ -721,16 +777,30 @@ paths:
                   bio:
                     type: string
                     nullable: true
+                  company:
+                    type: string
+                    nullable: true
+                  location:
+                    type: string
+                    nullable: true
+                  blog:
+                    type: string
+                    nullable: true
+                  html_url:
+                    type: string
                   public_repos:
+                    type: integer
+                  public_gists:
                     type: integer
                   followers:
                     type: integer
                   following:
                     type: integer
-                  html_url:
-                    type: string
                   created_at:
                     type: string
+                  twitter_username:
+                    type: string
+                    nullable: true
                 required:
                 - login
                 - name
@@ -738,9 +808,13 @@ paths:
   /repos/{owner}/{repo}/readme:
     get:
       operationId: getRepoReadme
-      summary: Get repository README — name, content (base64), encoding, size
+      summary: Get repository README — name, content (decoded text), path
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: github-read
+          operation: getRepoReadme
         build:
           stable_id: gh0007
           tool_version: 1
@@ -778,8 +852,8 @@ paths:
                     type: string
                   content:
                     type: string
-                    description: Base64-encoded README content
-                  encoding:
+                    description: Decoded README content (UTF-8 text)
+                  html_url:
                     type: string
                 required:
                 - name
@@ -790,6 +864,10 @@ paths:
       summary: List repository pull requests — title, state, user, head, base, created_at
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: github-read
+          operation: listPullRequests
         build:
           stable_id: gh0008
           tool_version: 1
@@ -844,21 +922,23 @@ paths:
                 items:
                   type: object
                   properties:
-                    id:
-                      type: integer
                     number:
                       type: integer
                     title:
                       type: string
                     state:
                       type: string
+                    draft:
+                      type: boolean
                     user:
                       type: object
+                      nullable: true
                       properties:
                         login:
                           type: string
                     head:
                       type: object
+                      nullable: true
                       properties:
                         ref:
                           type: string
@@ -866,6 +946,7 @@ paths:
                           type: string
                     base:
                       type: object
+                      nullable: true
                       properties:
                         ref:
                           type: string
@@ -873,8 +954,15 @@ paths:
                           type: string
                     created_at:
                       type: string
+                    updated_at:
+                      type: string
+                    merged_at:
+                      type: string
+                      nullable: true
+                    html_url:
+                      type: string
                   required:
-                  - id
+                  - number
                   - title
   /repos/{owner}/{repo}/contributors:
     get:
@@ -882,6 +970,10 @@ paths:
       summary: List repository contributors — login, contributions, avatar_url
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: github-read
+          operation: listContributors
         build:
           stable_id: gh0009
           tool_version: 1
@@ -935,8 +1027,11 @@ paths:
                       type: integer
                     avatar_url:
                       type: string
+                    html_url:
+                      type: string
                   required:
                   - login
+                  - contributions
   /repos/{owner}/{repo}/forks:
     post:
       operationId: forkRepo

@@ -21,6 +21,34 @@
 
 **Verification:** spec review only — no new capture or compilation
 
+## 2026-04-24 — Read-Op QA: Response Trimming + Base64 Decode
+
+**Context:** Userflow QA across 3 personas (developer evaluating lib, OSS maintainer triaging, recruiter checking candidate). All 7 read ops worked but returned massive, untrimmed GitHub API responses — 80+ keys per object, template URLs, nested link objects, base64-encoded README content.
+
+**Findings:**
+| Operation | Before | After | Reduction |
+|---|---|---|---|
+| searchRepos | 166 KB | 12 KB | 93% |
+| getRepo | 6 KB | 0.5 KB | 92% |
+| getRepoReadme | 25 KB | 18 KB | 28% (content is large) |
+| listIssues | 134 KB | 14 KB | 90% |
+| listPullRequests | 530 KB | 17 KB | 97% |
+| listContributors | 28 KB | 4 KB | 86% |
+| getUserProfile | 1.4 KB inline | 0.35 KB inline | 75% |
+
+**Changes:**
+- New `github-read.ts` adapter handles all 7 read operations with field-level response trimming via `nodeFetch`.
+- `getRepoReadme` decodes base64→UTF-8 text — agents get readable markdown, not encoded blobs.
+- `getRepo` and `searchRepos` now surface `topics`, `license` (SPDX ID), `homepage`, `archived`, `forks_count`.
+- `listPullRequests` now includes `draft`, `merged_at`, `updated_at`.
+- `listIssues` includes `comments` count, `updated_at`, `html_url`, and `pull_request` boolean flag.
+- `openapi.yaml` updated: all 7 read ops routed through `adapter: github-read` with `transport: node`; response schemas aligned to trimmed output; nullable annotations fixed (description, language in searchRepos).
+- Schema validation warnings eliminated (previously: `data/items/17/language must be string` etc).
+
+**Verification:** `pnpm dev verify github` → PASS (2/2). All 7 read ops tested live. `pnpm test` → 1049/1049 pass. Lint clean (1 pre-existing docker-hub warning).
+
+**Note:** Read adapter uses unauthenticated GitHub API (60 req/hr rate limit). For higher throughput, use `graphqlQuery` op which routes through cookie-session auth.
+
 ## 2026-04-19 — Write-Op Verify Campaign
 
 **Context:** Resume of the BLOCKED 5 ops (closeIssue, reopenIssue, watchRepo, unwatchRepo, unstarRepo) after the prior session left them stalled on a no-login probe failure. User was already signed in to github.com at `localhost:9222` (verified via `body.classList.contains("logged-in")` + `meta[name="user-login"]=imoonkey`), so blocker was lifted.
