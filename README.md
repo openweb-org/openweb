@@ -14,10 +14,10 @@
 
 ---
 
-Browser automation clicks buttons, reads pixels, and burns tokens. OpenWeb calls the same APIs the website calls.
+Browser automation clicks buttons, reads DOM, and burns tokens. OpenWeb calls the same APIs the website calls — when it can — and directly accesses the structured data underneath.
 
-- **Fast, cheap, and token-efficient** — No screenshots, no vision API, no LLM-powered parsing. JSON in, JSON out.
-- **Minimal effort per operation** — Direct HTTP when it works, browser-backed fetch when the site requires it, and code adapters for maximal flexibility. The right transport per site, automatically — the caller never chooses or cares.
+- **Fast, cheap, and token-efficient** — No screenshots, no LLM page interpretation. Structured JSON in, structured JSON out.
+- **Minimal effort per operation** — Direct HTTP when it works, browser-backed fetch when the site requires it, and code adapters for maximal flexibility. The right transport per operation, automatically — the caller never chooses or cares.
 - **Predictable, typed API** — Typed params, response schemas, and examples for every operation.
 - **Auth that just works** — Cookies, JWT, CSRF, request signing, exchange chains — auto-resolved per request. You never touch tokens.
 - **Safe by default** — Read, write, delete, and transact operations gated by permission tiers. SSRF protection on every request.
@@ -29,8 +29,6 @@ Browser automation clicks buttons, reads pixels, and burns tokens. OpenWeb calls
 npx @openweb-org/openweb sites
 npx @openweb-org/openweb wikipedia getPageSummary '{"title":"World_Wide_Web"}'
 ```
-
-> **Note:** OpenWeb is currently a CLI tool only. Programmatic API usage (importing as a library) is not supported — the package exposes only `bin` with no `main`, `exports`, or `types` fields.
 
 ## Install
 
@@ -57,7 +55,7 @@ Or run the install script directly:
 curl -fsSL https://raw.githubusercontent.com/openweb-org/openweb/main/install-skill.sh | bash
 ```
 
-Works with [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://github.com/openai/codex), [OpenCode](https://opencode.ai), and [OpenClaw](https://github.com/openclaw/openclaw). After install, add to your project instructions (`CLAUDE.md` / `AGENTS.md`):
+Works with [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://github.com/openai/codex), [OpenCode](https://opencode.ai), [OpenClaw](https://github.com/openclaw/openclaw), [Hermes](https://hermes-agent.nousresearch.com), and all agents supporting skills. After install, add to your project instructions (`CLAUDE.md` / `AGENTS.md`):
 
 ```markdown
 - OpenWeb: Access any website through /openweb
@@ -133,19 +131,15 @@ See [`skills/openweb/add-site/guide.md`](skills/openweb/add-site/guide.md) for t
 
 | Category | Sites |
 |---|---|
-| **Social** | instagram(24), x(29), reddit(17), bluesky(22), linkedin(12), weibo(16), xiaohongshu(14), zhihu(17), discord(14), telegram(13), whatsapp(8), tiktok(25), pinterest(11) |
-| **Commerce** | amazon(8), walmart(5), target(5), costco(14), bestbuy(5), ebay(3), etsy(4), jd(4), instacart(3), homedepot(5) |
-| **Food & Delivery** | doordash(5), grubhub(3), ubereats(8), starbucks(3), opentable(4) |
-| **Content** | youtube(15), youtube-music(9), medium(14), substack(4), wikipedia(14), hackernews(18), bilibili(15), soundcloud(4), spotify(13), twitch(7), apple-podcasts(4), douban(14) |
-| **Travel** | booking(5), expedia(6), google-flights(5), tripadvisor(7), kayak(2), ctrip(13), airbnb(5), uber(3) |
-| **Finance** | robinhood(14), fidelity(13), yahoo-finance(9), xueqiu(10), bloomberg(7), coinmarketcap(3), coingecko(5), seeking-alpha(4) |
-| **News** | bbc-news(4), cnn(3), reuters(4), guardian(3), techcrunch(4), npr(3), espn(6) |
-| **Dev** | github(18), gitlab(17), leetcode(12), chatgpt(6), stackoverflow(5), docker-hub(3), huggingface(5), npm(4), pypi(3) |
-| **Search** | google-search(10), google-maps(14), google-scholar(3) |
-| **Jobs & Reviews** | indeed(8), glassdoor(4), goodreads(4), yelp(2), rotten-tomatoes(3), imdb(4) |
-| **Real Estate** | zillow(4), redfin(3) |
-| **Productivity** | notion(7), todoist(6), trello(7) |
-| **Other** | craigslist(3), goodrx(3), producthunt(4), quora(4), steam(11), boss(7), arxiv(3) |
+| **Social** | x(29), tiktok(25), instagram(24), bluesky(22), reddit(17), zhihu(17), weibo(16), xiaohongshu(14), discord(14), telegram(13), linkedin(12), pinterest(11), whatsapp(8), quora(4) |
+| **Content & Media** | hackernews(18), youtube(15), bilibili(15), wikipedia(14), medium(14), douban(14), spotify(13), steam(11), google-search(10), youtube-music(9), twitch(7), substack(4), soundcloud(4), goodreads(4), imdb(4), apple-podcasts(4), rotten-tomatoes(3) |
+| **Commerce** | costco(14), amazon(8), walmart(5), bestbuy(5), homedepot(5), ebay(3), etsy(4), jd(4), target(5), instacart(3), zillow(4), redfin(3), craigslist(3), goodrx(3) |
+| **Dev & Research** | github(18), gitlab(17), chatgpt(6), notion(7), trello(7), todoist(6), stackoverflow(5), huggingface(5), producthunt(4), npm(4), docker-hub(3), pypi(3), arxiv(3), google-scholar(3) |
+| **Finance** | robinhood(14), fidelity(13), xueqiu(10), yahoo-finance(9), bloomberg(7), angellist(6), coingecko(5), seeking-alpha(4), coinmarketcap(3) |
+| **News & Sports** | espn(6), bbc-news(4), techcrunch(4), reuters(4), guardian(3), cnn(3), npr(3) |
+| **Travel** | google-maps(14), ctrip(13), tripadvisor(7), expedia(6), booking(5), google-flights(5), airbnb(5), uber(3), kayak(2), yelp(2) |
+| **Food & Delivery** | ubereats(8), doordash(5), opentable(4), starbucks(3), grubhub(3) |
+| **Jobs & Career** | indeed(8), boss(7), glassdoor(4), linkedin (cross-listed from Social), leetcode(12) |
 
 Run `openweb sites` for the source of truth — the table above is hand-maintained and may drift; the CLI also shows auth requirements.
 
