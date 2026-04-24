@@ -1,3 +1,18 @@
+## 2026-04-24: Userflow QA — response trimming and fixes
+
+**What changed:**
+- searchListings: capped results to 25 (was 300+), removed always-null `date` field, normalized `$0` price to null
+- getListing: trimmed body to 800 chars, capped images to 5, updated stale verify example (410 Gone)
+- Both adapters (node + DOM) aligned on the same trimming limits
+- openapi.yaml: dropped `date` from search schema, updated getListing category description to document subregion prefix
+
+**Why:**
+- Raw search responses were ~88KB (352 listings), far too large for LLM context
+- Job listings showed `$0` price instead of null
+- Verify example pointed to a deleted listing
+
+**Verification:** `pnpm dev verify craigslist` — 3/3 PASS
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**

@@ -4,6 +4,10 @@ import type { CustomRunner } from '../../../types/adapter.js'
 
 type AdapterErrors = { botBlocked(msg: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error }
 
+const MAX_SEARCH_RESULTS = 25
+const MAX_BODY = 800
+const MAX_IMAGES = 5
+
 /** Navigate to a Craigslist URL with the given city subdomain. */
 async function navigateTo(page: Page, city: string, path: string, errors: AdapterErrors): Promise<void> {
   const url = `https://${city}.craigslist.org${path}`
@@ -25,25 +29,31 @@ async function searchListings(page: Page, params: Record<string, unknown>, error
   // Wait for SPA results to render (craigslist is a JS SPA)
   await page.waitForSelector('.cl-search-result, .gallery-card', { timeout: 8_000 }).catch(() => {})
 
-  return page.evaluate(() => {
+  return page.evaluate((maxResults) => {
     const listings: Record<string, unknown>[] = []
+
+    function normalizePrice(raw: string | null): string | null {
+      if (!raw) return null
+      const cleaned = raw.replace(/[^0-9.]/g, '')
+      if (!cleaned || Number(cleaned) === 0) return null
+      return raw
+    }
 
     // Strategy 1: SPA-rendered result cards (.cl-search-result)
     const cards = document.querySelectorAll('.cl-search-result')
     if (cards.length > 0) {
       for (const card of cards) {
+        if (listings.length >= maxResults) break
         const titleEl = card.querySelector('.posting-title .label, .label, .titlestring')
         const title = titleEl?.textContent?.trim() || card.getAttribute('title') || ''
         const link = card.querySelector('a.posting-title, a.cl-app-anchor, a')
         const url = link?.getAttribute('href') || ''
         const priceEl = card.querySelector('.priceinfo')
-        const price = priceEl?.textContent?.trim() || null
+        const price = normalizePrice(priceEl?.textContent?.trim() || null)
         const locEl = card.querySelector('.result-location')
         const location = locEl?.textContent?.trim() || null
-        const dateEl = card.querySelector('.result-posted-date')
-        const date = dateEl?.textContent?.trim() || null
         const postId = card.getAttribute('data-pid') || null
-        listings.push({ title, url, price, location, date, postId })
+        listings.push({ title, url, price, location, postId })
       }
     }
 
@@ -51,15 +61,16 @@ async function searchListings(page: Page, params: Record<string, unknown>, error
     if (listings.length === 0) {
       const statics = document.querySelectorAll('.cl-static-search-result')
       for (const item of statics) {
+        if (listings.length >= maxResults) break
         const link = item.querySelector('a')
         const title = item.querySelector('.title')?.textContent?.trim() || link?.textContent?.trim() || ''
         const url = link?.getAttribute('href') || ''
         const priceEl = item.querySelector('.price')
-        const price = priceEl?.textContent?.trim() || null
+        const price = normalizePrice(priceEl?.textContent?.trim() || null)
         const locEl = item.querySelector('.location')
         const location = locEl?.textContent?.trim() || null
         const idMatch = url.match(/\/(\d+)\.html/)
-        listings.push({ title, url, price, location, date: null, postId: idMatch ? idMatch[1] : null })
+        listings.push({ title, url, price, location, postId: idMatch ? idMatch[1] : null })
       }
     }
 
@@ -71,6 +82,7 @@ async function searchListings(page: Page, params: Record<string, unknown>, error
           const ld = JSON.parse(ldEl.textContent || '{}')
           const items = ld.itemListElement || []
           for (const entry of items) {
+            if (listings.length >= maxResults) break
             const item = entry.item || {}
             const addr = item.address || {}
             listings.push({
@@ -78,7 +90,6 @@ async function searchListings(page: Page, params: Record<string, unknown>, error
               url: '',
               price: null,
               location: [addr.addressLocality, addr.addressRegion].filter(Boolean).join(', ') || null,
-              date: null,
               postId: null,
             })
           }
@@ -90,22 +101,21 @@ async function searchListings(page: Page, params: Record<string, unknown>, error
     if (listings.length === 0) {
       const rows = document.querySelectorAll('.result-row, li.result')
       for (const row of rows) {
+        if (listings.length >= maxResults) break
         const link = row.querySelector('a.result-title, a.hdrlnk, a')
         const title = link?.textContent?.trim() || ''
         const url = link?.getAttribute('href') || ''
         const priceEl = row.querySelector('.result-price, .price')
-        const price = priceEl?.textContent?.trim() || null
+        const price = normalizePrice(priceEl?.textContent?.trim() || null)
         const hoodEl = row.querySelector('.result-hood, .nearby')
         const location = hoodEl?.textContent?.trim()?.replace(/[()]/g, '') || null
-        const timeEl = row.querySelector('time')
-        const date = timeEl?.getAttribute('datetime') || null
         const idMatch = url.match(/\/(\d+)\.html/)
-        listings.push({ title, url, price, location, date, postId: idMatch ? idMatch[1] : null })
+        listings.push({ title, url, price, location, postId: idMatch ? idMatch[1] : null })
       }
     }
 
     return { resultCount: listings.length, listings }
-  })
+  }, MAX_SEARCH_RESULTS)
 }
 
 async function getListing(page: Page, params: Record<string, unknown>, errors: AdapterErrors): Promise<unknown> {
@@ -115,36 +125,30 @@ async function getListing(page: Page, params: Record<string, unknown>, errors: A
   const id = params.id as string
   await navigateTo(page, city, `/${category}/d/${slug}/${id}.html`, errors)
 
-  return page.evaluate(() => {
-    // Title
+  return page.evaluate((limits) => {
     const titleEl = document.querySelector('.postingtitletext, #titletextonly')
     const title = titleEl?.textContent?.replace(/\$[\d,]+/, '')?.trim() || document.querySelector('title')?.textContent?.trim() || ''
 
-    // Price
     const priceEl = document.querySelector('.postingtitletext .price, .price')
     const price = priceEl?.textContent?.trim() || null
 
-    // Body
     const bodyEl = document.getElementById('postingbody')
     let body = ''
     if (bodyEl) {
-      // Remove the "QR Code Link to This Post" notice
       const clone = bodyEl.cloneNode(true) as HTMLElement
       const notices = clone.querySelectorAll('.print-information, .print-qrcode-container')
       for (const n of notices) n.remove()
       body = clone.textContent?.trim() || ''
     }
+    if (body.length > limits.maxBody) body = `${body.slice(0, limits.maxBody - 1)}…`
 
-    // Location
     const mapAddr = document.querySelector('.mapaddress')
     const location = mapAddr?.textContent?.trim() || null
 
-    // Coordinates
     const mapEl = document.getElementById('map')
     const latitude = mapEl ? Number(mapEl.getAttribute('data-latitude')) || null : null
     const longitude = mapEl ? Number(mapEl.getAttribute('data-longitude')) || null : null
 
-    // Timestamps
     const timeEls = document.querySelectorAll('.postinginfos time')
     let postedAt: string | null = null
     let updatedAt: string | null = null
@@ -155,7 +159,6 @@ async function getListing(page: Page, params: Record<string, unknown>, errors: A
       if (parent.includes('updated') && dt) updatedAt = dt
     }
 
-    // Attributes
     const attrEls = document.querySelectorAll('.attrgroup span')
     const attributes: string[] = []
     for (const el of attrEls) {
@@ -163,28 +166,20 @@ async function getListing(page: Page, params: Record<string, unknown>, errors: A
       if (text) attributes.push(text)
     }
 
-    // Images
     const imgEls = document.querySelectorAll('#thumbs a, .gallery a, .swipe .slide img')
     const images: string[] = []
     for (const el of imgEls) {
+      if (images.length >= limits.maxImages) break
       const href = el.getAttribute('href') || (el as HTMLImageElement).src || ''
       if (href && !images.includes(href)) images.push(href)
     }
 
     return {
-      title,
-      price,
-      body,
-      location,
-      latitude,
-      longitude,
-      postedAt,
-      updatedAt,
-      attributes,
-      images,
+      title, price, body, location, latitude, longitude,
+      postedAt, updatedAt, attributes, images,
       url: window.location.href,
     }
-  })
+  }, { maxBody: MAX_BODY, maxImages: MAX_IMAGES })
 }
 
 async function getCategories(page: Page, params: Record<string, unknown>, errors: AdapterErrors): Promise<unknown> {

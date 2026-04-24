@@ -2,7 +2,7 @@
   "operation_id": "getListing",
   "cases": [
     {
-      "input": { "category": "apa", "slug": "berkeley-wood-style-flooring-workspaces", "id": "7922522225", "city": "sfbay" },
+      "input": { "category": "eby/apa", "slug": "berkeley-1br-1ba-apartment-bancroft-way", "id": "7929806627", "city": "sfbay" },
       "assertions": {
         "status": 200
       }

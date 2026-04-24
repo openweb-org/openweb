@@ -16,13 +16,28 @@ async function fetchHtml(url: string, errors: AdapterErrors): Promise<string> {
   return html
 }
 
-/** Unescape basic HTML entities. */
 function unescapeHtml(s: string): string {
   return s
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
     .replace(/&nbsp;/g, ' ')
 }
+
+function trimText(s: string, max: number): string {
+  if (s.length <= max) return s
+  return `${s.slice(0, max - 1)}…`
+}
+
+function normalizePrice(raw: string | null): string | null {
+  if (!raw) return null
+  const cleaned = raw.replace(/[^0-9.]/g, '')
+  if (!cleaned || Number(cleaned) === 0) return null
+  return raw
+}
+
+const MAX_SEARCH_RESULTS = 25
+const MAX_BODY = 800
+const MAX_IMAGES = 5
 
 // ── searchListings ─────────────────────────────────────────────────
 
@@ -39,14 +54,14 @@ async function searchListings(_page: Page, params: Record<string, unknown>, erro
   const resultRe = /class="cl-static-search-result"[^>]*title="([^"]*)">\s*<a href="([^"]*)">\s*<div class="title">([^<]*)<\/div>\s*<div class="details">\s*(?:<div class="price">([^<]*)<\/div>)?\s*(?:<div class="location">\s*([^<]*?)\s*<\/div>)?/g
   let m: RegExpExecArray | null
   for (m = resultRe.exec(html); m !== null; m = resultRe.exec(html)) {
+    if (listings.length >= MAX_SEARCH_RESULTS) break
     const url = m[2]
     const idMatch = url.match(/\/(\d+)\.html/)
     listings.push({
       title: unescapeHtml(m[3].trim()),
       url,
-      price: m[4]?.trim() || null,
+      price: normalizePrice(m[4]?.trim() || null),
       location: m[5]?.trim() || null,
-      date: null,
       postId: idMatch ? idMatch[1] : null,
     })
   }
@@ -133,7 +148,7 @@ async function getListing(_page: Page, params: Record<string, unknown>, errors: 
     }
   }
 
-  return { title, price, body, location, latitude, longitude, postedAt, updatedAt, attributes, images, url }
+  return { title, price, body: trimText(body, MAX_BODY), location, latitude, longitude, postedAt, updatedAt, attributes, images: images.slice(0, MAX_IMAGES), url }
 }
 
 // ── getCategories ──────────────────────────────────────────────────

@@ -84,9 +84,6 @@ paths:
                         location:
                           type: [string, 'null']
                           description: Neighborhood or area name.
-                        date:
-                          type: [string, 'null']
-                          description: Posted date or datetime string.
                         postId:
                           type: [string, 'null']
                           description: Craigslist numeric post ID.
@@ -111,22 +108,24 @@ paths:
           required: true
           schema:
             type: string
-          description: Category code (e.g. "apa", "sss").
-          example: apa
+          description: >-
+            Category path segment from the listing URL.
+            Includes the subregion prefix (e.g. "eby/apa", "sfc/fuo", "sby/jjj").
+          example: eby/apa
         - name: slug
           in: path
           required: true
           schema:
             type: string
-          description: URL slug from the listing link (e.g. "berkeley-wood-style-flooring-workspaces").
-          example: berkeley-wood-style-flooring-workspaces
+          description: URL slug from the listing link (e.g. "berkeley-1br-1ba-apartment-bancroft-way").
+          example: berkeley-1br-1ba-apartment-bancroft-way
         - name: id
           in: path
           required: true
           schema:
             type: string
-          description: Craigslist post ID (e.g. "7922522225").
-          example: '7922522225'
+          description: Craigslist post ID (e.g. "7929806627").
+          example: '7929806627'
         - name: city
           in: query
           required: false
