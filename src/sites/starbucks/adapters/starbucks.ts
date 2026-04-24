@@ -2,20 +2,12 @@ import type { Page } from 'patchright'
 
 import type { CustomRunner } from '../../../types/adapter.js'
 
-/**
- * Starbucks adapter — store detail lookup requires client-side filter.
- *
- * searchStores and getMenu are pure OpenAPI (declarative spec). Only
- * getStoreDetail remains adapter-backed because the /apiproxy/v1/locations
- * endpoint returns an array keyed by lat/lng, and the storeNumber filter
- * must be applied client-side.
- */
-
 type Errors = {
   unknownOp(op: string): Error
   missingParam(name: string): Error
   fatal(msg: string): Error
   retriable(msg: string): Error
+  httpError(status: number): Error
   wrap(error: unknown): Error
 }
 
@@ -26,35 +18,10 @@ type Helpers = {
 
 const BASE = 'https://www.starbucks.com'
 
-async function getStoreDetail(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
-  const { errors } = helpers
-  const storeNumber = String(params.storeNumber || '')
-  if (!storeNumber) throw errors.missingParam('storeNumber')
-
-  const lat = Number(params.lat)
-  const lng = Number(params.lng)
-  if (!lat || !lng) throw errors.missingParam('lat and lng (approximate store location)')
-
-  const resp = await helpers.pageFetch(page, {
-    url: `${BASE}/apiproxy/v1/locations?lat=${lat}&lng=${lng}`,
-    method: 'GET',
-    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-  })
-
-  if (resp.status !== 200) throw errors.retriable(`Store API returned ${resp.status}`)
-  const data = JSON.parse(resp.text) as Array<Record<string, unknown>>
-
-  const entry = data.find(e => {
-    const s = e.store as Record<string, unknown> | undefined
-    return s?.storeNumber === storeNumber
-  })
-  if (!entry) throw errors.fatal(`Store ${storeNumber} not found near lat=${lat}, lng=${lng}`)
-
-  const store = entry.store as Record<string, unknown>
+function trimStore(store: Record<string, unknown>): Record<string, unknown> {
   const addr = store.address as Record<string, unknown> | undefined
   const coords = store.coordinates as Record<string, unknown> | undefined
   const schedule = (store.schedule as Array<Record<string, unknown>>) || []
-
   return {
     storeNumber: store.storeNumber,
     name: store.name,
@@ -93,13 +60,95 @@ async function getStoreDetail(page: Page, params: Record<string, unknown>, helpe
   }
 }
 
+async function searchStores(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const { errors } = helpers
+  const lat = Number(params.lat)
+  const lng = Number(params.lng)
+  if (!lat || !lng) throw errors.missingParam('lat and lng')
+
+  const resp = await helpers.pageFetch(page, {
+    url: `${BASE}/apiproxy/v1/locations?lat=${lat}&lng=${lng}`,
+    method: 'GET',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+  })
+  if (resp.status !== 200) throw errors.httpError(resp.status)
+  const data = JSON.parse(resp.text) as Array<Record<string, unknown>>
+
+  return data.map(entry => ({
+    distance: entry.distance,
+    store: trimStore(entry.store as Record<string, unknown>),
+  }))
+}
+
+async function getStoreDetail(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const { errors } = helpers
+  const storeNumber = String(params.storeNumber || '')
+  if (!storeNumber) throw errors.missingParam('storeNumber')
+
+  const lat = Number(params.lat)
+  const lng = Number(params.lng)
+  if (!lat || !lng) throw errors.missingParam('lat and lng (approximate store location)')
+
+  const resp = await helpers.pageFetch(page, {
+    url: `${BASE}/apiproxy/v1/locations?lat=${lat}&lng=${lng}`,
+    method: 'GET',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+  })
+
+  if (resp.status !== 200) throw errors.retriable(`Store API returned ${resp.status}`)
+  const data = JSON.parse(resp.text) as Array<Record<string, unknown>>
+
+  const entry = data.find(e => {
+    const s = e.store as Record<string, unknown> | undefined
+    return s?.storeNumber === storeNumber
+  })
+  if (!entry) throw errors.fatal(`Store ${storeNumber} not found near lat=${lat}, lng=${lng}`)
+
+  return trimStore(entry.store as Record<string, unknown>)
+}
+
+function trimProduct(p: Record<string, unknown>): Record<string, unknown> {
+  return {
+    name: p.name,
+    productType: p.productType,
+    availability: p.availability,
+    imageURL: p.imageURL,
+    sizes: ((p.sizes as Array<Record<string, unknown>>) ?? []).map(s => s.sizeCode),
+  }
+}
+
+function trimCategory(cat: Record<string, unknown>): Record<string, unknown> {
+  const products = (cat.products as Array<Record<string, unknown>>) ?? []
+  const children = (cat.children as Array<Record<string, unknown>>) ?? []
+  return {
+    name: cat.name,
+    ...(cat.categoryImageURL ? { imageURL: cat.categoryImageURL } : {}),
+    ...(products.length > 0 ? { products: products.map(trimProduct) } : {}),
+    ...(children.length > 0 ? { children: children.map(trimCategory) } : {}),
+  }
+}
+
+async function getMenu(page: Page, _params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const resp = await helpers.pageFetch(page, {
+    url: `${BASE}/apiproxy/v1/ordering/menu`,
+    method: 'GET',
+  })
+  if (resp.status !== 200) throw helpers.errors.httpError(resp.status)
+  const body = JSON.parse(resp.text) as Record<string, unknown>
+
+  const menus = (body.menus as Array<Record<string, unknown>>) ?? []
+  return { menus: menus.map(trimCategory) }
+}
+
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, helpers: Helpers) => Promise<unknown>> = {
+  searchStores,
   getStoreDetail,
+  getMenu,
 }
 
 const adapter: CustomRunner = {
   name: 'starbucks',
-  description: 'Starbucks — store detail lookup (client-side filter by storeNumber)',
+  description: 'Starbucks — store search, detail, and menu with response trimming',
 
   async run(ctx) {
     const { page, operation, params, helpers } = ctx

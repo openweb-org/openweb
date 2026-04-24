@@ -1,3 +1,18 @@
+## 2026-04-24: Userflow QA — response trimming and fixes
+
+**What changed:**
+- searchStores: moved back to adapter for response trimming — 130KB→70KB. Stripped `isFavorite`, `isNearby`, `isPrevious`, `recommendationReason`, `id`, `closingSoon`, `internalFeatures`, `regulations`, `warningLabels`, `acceptedCampusCardIssuers`, `acceptsNonSvcMop`, `marketBusinessUnitCode`, `timeZone`, `pickUpOptions`. Renamed `openStatusFormatted`→`openStatus`, `hoursStatusFormatted`→`hours`, `ownershipTypeCode`→`ownershipType`. Normalized address from `lines[]` to flat `streetAddress`.
+- getMenu: moved back to adapter for response trimming — 150KB→76KB. Stripped `displayOrder`, `uri`, `id`, `heroCategoryImageURL`, `formCode`, `productNumber`, `defaultSize`. Flattened `sizes` from `[{sizeCode}]` to `["Tall","Grande"]`.
+- getStoreDetail: unchanged — already adapter-backed with clean response.
+- Removed `X-Requested-With` header parameter from spec — adapter handles it internally.
+- Updated openapi.yaml response schemas to match trimmed output (removed `additionalProperties: true`).
+
+**Why:**
+- Blind userflow QA: 3 personas (commuter: SF stores + menu, student: Berkeley stores with Wi-Fi filter, gift buyer: browse menu items). All 3 ops functional. Main gap: raw BFF responses with internal/noisy fields bloating responses.
+
+**Key files:** `src/sites/starbucks/adapters/starbucks.ts`, `src/sites/starbucks/openapi.yaml`.
+**Verification:** `pnpm dev verify starbucks` — 3/3 PASS.
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**

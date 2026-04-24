@@ -13,10 +13,12 @@ paths:
   /apiproxy/v1/locations:
     get:
       operationId: searchStores
-      summary: Find nearby Starbucks stores by coordinates — raw BFF locations response with store details, address, hours, amenities, distance, mobile ordering status
+      summary: Find nearby Starbucks stores by coordinates — trimmed store list with address, hours, amenities, distance, mobile ordering
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: starbucks
+          operation: searchStores
         build:
           stable_id: sbux0001
           tool_version: 3
@@ -38,16 +40,9 @@ paths:
             type: number
           description: Longitude of search center.
           example: -122.4194
-        - name: X-Requested-With
-          in: header
-          required: false
-          schema:
-            type: string
-            default: XMLHttpRequest
-          description: Required by the Starbucks BFF to treat the request as XHR.
       responses:
         '200':
-          description: Nearby Starbucks stores sorted by distance (raw BFF response).
+          description: Nearby Starbucks stores sorted by distance.
           content:
             application/json:
               schema:
@@ -55,14 +50,12 @@ paths:
                 description: Array of store entries sorted by distance from search center.
                 items:
                   type: object
-                  additionalProperties: true
                   properties:
                     distance:
                       type: number
                       description: Distance in miles from search center.
                     store:
                       type: object
-                      additionalProperties: true
                       description: Store details.
                       properties:
                         storeNumber:
@@ -79,28 +72,73 @@ paths:
                         open:
                           type: boolean
                           description: Whether the store is currently open.
-                        openStatusFormatted:
+                        isOpen24Hours:
+                          type: boolean
+                          description: Whether the store operates 24 hours.
+                        openStatus:
                           type: string
                           description: Human-readable open status.
-                        hoursStatusFormatted:
+                        hours:
                           type: string
                           description: Today's hours.
                         address:
                           type: object
-                          additionalProperties: true
-                          description: Store address block.
+                          description: Store address.
+                          properties:
+                            streetAddress:
+                              type: string
+                            city:
+                              type: string
+                            state:
+                              type: string
+                            postalCode:
+                              type: string
+                            country:
+                              type: string
+                            singleLine:
+                              type: string
                         coordinates:
                           type: object
-                          additionalProperties: true
                           description: Store geographic coordinates.
+                          properties:
+                            latitude:
+                              type: number
+                            longitude:
+                              type: number
+                        schedule:
+                          type: array
+                          description: Weekly operating schedule.
+                          items:
+                            type: object
+                            properties:
+                              day:
+                                type: string
+                              hours:
+                                type: string
+                              open:
+                                type: boolean
                         amenities:
                           type: array
                           items:
                             type: object
-                            additionalProperties: true
+                            properties:
+                              code:
+                                type: string
+                              name:
+                                type: string
                         mobileOrdering:
                           type: object
-                          additionalProperties: true
+                          properties:
+                            available:
+                              type: boolean
+                            guestOrdering:
+                              type: boolean
+                        ownershipType:
+                          type: string
+                          description: Ownership type code (CO = company-owned, LS = licensed).
+                        slug:
+                          type: string
+                          description: URL slug for the store page.
 
   /stores/detail:
     get:
@@ -265,10 +303,12 @@ paths:
   /apiproxy/v1/ordering/menu:
     get:
       operationId: getMenu
-      summary: Get Starbucks menu — raw BFF menu response with categories, subcategories, products with sizes, availability, and images
+      summary: Get Starbucks menu — categories, subcategories, products with sizes, availability, and images
       x-openweb:
         permission: read
-        adapter: false
+        adapter:
+          name: starbucks
+          operation: getMenu
         build:
           stable_id: sbux0003
           tool_version: 3
@@ -278,38 +318,51 @@ paths:
       parameters: []
       responses:
         '200':
-          description: Full menu (raw BFF response).
+          description: Full menu with categories, subcategories, and products.
           content:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
                 properties:
                   menus:
                     type: array
                     description: Top-level menu categories.
                     items:
                       type: object
-                      additionalProperties: true
                       properties:
                         name:
                           type: string
                           description: Category name (e.g. "Drinks", "Food").
+                        imageURL:
+                          type: string
+                          description: Category image URL (when available).
                         children:
                           type: array
                           description: Subcategories.
                           items:
                             type: object
-                            additionalProperties: true
                             properties:
                               name:
                                 type: string
-                              categoryImageURL:
-                                type:
-                                  - string
-                                  - 'null'
+                              imageURL:
+                                type: string
                               products:
                                 type: array
                                 items:
                                   type: object
-                                  additionalProperties: true
+                                  properties:
+                                    name:
+                                      type: string
+                                    productType:
+                                      type: string
+                                    availability:
+                                      type: string
+                                    imageURL:
+                                      type: string
+                                    sizes:
+                                      type: array
+                                      items:
+                                        type: string
+                              children:
+                                type: array
+                                description: Nested subcategories.
