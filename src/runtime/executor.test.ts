@@ -9,9 +9,8 @@ describe('executeOperation', () => {
     const fetchMock = vi.fn(async (_input: string | URL | Request) => {
       return new Response(
         JSON.stringify({
-          code: 0,
-          message: 'Success',
-          zpData: { hotCityList: [{ code: 101010100, name: '北京' }] },
+          batchcomplete: true,
+          query: { pages: [{ pageid: 15580374, ns: 0, title: 'Dog', contentmodel: 'wikitext', pagelanguage: 'en', length: 123456 }] },
         }),
         {
           status: 200,
@@ -23,9 +22,9 @@ describe('executeOperation', () => {
     const ssrfMock = vi.fn(async () => {})
 
     const result = await executeOperation(
-      'boss',
-      'getCities',
-      {},
+      'wikipedia',
+      'getPageInfo',
+      { titles: 'Dog' },
       { fetchImpl: fetchMock, ssrfValidator: ssrfMock },
     )
 
@@ -34,7 +33,7 @@ describe('executeOperation', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     const calledUrl = String((fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0])
-    expect(calledUrl).toContain('https://www.zhipin.com/wapi/zpCommon/data/city.json')
+    expect(calledUrl).toContain('en.wikipedia.org/w/api.php')
   })
 
   it('throws INVALID_PARAMS when required params are missing', async () => {
@@ -60,9 +59,9 @@ describe('executeOperation', () => {
     const ssrfMock = vi.fn(async () => {})
 
     const result = await executeOperation(
-      'boss',
-      'getCities',
-      {},
+      'wikipedia',
+      'getPageInfo',
+      { titles: 'Dog' },
       { fetchImpl: fetchMock, ssrfValidator: ssrfMock },
     )
 
@@ -79,7 +78,7 @@ describe('executeOperation', () => {
     ) as unknown as typeof fetch
 
     await expect(
-      executeOperation('boss', 'getCities', {}, { fetchImpl: fetchMock }),
+      executeOperation('wikipedia', 'getPageInfo', { titles: 'Dog' }, { fetchImpl: fetchMock }),
     ).rejects.toBeInstanceOf(OpenWebError)
   })
 })
