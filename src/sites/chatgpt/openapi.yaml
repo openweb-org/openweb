@@ -8,6 +8,8 @@ servers:
   - url: https://chatgpt.com/backend-api
     x-openweb:
       transport: node
+      page_plan:
+        entry_url: https://chatgpt.com/
       auth:
         type: exchange_chain
         steps:
@@ -36,6 +38,9 @@ paths:
       summary: Get authenticated user profile — id, name, email, picture, org membership
       x-openweb:
         permission: read
+        adapter:
+          name: chatgpt-api
+          operation: getProfile
         build:
           stable_id: cg0001
           tool_version: 2
@@ -98,6 +103,9 @@ paths:
       summary: List recent conversations — id, title, create/update time, archived status
       x-openweb:
         permission: read
+        adapter:
+          name: chatgpt-api
+          operation: listConversations
         build:
           stable_id: cg0002
           tool_version: 2
@@ -199,6 +207,9 @@ paths:
       summary: Get full conversation with message tree — title, mapping (message nodes with author, content, timestamps), current_node
       x-openweb:
         permission: read
+        adapter:
+          name: chatgpt-api
+          operation: getConversation
         build:
           stable_id: cg0003
           tool_version: 2
@@ -296,6 +307,9 @@ paths:
       summary: Search past conversations by keyword — returns conversation titles and matched message snippets
       x-openweb:
         permission: read
+        adapter:
+          name: chatgpt-api
+          operation: searchConversations
         build:
           stable_id: cg0004
           tool_version: 2
@@ -366,6 +380,9 @@ paths:
       summary: Get available models — slug, title, description, capabilities, max tokens
       x-openweb:
         permission: read
+        adapter:
+          name: chatgpt-api
+          operation: getModels
         build:
           stable_id: cg0006
           tool_version: 2
