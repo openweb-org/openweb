@@ -7,22 +7,24 @@ JavaScript package registry at registry.npmjs.org. Public REST API for package s
 
 ### Find a package
 1. `searchPackages(text)` → browse `objects[].package` → pick `name`
-2. `getPackage(package=name)` → description, dist-tags.latest, dependencies, license
+2. `getPackage(package=name)` → description, latest version, dependencies, license
 
 ### Check package health
-1. `getPackage(package)` → `dist-tags.latest`, maintainers, repository
+1. `getPackage(package)` → latest version, maintainers, repository, timestamps
 2. `getDownloads(package)` → downloads, start, end
+3. `getVersions(package)` → full release history with dates
 
 ### Compare versions
-1. `getPackage(package)` → `versions` map (version metadata per release), `time` map (publish date per version)
+1. `getVersions(package)` → all versions sorted newest-first with publish dates
+2. `getPackage(package)` → latest version dependencies and dist-tags
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchPackages | find packages by keyword | text | name, version, description, score | entry point, paginated via from/size |
-| getPackage | full package metadata | package <- searchPackages.name | name, description, versions, dependencies, license | full document, can be large |
-| getVersions | latest version details | package <- searchPackages.name | name, version, dependencies, dist | abbreviated metadata for latest |
+| searchPackages | find packages by keyword | text | name, version, description, score, downloads | entry point, paginated via from/size |
+| getPackage | package summary | package <- searchPackages.name | name, description, latest deps, license, maintainers | adapter-unwrapped summary |
+| getVersions | version history with dates | package <- searchPackages.name | versions [{version, date}], versionCount | sorted newest-first |
 | getDownloads | weekly download stats | package <- searchPackages.name | downloads, start, end | uses api.npmjs.org host |
 
 ## Quick Start
@@ -31,10 +33,10 @@ JavaScript package registry at registry.npmjs.org. Public REST API for package s
 # Search for packages
 openweb npm exec searchPackages '{"text": "express"}'
 
-# Get package details
+# Get package summary
 openweb npm exec getPackage '{"package": "react"}'
 
-# Get latest version info
+# Get version history
 openweb npm exec getVersions '{"package": "express"}'
 
 # Get download stats

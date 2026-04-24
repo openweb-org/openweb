@@ -123,7 +123,10 @@ paths:
         permission: read
         build:
           stable_id: npm0002
-          tool_version: 1
+          tool_version: 2
+        adapter:
+          name: npm
+          operation: getPackage
       parameters:
         - name: package
           in: path
@@ -133,12 +136,12 @@ paths:
           description: Package name (e.g. "express", "react"). For scoped packages use URL encoding (e.g. "@babel%2Fcore").
       responses:
         '200':
-          description: Full package document with all versions and metadata.
+          description: Package summary with latest version details.
           content:
             application/json:
               schema:
                 type: object
-                required: [name, dist-tags, versions, time]
+                required: [name]
                 properties:
                   name:
                     type: string
@@ -168,33 +171,6 @@ paths:
                         type: string
                       url:
                         type: string
-                  readme:
-                    type: string
-                    description: Package README content.
-                  versions:
-                    type: object
-                    description: Map of version string to version metadata.
-                    additionalProperties:
-                      type: object
-                      required: [name, version]
-                      properties:
-                        name:
-                          type: string
-                        version:
-                          type: string
-                        dependencies:
-                          type: object
-                          additionalProperties:
-                            type: string
-                        devDependencies:
-                          type: object
-                          additionalProperties:
-                            type: string
-                  time:
-                    type: object
-                    description: Map of version string to publish timestamp (ISO 8601).
-                    additionalProperties:
-                      type: string
                   maintainers:
                     type: array
                     items:
@@ -205,61 +181,97 @@ paths:
                           type: string
                         email:
                           type: string
-  /{package}/latest:
+                  lastModified:
+                    type: string
+                    description: Last modified timestamp (ISO 8601).
+                  lastPublished:
+                    type: string
+                    description: Publish date of the latest version (ISO 8601).
+                  latest:
+                    type: object
+                    description: Latest version details.
+                    properties:
+                      version:
+                        type: string
+                      dependencies:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      devDependencies:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      engines:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      dist:
+                        type: object
+                        properties:
+                          tarball:
+                            type: string
+                          shasum:
+                            type: string
+                  versionCount:
+                    type: integer
+                    description: Total number of published versions.
+  /internal/getVersions:
     get:
       operationId: getVersions
-      summary: List all versions of a package — version numbers with publish dates from the time field
+      summary: List all published versions of a package with publish dates
       x-openweb:
         permission: read
         build:
           stable_id: npm0003
-          tool_version: 1
+          tool_version: 2
+        adapter:
+          name: npm
+          operation: getVersions
       parameters:
         - name: package
-          in: path
+          in: query
           required: true
           schema:
             type: string
           description: Package name (e.g. "express"). For scoped packages use URL encoding (e.g. "@babel%2Fcore").
       responses:
         '200':
-          description: Abbreviated package metadata for the latest version.
+          description: Version history with publish dates, newest first.
           content:
             application/json:
               schema:
                 type: object
-                required: [name, version]
+                required: [name, versions]
                 properties:
                   name:
                     type: string
                     description: Package name.
-                  version:
-                    type: string
-                    description: Version string.
-                  description:
-                    type: string
-                    description: Package description.
-                  dependencies:
+                  dist-tags:
                     type: object
                     additionalProperties:
                       type: string
-                    description: Runtime dependencies.
-                  devDependencies:
-                    type: object
-                    additionalProperties:
-                      type: string
-                    description: Development dependencies.
-                  dist:
-                    type: object
-                    required: [tarball]
-                    properties:
-                      tarball:
-                        type: string
-                        description: URL to the package tarball.
-                      shasum:
-                        type: string
-                  license:
+                  created:
                     type: string
+                    description: Package creation timestamp (ISO 8601).
+                  modified:
+                    type: string
+                    description: Last modified timestamp (ISO 8601).
+                  versionCount:
+                    type: integer
+                    description: Total number of published versions.
+                  versions:
+                    type: array
+                    description: All versions sorted newest-first.
+                    items:
+                      type: object
+                      required: [version, date]
+                      properties:
+                        version:
+                          type: string
+                          description: Semver version string.
+                        date:
+                          type: string
+                          description: Publish timestamp (ISO 8601).
   /downloads/point/last-week/{package}:
     get:
       operationId: getDownloads

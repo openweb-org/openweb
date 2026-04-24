@@ -7,22 +7,24 @@ JavaScript package registry at registry.npmjs.org. Public REST API for package s
 
 ### Find a package
 1. `searchPackages(text)` → browse results → pick package `name`
-2. `getPackage(package)` → full metadata, description, dependencies, license
+2. `getPackage(package)` → summary with description, dependencies, license
 
 ### Check package health
-1. `getPackage(package)` → latest version, maintainers, repository
+1. `getPackage(package)` → latest version, maintainers, repository, timestamps
 2. `getDownloads(package)` → weekly download count
+3. `getVersions(package)` → full release history with dates
 
 ### Compare versions
-1. `getPackage(package)` → `versions` map with all version metadata and `time` map with publish dates
+1. `getVersions(package)` → all versions sorted newest-first with publish dates
+2. `getPackage(package)` → latest version dependencies and dist-tags
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchPackages | find packages by keyword | text | name, version, description, score | entry point, paginated via from/size |
-| getPackage | full package metadata | package ← searchPackages | name, description, versions, dependencies, license | full document, can be large |
-| getVersions | latest version details | package ← searchPackages | name, version, dependencies, dist | abbreviated metadata for latest |
+| searchPackages | find packages by keyword | text | name, version, description, score, downloads | entry point, paginated via from/size |
+| getPackage | package summary | package ← searchPackages | name, description, latest deps, license, maintainers | adapter-unwrapped from full registry doc |
+| getVersions | version history with dates | package ← searchPackages | versions array [{version, date}], versionCount | sorted newest-first |
 | getDownloads | weekly download stats | package ← searchPackages | downloads, start, end | uses api.npmjs.org host |
 
 ## Quick Start
@@ -31,10 +33,10 @@ JavaScript package registry at registry.npmjs.org. Public REST API for package s
 # Search for packages
 openweb npm exec searchPackages '{"text": "express"}'
 
-# Get package details
+# Get package summary
 openweb npm exec getPackage '{"package": "react"}'
 
-# Get latest version info
+# Get version history
 openweb npm exec getVersions '{"package": "express"}'
 
 # Get download stats
@@ -49,18 +51,18 @@ openweb npm exec getDownloads '{"package": "lodash"}'
 - Pure REST JSON API, two hosts:
   - `registry.npmjs.org` — package metadata, search, versions
   - `api.npmjs.org` — download statistics
-- All responses are JSON, no HTML rendering needed
-- Large packages (e.g. lodash) return big version maps; no server-side trimming available
+- `getPackage` and `getVersions` use an adapter to extract useful fields from the full registry document (which can be MB-sized for packages with many versions)
 
 ## Auth
 No auth required. All operations are public read-only.
 
 ## Transport
-- `node` — direct HTTP works, no browser needed
+- `node` — direct HTTP, no browser needed
+- `getPackage` and `getVersions` routed through adapter (`adapters/npm.ts`)
+- `searchPackages` and `getDownloads` are direct HTTP calls
 - No bot detection, no CORS restrictions, no rate limiting for reasonable usage
 - Downloads endpoint uses a different host (api.npmjs.org), configured via operation-level server override
 
 ## Known Issues
 - Scoped packages (e.g. @babel/core) require URL encoding: `@babel%2Fcore`
-- `getPackage` response can be very large for packages with many versions (hundreds of version entries)
-- The `getVersions` operation hits `/{package}/latest` which returns the latest version document, not a version list — use `getPackage` for the full version map with timestamps
+- `searchPackages` uses `text` as the query parameter name (matches npm upstream API)
