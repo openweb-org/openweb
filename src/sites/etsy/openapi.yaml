@@ -58,7 +58,8 @@ paths:
                   freeShipping: text.includes('Free shipping'),
                 });
               }
-              return { query, totalResults: listings.length, listings };
+              const capped = listings.slice(0, 20);
+              return { query, totalResults: capped.length, listings: capped };
             })()
       parameters:
         - name: query
@@ -160,6 +161,7 @@ paths:
                 } catch {}
               }
               if (!product) return null;
+              const decode = s => { const d = document.createElement('div'); d.innerHTML = s; return d.textContent || s; };
               const offers = product.offers || {};
               const rating = product.aggregateRating || {};
               const brand = product.brand || {};
@@ -170,12 +172,16 @@ paths:
                 if (src.includes('il_fullxfull') || src.includes('il_794x')) photoSet.add(src);
               }
               const photos = [...photoSet].slice(0, 10);
+              const desc = decode(String(product.description || ''));
+              const price = offers.price ? Number(offers.price) : offers.lowPrice ? Number(offers.lowPrice) : null;
+              const rawImg = product.image;
+              const image = Array.isArray(rawImg) ? String(rawImg[0]?.contentURL || rawImg[0]?.url || '') : String(rawImg || '');
               return {
                 listingId: String(product.sku || listingId),
-                title: String(product.name || ''),
+                title: decode(String(product.name || '')),
                 url: String(product.url || ''),
-                description: String(product.description || ''),
-                price: offers.price ? Number(offers.price) : null,
+                description: desc,
+                price,
                 currency: String(offers.priceCurrency || 'USD'),
                 availability: String(offers.availability || '').replace('https://schema.org/', ''),
                 shopName: String(brand.name || ''),
@@ -184,7 +190,7 @@ paths:
                 rating: rating.ratingValue ? Number(rating.ratingValue) : null,
                 reviewCount: rating.reviewCount ? Number(rating.reviewCount) : null,
                 photos,
-                image: String(product.image || ''),
+                image,
               };
             })()
       parameters:
@@ -222,7 +228,7 @@ paths:
                     type:
                       - number
                       - 'null'
-                    description: Price as a number.
+                    description: Price as a number (falls back to lowPrice for variant/custom items).
                   currency:
                     type: string
                     description: Currency code (e.g. "USD").
@@ -287,6 +293,7 @@ paths:
                 } catch {}
               }
               if (!product) return null;
+              const decode = s => { const d = document.createElement('div'); d.innerHTML = s; return d.textContent || s; };
               const aggregateRating = product.aggregateRating || {};
               const rawReviews = Array.isArray(product.review) ? product.review : [];
               const reviews = rawReviews.map(r => {
@@ -294,8 +301,8 @@ paths:
                 const author = r.author || {};
                 return {
                   rating: reviewRating.ratingValue ? Number(reviewRating.ratingValue) : null,
-                  text: String(r.reviewBody || ''),
-                  author: String(author.name || ''),
+                  text: decode(String(r.reviewBody || '')),
+                  author: decode(String(author.name || '')),
                   date: String(r.datePublished || ''),
                 };
               });
