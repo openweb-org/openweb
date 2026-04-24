@@ -23,6 +23,9 @@ paths:
       summary: Get home feed (friends timeline) — post text, images, reposts, likes, comments count, author info
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: getFriendsFeed
         build:
           stable_id: a3645dc7d9c37028
           tool_version: 2
@@ -264,6 +267,9 @@ paths:
       summary: Get hot/trending feed — popular posts with text, images, engagement counts, author info
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: getHotFeed
         build:
           stable_id: 7d7bf2fbf50c4d9f
           tool_version: 2
@@ -528,6 +534,9 @@ paths:
       summary: Get hot search / trending topics — top 50 with rank, heat, category labels
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: getHotSearch
         build:
           stable_id: c2d3e4f5a6b78901
           tool_version: 2
@@ -589,6 +598,9 @@ paths:
       summary: Get user profile — screen name, avatar, bio, followers/following counts, verification
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: getUserProfile
         build:
           stable_id: 254bd0dfa3f12586
           tool_version: 2
@@ -673,11 +685,9 @@ paths:
                         items:
                           type: object
                           properties:
-                            id:
-                              type: integer
                             tabKey:
                               type: string
-                              description: Tab identifier (e.g. 'weibo', 'album', 'fav').
+                              description: Tab identifier (e.g. 'home', 'feed', 'album').
                             title:
                               type: string
                               description: Tab display name.
@@ -687,6 +697,9 @@ paths:
       summary: Get user detail — birthday, gender, location, creation date, sunshine credit
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: getUserDetail
         build:
           stable_id: f5a6b7c8d9e01234
           tool_version: 2
@@ -740,6 +753,9 @@ paths:
       summary: Get user's posts — paginated list with text, images, engagement counts
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: getUserStatuses
         build:
           stable_id: 5cbe6a8939f65367
           tool_version: 2
@@ -1016,6 +1032,9 @@ paths:
       summary: Get post detail — full text, images, video, engagement counts, author info
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: getPost
         build:
           stable_id: 2defa3b7e0a39a48
           tool_version: 2
@@ -1252,6 +1271,9 @@ paths:
       summary: Get long text content for a truncated post — longTextContent, longTextContent_raw, url_struct
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: getLongtext
         build:
           stable_id: a6b7c8d9e0f12345
           tool_version: 2
@@ -1314,6 +1336,9 @@ paths:
       summary: List reposts/shares of a post — repost text, author, timestamp
       x-openweb:
         permission: read
+        adapter:
+          name: weibo-read
+          operation: listReposts
         build:
           stable_id: b7c8d9e0f1a23456
           tool_version: 2

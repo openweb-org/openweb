@@ -1,3 +1,37 @@
+## 2026-04-24 — Userflow QA: Response Trimming & Schema Fixes
+
+**Context:** Three blind persona workflows against 9 read ops. Raw responses were 23–280 KB per call due to 30+ extra fields per post/user object.
+
+**Personas tested:**
+1. 娱乐记者 — getHotSearch → getHotFeed → getPost
+2. 品牌经理 — getUserProfile → getUserStatuses → getUserDetail
+3. 普通用户 — getFriendsFeed → getPost → getLongtext → listReposts
+
+**All 9 read ops returned 200 before and after fixes.**
+
+**Changes:**
+- New `adapters/weibo-read.ts` — pageFetch-based adapter with trim helpers for all 9 read operations. Trims posts, users, pic_infos, retweeted_status, hot search items, url_struct to schema-only fields.
+- `openapi.yaml` — wired `x-openweb.adapter: { name: weibo-read, operation: <op> }` for all 9 read ops. Fixed `getUserProfile.tabList` schema: removed phantom `id: integer`, renamed `tabKey`/`title` to match actual API shape (`name` → `tabKey`, `tabName` → `title`).
+
+**Response size reduction (before → after):**
+| Operation | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| getHotSearch | 23 KB | 8 KB | 65% |
+| getHotFeed (15 posts) | 220 KB | 29 KB | 87% |
+| getFriendsFeed (24 posts) | 280 KB | 61 KB | 78% |
+| getUserStatuses (20 posts) | 108 KB | 36 KB | 67% |
+| listReposts (2 reposts) | 31 KB | 10 KB | 68% |
+| getPost | 5.5 KB | 2.5 KB | 55% |
+| getLongtext | 5.3 KB | 1.2 KB | 77% |
+| getUserProfile | inline | inline | trimmed |
+| getUserDetail | inline | inline | trimmed |
+
+**Key trimmed noise:** `analysis_extra`, `annotations`, `attitudes_status`, `can_edit`, `cardid`, `comment_manage_info`, `content_auth`, `favorited`, `isAd`, `is_paid`, `mblogtype`, `number_display_strategy`, `pictureViewerSign`, `rcList`, `readtimetype`, `rid`, `showFeedComment`, `showFeedRepost`, `visible`, `buttons`, `topic_struct`, `url_struct` (in feeds), `textLength`, `title`, plus user noise: `domain`, `follow_me`, `following`, `icon_list`, `mbtype`, `pc_new`, `planet_video`, `user_ability`, `v_plus`, `weihao`.
+
+**Verification:** `pnpm dev verify weibo` → **8/8 PASS**.
+
+---
+
 ## 2026-04-19 — Write-Op Verify Campaign (4 ops restored, 7/7 PASS)
 
 **Context:** Resume `0dbc7f8` follow-up. Four write ops (`bookmarkPost`, `unbookmarkPost`, `followUser`, `unfollowUser`) were left at 0/4 PASS because `/ajax/statuses/destroyFavorites` and `/ajax/friendships/destroy` returned HTTP 404 and reasonable rename variants (`/ajax/favorites/destroy`, `/ajax/profile/cancelFollow`, etc.) also 404'd.
