@@ -1,3 +1,430 @@
+## 2026-04-24: Bilibili userflow QA — WBI signing fix and response trimming
+
+**What changed:**
+- Added `transport: page` + `adapter` config to all 15 operations. Previously only getDanmaku was routed through the adapter — all other ops went through the node HTTP executor, which can't do WBI signing, causing -403 on every endpoint.
+- Adapter read ops switched from `fetchApiViaPage` (raw fetch, no WBI) to `interceptApiResponse` (navigate to real page, intercept WBI-signed API call from Bilibili's JS). getVideoComments scrolls page to trigger lazy-loaded comment section.
+- Response trimming: searchVideos strips to video-only results with key fields, removes `<em>` highlight tags (40KB→18KB). getVideoDetail keeps only View/Tags/Card essentials (205KB→14KB). getUserProfile trims pendant/nameplate/elec noise.
+- Schema fixes: getDanmaku `progress_ms` made optional. getPopularVideos `pn`/`ps` made optional with defaults. getVideoComments `bvid` added as required, `type` default added. searchVideos schema updated for trimmed flat-video output.
+
+**Why:**
+- Blind userflow QA across 3 personas: 学生看编程教程 (search "Python入门教程"→detail→comments→uploader profile), 动漫迷追番 (search "2026年4月新番"→detail→danmaku→popular), UP主分析竞品 (search "影视解说"→profile→user videos→detail). getUserProfile, searchUserVideos, getVideoComments all returned -403. Root cause: Bilibili's WBI migration is complete — all non-WBI endpoints now reject unsigned requests.
+
+**Key files:** `src/sites/bilibili/openapi.yaml`, `src/sites/bilibili/adapters/bilibili-web.ts`, `src/sites/bilibili/examples/getVideoComments.example.json`.
+**Verification:** `pnpm dev verify bilibili` — 9/9 PASS.
+
+## 2026-04-24: Twitch userflow QA — response trimming via inline GraphQL
+
+**What changed:**
+- Replaced all 6 persisted queries with inline `graphql_query` selecting only documented fields. Twitch GQL accepts inline queries — getTopStreams already used one. No adapter needed.
+- getTopGames: switched from `directoriesWithTags` (persisted-query-only field) to `games` (public schema). Updated response schema key.
+- getClips: hardcoded `{filter: LAST_WEEK}` criteria inline (type not publicly exposed). Removed user-facing `criteria` param.
+- getChannel: added `lastBroadcast.game.displayName` to response schema. getStream: trimmed to stream + last broadcast only.
+- Size reductions: searchChannels 358KB→3.9KB (99%), getTopGames 24KB→9KB, getClips 28KB→9KB, getVideos 38KB→15KB.
+
+**Why:**
+- Blind userflow QA across 3 personas: Gamer (search "Valorant", clips/VODs for shroud), Esports fan (VALORANT_EMEA live, channel profile), Aspiring streamer (top categories, top streams). All 7 ops returned 200 but responses were massively bloated with `__typename`, `trackingID`, embedded nested data.
+
+**Key files:** `src/sites/twitch/openapi.yaml`.
+**Verification:** `pnpm dev verify twitch` — 10/10 PASS.
+
+## 2026-04-24: Apple Podcasts userflow QA — response trimming and adapter wiring
+
+**What changed:**
+- Wired dead adapter to runtime: converted from legacy `init/isAuthenticated/execute` to `CustomRunner.run(ctx)`, added `x-openweb.adapter` to all 4 operations. Adapter now receives auth via `ctx.auth.headers` from page_global resolution.
+- Added `trimResponse()` stripping artwork color metadata (bgColor, textColor1-4, hasP3), offers, upsell, assetUrl, subscribable, displayType, mediaKind/mediaKinds, guid, copyright, createdDate, editorialArtwork, logoArtwork. Artwork reduced to `{url, width, height}`. Search additionally strips `meta.metrics` and group `href`/`next`.
+- Fixed schema: removed `feedUrl` (API doesn't return it), removed `included` array (episodes in `relationships.episodes.data`), added `userRating`, `releaseDateTime`, `languageTag`, episode `durationInMilliseconds`. Updated getTopCharts summary (editorial navigation, not podcast lists).
+- Size reductions: searchPodcasts 193→136KB, getPodcast 22→9KB, getSearchSuggestions 8.5→5.8KB, getTopCharts 23→15KB.
+
+**Why:**
+- Blind userflow QA across 3 personas: Commuter (search "true crime podcast"→suggestions→getPodcast), Professional (search "AI news weekly"→getTopCharts→getPodcast), Parent (search "kids educational podcast"→suggestions→getPodcast). All 4 ops returned 200 but adapter was disconnected (responses were raw AMP API), and specs documented unavailable fields.
+
+**Key files:** `src/sites/apple-podcasts/adapters/apple-podcasts-api.js`, `src/sites/apple-podcasts/openapi.yaml`.
+**Verification:** `pnpm dev verify apple-podcasts --browser` — 4/4 PASS.
+
+## 2026-04-24: SoundCloud userflow QA — response trimming and fixes
+
+**What changed:**
+- Added `soundcloud` adapter with `trimResponse()` — strips `media`, `publisher_metadata`, `track_authorization`, `monetization_model`, `policy`, `station_*`, `badges`, `creator_subscription*`, `visuals`, and 20+ noise fields across all 4 operations. Size reductions: searchTracks 106KB→35KB, getPlaylist 36KB→9KB, getTrack/getUser inline (no truncation).
+- Fixed nullable schema fields: `playback_count`, `likes_count`, `comment_count`, `reposts_count`, `download_count` on tracks; `playback_count` on playlist tracks (API returns null for some tracks).
+- Removed `client_id` as user-facing parameter — adapter injects it internally. Added `transport: node` at operation level for adapter dispatch.
+
+**Why:**
+- Blind userflow QA across 3 personas: Producer (search "lo-fi beat"→getTrack→getUser), DJ (search "house remix 2026"), Podcast host (search "true crime podcast"). All 4 ops returned 200 but searchTracks had schema mismatch warnings (null counts on integer fields) and responses were 36-106KB with media transcodings, JWT tokens, and platform metadata bloat.
+
+**Key files:** `src/sites/soundcloud/adapters/soundcloud.ts`, `src/sites/soundcloud/openapi.yaml`.
+**Verification:** `pnpm dev verify soundcloud` — 4/4 PASS.
+
+## 2026-04-24: YouTube userflow QA — response trimming and fixes
+
+**What changed:**
+- Added adapter-based response trimming for `searchVideos` (849KB→9KB), `getVideoDetail` (676KB→4.7KB), and `browseContent` (749KB→28KB). Each now returns clean, focused JSON with only actionable fields.
+- Fixed `getPlaylist` metadata: YouTube replaced `playlistHeaderRenderer` with `pageHeaderRenderer` + `sidebar.playlistSidebarRenderer`. Updated parser to use new paths — title, owner, videoCount, viewCount, description all now populate correctly.
+- Fixed `getVideoDetail` recommendations: YouTube changed secondary results from `compactVideoRenderer` to `lockupViewModel` (2025+ format), and browser responses wrap items in `itemSectionRenderer`. Handles both formats.
+- Fixed `getVideoDetail` description: YouTube moved to `attributedDescription.content` string instead of `textRuns`-based format.
+- Removed FEtrending from `browseContent` summary — YouTube API returns 400 for `FEtrending`/`FEexplore` browseIds. Added clear error message redirecting to `searchVideos`.
+- Simplified parameter schemas for adapter operations: `searchVideos` now takes just `query`, `getVideoDetail` takes `videoId`, `browseContent` takes `browseId` (adapter injects key+context internally).
+- Rewrote `getTranscript` to use InnerTube `get_transcript` endpoint (extracts params token from engagement panels via `/next`). Old timedtext URL approach returns empty from all contexts (browser, node, curl). New approach works when browser session context is available; gracefully degrades otherwise.
+
+**Why:**
+- Blind userflow QA across 3 personas: ML Student (searchVideos "transformer architecture explained"→getVideoDetail→getComments→getTranscript), Music Fan (searchVideos "lo-fi hip hop"→getPlaylist→getVideoDetail), News Follower (browseContent FEtrending→searchVideos "breaking news"→getComments). searchVideos/getVideoDetail/browseContent returned 600KB-1MB raw InnerTube JSON. getPlaylist metadata was all empty strings. getTranscript returned empty segments. FEtrending was broken at API level.
+
+**Key files:** `src/sites/youtube/adapters/youtube-innertube.ts`, `src/sites/youtube/openapi.yaml`.
+**Verification:** 9 read ops tested. searchVideos, getVideoDetail, browseContent (homepage + channel), getComments, getPlaylist, getGuide — all return correct trimmed data. getTranscript requires browser session (graceful fallback). FEtrending gives clear error.
+
+## 2026-04-24: Spotify userflow QA — response trimming and fixes
+
+**What changed:**
+- Fixed `getPlaylist` metadata missing: was using `fetchPlaylistContents` hash which returns only tracks. Now makes two sequential calls — `fetchPlaylistMetadata` (name, description, followers, owner, images) + `fetchPlaylistContents` (full track data) — and merges them.
+- Added `playlists` and `podcasts` fields to `searchMusic` response schema (were returned by API but undocumented).
+- Added response trimming across all operations: strips `__typename`, `extractedColors`, `playability`, `relinkingInformation`, `associationsV3`, `saved`, `relatedContent`, `goods`, `visuals`, and other GraphQL noise. Size reductions: searchMusic 95KB→37KB, getArtist 93KB→54KB, getTrack 55KB→~2KB, getPlaylist 22KB(no metadata)→11KB(with metadata).
+- Stripped embedded artist discography from `getTrack` response (was 25KB per artist of redundant data).
+- Fixed playlist image `width`/`height` schema to allow null (generated covers have no dimensions).
+- Removed `relatedContent` from `getArtist` schema (stripped for response size; available via separate `getArtist` call if needed).
+
+**Why:**
+- Blind userflow QA across 3 personas: Runner (searchMusic "high BPM running playlist"→getPlaylist→getTrack→getRecommendations), Podcast listener (searchMusic "tech podcast" — playlists/podcasts undocumented in schema), Artist explorer (searchMusic "Radiohead"→getArtist→getArtistDiscography→getAlbumTracks). All 8 read ops returned 200 but getPlaylist was missing all metadata (name, description, followers, owner) and responses were 55-115KB of GraphQL bloat.
+
+**Key files:** `src/sites/spotify/adapters/spotify-pathfinder.ts`, `src/sites/spotify/openapi.yaml`.
+**Verification:** All 7 read ops pass (searchMusic, getArtist, getArtistDiscography, getAlbumTracks, getTrack, getPlaylist, getRecommendations, getUserPlaylists). No schema warnings.
+
+## 2026-04-24: YouTube Music userflow QA — schema fix
+
+**What changed:**
+- Fixed `getPlaylist` response schema: `background` was required but album-backed playlists (VLOLAK…) omit it. Made optional.
+
+**Why:**
+- Blind userflow QA across 3 personas (Commuter: search→album→song→playlist→upNext, Music Explorer: search→artist→album→suggestions, DJ: charts→playlist→song→upNext→home). All 9 ops return 200, but getPlaylist emitted schema mismatch warning on album-backed playlist IDs.
+- Noted: getSong returns UNPLAYABLE without auth (expected); responses are 100KB–1MB raw InnerTube JSON (no L3 adapters for trimming — pipeline gap).
+
+**Key files:** `src/sites/youtube-music/openapi.yaml`, `src/sites/youtube-music/PROGRESS.md`.
+**Verification:** `pnpm dev verify youtube-music` — all ops pass, no schema warnings.
+
+## 2026-04-24: Etsy userflow QA — response trimming and fixes
+
+**What changed:**
+- searchListings: capped results to 20 (was 60-65, 30KB→10KB).
+- getListingDetail: fixed broken `image` field (`[object Object]` → proper URL via LD+JSON `contentURL`), added `lowPrice` fallback for custom/variant items, added HTML entity decoding.
+- getReviews: added HTML entity decoding for review text and author names.
+
+**Why:**
+- Blind userflow QA across 3 personas (gift shopper: "personalized jewelry", home decorator: "abstract wall art", wedding planner: "custom wedding invitations") revealed oversized search responses (60+ listings), broken image field, uncapped descriptions, and null prices for variant items.
+
+**Key files:** `src/sites/etsy/openapi.yaml`, `src/sites/etsy/PROGRESS.md`.
+**Verification:** `pnpm dev verify etsy` — 4/4 PASS. 12/12 persona calls succeed.
+
+## 2026-04-24: Telegram userflow QA — response trimming and fixes
+
+**What changed:**
+- Fixed `getChats` lastMessageDate: was reading `chat.lastMessage.date` which TG Web A never populates. Now derives from `messages.byChatId[id]` (scans cached messages for max date).
+- Fixed `getChats` title: self-chat now shows "Saved Messages" instead of user's own name. Private chats with no identifiable user omit `title` instead of showing "unknown".
+- Added `unreadCount` field to `getChats` response (from `chat.unreadCount` in TG state).
+- Fixed `getMessages`/`searchMessages` senderName: empty string `""` leaked for unknown senders. Now omits `senderId`/`senderName` when absent.
+- Fixed `searchMessages` chatTitle: `"unknown"` leaked for private chats. Now omits when absent.
+- Fixed `getUserInfo`/`getMe`/`getContacts`: spread-conditional pattern — undefined/empty fields omitted instead of serialized.
+- Fixed `getMe.username` schema: was `oneOf: [string, integer]`, now `type: [string, 'null']`.
+- Fixed `manifest.json`: operation_count 7 → 13 (was stale from v2.0).
+
+**Why:**
+- Blind userflow QA: 3 personas (Crypto trader: getChats→getMessages on trading group, News junkie: getChats→getMessages on War Monitor channel→searchMessages, Family member: getContacts). All read ops returned data but with response quality issues: empty-string fields, missing lastMessageDate, stale manifest count.
+
+**Key files:** `src/sites/telegram/adapters/telegram-protocol.ts`, `src/sites/telegram/openapi.yaml`, `src/sites/telegram/manifest.json`.
+**Verification:** Fresh-browser getChats, getMessages, getUserInfo, getContacts — clean trimmed responses, no schema warnings.
+
+## 2026-04-24: WhatsApp userflow QA — response trimming and fixes
+
+**What changed:**
+- Fixed `getChats` isGroup: was using `c.isGroup ?? false` which always returned false. Changed to derive from `c.id.server === 'g.us'` (matching getChatById/searchChats pattern).
+- Fixed `getMessages` binary body leak: media messages (video, image, audio) leaked raw base64 data in the `body` field. Now filters by message type — only text-bearing types (`chat`, `gp2`, `notification_template`, `e2e_notification`, `call_log`) pass body through.
+- Added `sender` field to group messages in `getMessages`: group chat messages now include the sender's WhatsApp ID, extracted from `m.author ?? mid.participant ?? mid.remote`. Only present for group chats.
+- Fixed `getContacts` isMe: `c.isMe` property doesn't exist on WhatsApp Web contact models. Now probes multiple internal modules (`WAWebUserPrefsMeUser`, `WAWebWidFactory`, `WASmaxWap`, `Store.Conn.wid`) to resolve the current user's WID, then compares.
+- Added name fallbacks in `getContacts`: chain `c.name ?? c.pushname ?? c.verifiedName ?? c.shortName ?? c.formattedName ?? 'unnamed'`.
+- Fixed `getChatById` lastMessage body: same binary leak as getMessages — now filters media body.
+- Updated `openapi.yaml`: added `sender` field (string|null) to message response schema.
+
+**Why:**
+- Blind userflow QA: 3 personas (Remote worker: getChats→getMessages on work group, Parent in school group: searchChats→getMessages, Friend planning trip: getChats→getChatById→getMessages). 5/5 read ops returned data. Gaps: isGroup always false (broken derivation), media body leaking base64 (no type filtering), no sender in group messages (missing field), isMe always false (wrong property), sparse contact names.
+
+**Key files:** `src/sites/whatsapp/adapters/whatsapp-modules.ts`, `src/sites/whatsapp/openapi.yaml`.
+**Verification:** `pnpm dev verify whatsapp` — 3/3 PASS (getChats, getContacts, searchChats). getMessages/getChatById not auto-verifiable (require valid chatId from account).
+
+## 2026-04-24: Xiaohongshu userflow QA — broken ops fixed, title fallback, API interception
+
+**What changed:**
+- Fixed `getHotSearch`: was navigating to `/explore` which has no search state. Now intercepts `/api/sns/web/v1/search/querytrending` (fires on search input focus) to return 8 trending keywords.
+- Fixed `getRelatedNotes`: XHS web has no related-notes API. Rewrote to extract note tags from SSR state, then search by the first topic tag — returns 10 related notes by topic.
+- Fixed `getNoteDetail` title for video notes: XHS video notes have empty `title` and `displayTitle` in SSR state. Added fallback chain: `title || displayTitle || desc.split(#/\n)[0]`.
+- Fixed `getUserCollections`/`getUserLiked`: tab click loads data via API but adapter read stale SSR state. Now intercepts `/api/sns/web/v1/user/collect` and `/api/sns/web/v1/user/like` API responses, with SSR fallback.
+
+**Why:**
+- Blind userflow QA: 3 personas (美妆博主: searchNotes("2026夏季妆容")→getNoteDetail→getUserProfile→getRelatedNotes, 旅行者: searchNotes("京都自由行攻略")→getNoteDetail→getNoteComments→getUserNotes, 健身爱好者: searchNotes("居家健身计划")→getNoteDetail→getNoteComments→getUserProfile). 10/14 ops worked on first try. Gaps: getHotSearch returned empty (wrong page), getRelatedNotes returned empty (no API on web), video note title empty, getUserCollections/getUserLiked read stale SSR.
+
+**Key files:** `src/sites/xiaohongshu/adapters/xiaohongshu-web.ts`.
+**Verification:** `pnpm dev verify xiaohongshu` — 6/10 PASS (getExploreFeed, getHotSearch, getNoteComments, getNoteDetail, getRelatedNotes, getUserCollections). 4 FAIL from XHS captcha/anti-bot redirect during sequential verify — transient, not adapter bugs.
+
+## 2026-04-24: Weibo userflow QA — response trimming via pageFetch adapter
+
+**What changed:**
+- Created `adapters/weibo-read.ts` — CustomRunner adapter handling all 9 read ops with pageFetch-based response trimming. Strips 30+ noise fields per post (analysis_extra, annotations, attitudes_status, can_edit, cardid, comment_manage_info, etc.) and user noise (domain, follow_me, icon_list, planet_video, user_ability, etc.).
+- Wired `x-openweb.adapter` for all 9 read operations in openapi.yaml.
+- Fixed `getUserProfile.tabList` schema: removed phantom `id: integer`, corrected field names to match actual API (`name` → `tabKey`, `tabName` → `title`).
+- Response size reductions: getHotFeed 220KB→29KB (87%), getFriendsFeed 280KB→61KB (78%), getUserStatuses 108KB→36KB (67%), getHotSearch 23KB→8KB (65%), listReposts 31KB→10KB (68%).
+
+**Why:**
+- Blind userflow QA: 3 personas (娱乐记者: getHotSearch→getHotFeed→getPost, 品牌经理: getUserProfile→getUserStatuses→getUserDetail, 普通用户: getFriendsFeed→getPost→getLongtext→listReposts). All 9 read ops returned 200. Main gap: extreme response bloat (220–280KB per feed call) wasting agent context.
+
+**Key files:** `src/sites/weibo/adapters/weibo-read.ts`, `src/sites/weibo/openapi.yaml`.
+**Verification:** `pnpm dev verify weibo` — 8/8 PASS.
+
+## 2026-04-24: Douban userflow QA — response trimming via read adapter
+
+**What changed:**
+- Created `adapters/douban-read.ts` — CustomRunner adapter handling all 14 read ops with field-level response trimming. Strips internal Douban metadata (douban:// URIs, color_scheme, variable_modules, sharing_url, wechat configs, full user registration objects).
+- Added `transport: node` to all 14 operation-level x-openweb blocks (required for runtime to skip browser acquisition for adapter ops).
+- Fixed `star_count` schema type: `integer` → `number` (API returns floats like 4.5).
+- Removed internal-only `uri`/`url` fields from response schemas. Added missing fields: `trailers` in getMovie, `ip_location` in reviews, `null_rating_reason` in listings, `abstract` in search targets.
+- Response size reductions: getNowShowingMovies 18KB→9KB, getMovieReviews 23KB→4.5KB, getMovieCelebrities 20KB→7.6KB, getMoviePhotos 26KB→6.7KB, getTop250 80KB→10KB, getBookReviews 22KB→5.6KB.
+
+**Why:**
+- Blind userflow QA: 3 personas (影迷: getNowShowingMovies→getMovie→reviews→celebrities→photos, 书虫: searchBooks→getBook→getBookReviews, 活动爱好者: searchMusic→getMusicDetail + hot movies/TV/top250). All 14 ops returned 200. Main gap: extreme response bloat across every endpoint — raw API responses included internal Douban metadata consuming 50–80% of payload size, wasting agent tokens.
+
+**Key files:** `src/sites/douban/adapters/douban-read.ts`, `src/sites/douban/openapi.yaml`.
+**Verification:** `pnpm dev verify douban` — 14/14 PASS.
+
+## 2026-04-24: Zhihu userflow QA — response trimming via read adapter
+
+**What changed:**
+- Created `adapters/zhihu-read.ts` — handles 7 read ops with field-level response trimming via `readTokenCache` + `nodeFetch`. Strips HTML content, internal fields (attached_info_bytes, biz_encoded_params, doc_relevance_scores, bert_rel), and noise (vip_info, badge_v2, topic_bayes_map).
+- Fixed `include` parameter on getMember/listMemberMutuals/listSimilarQuestions — changed from `type: array` to `type: string` with comma-separated defaults. Array serialization caused Zhihu to read only the first value, silently omitting `follower_count`, `answer_count`, etc.
+- Updated response schemas for all 7 adapter ops to match trimmed output. Removed ~2700 lines of schema bloat.
+- Response sizes: searchContent 155KB→5KB (97%), getFeedRecommend 99KB→8KB (92%), listMemberActivities 169KB→11KB (93%), getHotSearch 22KB→4KB (81%).
+
+**Why:**
+- Blind userflow QA: 3 personas (大学生备考研究生: 计算机考研经验, 创业者: AI创业2026, 技术人员: Rust语言入门). All 11 read ops returned HTTP 200. Main gaps: response bloat (154KB for 5 search results), getMember silently missing critical fields (follower_count, answer_count) due to include param type mismatch, listMemberActivities schema drift.
+
+**Key files:** `src/sites/zhihu/adapters/zhihu-read.ts`, `src/sites/zhihu/openapi.yaml`.
+**Verification:** `pnpm dev verify zhihu` — 10/10 PASS.
+
+## 2026-04-24: Quora userflow QA — GQL query migration and response fixes
+
+**What changed:**
+- GQL intercept updated: Quora renamed `QuestionPagedListPaginationQuery` to `QuestionAnswerPagedListQuery`. Adapter now intercepts both query names for backward compatibility.
+- GQL response structure updated: response moved from `data.node.answers.edges` to `data.question.pagedListDataConnection.edges`. `extractAnswersFromGql` handles both formats. Ads (`QuestionAdItem` edges) are now filtered out.
+- Author format updated: GQL now returns `answer.author` as an array of name objects (was `author.names`). `authorName()` handles both formats.
+- Title notification prefix stripped: `document.title` includes `(N)` tab notification count — now removed via `^\(\d+\)\s*` in getQuestion, getAnswers DOM fallback, and getProfile.
+- getAnswers DOM fallback title: now extracted from `document.title` instead of returning empty string.
+- searchQuestions answerCount: improved extraction by traversing parent elements up to 8 levels from the link.
+- Upvote text deduplication: DOM buttons render count twice (`10.7K10.7K`), now cleaned.
+- Pagination replay: captured query name used for Tier 5 `fetchAnswerPage` instead of hardcoded constant.
+
+**Why:**
+- Blind userflow QA: 3 personas (student: search "software engineering vs data science" + question + answers, professional: getProfile Adam-DAngelo, curious reader: search "quantum computing" + answers). Pre-fix: GQL intercept completely broken (0 hits) due to renamed query, title had notification prefix, DOM fallback returned spam/ad answers, answerCount from body regex matched 9.9M random number. Post-fix: GQL intercept works for all questions with enough answers, title clean, ads filtered, structured data with author/credentials/views/timestamps.
+
+**Key files:** `src/sites/quora/adapters/quora.ts`.
+**Verification:** `pnpm dev verify quora` — 4/4 PASS.
+
+## 2026-04-24: Pinterest userflow QA — response trimming via new adapter
+
+**What changed:**
+- Created `adapters/pinterest-api.ts` — adapter for all 7 read ops with response trimming via `pageFetch`. Strips 50–70 tracking/internal fields per response (`tracking_params`, `is_promoted`, `shopping_flags`, `is_quick_promotable`, `shopping_rec_disabled`, `storefront_management_enabled`, etc.).
+- Updated `openapi.yaml`: added `adapter` references for all read ops, corrected response schemas to match trimmed output, removed Pinterest-specific header params from read ops (adapter handles `x-requested-with`, `x-pinterest-appstate`, `x-pinterest-pws-handler`, `x-pinterest-source-url` internally).
+- Fixed `getNotifications` schema mismatch: actual API returns `header_text`/`category`/`content_items`/`unread`/`last_updated_at`, not `message`/`timestamp`/`actors`/`target` as previously documented.
+- Fixed `getHomeFeed` schema: Pinterest no longer inlines full pin data — returns sparse node refs. Adapter extracts pin ID from base64 `node_id` and title/image from `story_pin_data` when available.
+- Response sizes: searchPins 84KB→9.7KB (88%), getPin 20KB→1.3KB (94%), getBoard 9KB→0.5KB (95%), getUserProfile 8KB→0.4KB (95%), getNotifications 124KB→6.5KB (95%).
+
+**Why:**
+- Blind userflow QA: 3 personas (interior designer: mid-century modern living room, wedding planner: outdoor wedding decor, DIY enthusiast: woodworking beginner projects). All 7 read ops functional (HTTP 200). Main gap: massive response bloat (84KB for 5 search results, 124KB for 5 notifications).
+
+**Key files:** `src/sites/pinterest/adapters/pinterest-api.ts`, `src/sites/pinterest/openapi.yaml`.
+**Verification:** All 7 read ops confirmed working with trimmed output.
+
+## 2026-04-24: Instagram userflow QA — response trimming for all 12 read ops
+
+**What changed:**
+- Moved all 12 read ops to adapter-backed with response trimming in `instagram-api.ts`. Stripped 50–100+ internal fields per response (strong_id__, fbid_v2, client_cache_key, integrity_review_decision, organic_tracking_token, etc.).
+- getUserPosts: 110KB→17KB. getExplore: 739KB→110KB (also fixed schema mismatch — flattened nested `fill_items`/`clips.items` to single `items[]`). getUserProfile: blob→1.5KB. getReels: 94KB→11KB.
+- Removed header parameters from spec (adapter handles x-ig-app-id, x-requested-with internally). Stringify `next_max_id` in followers/following for type consistency.
+
+**Why:**
+- Blind userflow QA: 3 personas (small business owner: search Nike + browse posts, influencer: profile stats + notifications + followers, travel blogger: search bali + explore + stories + reels). All 12 read ops functional. Main gap: raw Instagram API responses with 50–100+ internal fields per item, making responses 5–10x larger than useful content.
+
+**Key files:** `src/sites/instagram/adapters/instagram-api.ts`, `src/sites/instagram/openapi.yaml`.
+**Verification:** `pnpm dev verify instagram` — 12/12 PASS.
+
+## 2026-04-24: Reddit userflow QA — response trimming via new read adapter
+
+**What changed:**
+- Created `adapters/reddit-read.ts` — field-level response trimming for all 7 unauthenticated read operations. Raw Reddit API returns ~102 fields per post; adapter trims to 18 (posts), 11 (comments), 13 (user profiles), 16 (subreddit about). Uses direct `fetch` (no browser needed, `transport: node`).
+- Updated `openapi.yaml` — added `transport: node` + `adapter` ref to each read operation. Added `upvote_ratio` and `link_flair_text` to post listing schemas.
+- Response size reduced 60–87% across all read ops (e.g. getSubredditPosts: 56KB → 22KB for 5 posts).
+
+**Why:**
+- Blind userflow QA: 3 personas (developer: r/programming + "React Server Components" search, investor: r/wallstreetbets hot + popular, student: "grad school computer science" search + user profile). All 11 calls returned 200 with valid data. No bot detection. Main gap: massive response bloat from unfiltered Reddit API fields.
+
+**Key files:** `src/sites/reddit/adapters/reddit-read.ts`, `src/sites/reddit/openapi.yaml`.
+**Verification:** `pnpm dev verify reddit` — 9/9 PASS, no schema warnings.
+
+## 2026-04-24: OpenTable userflow QA — response fixes and data extraction updates
+
+**What changed:**
+- searchRestaurants: location param was captured but never added to the URL — all results defaulted to server geo-IP (Durham NC). Fix: concatenate `term` + `location` into the search query.
+- searchRestaurants: slug extraction only stripped `/r/` prefix, leaving full URLs for non-`/r/` restaurants. Fix: strip both `/r/` and bare domain prefixes.
+- getRestaurant: photos always empty — SSR state migrated from `photos.gallery` to `photos.galleryV3` with `url` directly on photo objects instead of nested `thumbnails[0].url`. Fix: use `galleryV3 ?? gallery` fallback.
+- getRestaurant: `description` and `hoursOfOperation` contained raw `<br />` HTML. Fix: strip HTML tags, convert to newlines.
+- getReviews: always returned empty — GQL response path changed from `data.reviewSearchResults` to `data.restaurant.reviewSearchResults`; `rating` became an object; `user.displayName` moved to `user.nickname`. Fix: try both paths, handle both rating formats.
+- getReviews: null photo URLs leaked through. Fix: filter nulls.
+- Search photos: updated to use `galleryV3` with same fallback.
+- Removed `parkingDetails` from getRestaurant response (not in schema).
+
+**Why:**
+- Blind userflow QA: 3 personas (couple: SF fine dining, business pro: NYC Midtown steakhouse, foodie: SF ramen). All 4 ops functional after fixes. Pre-existing: occasional null returns from getRestaurant due to page load timing flakiness.
+
+**Key files:** `src/sites/opentable/adapters/opentable.ts`.
+**Verification:** `pnpm dev verify opentable` — 4/4 PASS.
+
+## 2026-04-24: Instacart userflow QA — response fixes and adapter improvements
+
+**What changed:**
+- normalizeItem: fixed `imageUrl` to use `viewSection.itemImage.url` (full CDN URL) instead of `evergreenUrl` (was returning slug like `"324948-publix-milk-reduced-fat-2-milkfat-1-pint"`).
+- normalizeItem: fixed `pricePerUnit` extraction — falls back to `itemDetails.pricePerUnitString` when `itemCard.pricePerUnitString` is null (was always null, now populated for most items e.g. `$0.05/fl oz`).
+- searchProducts: replaced broken standalone `CrossRetailerSearchAutosuggestions` call (failed with "Valid retailer ids must be provided") with page-navigation response interception — page provides retailerIds automatically, now returns 10 suggestions.
+
+**Why:**
+- Blind userflow QA: 3 personas (busy parent: "whole milk", host: "fresh salmon", budget shopper: "sale items"). All 3 ops functional (searchProducts, getStoreProducts, getNearbyStores). Gaps: imageUrl was slug not URL, pricePerUnit always null, suggestions always empty.
+
+**Key files:** `src/sites/instacart/adapters/instacart-graphql.ts`, `src/sites/instacart/adapters/queries.ts`.
+**Verification:** `pnpm dev verify instacart`.
+
+## 2026-04-24: Starbucks userflow QA — response trimming via adapter
+
+**What changed:**
+- searchStores: moved back to adapter — 130KB→70KB. Stripped internal BFF fields (`internalFeatures`, `regulations`, `warningLabels`, `isFavorite`, `isNearby`, `isPrevious`, `recommendationReason`, `id`, `closingSoon`, `acceptedCampusCardIssuers`, `acceptsNonSvcMop`, `marketBusinessUnitCode`, `timeZone`, `pickUpOptions`). Renamed BFF field names to clean API names (`openStatusFormatted`→`openStatus`, `hoursStatusFormatted`→`hours`). Normalized address from `lines[]` to flat `streetAddress`.
+- getMenu: moved back to adapter — 150KB→76KB. Stripped `displayOrder`, `uri`, `id`, `heroCategoryImageURL`, `formCode`, `productNumber`, `defaultSize`. Flattened `sizes` from `[{sizeCode}]` to string array.
+- Shared `trimStore()` helper used by both searchStores and getStoreDetail for consistent shape.
+- Removed `X-Requested-With` header param from spec — adapter handles internally.
+
+**Why:**
+- Blind userflow QA: 3 personas (commuter: SF stores + menu, student: Berkeley Wi-Fi filter, gift buyer: browse menu). All 3 ops functional. Gap: raw BFF responses with internal/noisy fields.
+
+**Key files:** `src/sites/starbucks/adapters/starbucks.ts`, `src/sites/starbucks/openapi.yaml`.
+**Verification:** `pnpm dev verify starbucks` — 3/3 PASS.
+
+## 2026-04-24: Uber Eats userflow QA — adapter response trimming, schema fixes
+
+**What changed:**
+- getEatsOrderHistory: added response trimming in adapter — 128KB→5.7KB. Strips courier info, rating info, delivery state changes, per-item internal UUIDs. Keeps: uuid, completedAt, isCancelled, isCompleted, cart items (title/price/quantity), store info (title/uuid), fare total.
+- Adapter type cleanup: replaced custom `Helpers`/`Errors` types with proper `AdapterHelpers` import.
+- Response schema additions: `itemDescription` on getRestaurantMenu + getItemDetails, `hasCustomizations`/`isSoldOut`/`imageUrl` on getItemDetails.
+
+**Why:**
+- Blind userflow QA: 3 personas (family dinner, tourist ramen, budget deals). All 5 read ops functional. Main gap: response bloat on node-transport ops (search 298KB, menu 828KB). Attempted adapter routing for trimming but DataDome blocks pageFetch from browser context — reverted to node transport.
+
+**Key files:** `src/sites/ubereats/adapters/uber-eats.ts`, `src/sites/ubereats/{openapi.yaml,manifest.json}`.
+**Verification:** `pnpm dev verify ubereats` — 5/5 read ops PASS.
+
+## 2026-04-24: DoorDash userflow QA — adapter, response trimming
+
+**What changed:**
+- Created `doordash-read` adapter for searchRestaurants and getRestaurantMenu.
+- searchRestaurants: parses `custom` JSON-in-JSON, extracts `storeId`/`resultType`/`rating`/`ratingCount`; flattens nested `body[].body[]` into flat `results[]`.
+- getRestaurantMenu: trimmed GQL query (dropped `coverImgUrl`, `lat`/`lng`, `numRatings`, `isNewlyAdded`, `dietaryTagsList`, `dynamicLabelDisplayString`, `calloutDisplayString`, `reviewPreview`); strips empty optional fields — response ~36KB→~28KB.
+- Updated openapi.yaml: adapter refs, simplified request schemas, updated response schemas.
+- getOrderHistory untouched — already lean at 3.5KB/5 orders.
+
+**Why:**
+- Blind userflow QA: "pizza" returned stores + suggestions but `custom` field was unparsed JSON string; "pizza open now" and "salad bowls" returned suggestions only (DoorDash search is keyword-only, location from account).
+
+**Key files:** `src/sites/doordash/adapters/doordash-read.ts`, `src/sites/doordash/{openapi.yaml,DOC.md}`.
+**Verification:** `pnpm dev verify doordash` → 3/3 PASS.
+
+## 2026-04-24: Grubhub userflow QA — adapter rewrite, response trimming
+
+**What changed:**
+- Rewrote adapter from old interface (`init`/`execute`) to `CustomRunner.run(ctx)` — adapter was never loading, raw wire returned for all 3 ops.
+- Renamed `grubhub.js` → `grubhub-read.ts/.js` to match naming convention.
+- Added `adapter:` blocks to openapi.yaml with `adapter-verified` signal.
+- Response trimming: searchRestaurants 47KB→<2KB, getMenu 460KB→38KB, getDeliveryEstimate 6.6KB→<200B.
+- Documented `searchTerm` as ranking-only (Grubhub API returns popular/promoted results regardless of term).
+
+**Why:**
+- Blind userflow QA across 3 personas (student: "Chinese food", group ordering: "catering", dietary: "gluten free restaurant") revealed adapter was dead code — wrong interface, no spec wiring.
+
+**Key files:** `src/sites/grubhub/adapters/grubhub-read.ts`, `src/sites/grubhub/{openapi.yaml,DOC.md}`.
+**Verification:** `pnpm dev verify grubhub`.
+
+## 2026-04-24: Best Buy userflow QA — response trimming via adapter
+
+**What changed:**
+- Created `bestbuy-read` adapter for all 3 read ops (searchProducts, getProductDetails, getProductPricing). Uses `pageFetch` GET + field trimming.
+- searchProducts: stripped internal metadata (`isLLMSourced`, `isLLMGenerated`, `isAppended`, `track`, product `source`/`type`). Clean `{term, category[], products[{skuId}]}` shape.
+- getProductDetails: stripped `track`, `altText`, `queryResponseTime`. Clean `{skuid, skushortlabel, pdpUrl, imageUrl, customerrating_facet, numberofreviews_facet}`.
+- getProductPricing: major trim — stripped `priceDomain` (duplicate of `price`), `offerQualifiers`, `giftSkus`, `multipleSellers`/`productOptions`, `gspAppleCare`, `sellerInfo`, `inkSubscriptions`, `properties`, `attributes`, `availability`, `class`, `department`, `subclass`. Clean `{skuId, condition, productType, brand, names, price{currentPrice,regularPrice,pricingType,savingsAmount}, buttonState{purchasable,buttonState,displayText}, url}`.
+- Fixed schema: `regularPrice`/`savingsAmount` now nullable (null when pricingType is "regular" and no sale).
+- Removed internal-only spec params (`count`, `searchVariant`, `x-client-id` header) — adapter handles them.
+- Fixed adapter `pageFetch` method: must use `method: 'GET'` (default is POST, caused 403 → login cascade).
+
+**Why:**
+- Blind userflow QA across 3 personas (gamer: "RTX 5080", professional: "4K monitor 32 inch", parent: "student laptop under 500") revealed heavily verbose pricing responses with duplicate/internal fields.
+
+**Key files:** `src/sites/bestbuy/adapters/bestbuy-read.ts`, `src/sites/bestbuy/{openapi.yaml,manifest.json,examples/searchProducts.example.json}`.
+**Verification:** `pnpm dev verify bestbuy` — 3/3 PASS. 9/9 persona calls succeed.
+
+## 2026-04-24: Home Depot userflow QA — response trimming and fixes
+
+**What changed:**
+- `priceDisplay` was returning boolean `true` instead of string for some products (GraphQL `alternatePriceDisplay` is sometimes a boolean flag). Added `formatPrice()` helper that type-checks before using, falls back to `$X.XX` formatting from numeric price.
+- `bulkPricing` was leaking GraphQL `__typename` field. Added `stripTypename()` to clean it.
+- Both fixes apply across searchProducts, getProductDetail, and getProductPricing.
+
+**Why:**
+- Blind userflow QA across 3 personas (DIY homeowner: "fence boards cedar", contractor: "PVC pipe 2 inch", gardener: "raised garden bed kit") revealed schema mismatch warnings on `priceDisplay` and `__typename` leak in pricing.
+
+**Key files:** `src/sites/homedepot/adapters/homedepot-web.ts`.
+**Verification:** `pnpm dev verify homedepot` — 5/5 PASS. 15/15 persona calls succeed (5 ops × 3 personas).
+
+## 2026-04-24: Walmart userflow QA — response trimming via adapter
+
+**What changed:**
+- Created `walmart-read` adapter for all 3 read ops (searchProducts, getProductDetail, getProductPricing). Uses in-page `fetch()` + `__NEXT_DATA__` parse + field trimming.
+- searchProducts: 591KB→11KB. Deduplicates items across itemStacks, caps at 20 items, flat `{title, count, items[]}` response.
+- getProductDetail: 30KB→~1.5KB (fits inline, no file spill). Trimmed to essential fields + 500-char description cap + max 5 images.
+- getProductPricing: ~1KB→~200B. Trimmed to currentPrice, wasPrice, unitPrice, savingsAmount, isPriceReduced.
+- Fixed schema: `averageRating`/`numberOfReviews` now nullable (variant products return null).
+- All read ops switched from `ssr_next_data` extraction to adapter-based (transport: node→page for detail/pricing).
+
+**Why:**
+- Blind userflow QA across 3 personas (budget family, parent, student) revealed untrimmed SSR responses with 100+ fields per item.
+
+**Key files:** `src/sites/walmart/adapters/walmart-read.ts`, `src/sites/walmart/{openapi.yaml,manifest.json,PROGRESS.md}`.
+**Verification:** `pnpm dev verify walmart` — 3/3 PASS. 9/9 persona calls succeed.
+
+## 2026-04-24: Costco userflow QA — delivery options and category browsing fixes
+
+**What changed:**
+- getDeliveryOptions: fixed `programTypes` parsing (comma-separated string, not array) and mapped correct enum values (`ShipIt`→shipping, `2DayDelivery`→2day_shipping, `WarehouseDelivery`→business_delivery, `InWarehouse`→warehouse_pickup). Was returning empty `options: []`.
+- browseCategory: pass category as `query` (effective filter) instead of relying on `pageCategories` field which the search API silently ignores. Was returning unrelated items.
+- Both ops: fixed `membershipReqd` check (number `0`/`1` not string `"Y"`).
+- openapi.yaml: added `2day_shipping` to delivery type description.
+
+**Why:**
+- Blind userflow QA across 3 personas (small business, party planner, health shopper) revealed two broken response shapes and one wrong membership check.
+
+**Key files:** `src/sites/costco/adapters/costco-api.ts`, `src/sites/costco/{openapi.yaml,PROGRESS.md}`.
+**Verification:** All 11 read ops return correct data. `pnpm dev verify costco` — PASS.
+
+## 2026-04-24: Craigslist userflow QA — response trimming and fixes
+
+**What changed:**
+- searchListings: capped results to 25 (was 300+), removed always-null `date` field, normalized `$0` job prices to null.
+- getListing: trimmed body to 800 chars, capped images to 5, updated stale verify example (HTTP 410 Gone).
+- Both adapters (node fetch + DOM) aligned on same trimming limits.
+- openapi.yaml: dropped `date` from search schema, documented subregion prefix in getListing category param.
+
+**Why:**
+- Blind userflow QA across 3 personas (apartment hunter, bargain hunter, job seeker) revealed oversized responses (~88KB / 352 listings) and noisy fields.
+
+**Key files:** `src/sites/craigslist/adapters/{craigslist.ts,craigslist-dom.ts}`, `src/sites/craigslist/{openapi.yaml,examples/getListing.example.json,PROGRESS.md}`.
+**Verification:** `pnpm dev verify craigslist` — 3/3 PASS.
+
 ## 2026-04-23: AngelList Venture site package — 6 read-only ops
 
 **What changed:**
