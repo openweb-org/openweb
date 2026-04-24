@@ -9,8 +9,9 @@ describe('executeOperation', () => {
     const fetchMock = vi.fn(async (_input: string | URL | Request) => {
       return new Response(
         JSON.stringify({
-          total: 1,
-          items: [{ name: 'Elden Ring', id: 1245620, type: 'app' }],
+          code: 0,
+          message: 'Success',
+          zpData: { hotCityList: [{ code: 101010100, name: '北京' }] },
         }),
         {
           status: 200,
@@ -22,9 +23,9 @@ describe('executeOperation', () => {
     const ssrfMock = vi.fn(async () => {})
 
     const result = await executeOperation(
-      'steam',
-      'searchGames',
-      { term: 'elden ring' },
+      'boss',
+      'getCities',
+      {},
       { fetchImpl: fetchMock, ssrfValidator: ssrfMock },
     )
 
@@ -33,8 +34,7 @@ describe('executeOperation', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     const calledUrl = String((fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0])
-    expect(calledUrl).toContain('https://store.steampowered.com/api/storesearch')
-    expect(calledUrl).toContain('term=elden')
+    expect(calledUrl).toContain('https://www.zhipin.com/wapi/zpCommon/data/city.json')
   })
 
   it('throws INVALID_PARAMS when required params are missing', async () => {
@@ -60,9 +60,9 @@ describe('executeOperation', () => {
     const ssrfMock = vi.fn(async () => {})
 
     const result = await executeOperation(
-      'steam',
-      'searchGames',
-      { term: 'test' },
+      'boss',
+      'getCities',
+      {},
       { fetchImpl: fetchMock, ssrfValidator: ssrfMock },
     )
 
@@ -79,7 +79,7 @@ describe('executeOperation', () => {
     ) as unknown as typeof fetch
 
     await expect(
-      executeOperation('steam', 'searchGames', { term: 'test' }, { fetchImpl: fetchMock }),
+      executeOperation('boss', 'getCities', {}, { fetchImpl: fetchMock }),
     ).rejects.toBeInstanceOf(OpenWebError)
   })
 })

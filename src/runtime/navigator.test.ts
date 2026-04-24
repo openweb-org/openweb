@@ -9,7 +9,7 @@ describe('navigator', () => {
   it('renders site with readiness metadata', async () => {
     const output = await renderSite('steam')
     expect(output).toContain('11 operations')
-    expect(output).toContain('Transport:        node')
+    expect(output).toContain('Transport:        adapter (L3)')
     expect(output).toContain('Requires browser: no')
     expect(output).toContain('Requires login:   no')
     expect(output).toContain('Permissions:')
@@ -30,7 +30,7 @@ describe('navigator', () => {
   it('renders one operation with resolved transport', async () => {
     const output = await renderOperation('steam', 'getAppDetails', false)
     expect(output).toContain('GET /api/appdetails')
-    expect(output).toContain('Transport: node')
+    expect(output).toContain('Transport: adapter (L3)')
     expect(output).toContain('Permission: read')
   })
 
