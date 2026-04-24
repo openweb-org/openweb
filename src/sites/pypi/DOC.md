@@ -10,10 +10,10 @@ Python Package Index — the official repository for Python packages. Public JSO
 
 ### Check a specific version
 1. `getPackage(package)` → find latest version
-2. `getPackageVersion(package, version)` → metadata for that version
+2. `getPackageVersion(package, version)` → metadata + upload_time for that version
 
 ### List all versions of a package
-1. `getReleases(package)` → all version strings + download files
+1. `getReleases(package)` → chronological version list
 
 ### Compare versions
 1. `getReleases(package)` → pick versions from the list
@@ -25,8 +25,8 @@ Python Package Index — the official repository for Python packages. Public JSO
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | getPackage | get package metadata | package name | name, summary, version, author, license, requires_dist | entry point |
-| getPackageVersion | version-specific metadata | package, version ← getReleases | name, version, requires_python, requires_dist | |
-| getReleases | list all versions | package name | versions[], files[] | entry point |
+| getPackageVersion | version-specific metadata | package, version ← getReleases | name, version, requires_python, requires_dist, upload_time | |
+| getReleases | list all versions | package name | versions[] | entry point |
 
 ## Quick Start
 
@@ -56,11 +56,10 @@ No auth required. All operations are public read-only.
 
 ## Transport
 - `node` — direct HTTP, no browser needed
-- All endpoints return JSON natively
-- getReleases requires `Accept: application/vnd.pypi.simple.v1+json` header
+- Adapter curates response fields (strips bloated description, deprecated downloads, download URLs/hashes)
 
 ## Known Issues
 - No programmatic search API — use getPackage with known package names
 - `author` field is often null on newer packages (metadata moved to `author_email`)
-- `license` may be null; check `classifiers` for license trove classifiers as fallback
-- getReleases `files` array can be very large for packages with many versions
+- `license` may be full text on older packages; adapter extracts the first line as identifier
+- `home_page` may be null; adapter resolves from `project_urls` when possible

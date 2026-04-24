@@ -16,10 +16,12 @@ paths:
       summary: "Get package metadata — name, summary, version, author, license, urls, dependencies"
       x-openweb:
         permission: read
-        unwrap: info
+        adapter:
+          name: pypi
+          operation: getPackage
         build:
           stable_id: pypi0001
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: package
           in: path
@@ -59,12 +61,12 @@ paths:
                     type:
                       - string
                       - "null"
-                    description: License identifier (e.g. MIT, Apache-2.0).
+                    description: "SPDX license expression or full license text (e.g. MIT, BSD-3-Clause)."
                   home_page:
                     type:
                       - string
                       - "null"
-                    description: Project home page URL.
+                    description: "Project home page URL (resolved from project_urls when missing)."
                   package_url:
                     type: string
                     description: PyPI project page URL.
@@ -108,10 +110,12 @@ paths:
       summary: "Get metadata for a specific version — name, version, summary, author, license, download files"
       x-openweb:
         permission: read
-        unwrap: info
+        adapter:
+          name: pypi
+          operation: getPackageVersion
         build:
           stable_id: pypi0002
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: package
           in: path
@@ -158,7 +162,7 @@ paths:
                     type:
                       - string
                       - "null"
-                    description: License identifier (e.g. MIT, Apache-2.0).
+                    description: "SPDX license expression or full license text (e.g. MIT, BSD-3-Clause)."
                   requires_python:
                     type:
                       - string
@@ -171,6 +175,11 @@ paths:
                     items:
                       type: string
                     description: "List of dependency specifiers."
+                  upload_time:
+                    type:
+                      - string
+                      - "null"
+                    description: "ISO 8601 timestamp of when this version was uploaded."
                 required:
                   - name
                   - version
@@ -179,20 +188,16 @@ paths:
   /simple/{package}/:
     get:
       operationId: getReleases
-      summary: "List all releases/versions of a package — version list and download files"
+      summary: "List all releases/versions of a package — chronological version list"
       x-openweb:
         permission: read
+        adapter:
+          name: pypi
+          operation: getReleases
         build:
           stable_id: pypi0003
-          tool_version: 1
+          tool_version: 2
       parameters:
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: application/vnd.pypi.simple.v1+json
-          description: "JSON content negotiation for the Simple API"
         - name: package
           in: path
           required: true
@@ -216,31 +221,6 @@ paths:
                     items:
                       type: string
                     description: "All released version strings in chronological order."
-                  files:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        filename:
-                          type: string
-                          description: Distribution filename.
-                        url:
-                          type: string
-                          description: Download URL.
-                        requires-python:
-                          type:
-                            - string
-                            - "null"
-                          description: Python version constraint for this file.
-                        yanked:
-                          description: Yank reason if yanked, false otherwise.
-                          oneOf:
-                            - type: string
-                            - type: boolean
-                      required:
-                        - filename
-                        - url
-                    description: Download files across all versions.
                 required:
                   - name
                   - versions
