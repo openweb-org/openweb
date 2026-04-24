@@ -1,3 +1,28 @@
+## 2026-04-24 — Userflow QA: response trimming and fixes
+
+**Context:** Blind userflow QA with 3 personas (foodie/brunch, tourist/cuisine, home-services/plumber). Read-only ops.
+
+**Gaps found:**
+- autocompleteBusinesses returned bloated response with ~10 noise fields per suggestion (ajax_data, css_class, is_bookmarked, is_typeahead, name_param, num_checkins, version, unique_request_id, should_not_cache)
+- searchBusinesses pagination metadata (totalResults) was null on some queries due to `||` coercing 0 to null
+- searchBusinesses DOM extraction missed phone and address (no fallback attempted)
+- searchBusinesses DOM review count regex only matched parenthesized format
+- searchBusinesses organic results lack priceRange/phone/address/neighborhoods — confirmed as Yelp page limitation (only ads have enriched data)
+
+**Fixes:**
+- Created `adapters/yelp.ts` CustomRunner for autocomplete — trims each suggestion to {title, query, type, subtitle?, redirect_url?, thumbnail?, refinements?}
+- Routed autocomplete through adapter via `x-openweb.adapter`
+- Updated autocomplete schema from nested envelope to flat suggestion array
+- Fixed pagination metadata: `ctx.totalResults || null` → `ctx.totalResults ?? null` (preserves 0)
+- Added DOM phone extraction (US format regex)
+- Added DOM address extraction (street number pattern)
+- Broadened review count regex to match both `(N reviews)` and bare `N reviews`
+- Broadened price range regex to match `·` separator
+- Removed unused `bizId` from response schema
+- Synced `yelp-web.js` adapter with updated extraction logic
+
+**Verification:** autocompleteBusinesses PASS (3 locations). searchBusinesses PASS for pizza/SF (bot detection intermittent on rapid calls — DataDome rate-limiting, not a code issue).
+
 ## 2026-04-17 — Phase 3 Normalize-Adapter
 
 **Context:** Convert adapter-based ops to spec extraction primitives so the runtime drives extraction directly from `x-openweb.extraction` blocks.

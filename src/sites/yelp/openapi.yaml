@@ -17,13 +17,16 @@ paths:
       summary: Autocomplete businesses and categories by prefix and location
       x-openweb:
         permission: read
+        adapter:
+          name: yelp
+          operation: autocompleteBusinesses
         build:
           verified: true
           stable_id: 63a017c451fa4a34
           signature_id: 056612ff7b984329
           tool_version: 1
           signals:
-            - status-match
+            - adapter-verified
       parameters:
         - name: loc
           in: query
@@ -45,51 +48,47 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - response
-                properties:
-                  unique_request_id:
-                    type: string
-                    description: Unique identifier for this autocomplete request
-                  response:
-                    type: array
-                    description: Autocomplete response groups keyed by prefix
-                    items:
+                type: array
+                description: Autocomplete suggestions for the given prefix
+                items:
+                  type: object
+                  required:
+                    - title
+                    - type
+                  properties:
+                    title:
+                      type: string
+                      description: Display title of the suggestion
+                    query:
+                      type: string
+                      description: Search query to use when selecting this suggestion
+                    type:
+                      type: string
+                      description: Suggestion type — "common" (search term), "business", or "category"
+                    subtitle:
+                      type: string
+                      description: Secondary text (e.g. address for business suggestions)
+                    redirect_url:
+                      type: string
+                      description: Direct URL for business suggestions
+                    thumbnail:
                       type: object
-                      required:
-                        - prefix
-                        - suggestions
+                      description: Thumbnail image for business suggestions
                       properties:
-                        prefix:
+                        url:
                           type: string
-                          description: The prefix that generated these suggestions
-                        suggestions:
-                          type: array
-                          description: List of autocomplete suggestions
-                          items:
-                            type: object
-                            required:
-                              - title
-                              - type
-                            properties:
-                              title:
-                                type: string
-                                description: Display title of the suggestion
-                              query:
-                                type: string
-                                description: Search query to use when selecting this suggestion
-                              subtitle:
-                                type:
-                                  - string
-                                  - "null"
-                                description: Secondary text (e.g. category or location context)
-                              type:
-                                type: string
-                                description: Suggestion type (e.g. "term", "business", "category")
-                  should_not_cache:
-                    type: boolean
-                    description: Whether the client should skip caching this response
+                        type:
+                          type: string
+                    refinements:
+                      type: array
+                      description: Sub-category refinements (e.g. plumber specialties)
+                      items:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                          query:
+                            type: string
   /search/businesses:
     get:
       operationId: searchBusinesses
@@ -105,7 +104,6 @@ paths:
           page_url: /search
           expression: |
             (() => {
-              // --- Parse SSR JSON for structured data ---
               const scripts = Array.from(document.querySelectorAll('script[type="application/json"]'));
               const large = scripts.find(s => (s.textContent?.length || 0) > 50000);
               let ssrData = null;
@@ -121,7 +119,6 @@ paths:
               const ssrItems = spp?.mainContentComponentsListProps || [];
               const ctx = spp?.searchContext || lp?.searchContext || {};
 
-              // Build a map of bizId -> SSR data (ads have full data, organic has partial)
               const ssrMap = {};
               for (const item of ssrItems) {
                 if (!item.bizId) continue;
@@ -138,7 +135,6 @@ paths:
                   neighborhoods: b?.neighborhoods || null,
                   address: b?.formattedAddress || null,
                   isAd: item.isAd ?? b?.isAd ?? false,
-                  ranking: item.ranking ?? null,
                   businessUrl: item.businessUrl || (b?.alias ? '/biz/' + b.alias : null),
                   snippet: item.snippet?.text
                     ?.replace(/\[\[HIGHLIGHT\]\]/g, '')
@@ -147,10 +143,8 @@ paths:
                 };
               }
 
-              // --- DOM extraction for fields missing from SSR ---
               const cards = document.querySelectorAll('[data-testid="serp-ia-card"]');
-              const domResults = Array.from(cards).map((card, idx) => {
-                // Business name: find link with visible text
+              const domResults = Array.from(cards).map((card) => {
                 const allLinks = Array.from(card.querySelectorAll('a'));
                 const nameLink = allLinks.find(a => {
                   const href = a.getAttribute('href') || '';
@@ -159,12 +153,10 @@ paths:
                 });
                 const name = nameLink?.textContent?.trim() || null;
 
-                // Alias from href
                 const href = nameLink?.getAttribute('href') || '';
                 let alias = null;
                 const bizMatch = href.match(/\/biz\/([^?&]+)/);
                 if (bizMatch) alias = bizMatch[1];
-                // For adredir, extract from redirect_url
                 if (!alias && href.includes('/adredir')) {
                   const redirectMatch = href.match(/redirect_url=.*?\/biz\/([^?&%]+)/);
                   if (redirectMatch) alias = decodeURIComponent(redirectMatch[1]);
@@ -172,66 +164,73 @@ paths:
 
                 const isAd = href.includes('/adredir');
 
-                // Rating
                 const ratingEl = card.querySelector('[aria-label*="star rating"]');
                 const ratingLabel = ratingEl?.getAttribute('aria-label') || '';
                 const ratingMatch = ratingLabel.match(/([\d.]+)\s*star/);
                 const rating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
 
-                // Review count
                 const allText = card.innerText || '';
-                const reviewMatch = allText.match(/\((\d[\d,]*)\s+reviews?\)/);
-                const reviewCount = reviewMatch ? parseInt(reviewMatch[1].replace(/,/g, '')) : null;
 
-                // Price range (match 1-4 dollar signs)
-                const priceMatch = allText.match(/(?:^|\n|\s)(\$\$?\$?\$?)(?:\n|$|Closed|Open)/m);
-                const priceRange = priceMatch ? priceMatch[1] : null;
+                // Review count: try multiple patterns
+                let reviewCount = null;
+                const rcParens = allText.match(/\((\d[\d,]*)\s*reviews?\)/i);
+                if (rcParens) { reviewCount = parseInt(rcParens[1].replace(/,/g, ''), 10); }
+                else {
+                  const rcBare = allText.match(/(\d[\d,]*)\s+reviews?\b/i);
+                  if (rcBare) reviewCount = parseInt(rcBare[1].replace(/,/g, ''), 10);
+                }
 
-                // Categories
+                // Price range: match $ signs near category/hours context
+                let priceRange = null;
+                const priceM = allText.match(/(?:^|\n|\s)(\${1,4})(?:\s|$|\n|·|Closed|Open)/m);
+                if (priceM) priceRange = priceM[1];
+
+                // Phone number
+                let phone = null;
+                const phoneM = allText.match(/\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+                if (phoneM) phone = phoneM[0];
+
+                // Address: look for street-pattern text in the card
+                let address = null;
+                const lines = allText.split('\n').map(l => l.trim()).filter(Boolean);
+                for (const line of lines) {
+                  if (/^\d+\s+\w/.test(line) && line.length < 80 && !/review|star|open|close|\$/i.test(line)) {
+                    address = line;
+                    break;
+                  }
+                }
+
                 const catEl = card.querySelector('[data-testid="serp-ia-categories"]');
                 const categories = catEl
                   ? Array.from(catEl.querySelectorAll('a')).map(c => c.textContent?.trim()).filter(Boolean)
                   : [];
 
-                // Neighborhood — text before price/hours
-                const lines = allText.split('\n').map(l => l.trim()).filter(Boolean);
-                const ratingLineIdx = lines.findIndex(l => /^\d.*star/.test(l) || /^\(\d/.test(l));
                 let neighborhood = null;
+                const ratingLineIdx = lines.findIndex(l => /^\d.*star/.test(l) || /^\(\d/.test(l));
                 if (ratingLineIdx >= 0) {
-                  // neighborhood is typically right after the review count line
                   for (let i = ratingLineIdx + 1; i < lines.length; i++) {
                     const line = lines[i];
-                    if (/^[A-Z][a-zA-Z\s-]+$/.test(line) && !line.includes('Closed') && !line.includes('Open') && line.length < 40) {
+                    if (/^[A-Z][a-zA-Z\s-]+$/.test(line) && !/Closed|Open/.test(line) && line.length < 40) {
                       neighborhood = line;
                       break;
                     }
                   }
                 }
 
-                // Snippet
                 const snippetMatch = allText.match(/"([^"]{20,})"/);
                 const snippet = snippetMatch ? snippetMatch[1].replace(/\.{3}$/, '…') : null;
 
-                return { name, alias, rating, reviewCount, priceRange, categories, neighborhood, isAd, snippet, ranking: idx + 1 };
+                return { name, alias, rating, reviewCount, priceRange, phone, address, categories, neighborhood, isAd, snippet };
               });
 
-              // --- Merge SSR + DOM: prefer SSR data, fill gaps from DOM ---
-              const ssrBizIds = Object.keys(ssrMap);
               const businesses = [];
-
-              // Use SSR ordering (includes ranking info) with DOM supplementation
-              for (let i = 0; i < Math.max(ssrBizIds.length, domResults.length); i++) {
+              for (let i = 0; i < Math.max(Object.keys(ssrMap).length, domResults.length); i++) {
                 const dom = domResults[i];
                 if (!dom) continue;
 
-                // Try to match SSR item by alias or by position
                 let ssr = null;
-                if (dom.alias) {
-                  ssr = Object.values(ssrMap).find(s => s.alias === dom.alias);
-                }
-                if (!ssr && dom.name) {
-                  ssr = Object.values(ssrMap).find(s => s.name === dom.name);
-                }
+                if (dom.alias) ssr = Object.values(ssrMap).find(s => s.alias === dom.alias);
+                if (!ssr && dom.name) ssr = Object.values(ssrMap).find(s => s.name === dom.name);
 
                 businesses.push({
                   name: ssr?.name || dom.name,
@@ -240,10 +239,10 @@ paths:
                   rating: ssr?.rating ?? dom.rating,
                   reviewCount: ssr?.reviewCount ?? dom.reviewCount,
                   priceRange: ssr?.priceRange || dom.priceRange || null,
-                  phone: ssr?.phone || null,
+                  phone: ssr?.phone || dom.phone || null,
                   categories: ssr?.categories || (dom.categories.length ? dom.categories : []),
                   neighborhoods: ssr?.neighborhoods || (dom.neighborhood ? [dom.neighborhood] : []),
-                  address: ssr?.address || null,
+                  address: ssr?.address || dom.address || null,
                   isAd: ssr?.isAd ?? dom.isAd,
                   snippet: ssr?.snippet || dom.snippet || null,
                 });
@@ -251,8 +250,8 @@ paths:
 
               return {
                 businesses,
-                totalResults: ctx.totalResults || null,
-                resultsPerPage: ctx.resultsPerPage || null,
+                totalResults: ctx.totalResults ?? null,
+                resultsPerPage: ctx.resultsPerPage ?? null,
                 startResult: ctx.startResult ?? null,
               };
             })()
@@ -297,11 +296,6 @@ paths:
                       required:
                         - name
                       properties:
-                        bizId:
-                          type:
-                            - string
-                            - "null"
-                          description: Unique business identifier
                         name:
                           type: string
                           description: Business display name
