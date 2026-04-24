@@ -139,6 +139,10 @@ paths:
       summary: Get recommended feed items — question titles, answer excerpts, vote counts, author info, pagination
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: zhihu-read
+          operation: getFeedRecommend
         build:
           stable_id: 27f5d18c6ac460dd
           tool_version: 2
@@ -183,6 +187,14 @@ paths:
               schema:
                 type: object
                 properties:
+                  paging:
+                    type: object
+                    properties:
+                      is_end:
+                        type: boolean
+                      next:
+                        type: string
+                        description: URL
                   data:
                     type: array
                     items:
@@ -192,422 +204,74 @@ paths:
                           type: string
                         type:
                           type: string
-                        offset:
-                          type: integer
                         verb:
                           type: string
                         created_time:
                           type: integer
-                        updated_time:
-                          type: integer
                         target:
                           type: object
                           properties:
-                            created_time:
-                              type: integer
-                            reshipment_settings:
-                              type: string
-                            navigator_vote:
-                              type: boolean
                             id:
                               type: string
-                            is_copyable:
-                              type: boolean
-                            excerpt:
-                              type: string
-                            thumbnails:
-                              type: array
-                              items:
-                                type: string
-                                description: URL
-                            vote_next_step:
-                              type: string
-                            preview_type:
-                              type: string
-                            answer_type:
-                              type: string
-                            reaction:
-                              type: object
-                              properties:
-                                relation:
-                                  type: object
-                                  properties:
-                                    liked:
-                                      type: boolean
-                                    faved:
-                                      type: boolean
-                                  required:
-                                    - liked
-                                    - faved
-                                statistics:
-                                  type: object
-                                  properties:
-                                    like_count:
-                                      type: integer
-                                    favorites:
-                                      type: integer
-                                  required:
-                                    - like_count
-                                    - favorites
-                              required:
-                                - relation
-                                - statistics
                             type:
                               type: string
+                            url:
+                              type: string
+                              description: URL
+                            excerpt:
+                              type: string
+                            voteup_count:
+                              type: integer
+                            comment_count:
+                              type: integer
+                            favorite_count:
+                              type: integer
+                            thanks_count:
+                              type: integer
+                            created_time:
+                              type: integer
+                            updated_time:
+                              type: integer
                             author:
                               type: object
                               properties:
-                                followers_count:
-                                  type: integer
                                 id:
                                   type: string
-                                user_type:
+                                url_token:
                                   type: string
                                 name:
                                   type: string
                                 headline:
                                   type: string
-                                gender:
-                                  type: integer
-                                is_following:
-                                  type: boolean
-                                is_followed:
-                                  type: boolean
-                                url:
-                                  type: string
-                                  description: URL
-                                url_token:
-                                  type: string
                                 avatar_url:
                                   type: string
                                   description: URL
-                                is_org:
-                                  type: boolean
-                                badge:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      type:
-                                        type: string
-                                      description:
-                                        type: string
-                                      topic_names:
-                                        type: array
-                                        items:
-                                          type: string
-                                      topic_ids:
-                                        type: array
-                                        items:
-                                          type: integer
-                                    required:
-                                      - type
-                                      - description
-                              required:
-                                - followers_count
-                                - id
-                                - user_type
-                                - name
-                                - headline
-                                - gender
-                                - is_following
-                                - is_followed
-                                - url
-                                - url_token
-                                - avatar_url
-                                - is_org
-                            updated_time:
-                              type: integer
-                            voteup_count:
-                              type: integer
-                            visited_count:
-                              type: integer
-                            allow_segment_interaction:
-                              type: boolean
-                            thanks_count:
-                              type: integer
-                            is_labeled:
-                              type: boolean
-                            favorite_count:
-                              type: integer
-                            excerpt_new:
-                              type: string
-                            relationship:
-                              type: object
-                              properties:
-                                is_thanked:
-                                  type: boolean
-                                is_nothelp:
-                                  type: boolean
-                                voting:
-                                  type: integer
-                              required:
-                                - is_thanked
-                                - is_nothelp
-                                - voting
-                            is_navigator:
-                              type: boolean
-                            url:
-                              type: string
-                              description: URL
-                            comment_count:
-                              type: integer
                             question:
                               type: object
                               properties:
-                                created:
-                                  type: integer
-                                is_following:
-                                  type: boolean
-                                relationship:
-                                  type: object
-                                  properties:
-                                    is_author:
-                                      type: boolean
-                                  required:
-                                    - is_author
-                                excerpt:
+                                id:
                                   type: string
-                                question_type:
+                                title:
                                   type: string
+                                url:
+                                  type: string
+                                  description: URL
                                 answer_count:
                                   type: integer
                                 follower_count:
                                   type: integer
-                                comment_count:
-                                  type: integer
-                                bound_topic_ids:
-                                  type: array
-                                  items:
-                                    type: integer
-                                id:
-                                  type: string
-                                url:
-                                  type: string
-                                  description: URL
-                                author:
-                                  type: object
-                                  properties:
-                                    url:
-                                      type: string
-                                      description: URL
-                                    avatar_url:
-                                      type: string
-                                      description: URL
-                                    followers_count:
-                                      type: integer
-                                    is_followed:
-                                      type: boolean
-                                    headline:
-                                      type: string
-                                    is_org:
-                                      type: boolean
-                                    gender:
-                                      type: integer
-                                    is_following:
-                                      type: boolean
-                                    id:
-                                      type: string
-                                    user_type:
-                                      type: string
-                                    url_token:
-                                      type: string
-                                    name:
-                                      type: string
-                                  required:
-                                    - url
-                                    - avatar_url
-                                    - followers_count
-                                    - is_followed
-                                    - headline
-                                    - is_org
-                                    - gender
-                                    - is_following
-                                    - id
-                                    - user_type
-                                    - url_token
-                                    - name
-                                title:
-                                  type: string
-                                type:
-                                  type: string
-                                detail:
-                                  type: string
-                              required:
-                                - created
-                                - is_following
-                                - relationship
-                                - excerpt
-                                - question_type
-                                - answer_count
-                                - follower_count
-                                - comment_count
-                                - id
-                                - url
-                                - author
-                                - title
-                                - type
-                                - detail
-                            thumbnail:
-                              type: string
-                              description: URL
-                            preview_text:
-                              type: string
-                            content:
-                              type: string
-                            reaction_instruction:
-                              type: object
-                              properties:
-                                REACTION_COMMENT_NEWEST_LIST:
-                                  type: string
-                            segment_infos:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  pid:
-                                    type: string
-                                  text:
-                                    type: string
-                                  marks:
-                                    type: array
-                                    items:
-                                      type: object
-                                      properties:
-                                        start_index:
-                                          type: integer
-                                        end_index:
-                                          type: integer
-                                        seg_info:
-                                          type: object
-                                          properties:
-                                            seg_ids:
-                                              type: array
-                                              items:
-                                                type: string
-                                            is_like:
-                                              type: boolean
-                                            like_count:
-                                              type: integer
-                                            comment_count:
-                                              type: integer
-                                            my_comment_count:
-                                              type: integer
-                                            is_span:
-                                              type: boolean
-                                          required:
-                                            - seg_ids
-                                            - is_like
-                                            - like_count
-                                            - comment_count
-                                            - my_comment_count
-                                            - is_span
-                                      required:
-                                        - start_index
-                                        - end_index
-                                        - seg_info
-                                required:
-                                  - pid
-                                  - text
-                                  - marks
-                            title:
-                              type: string
-                            linkbox:
-                              type: object
-                              properties:
-                                category:
-                                  type: string
-                                pic:
-                                  type: string
-                                title:
-                                  type: string
-                                url:
-                                  type: string
-                              required:
-                                - category
-                                - pic
-                                - title
-                                - url
-                            updated:
-                              type: integer
-                            article_type:
-                              type: string
-                            comment_permission:
-                              type: string
-                            created:
-                              type: integer
-                            voting:
-                              type: integer
-                          required:
-                            - navigator_vote
-                            - id
-                            - excerpt
-                            - vote_next_step
-                            - preview_type
-                            - reaction
-                            - type
-                            - author
-                            - voteup_count
-                            - visited_count
-                            - allow_segment_interaction
-                            - is_labeled
-                            - favorite_count
-                            - excerpt_new
-                            - is_navigator
-                            - url
-                            - comment_count
-                            - preview_text
-                            - content
-                        brief:
-                          type: string
-                        attached_info:
-                          type: string
-                        action_card:
-                          type: boolean
-                      required:
-                        - id
-                        - type
-                        - offset
-                        - verb
-                        - created_time
-                        - updated_time
-                        - target
-                        - brief
-                        - attached_info
-                        - action_card
-                  paging:
-                    type: object
-                    properties:
-                      is_end:
-                        type: boolean
-                      is_start:
-                        type: boolean
-                      next:
-                        type: string
-                        description: URL
-                      previous:
-                        type: string
-                        description: URL
-                      totals:
-                        type: integer
-                    required:
-                      - is_end
-                      - is_start
-                      - next
-                      - previous
-                      - totals
-                  fresh_text:
-                    type: string
                 required:
                   - data
-                  - paging
-                  - fresh_text
   /api/v3/moments/{url_token}/activities:
     get:
       operationId: listMemberActivities
       summary: List user recent activity feed — answers, articles, upvotes, timestamps
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: zhihu-read
+          operation: listMemberActivities
         build:
           stable_id: 36eae2abb0983ca3
           tool_version: 2
@@ -652,6 +316,14 @@ paths:
               schema:
                 type: object
                 properties:
+                  paging:
+                    type: object
+                    properties:
+                      is_end:
+                        type: boolean
+                      next:
+                        type: string
+                        description: URL
                   data:
                     type: array
                     items:
@@ -661,1371 +333,76 @@ paths:
                           type: string
                         type:
                           type: string
-                        target:
-                          type: object
-                          properties:
-                            ab_config:
-                              type: object
-                              properties:
-                                md_interact_unify:
-                                  type: string
-                              required:
-                                - md_interact_unify
-                            admin_closed_comment:
-                              type: boolean
-                            author:
-                              type: object
-                              properties:
-                                avatar_url:
-                                  type: string
-                                  description: URL
-                                badge:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      description:
-                                        type: string
-                                      topics:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            id:
-                                              type: string
-                                            name:
-                                              type: string
-                                            type:
-                                              type: string
-                                          required:
-                                            - id
-                                            - name
-                                            - type
-                                      type:
-                                        type: string
-                                      topic_names:
-                                        type: array
-                                        items:
-                                          type: string
-                                    required:
-                                      - description
-                                      - topics
-                                      - type
-                                badge_v2:
-                                  type: object
-                                  properties:
-                                    detail_badges:
-                                      type: array
-                                      items:
-                                        type: object
-                                        properties:
-                                          badge_status:
-                                            type: string
-                                          description:
-                                            type: string
-                                          detail_type:
-                                            type: string
-                                          icon:
-                                            type: string
-                                            description: URL
-                                          night_icon:
-                                            type: string
-                                            description: URL
-                                          sources:
-                                            type: array
-                                            items:
-                                              type: object
-                                              properties:
-                                                avatar_path:
-                                                  type: string
-                                                avatar_url:
-                                                  type: string
-                                                description:
-                                                  type: string
-                                                id:
-                                                  type: string
-                                                name:
-                                                  type: string
-                                                priority:
-                                                  type: integer
-                                                token:
-                                                  type: string
-                                                type:
-                                                  type: string
-                                                url:
-                                                  type: string
-                                              required:
-                                                - avatar_path
-                                                - avatar_url
-                                                - description
-                                                - id
-                                                - name
-                                                - priority
-                                                - token
-                                                - type
-                                                - url
-                                          title:
-                                            type: string
-                                          type:
-                                            type: string
-                                          url:
-                                            type: string
-                                        required:
-                                          - description
-                                          - detail_type
-                                          - icon
-                                          - night_icon
-                                          - sources
-                                          - title
-                                          - type
-                                          - url
-                                    icon:
-                                      type: string
-                                    merged_badges:
-                                      type: array
-                                      items:
-                                        type: object
-                                        properties:
-                                          badge_status:
-                                            type: string
-                                          description:
-                                            type: string
-                                          detail_type:
-                                            type: string
-                                          icon:
-                                            type: string
-                                          night_icon:
-                                            type: string
-                                          sources:
-                                            type: array
-                                            items:
-                                              type: object
-                                              description: Object with variable structure
-                                          title:
-                                            type: string
-                                          type:
-                                            type: string
-                                          url:
-                                            type: string
-                                            description: URL
-                                        required:
-                                          - description
-                                          - detail_type
-                                          - icon
-                                          - night_icon
-                                          - sources
-                                          - title
-                                          - type
-                                          - url
-                                    night_icon:
-                                      type: string
-                                    title:
-                                      type: string
-                                  required:
-                                    - detail_badges
-                                    - icon
-                                    - merged_badges
-                                    - night_icon
-                                    - title
-                                exposed_medal:
-                                  type: object
-                                  properties:
-                                    avatar_url:
-                                      type: string
-                                      description: URL
-                                    description:
-                                      type: string
-                                    medal_avatar_frame:
-                                      type: string
-                                    medal_id:
-                                      type: string
-                                    medal_name:
-                                      type: string
-                                    mini_avatar_url:
-                                      type: string
-                                      description: URL
-                                  required:
-                                    - avatar_url
-                                    - description
-                                    - medal_avatar_frame
-                                    - medal_id
-                                    - medal_name
-                                    - mini_avatar_url
-                                follower_count:
-                                  type: integer
-                                gender:
-                                  type: integer
-                                headline:
-                                  type: string
-                                id:
-                                  type: string
-                                is_advertiser:
-                                  type: boolean
-                                is_blocked:
-                                  type: boolean
-                                is_blocking:
-                                  type: boolean
-                                is_followed:
-                                  type: boolean
-                                is_following:
-                                  type: boolean
-                                is_org:
-                                  type: boolean
-                                is_special_follow:
-                                  type: boolean
-                                kvip_info:
-                                  type: object
-                                  properties:
-                                    is_vip:
-                                      type: boolean
-                                    target_url:
-                                      type: string
-                                  required:
-                                    - is_vip
-                                    - target_url
-                                name:
-                                  type: string
-                                reaction_count:
-                                  type: integer
-                                type:
-                                  type: string
-                                url:
-                                  type: string
-                                url_token:
-                                  type: string
-                                user_type:
-                                  type: string
-                                vip_info:
-                                  type: object
-                                  properties:
-                                    is_vip:
-                                      type: boolean
-                                    target_url:
-                                      type: string
-                                    widget:
-                                      type: object
-                                      properties:
-                                        url:
-                                          type: string
-                                          description: URL
-                                        night_mode_url:
-                                          type: string
-                                          description: URL
-                                        id:
-                                          type: integer
-                                      required:
-                                        - url
-                                        - night_mode_url
-                                        - id
-                                  required:
-                                    - is_vip
-                              required:
-                                - avatar_url
-                                - badge
-                                - badge_v2
-                                - gender
-                                - headline
-                                - id
-                                - is_followed
-                                - is_following
-                                - is_org
-                                - kvip_info
-                                - name
-                                - type
-                                - url
-                                - url_token
-                                - user_type
-                                - vip_info
-                            can_top:
-                              type: boolean
-                            comment_count:
-                              type: integer
-                            comment_permission:
-                              type: string
-                            comments:
-                              type: array
-                              items:
-                                type: object
-                                description: Object with variable structure
-                            content:
-                              anyOf:
-                                - type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      content:
-                                        type: string
-                                      fold_type:
-                                        type: string
-                                      own_text:
-                                        type: string
-                                      text_link_type:
-                                        type: string
-                                      title:
-                                        type: string
-                                      type:
-                                        type: string
-                                    required:
-                                      - content
-                                      - fold_type
-                                      - own_text
-                                      - text_link_type
-                                      - title
-                                      - type
-                                - type: string
-                            content_html:
-                              type: string
-                            created:
-                              type: integer
-                            creation_disclaimer:
-                              type: string
-                            excerpt_title:
-                              type: string
-                            favlists_count:
-                              type: integer
-                            favorite_count:
-                              type: integer
-                            id:
-                              type: string
-                            is_admin_close_repin:
-                              type: boolean
-                            is_contain_ai_content:
-                              type: boolean
-                            is_deleted:
-                              type: boolean
-                            is_top:
-                              type: boolean
-                            like_count:
-                              type: integer
-                            likers:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  avatar_url:
-                                    type: string
-                                    description: URL
-                                  badge_v2:
-                                    type: object
-                                    properties:
-                                      detail_badges:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            badge_status:
-                                              type: string
-                                            description:
-                                              type: string
-                                            detail_type:
-                                              type: string
-                                            icon:
-                                              type: string
-                                              description: URL
-                                            night_icon:
-                                              type: string
-                                              description: URL
-                                            sources:
-                                              type: array
-                                              items:
-                                                type: object
-                                                description: Object with variable structure
-                                            title:
-                                              type: string
-                                            type:
-                                              type: string
-                                            url:
-                                              type: string
-                                              description: URL
-                                          required:
-                                            - badge_status
-                                            - description
-                                            - detail_type
-                                            - icon
-                                            - night_icon
-                                            - sources
-                                            - title
-                                            - type
-                                            - url
-                                      icon:
-                                        type: string
-                                      merged_badges:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            badge_status:
-                                              type: string
-                                            description:
-                                              type: string
-                                            detail_type:
-                                              type: string
-                                            icon:
-                                              type: string
-                                            night_icon:
-                                              type: string
-                                            sources:
-                                              type: array
-                                              items:
-                                                type: object
-                                                description: Object with variable structure
-                                            title:
-                                              type: string
-                                            type:
-                                              type: string
-                                            url:
-                                              type: string
-                                              description: URL
-                                          required:
-                                            - badge_status
-                                            - description
-                                            - detail_type
-                                            - icon
-                                            - night_icon
-                                            - sources
-                                            - title
-                                            - type
-                                            - url
-                                      night_icon:
-                                        type: string
-                                      title:
-                                        type: string
-                                    required:
-                                      - detail_badges
-                                      - icon
-                                      - merged_badges
-                                      - night_icon
-                                      - title
-                                  exposed_medal:
-                                    type: object
-                                    properties:
-                                      avatar_url:
-                                        type: string
-                                        description: URL
-                                      description:
-                                        type: string
-                                      medal_avatar_frame:
-                                        type: string
-                                      medal_id:
-                                        type: string
-                                      medal_name:
-                                        type: string
-                                      mini_avatar_url:
-                                        type: string
-                                        description: URL
-                                    required:
-                                      - avatar_url
-                                      - description
-                                      - medal_avatar_frame
-                                      - medal_id
-                                      - medal_name
-                                      - mini_avatar_url
-                                  follower_count:
-                                    type: integer
-                                  gender:
-                                    type: integer
-                                  headline:
-                                    type: string
-                                  id:
-                                    type: string
-                                  is_advertiser:
-                                    type: boolean
-                                  is_blocked:
-                                    type: boolean
-                                  is_blocking:
-                                    type: boolean
-                                  is_followed:
-                                    type: boolean
-                                  is_following:
-                                    type: boolean
-                                  is_org:
-                                    type: boolean
-                                  is_special_follow:
-                                    type: boolean
-                                  kvip_info:
-                                    type: object
-                                    properties:
-                                      is_vip:
-                                        type: boolean
-                                      target_url:
-                                        type: string
-                                      vip_icon:
-                                        type: object
-                                        properties:
-                                          night_mode_url:
-                                            type: string
-                                            description: URL
-                                          url:
-                                            type: string
-                                            description: URL
-                                        required:
-                                          - night_mode_url
-                                          - url
-                                    required:
-                                      - is_vip
-                                      - target_url
-                                  name:
-                                    type: string
-                                  reaction_count:
-                                    type: integer
-                                  type:
-                                    type: string
-                                  url:
-                                    type: string
-                                  url_token:
-                                    type: string
-                                  user_type:
-                                    type: string
-                                  vip_info:
-                                    type: object
-                                    properties:
-                                      is_vip:
-                                        type: boolean
-                                      widget:
-                                        type: object
-                                        properties:
-                                          id:
-                                            type: integer
-                                          night_mode_url:
-                                            type: string
-                                            description: URL
-                                          url:
-                                            type: string
-                                            description: URL
-                                        required:
-                                          - id
-                                          - night_mode_url
-                                          - url
-                                    required:
-                                      - is_vip
-                                  badge:
-                                    type: array
-                                    items:
-                                      type: object
-                                      properties:
-                                        description:
-                                          type: string
-                                        type:
-                                          type: string
-                                      required:
-                                        - description
-                                        - type
-                                required:
-                                  - avatar_url
-                                  - badge_v2
-                                  - exposed_medal
-                                  - follower_count
-                                  - gender
-                                  - headline
-                                  - id
-                                  - is_advertiser
-                                  - is_blocked
-                                  - is_blocking
-                                  - is_followed
-                                  - is_following
-                                  - is_org
-                                  - is_special_follow
-                                  - kvip_info
-                                  - name
-                                  - reaction_count
-                                  - type
-                                  - url
-                                  - url_token
-                                  - user_type
-                                  - vip_info
-                            long_threshold:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  height:
-                                    type: integer
-                                  width:
-                                    type: integer
-                                required:
-                                  - height
-                                  - width
-                            meet_reaction_guide_conditions:
-                              type: boolean
-                            page_view_count:
-                              type: "null"
-                            pin_type:
-                              type: string
-                            questions:
-                              type: "null"
-                            reaction:
-                              type: object
-                              properties:
-                                image_reactions:
-                                  type: object
-                                  properties: {}
-                                  required: []
-                                relation:
-                                  type: object
-                                  properties:
-                                    current_user_is_navigator:
-                                      type: boolean
-                                    faved:
-                                      type: boolean
-                                    following:
-                                      type: boolean
-                                    is_author:
-                                      type: boolean
-                                    is_navigator_vote:
-                                      type: boolean
-                                    liked:
-                                      type: boolean
-                                    subcribed:
-                                      type: boolean
-                                    vote:
-                                      type: string
-                                    vote_next_step:
-                                      type: string
-                                  required:
-                                    - current_user_is_navigator
-                                    - faved
-                                    - following
-                                    - is_author
-                                    - is_navigator_vote
-                                    - liked
-                                    - subcribed
-                                    - vote
-                                    - vote_next_step
-                                special_reaction_style:
-                                  type: object
-                                  properties:
-                                    is_hit:
-                                      type: boolean
-                                  required:
-                                    - is_hit
-                                statistics:
-                                  type: object
-                                  properties:
-                                    applaud_count:
-                                      type: integer
-                                    bullet_count:
-                                      type: integer
-                                    comment_count:
-                                      type: integer
-                                    down_vote_count:
-                                      type: integer
-                                    favorites:
-                                      type: integer
-                                    interest_play_count:
-                                      type: integer
-                                    like_count:
-                                      type: integer
-                                    plaincontent_like_count:
-                                      type: integer
-                                    plaincontent_vote_up_count:
-                                      type: integer
-                                    play_count:
-                                      type: integer
-                                    pv_count:
-                                      type: integer
-                                    question_answer_count:
-                                      type: integer
-                                    question_follower_count:
-                                      type: integer
-                                    republishers:
-                                      type: array
-                                      items:
-                                        type: object
-                                        description: Object with variable structure
-                                    share_count:
-                                      type: integer
-                                    subscribe_count:
-                                      type: integer
-                                    up_vote_count:
-                                      type: integer
-                                  required:
-                                    - applaud_count
-                                    - bullet_count
-                                    - comment_count
-                                    - down_vote_count
-                                    - favorites
-                                    - interest_play_count
-                                    - like_count
-                                    - plaincontent_like_count
-                                    - plaincontent_vote_up_count
-                                    - play_count
-                                    - pv_count
-                                    - question_answer_count
-                                    - question_follower_count
-                                    - republishers
-                                    - share_count
-                                    - subscribe_count
-                                    - up_vote_count
-                              required:
-                                - image_reactions
-                                - relation
-                                - special_reaction_style
-                                - statistics
-                            reaction_count:
-                              type: integer
-                            reaction_instruction:
-                              type: object
-                              properties: {}
-                              required: []
-                            reaction_relation:
-                              type: object
-                              properties:
-                                like:
-                                  type: integer
-                                vote:
-                                  type: integer
-                              required:
-                                - like
-                                - vote
-                            regulate_info:
-                              type: object
-                              properties:
-                                is_regulating:
-                                  type: boolean
-                              required:
-                                - is_regulating
-                            repin_count:
-                              type: integer
-                            ring_info:
-                              type: "null"
-                            self_create:
-                              type: boolean
-                            source_pin_id:
-                              type: integer
-                            state:
-                              type: string
-                            tag_specials:
-                              type: object
-                              properties: {}
-                              required: []
-                            tags:
-                              type: array
-                              items:
-                                type: string
-                            top_reactions:
-                              type: object
-                              properties:
-                                like:
-                                  type: integer
-                              required:
-                                - like
-                            topics:
-                              anyOf:
-                                - type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      id:
-                                        type: string
-                                      name:
-                                        type: string
-                                      topic_type:
-                                        type: string
-                                      type:
-                                        type: string
-                                      url:
-                                        type: string
-                                    required:
-                                      - id
-                                      - name
-                                      - topic_type
-                                      - type
-                                      - url
-                                - type: "null"
-                            type:
-                              type: string
-                            updated:
-                              type: integer
-                            url:
-                              type: string
-                              description: URL
-                            view_permission:
-                              type: string
-                            virtuals:
-                              type: object
-                              properties:
-                                is_favorited:
-                                  type: boolean
-                                is_liked:
-                                  type: boolean
-                              required:
-                                - is_favorited
-                                - is_liked
-                            title:
-                              type: string
-                            excerpt:
-                              type: string
-                            excerpt_new:
-                              type: string
-                            preview_type:
-                              type: string
-                            preview_text:
-                              type: string
-                            voteup_count:
-                              type: integer
-                            image_url:
-                              type: string
-                            linkbox:
-                              type: object
-                              properties:
-                                url:
-                                  type: string
-                                category:
-                                  type: string
-                                pic:
-                                  type: string
-                                title:
-                                  type: string
-                              required:
-                                - url
-                                - category
-                                - pic
-                                - title
-                            upvoted_followees:
-                              type: array
-                              items:
-                                type: object
-                                description: Object with variable structure
-                            voting:
-                              type: integer
-                            content_need_truncated:
-                              type: boolean
-                            force_login_when_click_read_more:
-                              type: boolean
-                            is_navigator:
-                              type: boolean
-                            navigator_vote:
-                              type: boolean
-                            vote_next_step:
-                              type: string
-                            allow_segment_interaction:
-                              type: integer
-                            thanks_count:
-                              type: integer
-                            question:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                title:
-                                  type: string
-                                url:
-                                  type: string
-                                  description: URL
-                                type:
-                                  type: string
-                                question_type:
-                                  type: string
-                                created:
-                                  type: integer
-                                answer_count:
-                                  type: integer
-                                comment_count:
-                                  type: integer
-                                follower_count:
-                                  type: integer
-                                detail:
-                                  type: string
-                                excerpt:
-                                  type: string
-                                bound_topic_ids:
-                                  type: array
-                                  items:
-                                    type: integer
-                                relationship:
-                                  type: object
-                                  properties:
-                                    is_author:
-                                      type: boolean
-                                  required:
-                                    - is_author
-                                is_following:
-                                  type: boolean
-                                author:
-                                  type: object
-                                  properties:
-                                    id:
-                                      type: string
-                                    name:
-                                      type: string
-                                    headline:
-                                      type: string
-                                    type:
-                                      type: string
-                                    user_type:
-                                      type: string
-                                    url:
-                                      type: string
-                                      description: URL
-                                    url_token:
-                                      type: string
-                                    avatar_url:
-                                      type: string
-                                      description: URL
-                                    gender:
-                                      type: integer
-                                    is_following:
-                                      type: boolean
-                                    is_followed:
-                                      type: boolean
-                                    is_org:
-                                      type: boolean
-                                    badge:
-                                      type: array
-                                      items:
-                                        type: object
-                                        description: Badge info with type and description
-                                    badge_v2:
-                                      type: object
-                                      properties:
-                                        title:
-                                          type: string
-                                        merged_badges:
-                                          type: array
-                                          items:
-                                            type: object
-                                            description: Merged badge entry with type, title, description, and URL
-                                        detail_badges:
-                                          type: array
-                                          items:
-                                            type: object
-                                            description: Detail badge entry with type, title, icon, and night_icon URLs
-                                        icon:
-                                          type: string
-                                        night_icon:
-                                          type: string
-                                      required:
-                                        - title
-                                        - merged_badges
-                                        - detail_badges
-                                        - icon
-                                        - night_icon
-                                    vip_info:
-                                      type: object
-                                      properties:
-                                        is_vip:
-                                          type: boolean
-                                        target_url:
-                                          type: string
-                                        widget:
-                                          type: object
-                                          properties:
-                                            url:
-                                              type: string
-                                              description: URL
-                                            night_mode_url:
-                                              type: string
-                                              description: URL
-                                            id:
-                                              type: integer
-                                          required:
-                                            - url
-                                            - night_mode_url
-                                            - id
-                                      required:
-                                        - is_vip
-                                        - target_url
-                                    kvip_info:
-                                      type: object
-                                      properties:
-                                        is_vip:
-                                          type: boolean
-                                        target_url:
-                                          type: string
-                                      required:
-                                        - is_vip
-                                        - target_url
-                                  required:
-                                    - id
-                                    - name
-                                    - headline
-                                    - type
-                                    - user_type
-                                    - url
-                                    - url_token
-                                    - avatar_url
-                                    - gender
-                                    - is_following
-                                    - is_followed
-                                    - is_org
-                                    - badge
-                                    - badge_v2
-                                    - vip_info
-                                    - kvip_info
-                                reaction_instruction:
-                                  type: "null"
-                              required:
-                                - id
-                                - title
-                                - url
-                                - type
-                                - question_type
-                                - created
-                                - answer_count
-                                - comment_count
-                                - follower_count
-                                - detail
-                                - excerpt
-                                - bound_topic_ids
-                                - relationship
-                                - is_following
-                                - author
-                                - reaction_instruction
-                            updated_time:
-                              type: integer
-                            created_time:
-                              type: integer
-                            is_copyable:
-                              type: boolean
-                            can_comment:
-                              type: object
-                              properties:
-                                status:
-                                  type: boolean
-                                reason:
-                                  type: string
-                              required:
-                                - status
-                                - reason
-                            relationship:
-                              type: object
-                              properties:
-                                voting:
-                                  type: integer
-                                is_thanked:
-                                  type: boolean
-                                is_nothelp:
-                                  type: boolean
-                                upvoted_followee_ids:
-                                  type: "null"
-                              required:
-                                - voting
-                                - is_thanked
-                                - is_nothelp
-                                - upvoted_followee_ids
-                            relevant_info:
-                              type: object
-                              properties:
-                                relevant_type:
-                                  type: string
-                                is_relevant:
-                                  type: boolean
-                                relevant_text:
-                                  type: string
-                              required:
-                                - relevant_type
-                                - is_relevant
-                                - relevant_text
-                            reshipment_settings:
-                              type: string
-                            answer_type:
-                              type: string
-                            paid_info:
-                              type: object
-                              properties:
-                                type:
-                                  type: string
-                                content:
-                                  type: string
-                                has_purchased:
-                                  type: boolean
-                              required:
-                                - type
-                                - content
-                                - has_purchased
-                            attachment:
-                              type: "null"
-                            mark_infos:
-                              type: array
-                              items:
-                                type: object
-                                description: Object with variable structure
-                            segment_infos:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  pid:
-                                    type: string
-                                  text:
-                                    type: string
-                                  marks:
-                                    type: array
-                                    items:
-                                      type: object
-                                      properties:
-                                        start_index:
-                                          type: integer
-                                        end_index:
-                                          type: integer
-                                        seg_info:
-                                          type: object
-                                          properties:
-                                            seg_ids:
-                                              type: array
-                                              items:
-                                                type: string
-                                            is_like:
-                                              type: boolean
-                                            like_count:
-                                              type: integer
-                                            comment_count:
-                                              type: integer
-                                            my_comment_count:
-                                              type: integer
-                                            is_span:
-                                              type: boolean
-                                          required:
-                                            - seg_ids
-                                            - is_like
-                                            - like_count
-                                            - comment_count
-                                            - my_comment_count
-                                            - is_span
-                                      required:
-                                        - start_index
-                                        - end_index
-                                        - seg_info
-                                required:
-                                  - pid
-                                  - text
-                                  - marks
                         verb:
                           type: string
                         created_time:
                           type: integer
-                        interaction:
-                          type: object
-                          properties:
-                            can_show_sticker:
-                              type: boolean
-                        actor:
+                        action_text:
+                          type: string
+                        target:
                           type: object
                           properties:
                             id:
                               type: string
-                            name:
-                              type: string
-                            headline:
-                              type: string
                             type:
                               type: string
-                            user_type:
+                            title:
                               type: string
                             url:
                               type: string
                               description: URL
-                            url_token:
+                            excerpt:
                               type: string
-                            avatar_url:
-                              type: string
-                              description: URL
-                            gender:
+                            voteup_count:
                               type: integer
-                            is_following:
-                              type: boolean
-                            is_followed:
-                              type: boolean
-                            is_org:
-                              type: boolean
-                            badge:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  type:
-                                    type: string
-                                  description:
-                                    type: string
-                                  topic_names:
-                                    type: array
-                                    items:
+                            comment_count:
+                              type: integer
+                            created_time:
+                              type: integer
+                            updated_time:
+                              type: integer
+                            author:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                url_token:
+                                  type: string
+                                name:
+                                  type: string
+                                headline:
+                                  type: string
+                                avatar_url:
+                                  type: string
+                                  description: URL
+                            question:
+                              anyOf:
+                                - type: object
+                                  properties:
+                                    id:
                                       type: string
-                                  topics:
-                                    type: array
-                                    items:
-                                      type: object
-                                      description: Topic reference with id, name, and URL
-                                required:
-                                  - type
-                                  - description
-                                  - topic_names
-                                  - topics
-                            badge_v2:
-                              type: object
-                              properties:
-                                title:
-                                  type: string
-                                merged_badges:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      type:
-                                        type: string
-                                      detail_type:
-                                        type: string
-                                      title:
-                                        type: string
-                                      description:
-                                        type: string
-                                      url:
-                                        type: string
-                                        description: URL
-                                      sources:
-                                        type: array
-                                        items:
-                                          type: object
-                                          description: Object with variable structure
-                                      icon:
-                                        type: string
-                                      night_icon:
-                                        type: string
-                                    required:
-                                      - type
-                                      - detail_type
-                                      - title
-                                      - description
-                                      - url
-                                      - sources
-                                      - icon
-                                      - night_icon
-                                detail_badges:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      type:
-                                        type: string
-                                      detail_type:
-                                        type: string
-                                      title:
-                                        type: string
-                                      description:
-                                        type: string
-                                      url:
-                                        type: string
-                                      sources:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            id:
-                                              type: string
-                                            token:
-                                              type: string
-                                            type:
-                                              type: string
-                                            url:
-                                              type: string
-                                            name:
-                                              type: string
-                                            avatar_path:
-                                              type: string
-                                            avatar_url:
-                                              type: string
-                                            description:
-                                              type: string
-                                            priority:
-                                              type: integer
-                                          required:
-                                            - id
-                                            - token
-                                            - type
-                                            - url
-                                            - name
-                                            - avatar_path
-                                            - avatar_url
-                                            - description
-                                            - priority
-                                      icon:
-                                        type: string
-                                        description: URL
-                                      night_icon:
-                                        type: string
-                                        description: URL
-                                    required:
-                                      - type
-                                      - detail_type
-                                      - title
-                                      - description
-                                      - url
-                                      - sources
-                                      - icon
-                                      - night_icon
-                                icon:
-                                  type: string
-                                  description: URL
-                                night_icon:
-                                  type: string
-                                  description: URL
-                              required:
-                                - title
-                                - merged_badges
-                                - detail_badges
-                                - icon
-                                - night_icon
-                            vip_info:
-                              type: object
-                              properties:
-                                is_vip:
-                                  type: boolean
-                                target_url:
-                                  type: string
-                              required:
-                                - is_vip
-                                - target_url
-                            kvip_info:
-                              type: object
-                              properties:
-                                is_vip:
-                                  type: boolean
-                                target_url:
-                                  type: string
-                              required:
-                                - is_vip
-                                - target_url
-                        action_text:
-                          type: string
-                        is_sticky:
-                          type: boolean
-                  paging:
-                    type: object
-                    properties:
-                      is_end:
-                        type: boolean
-                      need_force_login:
-                        type: boolean
-                      next:
-                        type: string
-                        description: URL
-                    required:
-                      - is_end
-                      - need_force_login
-                      - next
+                                    title:
+                                      type: string
+                                    url:
+                                      type: string
+                                      description: URL
+                                - type: "null"
                 required:
                   - data
-                  - paging
   /api/v4/me:
     get:
       operationId: getMe
       summary: Get current authenticated user info — name, avatar, follower count, answer count, notification counts
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: zhihu-read
+          operation: getMe
         build:
           stable_id: ba0c00fc4238c265
           tool_version: 2
-      parameters:
-        - name: include
-          in: query
-          required: false
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - is_realname
-          description: Comma-separated fields to include
+      parameters: []
       responses:
         "200":
           description: Success.
@@ -2040,14 +417,13 @@ paths:
                     type: string
                   name:
                     type: string
-                  use_default_avatar:
-                    type: boolean
                   avatar_url:
                     type: string
                     description: URL
-                  avatar_url_template:
+                  headline:
                     type: string
-                    description: URL
+                  gender:
+                    type: integer
                   is_org:
                     type: boolean
                   type:
@@ -2055,83 +431,18 @@ paths:
                   url:
                     type: string
                     description: URL
-                  user_type:
-                    type: string
-                  headline:
-                    type: string
-                  headline_render:
-                    type: string
-                  gender:
-                    type: integer
-                  is_advertiser:
-                    type: boolean
-                  ip_info:
-                    type: string
-                  vip_info:
-                    type: object
-                    properties:
-                      is_vip:
-                        type: boolean
-                      vip_type:
-                        type: integer
-                      rename_days:
-                        type: string
-                      entrance_v2:
-                        type: "null"
-                      rename_frequency:
-                        type: integer
-                      rename_await_days:
-                        type: integer
-                    required:
-                      - is_vip
-                      - vip_type
-                      - rename_days
-                      - rename_frequency
-                      - rename_await_days
-                  kvip_info:
-                    type: object
-                    properties:
-                      is_vip:
-                        type: boolean
-                    required:
-                      - is_vip
-                  account_status:
-                    type: array
-                    items:
-                      type: object
-                      description: Object with variable structure
-                  is_destroy_waiting:
-                    type: boolean
                   answer_count:
                     type: integer
                   question_count:
                     type: integer
                   articles_count:
                     type: integer
-                  columns_count:
-                    type: integer
-                  zvideo_count:
-                    type: integer
                   favorite_count:
-                    type: integer
-                  pins_count:
                     type: integer
                   voteup_count:
                     type: integer
                   thanked_count:
                     type: integer
-                  line_comment_count:
-                    type: integer
-                  line_like_count:
-                    type: integer
-                  line_comment_only_count:
-                    type: integer
-                  available_medals_count:
-                    type: integer
-                  org_verify_status:
-                    type: "null"
-                  uid:
-                    type: string
                   default_notifications_count:
                     type: integer
                   follow_notifications_count:
@@ -2140,102 +451,26 @@ paths:
                     type: integer
                   messages_count:
                     type: integer
-                  creation_count:
-                    type: integer
-                  is_bind_phone:
-                    type: boolean
-                  is_realname:
-                    type: boolean
-                  has_applying_column:
-                    type: boolean
-                  has_add_baike_summary_permission:
-                    type: boolean
-                  editor_info:
-                    type: array
-                    items:
-                      type: string
-                  available_message_types:
-                    type: array
-                    items:
-                      type: string
-                  ai_assistant_info:
-                    type: "null"
-                  is_active:
-                    type: integer
-                  mcn_user_info:
-                    type: object
-                    properties:
-                      status:
-                        type: integer
-                      showcase_permission:
-                        type: integer
-                      jingdong_param:
-                        type: string
-                      jingdong_app_param:
-                        type: string
-                      available_source:
-                        type: array
-                        items:
-                          type: object
-                          description: Object with variable structure
-                      bind_info:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            pid:
-                              type: string
-                            source:
-                              type: string
-                      goods_count:
-                        type: integer
                 required:
                   - id
                   - url_token
                   - name
-                  - use_default_avatar
                   - avatar_url
-                  - avatar_url_template
                   - is_org
                   - type
                   - url
-                  - user_type
-                  - headline
-                  - headline_render
-                  - gender
-                  - is_advertiser
-                  - ip_info
-                  - vip_info
-                  - kvip_info
                   - answer_count
-                  - question_count
-                  - articles_count
-                  - columns_count
-                  - zvideo_count
-                  - favorite_count
-                  - pins_count
                   - voteup_count
-                  - thanked_count
-                  - line_comment_count
-                  - line_like_count
-                  - line_comment_only_count
-                  - available_medals_count
-                  - uid
-                  - default_notifications_count
-                  - follow_notifications_count
-                  - vote_thank_notifications_count
-                  - messages_count
-                  - creation_count
-                  - is_realname
-                  - has_applying_column
-                  - has_add_baike_summary_permission
-                  - editor_info
   /api/v4/members/{url_token}:
     get:
       operationId: getMember
       summary: Get user profile by url_token — name, bio, answer count, follower count, following count, employment
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: zhihu-read
+          operation: getMember
         build:
           stable_id: d449a10757e77a6a
           tool_version: 2
@@ -2251,21 +486,8 @@ paths:
           in: query
           required: false
           schema:
-            type: array
-            items:
-              type: string
-          example:
-            - allow_message
-            - is_followed
-            - is_following
-            - is_org
-            - is_blocking
-            - employments
-            - answer_count
-            - follower_count
-            - articles_count
-            - gender
-            - badge[?(type=best_answerer)].topics
+            type: string
+            default: "allow_message,is_followed,is_following,is_org,is_blocking,employments,answer_count,follower_count,articles_count,gender,badge[?(type=best_answerer)].topics"
           description: Comma-separated fields to include
       responses:
         "200":
@@ -2281,14 +503,13 @@ paths:
                     type: string
                   name:
                     type: string
-                  use_default_avatar:
-                    type: boolean
                   avatar_url:
                     type: string
                     description: URL
-                  avatar_url_template:
+                  headline:
                     type: string
-                    description: URL
+                  gender:
+                    type: integer
                   is_org:
                     type: boolean
                   type:
@@ -2298,68 +519,22 @@ paths:
                     description: URL
                   user_type:
                     type: string
-                  headline:
-                    type: string
-                  headline_render:
-                    type: string
-                  gender:
+                  follower_count:
                     type: integer
-                  is_advertiser:
-                    type: boolean
-                  ip_info:
-                    type: string
-                  vip_info:
-                    type: object
-                    properties:
-                      is_vip:
-                        type: boolean
-                      vip_type:
-                        type: integer
-                      rename_days:
-                        type: string
-                      entrance_v2:
-                        type: "null"
-                      rename_frequency:
-                        type: integer
-                      rename_await_days:
-                        type: integer
-                    required:
-                      - is_vip
-                      - vip_type
-                      - rename_days
-                      - rename_frequency
-                      - rename_await_days
-                  kvip_info:
-                    type: object
-                    properties:
-                      is_vip:
-                        type: boolean
-                    required:
-                      - is_vip
+                  answer_count:
+                    type: integer
+                  articles_count:
+                    type: integer
+                  employments:
+                    type: array
+                    items:
+                      type: object
+                      description: Employment entry with job and company info
                   badge:
                     type: array
                     items:
                       type: object
                       description: Badge info with type and description
-                  badge_v2:
-                    type: object
-                    properties:
-                      title:
-                        type: string
-                      merged_badges:
-                        type: array
-                        items:
-                          type: object
-                          description: Merged badge entry with type, title, description, and URL
-                      detail_badges:
-                        type: array
-                        items:
-                          type: object
-                          description: Detail badge entry with type, title, icon, and night_icon URLs
-                      icon:
-                        type: string
-                      night_icon:
-                        type: string
                   allow_message:
                     type: boolean
                   is_following:
@@ -2368,39 +543,16 @@ paths:
                     type: boolean
                   is_blocking:
                     type: boolean
-                  follower_count:
-                    type: integer
-                  answer_count:
-                    type: integer
-                  articles_count:
-                    type: integer
-                  available_medals_count:
-                    type: integer
-                  employments:
-                    type: array
-                    items:
-                      type: object
-                      description: Employment entry with job and company info
-                  org_verify_status:
-                    type: "null"
-                  is_realname:
-                    type: boolean
-                  has_applying_column:
-                    type: boolean
-                  is_new_rename:
-                    type: boolean
-                  ai_assistant_info:
-                    type: "null"
                 required:
                   - id
                   - url_token
                   - name
+                  - avatar_url
+                  - headline
+                  - is_org
                   - type
                   - url
                   - user_type
-                  - headline
-                  - avatar_url
-                  - is_org
   /api/v4/members/{url_token}/relations/mutuals:
     get:
       operationId: listMemberMutuals
@@ -2422,17 +574,9 @@ paths:
           in: query
           required: false
           schema:
-            type: array
-            items:
-              type: string
-          example:
-            - data[*].answer_count
-            - articles_count
-            - gender
-            - follower_count
-            - is_followed
-            - is_following
-            - badge[?(type=best_answerer)].topics
+            type: string
+            default: "data[*].answer_count,articles_count,gender,follower_count,is_followed,is_following,badge[?(type=best_answerer)].topics"
+          description: Comma-separated fields to include
         - name: limit
           in: query
           required: false
@@ -2646,13 +790,9 @@ paths:
           in: query
           required: false
           schema:
-            type: array
-            items:
-              type: string
-          example:
-            - data[*].answer_count
-            - author
-            - follower_count
+            type: string
+            default: "data[*].answer_count,author,follower_count"
+          description: Comma-separated fields to include
         - name: limit
           in: query
           required: false
@@ -2727,6 +867,10 @@ paths:
       summary: Search questions and answers by keyword — returns title, excerpt, vote count, answer count, author info
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: zhihu-read
+          operation: searchContent
         build:
           stable_id: 6a562013f2198726
           tool_version: 2
@@ -2778,9 +922,6 @@ paths:
                       next:
                         type: string
                         description: URL
-                    required:
-                      - is_end
-                      - next
                   data:
                     type: array
                     items:
@@ -2796,681 +937,35 @@ paths:
                                   type: string
                                 title:
                                   type: string
-                              required: []
                             - type: "null"
                         object:
                           type: object
                           properties:
+                            id:
+                              type: string
                             type:
                               type: string
-                            major_info:
-                              type: object
-                              properties:
-                                name:
-                                  type: string
-                                id:
-                                  type: string
-                                degree:
-                                  type: array
-                                  items:
-                                    type: string
-                                genre:
-                                  type: array
-                                  items:
-                                    type: string
-                                years:
-                                  type: array
-                                  items:
-                                    type: string
-                                classification:
-                                  type: string
-                                top_area:
-                                  type: string
-                                top_industry:
-                                  type: string
-                                top_position:
-                                  type: string
-                                avg_salary:
-                                  type: integer
-                                topic_id:
-                                  type: string
-                                top_majors:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      name:
-                                        type: string
-                                    required:
-                                      - name
-                                discussions:
-                                  type: object
-                                  properties:
-                                    contents:
-                                      type: array
-                                      items:
-                                        type: object
-                                        properties:
-                                          id:
-                                            type: string
-                                          name:
-                                            type: string
-                                          items:
-                                            type: array
-                                            items:
-                                              type: object
-                                              properties:
-                                                type:
-                                                  type: string
-                                                highlight:
-                                                  type: object
-                                                  description: Search highlight fragments keyed by field name
-                                                object:
-                                                  type: object
-                                                  description: Nested content object (question, answer, or article)
-                                                hit_labels:
-                                                  type: "null"
-                                              required:
-                                                - type
-                                                - highlight
-                                                - object
-                                                - hit_labels
-                                          has_more:
-                                            type: boolean
-                                        required:
-                                          - id
-                                          - name
-                                          - items
-                                          - has_more
-                                    default_tab_id:
-                                      type: string
-                                  required:
-                                    - contents
-                                    - default_tab_id
-                              required:
-                                - name
-                                - id
-                            attached_info_bytes:
-                              type: string
-                            header:
-                              type: object
-                              properties:
-                                card_title:
-                                  type: string
-                                no_more:
-                                  type: boolean
-                              required:
-                                - card_title
-                                - no_more
-                            body:
-                              type: object
-                              properties:
-                                title:
-                                  type: string
-                                description:
-                                  type: string
-                                authors:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      name:
-                                        type: string
-                                      url_token:
-                                        type: string
-                                      bio:
-                                        type: string
-                                      icon:
-                                        type: string
-                                    required:
-                                      - name
-                                      - url_token
-                                      - bio
-                                      - icon
-                                images:
-                                  type: array
-                                  items:
-                                    type: string
-                                    description: URL
-                                play_icon:
-                                  type: string
-                                show_image:
-                                  type: string
-                                show_author:
-                                  type: string
-                              required:
-                                - title
-                                - description
-                                - authors
-                                - images
-                                - play_icon
-                                - show_image
-                                - show_author
-                            footer:
-                              type: string
-                            commodity_id:
-                              type: string
-                            commodity_type:
+                            title:
                               type: string
                             url:
                               type: string
                               description: URL
-                            source:
-                              type: string
-                            card_version:
-                              type: string
-                            slave_url:
-                              type: string
-                              description: URL
-                            tab_type:
-                              type: string
-                            ab_id_list:
-                              type: array
-                              items:
-                                type: string
-                            card_type:
-                              type: string
-                            sku_id:
-                              type: string
-                            title:
-                              type: string
-                            image_url:
-                              type: string
-                            redirect_url:
-                              type: string
-                            background_color:
-                              type: string
-                            campaign_type:
-                              type: string
-                            icon_title:
-                              type: string
-                            expert:
-                              type: string
-                            has_more:
-                              type: boolean
-                            content_items:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  object:
-                                    type: object
-                                    properties:
-                                      id:
-                                        type: string
-                                      title:
-                                        type: string
-                                      description:
-                                        type: string
-                                      url:
-                                        type: string
-                                        description: URL
-                                      type:
-                                        type: string
-                                      follower_count:
-                                        type: integer
-                                      comment_count:
-                                        type: integer
-                                      answer_count:
-                                        type: integer
-                                      visits_count:
-                                        type: integer
-                                      updated_time:
-                                        type: integer
-                                      relationship:
-                                        type: object
-                                        properties:
-                                          is_following:
-                                            type: boolean
-                                        required:
-                                          - is_following
-                                      is_anonymous:
-                                        type: boolean
-                                      thumbnail_info:
-                                        type: object
-                                        properties:
-                                          count:
-                                            type: integer
-                                          thumbnails:
-                                            type: array
-                                            items:
-                                              type: object
-                                              description: Object with variable structure
-                                          type:
-                                            type: string
-                                          total_count:
-                                            type: integer
-                                        required:
-                                          - count
-                                          - thumbnails
-                                          - type
-                                          - total_count
-                                      attached_info_bytes:
-                                        type: string
-                                      doc_relevance_scores:
-                                        type: "null"
-                                      bert_rel:
-                                        type: integer
-                                    required:
-                                      - id
-                                      - title
-                                      - description
-                                      - url
-                                      - type
-                                      - follower_count
-                                      - comment_count
-                                      - answer_count
-                                      - visits_count
-                                      - updated_time
-                                      - relationship
-                                      - is_anonymous
-                                      - thumbnail_info
-                                      - attached_info_bytes
-                                      - doc_relevance_scores
-                                      - bert_rel
-                                  type:
-                                    type: string
-                                  index:
-                                    type: integer
-                                  sub_contents:
-                                    type: array
-                                    items:
-                                      type: object
-                                      properties:
-                                        object:
-                                          type: object
-                                          properties:
-                                            original_id:
-                                              type: string
-                                            id:
-                                              type: string
-                                            type:
-                                              type: string
-                                            excerpt:
-                                              type: string
-                                            url:
-                                              type: string
-                                              description: URL
-                                            voteup_count:
-                                              type: integer
-                                            comment_count:
-                                              type: integer
-                                            favorites_count:
-                                              type: integer
-                                            created_time:
-                                              type: integer
-                                            updated_time:
-                                              type: integer
-                                            content:
-                                              type: string
-                                            thumbnail_info:
-                                              type: object
-                                              properties:
-                                                count:
-                                                  type: integer
-                                                thumbnails:
-                                                  type: array
-                                                type:
-                                                  type: string
-                                                total_count:
-                                                  type: integer
-                                              required:
-                                                - count
-                                                - thumbnails
-                                                - type
-                                                - total_count
-                                            relationship:
-                                              type: object
-                                              properties:
-                                                voting:
-                                                  type: integer
-                                                is_author:
-                                                  type: boolean
-                                                is_thanked:
-                                                  type: boolean
-                                                is_nothelp:
-                                                  type: boolean
-                                                following_upvoter:
-                                                  type: array
-                                                following_upvoter_count:
-                                                  type: integer
-                                                following_collect:
-                                                  type: array
-                                                following_collect_count:
-                                                  type: integer
-                                                high_level_creator:
-                                                  type: array
-                                                high_level_creator_count:
-                                                  type: integer
-                                                is_following:
-                                                  type: boolean
-                                              required:
-                                                - voting
-                                                - is_author
-                                                - is_thanked
-                                                - is_nothelp
-                                                - following_upvoter
-                                                - following_upvoter_count
-                                                - following_collect
-                                                - following_collect_count
-                                                - high_level_creator
-                                                - high_level_creator_count
-                                                - is_following
-                                            question:
-                                              type: object
-                                              properties:
-                                                id:
-                                                  type: string
-                                                type:
-                                                  type: string
-                                                name:
-                                                  type: string
-                                                url:
-                                                  type: string
-                                                  description: URL
-                                                answer_count:
-                                                  type: integer
-                                                follow_count:
-                                                  type: integer
-                                                attached_info_bytes:
-                                                  type: string
-                                              required:
-                                                - id
-                                                - type
-                                                - name
-                                                - url
-                                                - answer_count
-                                                - follow_count
-                                                - attached_info_bytes
-                                            author:
-                                              type: object
-                                              properties:
-                                                id:
-                                                  type: string
-                                                url_token:
-                                                  type: string
-                                                name:
-                                                  type: string
-                                                headline:
-                                                  type: string
-                                                gender:
-                                                  type: integer
-                                                is_followed:
-                                                  type: boolean
-                                                is_following:
-                                                  type: boolean
-                                                user_type:
-                                                  type: string
-                                                url:
-                                                  type: string
-                                                  description: URL
-                                                type:
-                                                  type: string
-                                                avatar_url:
-                                                  type: string
-                                                  description: URL
-                                                badge:
-                                                  type: array
-                                                authority_info:
-                                                  anyOf:
-                                                    - type: "null"
-                                                    - type: array
-                                                      items:
-                                                        type: object
-                                                voteup_count:
-                                                  type: integer
-                                                follower_count:
-                                                  type: integer
-                                                badge_v2:
-                                                  type: object
-                                                  description: Badge v2 container with title, merged/detail badges, and icon URLs
-                                                badge_v2_string:
-                                                  type: string
-                                                topic_bayes_map:
-                                                  type: "null"
-                                                topic_map:
-                                                  type: object
-                                                  description: Map of topic IDs to topic metadata
-                                                verify_bayes:
-                                                  type: string
-                                              required:
-                                                - id
-                                                - url_token
-                                                - name
-                                                - headline
-                                                - gender
-                                                - is_followed
-                                                - is_following
-                                                - user_type
-                                                - url
-                                                - type
-                                                - avatar_url
-                                                - badge
-                                                - authority_info
-                                                - voteup_count
-                                                - follower_count
-                                                - badge_v2
-                                                - badge_v2_string
-                                                - topic_bayes_map
-                                                - topic_map
-                                                - verify_bayes
-                                            is_anonymous:
-                                              type: boolean
-                                            is_zhi_plus:
-                                              type: boolean
-                                            is_zhi_plus_content:
-                                              type: boolean
-                                            extra:
-                                              type: string
-                                            health_tag:
-                                              type: string
-                                            answer_type:
-                                              type: string
-                                            sub_content_type:
-                                              type: string
-                                            settings:
-                                              type: object
-                                              properties:
-                                                table_of_contents:
-                                                  type: object
-                                                  description: Table of contents metadata for article navigation
-                                              required:
-                                                - table_of_contents
-                                            attached_info_bytes:
-                                              type: string
-                                            biz_encoded_params:
-                                              type: string
-                                            answer_count:
-                                              type: integer
-                                            visits_count:
-                                              type: integer
-                                            description:
-                                              type: string
-                                            title:
-                                              type: string
-                                            native:
-                                              type: integer
-                                            doc_relevance_scores:
-                                              type: "null"
-                                            bert_rel:
-                                              type: integer
-                                          required:
-                                            - original_id
-                                            - id
-                                            - type
-                                            - excerpt
-                                            - url
-                                            - voteup_count
-                                            - comment_count
-                                            - favorites_count
-                                            - created_time
-                                            - updated_time
-                                            - content
-                                            - thumbnail_info
-                                            - relationship
-                                            - question
-                                            - author
-                                            - is_anonymous
-                                            - is_zhi_plus
-                                            - is_zhi_plus_content
-                                            - extra
-                                            - health_tag
-                                            - answer_type
-                                            - sub_content_type
-                                            - settings
-                                            - attached_info_bytes
-                                            - biz_encoded_params
-                                            - answer_count
-                                            - visits_count
-                                            - description
-                                            - title
-                                            - native
-                                            - doc_relevance_scores
-                                            - bert_rel
-                                        type:
-                                          type: string
-                                        index:
-                                          type: integer
-                                      required:
-                                        - object
-                                        - type
-                                        - index
-                                required:
-                                  - object
-                                  - type
-                                  - index
-                                  - sub_contents
-                            questions_pv_count:
-                              type: integer
-                            original_id:
-                              type: string
-                            id:
-                              type: string
                             excerpt:
                               type: string
                             voteup_count:
                               type: integer
                             comment_count:
                               type: integer
-                            favorites_count:
-                              type: integer
+                            zfav_count:
+                              anyOf:
+                                - type: integer
+                                - type: "null"
                             created_time:
                               type: integer
                             updated_time:
                               type: integer
-                            content:
-                              anyOf:
-                                - type: string
-                                - type: "null"
-                                - type: array
-                                  items:
-                                    type: object
                             thumbnail_info:
                               type: object
-                              properties:
-                                count:
-                                  type: integer
-                                thumbnails:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      data_url:
-                                        type: string
-                                      url:
-                                        type: string
-                                        description: URL
-                                      type:
-                                        type: string
-                                      width:
-                                        type: integer
-                                      height:
-                                        type: integer
-                                    required:
-                                      - data_url
-                                      - url
-                                      - type
-                                      - width
-                                      - height
-                                type:
-                                  type: string
-                                total_count:
-                                  type: integer
-                              required:
-                                - count
-                                - thumbnails
-                                - type
-                                - total_count
-                            relationship:
-                              type: object
-                              properties:
-                                voting:
-                                  type: integer
-                                is_author:
-                                  type: boolean
-                                is_thanked:
-                                  type: boolean
-                                is_nothelp:
-                                  type: boolean
-                                following_upvoter:
-                                  type: array
-                                  items:
-                                    type: object
-                                    description: Object with variable structure
-                                following_upvoter_count:
-                                  type: integer
-                                following_collect:
-                                  type: array
-                                  items:
-                                    type: object
-                                    description: Object with variable structure
-                                following_collect_count:
-                                  type: integer
-                                high_level_creator:
-                                  type: array
-                                  items:
-                                    type: object
-                                    description: Object with variable structure
-                                high_level_creator_count:
-                                  type: integer
-                                is_following:
-                                  type: boolean
-                                is_voted:
-                                  type: boolean
-                              required:
-                                - is_author
-                                - following_upvoter
-                                - following_upvoter_count
-                                - following_collect
-                                - following_collect_count
-                                - high_level_creator
-                                - high_level_creator_count
-                            question:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                type:
-                                  type: string
-                                name:
-                                  type: string
-                                url:
-                                  type: string
-                                  description: URL
-                                answer_count:
-                                  type: integer
-                                follow_count:
-                                  type: integer
-                                attached_info_bytes:
-                                  type: string
-                              required:
-                                - id
-                                - type
-                                - name
-                                - url
-                                - answer_count
-                                - follow_count
-                                - attached_info_bytes
                             author:
                               type: object
                               properties:
@@ -3482,454 +977,39 @@ paths:
                                   type: string
                                 headline:
                                   type: string
-                                gender:
-                                  type: integer
-                                is_followed:
-                                  type: boolean
-                                is_following:
-                                  type: boolean
-                                user_type:
-                                  type: string
-                                url:
-                                  type: string
-                                  description: URL
-                                type:
-                                  type: string
                                 avatar_url:
                                   type: string
                                   description: URL
-                                badge:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      type:
-                                        type: string
-                                      description:
-                                        type: string
-                                      topics:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            id:
-                                              type: string
-                                            name:
-                                              type: string
-                                            introduction:
-                                              type: string
-                                            excerpt:
-                                              type: string
-                                            type:
-                                              type: string
-                                            url:
-                                              type: string
-                                              description: URL
-                                            avatar_url:
-                                              type: string
-                                              description: URL
-                                          required:
-                                            - id
-                                            - name
-                                            - introduction
-                                            - excerpt
-                                            - type
-                                            - url
-                                            - avatar_url
-                                    required:
-                                      - type
-                                      - description
-                                      - topics
-                                authority_info:
-                                  anyOf:
-                                    - type: "null"
-                                    - type: array
-                                      items:
-                                        type: object
-                                        properties:
-                                          company:
-                                            type: string
-                                          job:
-                                            type: string
-                                          name:
-                                            type: string
-                                          verify_info:
-                                            type: string
-                                          verify_info_bayes:
-                                            type: string
-                                        required:
-                                          - company
-                                          - job
-                                          - name
-                                          - verify_info
-                                          - verify_info_bayes
-                                voteup_count:
-                                  type: integer
-                                follower_count:
-                                  type: integer
-                                badge_v2:
-                                  type: object
+                            question:
+                              anyOf:
+                                - type: object
                                   properties:
+                                    id:
+                                      type: string
                                     title:
                                       type: string
-                                    merged_badges:
-                                      type: array
-                                      items:
-                                        type: object
-                                        properties:
-                                          type:
-                                            type: string
-                                          detail_type:
-                                            type: string
-                                          title:
-                                            type: string
-                                          description:
-                                            type: string
-                                          url:
-                                            type: string
-                                          sources:
-                                            type: array
-                                            items:
-                                              type: object
-                                              description: Object with variable structure
-                                          icon:
-                                            type: string
-                                          night_icon:
-                                            type: string
-                                        required:
-                                          - type
-                                          - detail_type
-                                          - title
-                                          - description
-                                          - url
-                                          - sources
-                                          - icon
-                                          - night_icon
-                                    detail_badges:
-                                      type: array
-                                      items:
-                                        type: object
-                                        properties:
-                                          type:
-                                            type: string
-                                          detail_type:
-                                            type: string
-                                          title:
-                                            type: string
-                                          description:
-                                            type: string
-                                          url:
-                                            type: string
-                                          sources:
-                                            type: array
-                                            items:
-                                              type: object
-                                              properties:
-                                                id:
-                                                  type: string
-                                                token:
-                                                  type: string
-                                                type:
-                                                  type: string
-                                                url:
-                                                  type: string
-                                                name:
-                                                  type: string
-                                                avatar_path:
-                                                  type: string
-                                                avatar_url:
-                                                  type: string
-                                                description:
-                                                  type: string
-                                                priority:
-                                                  type: integer
-                                              required:
-                                                - id
-                                                - token
-                                                - type
-                                                - url
-                                                - name
-                                                - avatar_path
-                                                - avatar_url
-                                                - description
-                                                - priority
-                                          icon:
-                                            type: string
-                                            description: URL
-                                          night_icon:
-                                            type: string
-                                            description: URL
-                                        required:
-                                          - type
-                                          - detail_type
-                                          - title
-                                          - description
-                                          - url
-                                          - sources
-                                          - icon
-                                          - night_icon
-                                    icon:
+                                    url:
                                       type: string
-                                    night_icon:
+                                      description: URL
+                                    type:
                                       type: string
-                                  required:
-                                    - title
-                                    - merged_badges
-                                    - detail_badges
-                                    - icon
-                                    - night_icon
-                                badge_v2_string:
-                                  type: string
-                                topic_bayes_map:
-                                  type: "null"
-                                topic_map:
-                                  type: object
-                                  properties:
-                                    科幻:
-                                      type: string
-                                    科幻电影:
-                                      type: string
-                                    科普:
-                                      type: string
-                                    Android 开发:
-                                      type: string
-                                    Linux:
-                                      type: string
-                                    手机:
-                                      type: string
-                                    笔记本电脑:
-                                      type: string
-                                    编程:
-                                      type: string
-                                  required: []
-                                verify_bayes:
-                                  type: string
-                                old_badges:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      type:
-                                        type: string
-                                      description:
-                                        type: string
-                                      topics:
-                                        type: array
-                                        items:
-                                          type: object
-                                          properties:
-                                            id:
-                                              type: string
-                                            type:
-                                              type: string
-                                            url:
-                                              type: string
-                                              description: URL
-                                            name:
-                                              type: string
-                                            avatar_url:
-                                              type: string
-                                              description: URL
-                                          required:
-                                            - id
-                                            - type
-                                            - url
-                                            - name
-                                            - avatar_url
-                                    required:
-                                      - type
-                                      - description
-                              required:
-                                - id
-                                - url_token
-                                - name
-                                - headline
-                                - gender
-                                - is_followed
-                                - is_following
-                                - user_type
-                                - url
-                                - type
-                                - avatar_url
-                                - badge
-                                - authority_info
-                                - voteup_count
-                                - follower_count
-                                - badge_v2
-                                - badge_v2_string
-                                - topic_bayes_map
-                                - topic_map
-                                - verify_bayes
-                            is_anonymous:
-                              type: boolean
-                            flag:
-                              type: object
-                              properties:
-                                flag_type:
-                                  type: string
-                                flag_text:
-                                  type: string
-                              required:
-                                - flag_type
-                                - flag_text
-                            is_zhi_plus:
-                              type: boolean
-                            is_zhi_plus_content:
-                              type: boolean
-                            extra:
-                              type: string
-                            health_tag:
-                              type: string
-                            answer_type:
-                              type: string
-                            sub_content_type:
-                              type: string
-                            settings:
-                              type: object
-                              properties:
-                                table_of_contents:
-                                  type: object
-                                  properties:
-                                    enabled:
-                                      type: boolean
-                                  required:
-                                    - enabled
-                              required:
-                                - table_of_contents
-                            biz_encoded_params:
-                              type: string
-                            answer_count:
-                              type: integer
-                            visits_count:
-                              type: integer
-                            description:
-                              type: string
-                            native:
-                              type: integer
-                            doc_relevance_scores:
-                              type: "null"
-                            bert_rel:
-                              type: integer
-                            zfav_count:
-                              type: integer
-                            voting:
-                              type: integer
-                            article_type:
-                              type: string
-                          required:
-                            - attached_info_bytes
-                        hit_labels:
-                          type: "null"
-                        index:
-                          type: integer
-                        id:
-                          anyOf:
-                            - type: string
-                            - type: integer
-                        query_list:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              query:
-                                type: string
-                              id:
-                                type: string
-                              has_icon:
-                                type: boolean
-                              attached_info_bytes:
-                                type: string
-                            required:
-                              - query
-                              - id
-                              - has_icon
-                              - attached_info_bytes
-                        attached_info_bytes:
-                          type: string
-                        is_single_column:
-                          type: boolean
-                      required:
-                        - type
-                        - index
-                  hit_labels:
-                    type: "null"
-                  related_search_result:
-                    type: array
-                    items:
-                      type: object
-                      description: Object with variable structure
-                  search_action_info:
-                    type: object
-                    properties:
-                      attached_info_bytes:
-                        type: string
-                      lc_idx:
-                        type: integer
-                      search_hash_id:
-                        type: string
-                      isfeed:
-                        type: boolean
-                    required:
-                      - attached_info_bytes
-                      - lc_idx
-                      - search_hash_id
-                      - isfeed
-                  is_brand_word:
-                    type: boolean
-                  pendant:
-                    type: "null"
-                  sensitive_level:
-                    type: integer
-                  warning:
-                    type: string
-                  filter_items:
-                    type: "null"
-                  ab_params:
-                    type: string
-                  item_in_view:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                        index:
-                          type: integer
-                        token:
-                          type: string
-                      required:
-                        - type
-                        - index
-                  domain_info:
-                    type: object
-                    properties:
-                      first_category:
-                        type: string
-                    required:
-                      - first_category
-                  is_koc_words:
-                    type: boolean
-                  is_hit_koc_cache:
-                    type: boolean
+                                    answer_count:
+                                      type: integer
+                                    follower_count:
+                                      type: integer
+                                - type: "null"
                 required:
-                  - paging
                   - data
-                  - related_search_result
-                  - search_action_info
-                  - is_brand_word
-                  - sensitive_level
-                  - warning
-                  - ab_params
-                  - item_in_view
-                  - domain_info
-                  - is_koc_words
-                  - is_hit_koc_cache
   /api/v4/search/hot_search:
     get:
       operationId: getHotSearch
       summary: Get trending hot search terms — query text, display text, search count
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: zhihu-read
+          operation: getHotSearch
         build:
           stable_id: 11773b7de3ae021f
           tool_version: 2
@@ -3947,71 +1027,32 @@ paths:
                     items:
                       type: object
                       properties:
-                        query_id:
-                          type: string
                         query:
                           type: string
                         real_query:
                           type: string
-                        hot_source:
-                          type: integer
-                        label:
-                          type: string
-                        icon_url:
-                          type: string
-                        hot:
-                          type: integer
                         hot_show:
                           type: string
-                        search_source:
+                        label:
                           type: string
                         index:
                           type: integer
-                        redirect_link:
-                          type: string
-                        image_item:
-                          type: object
-                          properties:
-                            icon_url:
-                              type: string
-                            width:
-                              type: integer
-                            height:
-                              type: integer
-                          required:
-                            - icon_url
-                            - width
-                            - height
-                        attached_info:
-                          type: string
                       required:
-                        - query_id
                         - query
-                        - real_query
-                        - hot_source
-                        - label
-                        - icon_url
-                        - hot
                         - hot_show
-                        - search_source
                         - index
-                        - redirect_link
-                        - image_item
-                        - attached_info
-                  request_hash_id:
-                    type: string
-                  attached_info:
-                    type: string
                 required:
                   - hot_search_queries
-                  - request_hash_id
-                  - attached_info
   /api/v4/members/{url_token}/answers:
     get:
       operationId: getUserAnswers
       summary: Get a user's answer list — question titles, answer excerpts, vote counts, timestamps
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: zhihu-read
+          operation: getUserAnswers
         build:
           stable_id: zhihu0003
           tool_version: 1
@@ -4068,18 +1109,8 @@ paths:
                         type: boolean
                       totals:
                         type: integer
-                      previous:
-                        type: string
-                      is_start:
-                        type: boolean
                       next:
                         type: string
-                    required:
-                      - is_end
-                      - totals
-                      - previous
-                      - is_start
-                      - next
                   data:
                     type: array
                     items:
@@ -4089,21 +1120,10 @@ paths:
                           type: string
                         type:
                           type: string
-                        question:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            type:
-                              type: string
-                            title:
-                              type: string
-                            url:
-                              type: string
-                              description: URL
-                        excerpt:
+                        url:
                           type: string
-                        content:
+                          description: URL
+                        excerpt:
                           type: string
                         voteup_count:
                           type: integer
@@ -4127,12 +1147,25 @@ paths:
                             avatar_url:
                               type: string
                               description: URL
-                  need_force_login:
-                    type: boolean
+                        question:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            url:
+                              type: string
+                              description: URL
+                            type:
+                              type: string
+                            answer_count:
+                              type: integer
+                            follower_count:
+                              type: integer
                 required:
                   - paging
                   - data
-                  - need_force_login
   /api/v4/answers/{answer_id}/voters:
     post:
       operationId: upvoteAnswer

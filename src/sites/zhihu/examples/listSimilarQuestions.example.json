@@ -5,11 +5,6 @@
     {
       "input": {
         "id": 19550225,
-        "include": [
-          "data[*].answer_count",
-          "author",
-          "follower_count"
-        ],
         "limit": 1
       },
       "assertions": {

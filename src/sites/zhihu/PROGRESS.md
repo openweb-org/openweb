@@ -1,5 +1,46 @@
 # Zhihu (知乎) — Progress
 
+## 2026-04-24 — Userflow QA: response trimming via read adapter
+
+**Personas tested:**
+1. 大学生备考研究生 — searchContent("计算机考研经验") → getMember → getUserAnswers → listSimilarQuestions
+2. 创业者 — getHotSearch → searchContent("AI创业2026") → getMember → listMemberActivities
+3. 技术人员 — searchContent("Rust语言入门") → listQuestionFollowers → listSimilarQuestions → getEntityWord → getFeedRecommend
+
+All 11 read ops returned HTTP 200 with valid data.
+
+**Findings:**
+- P0: searchContent 154KB/5 items — 13 top-level noise keys, 15+ noise fields per item, full HTML `content`
+- P0: getFeedRecommend 99KB/6 items — full HTML content per target, action_card/attached_info noise
+- P0: listMemberActivities 169KB/8 items — one article had 74KB HTML content
+- P0: getUserAnswers 12KB/3 items — 37 fields per answer, 25+ noise
+- P1: getMember `include` param type:array serialized as multiple query params but Zhihu expects comma-separated — `follower_count`, `answer_count` silently missing
+- P1: getMe/getHotSearch moderate bloat (vip_info, kvip_info, attached_info noise)
+- P1: listMemberActivities schema mismatch (badge/content type polymorphism)
+
+**Changes:**
+- Created `adapters/zhihu-read.ts` — handles 7 read ops (searchContent, getFeedRecommend, listMemberActivities, getUserAnswers, getMember, getMe, getHotSearch) with field-level response trimming via `readTokenCache` + `nodeFetch`.
+- Fixed `include` param on getMember/listMemberMutuals/listSimilarQuestions — changed from `type: array` to `type: string` with comma-separated defaults. getMember now returns `follower_count`, `answer_count` by default.
+- Removed getMe `include` param (adapter handles internally).
+- Updated openapi.yaml response schemas for all 7 adapter ops to match trimmed output.
+- Updated 4 example files (getMe, getMember, listMemberMutuals, listSimilarQuestions) to remove array include params.
+- 4 non-adapter read ops (getEntityWord, listSimilarQuestions, listQuestionFollowers, listMemberMutuals) left on normal node transport — responses already clean.
+
+**Size reduction:**
+| Operation | Before | After | Reduction |
+|---|---|---|---|
+| searchContent (5) | 154,793 | 5,309 | 97% |
+| getFeedRecommend (6) | 98,932 | 8,061 | 92% |
+| listMemberActivities (7) | 169,390 | 11,366 | 93% |
+| getUserAnswers (3) | 12,063 | ~3,500 | 71% |
+| getHotSearch (30) | 22,226 | 4,220 | 81% |
+| getMe | ~1,077 | ~350 | 68% |
+| getMember | ~1,041 | ~450 | 57% (+ now includes follower_count/answer_count) |
+
+**Key files:** `src/sites/zhihu/adapters/zhihu-read.ts`, `src/sites/zhihu/openapi.yaml`
+**Verification:** `pnpm dev verify zhihu` — 10/10 PASS.
+
+---
 ## 2026-04-11 — Discovery & Implementation
 
 ## What was done
