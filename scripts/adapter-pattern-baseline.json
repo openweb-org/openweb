@@ -1,5 +1,5 @@
 {
-  "generated": "2026-04-23",
+  "generated": "2026-04-24",
   "note": "Baseline pattern counts per site. See scripts/adapter-pattern-report.ts — ratcheting down is the unit of forward progress for normalize-adapter. Refresh via --write-baseline only after counts legitimately drop.",
   "counts": {
     "airbnb": {
@@ -109,7 +109,7 @@
       "page_goto": 1
     },
     "producthunt": {
-      "page_goto": 1
+      "page_goto": 2
     },
     "quora": {
       "page_goto": 1,
