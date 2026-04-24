@@ -1,3 +1,24 @@
+## 2026-04-24: Userflow QA — response trimming and fixes
+
+**What changed:**
+- All 12 read ops moved to adapter-backed with response trimming. Stripped 50–100+ internal fields per response (strong_id__, fbid_v2, client_cache_key, integrity_review_decision, organic_tracking_token, etc.).
+- getUserPosts: 110KB→17KB (3 posts). Items trimmed to pk/id/code/media_type/taken_at/caption/like_count/comment_count/image_versions2/video_versions/carousel_media/user.
+- getExplore: 739KB→110KB. Fixed schema mismatch — actual API returns `fill_items` + `one_by_two_item.clips.items` not `medias`. Adapter flattens to a single `items[]` array.
+- getUserProfile: massive blob→1.5KB. Stripped 40+ internal fields (business_*, guardian_*, transparency_*, edge_mutual_followed_by, etc.).
+- getReels: 94KB→11KB. Added `play_count` to trimmed media shape.
+- getNotifications: trimmed to counts + notification text/profile/timestamp.
+- searchUsers: trimmed user objects, removed `include_reel` header params.
+- getFollowers/getFollowing: stripped internal user fields (strong_id__, fbid_v2, account_badges, etc.), stringify `next_max_id` for type consistency.
+- getStories/getPostComments/getPost/getFeed: all trimmed.
+- Removed all `x-ig-app-id`/`x-requested-with` header parameters from spec — adapter handles internally.
+- Updated openapi.yaml response schemas to match trimmed output.
+
+**Why:**
+- Blind userflow QA: 3 personas (small business owner: search Nike + browse posts, influencer: profile stats + notifications + followers, travel blogger: search bali + explore + stories + reels). All 12 read ops functional. Main gap: raw Instagram API responses with 50–100+ internal/noisy fields per item, making responses 5–10x larger than useful content.
+
+**Key files:** `src/sites/instagram/adapters/instagram-api.ts`, `src/sites/instagram/openapi.yaml`.
+**Verification:** `pnpm dev verify instagram` — 12/12 PASS.
+
 ## 2026-04-20 — 24/24 PASS confirmed after cookie refresh (handoff5)
 
 **Context:** Handoff4 read-side regressed because the orphan-Chrome cleanup gap from §3.1 left several ops hitting a dead browser handle. Write-side already-recovered ops from earlier sessions remained intact.
