@@ -17,39 +17,18 @@ paths:
       summary: Get CNN front-page headlines — title, url, content type
       x-openweb:
         permission: read
+        adapter:
+          name: cnn
+          operation: getHeadlines
+        page_plan:
+          entry_url: https://www.cnn.com/
         build:
           verified: true
           stable_id: cnn0001
           signature_id: cnn0001s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - dom
-        extraction:
-          type: page_global_data
-          page_url: /
-          expression: |
-            (() => {
-              const cards = document.querySelectorAll('[data-component-name="card"]');
-              const seen = new Set();
-              const items = [];
-              for (const card of cards) {
-                const link = card.querySelector('a[href]');
-                if (!link) continue;
-                const href = link.getAttribute('href');
-                if (!href || seen.has(href)) continue;
-                seen.add(href);
-                const headlineEl = card.querySelector('.container__headline-text');
-                const title = headlineEl?.textContent?.trim();
-                if (!title) continue;
-                const linkType = link.getAttribute('data-link-type') || null;
-                items.push({
-                  title,
-                  url: href.startsWith('/') ? href : new URL(href).pathname,
-                  contentType: linkType,
-                });
-              }
-              return { count: items.length, items };
-            })()
+            - adapter-verified
       parameters: []
       responses:
         '200':
@@ -86,43 +65,18 @@ paths:
       summary: Get a CNN article — title, body, author, published date, section
       x-openweb:
         permission: read
+        adapter:
+          name: cnn
+          operation: getArticle
+        page_plan:
+          entry_url: https://www.cnn.com/{slug}
         build:
           verified: true
           stable_id: cnn0002
           signature_id: cnn0002s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - ld_json
-        extraction:
-          type: page_global_data
-          page_url: /{slug}
-          expression: |
-            (() => {
-              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-              let article = null;
-              for (const s of scripts) {
-                try {
-                  const data = JSON.parse(s.textContent);
-                  const items = Array.isArray(data) ? data : [data];
-                  for (const item of items) {
-                    if (item['@type'] === 'NewsArticle') { article = item; break; }
-                  }
-                } catch {}
-                if (article) break;
-              }
-              if (!article) return null;
-              const authors = (article.author || []).map(a => typeof a === 'string' ? a : a.name).filter(Boolean);
-              return {
-                title: article.headline || null,
-                description: article.description || null,
-                author: authors.join(', ') || null,
-                publishedAt: article.datePublished || null,
-                modifiedAt: article.dateModified || null,
-                section: (article.articleSection || [])[0] || null,
-                body: article.articleBody || null,
-                thumbnail: article.thumbnailUrl || null,
-              };
-            })()
+            - adapter-verified
       parameters:
         - name: slug
           in: path
@@ -171,47 +125,18 @@ paths:
       summary: Search CNN for articles — title, url, description, date
       x-openweb:
         permission: read
+        adapter:
+          name: cnn
+          operation: searchArticles
+        page_plan:
+          entry_url: https://www.cnn.com/search
         build:
           verified: true
           stable_id: cnn0003
           signature_id: cnn0003s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - dom
-        extraction:
-          type: page_global_data
-          page_url: /search
-          expression: |
-            (async () => {
-              const poll = (sel, ms, max) => new Promise((res) => {
-                let t = 0;
-                const id = setInterval(() => {
-                  t += ms;
-                  if (document.querySelectorAll(sel).length > 0 || t >= max) { clearInterval(id); res(); }
-                }, ms);
-              });
-              await poll('[data-component-name="card"] .container__headline-text', 200, 8000);
-              const cards = document.querySelectorAll('[data-component-name="card"]');
-              const items = [];
-              for (const card of cards) {
-                const link = card.querySelector('a[href]');
-                if (!link) continue;
-                const href = link.getAttribute('href');
-                if (!href) continue;
-                const headlineEl = card.querySelector('.container__headline-text');
-                const title = headlineEl?.textContent?.trim();
-                if (!title) continue;
-                const descEl = card.querySelector('.container__description');
-                const dateEl = card.querySelector('.container__date');
-                items.push({
-                  title,
-                  url: href.startsWith('http') ? new URL(href).pathname : href,
-                  description: descEl?.textContent?.trim() || null,
-                  date: dateEl?.textContent?.trim() || null,
-                });
-              }
-              return { count: items.length, results: items };
-            })()
+            - adapter-verified
       parameters:
         - name: q
           in: query
