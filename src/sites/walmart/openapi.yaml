@@ -12,23 +12,21 @@ paths:
   /search:
     get:
       operationId: searchProducts
-      summary: Search products — name, usItemId, linePrice, averageRating, canonicalUrl
+      summary: Search products — name, usItemId, linePrice, averageRating, brand, thumbnailUrl
       x-openweb:
         permission: read
         transport: page
         page_plan:
           warm: true
-          settle_ms: 3000
-          wait_until: domcontentloaded
         build:
           stable_id: wm0002
           tool_version: 1
           verified: true
           signals:
-          - next_data
-        extraction:
-          type: ssr_next_data
-          path: props.pageProps.initialData.searchResult
+          - adapter-verified
+        adapter:
+          name: walmart-read
+          operation: searchProducts
       parameters:
       - name: q
         in: query
@@ -45,59 +43,54 @@ paths:
                 type: object
                 properties:
                   title:
-                    type: string
+                    type: [string, "null"]
                   count:
                     type: integer
-                  itemStacks:
+                  items:
                     type: array
                     items:
                       type: object
                       properties:
-                        title:
+                        usItemId:
                           type: string
-                        count:
-                          type: integer
-                        items:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              name:
-                                type: string
-                              usItemId:
-                                type: string
-                              canonicalUrl:
-                                type: string
-                              averageRating:
-                                type:
-                                - number
-                                - 'null'
-                              priceInfo:
-                                type: object
-                                properties:
-                                  linePrice:
-                                    type: string
-                                  wasPrice:
-                                    type: string
-                                  savings:
-                                    type: string
+                        name:
+                          type: string
+                        brand:
+                          type: [string, "null"]
+                        canonicalUrl:
+                          type: [string, "null"]
+                        averageRating:
+                          type: [number, "null"]
+                        numberOfReviews:
+                          type: [integer, "null"]
+                        linePrice:
+                          type: [string, "null"]
+                        wasPrice:
+                          type: [string, "null"]
+                        savings:
+                          type: [string, "null"]
+                        thumbnailUrl:
+                          type: [string, "null"]
                 required:
-                - itemStacks
+                - items
   /ip/{slug}/{itemId}:
     get:
       operationId: getProductDetail
-      summary: Get product detail — name, brand, priceInfo, averageRating, numberOfReviews, imageInfo
+      summary: Get product detail — name, brand, priceInfo, averageRating, numberOfReviews, imageInfo, sellerName
       x-openweb:
         permission: read
+        transport: page
+        page_plan:
+          warm: true
         build:
           stable_id: wm0003
           tool_version: 1
           verified: true
           signals:
-          - next_data
-        extraction:
-          type: ssr_next_data
-          path: props.pageProps.initialData.data.product
+          - adapter-verified
+        adapter:
+          name: walmart-read
+          operation: getProductDetail
       parameters:
       - name: slug
         in: path
@@ -119,18 +112,21 @@ paths:
               schema:
                 type: object
                 properties:
+                  usItemId:
+                    type: [string, "null"]
                   name:
                     type: string
                   brand:
-                    type: string
+                    type: [string, "null"]
                   shortDescription:
-                    type: string
+                    type: [string, "null"]
+                    description: Product description (truncated to 500 chars)
                   averageRating:
-                    type: number
+                    type: [number, "null"]
                   numberOfReviews:
-                    type: integer
+                    type: [integer, "null"]
                   canonicalUrl:
-                    type: string
+                    type: [string, "null"]
                   priceInfo:
                     type: object
                     properties:
@@ -138,47 +134,64 @@ paths:
                         type: object
                         properties:
                           price:
-                            type: number
+                            type: [number, "null"]
                           priceString:
-                            type: string
+                            type: [string, "null"]
                       wasPrice:
-                        type:
-                        - object
-                        - 'null'
+                        type: [object, "null"]
                         properties:
                           price:
-                            type: number
+                            type: [number, "null"]
                           priceString:
-                            type: string
+                            type: [string, "null"]
+                      unitPrice:
+                        type: [string, "null"]
+                        description: Formatted unit price (e.g. "14.3 ¢/fl oz")
+                      savingsAmount:
+                        type: [object, "null"]
+                        properties:
+                          amount:
+                            type: [number, "null"]
+                          priceString:
+                            type: [string, "null"]
+                      isPriceReduced:
+                        type: boolean
                   imageInfo:
                     type: object
                     properties:
                       thumbnailUrl:
-                        type: string
+                        type: [string, "null"]
                       allImages:
                         type: array
                         items:
                           type: object
                           properties:
                             url:
-                              type: string
+                              type: [string, "null"]
+                  availabilityStatus:
+                    type: [string, "null"]
+                  sellerName:
+                    type: [string, "null"]
                 required:
                 - name
   /ip/{itemId}:
     get:
       operationId: getProductPricing
-      summary: Get product pricing — currentPrice, wasPrice, savingsAmount, isPriceReduced
+      summary: Get product pricing — currentPrice, wasPrice, unitPrice, savingsAmount, isPriceReduced
       x-openweb:
         permission: read
+        transport: page
+        page_plan:
+          warm: true
         build:
           stable_id: wm0004
           tool_version: 1
           verified: true
           signals:
-          - next_data
-        extraction:
-          type: ssr_next_data
-          path: props.pageProps.initialData.data.product.priceInfo
+          - adapter-verified
+        adapter:
+          name: walmart-read
+          operation: getProductPricing
       parameters:
       - name: itemId
         in: path
@@ -198,29 +211,28 @@ paths:
                     type: object
                     properties:
                       price:
-                        type: number
+                        type: [number, "null"]
                       priceString:
-                        type: string
+                        type: [string, "null"]
                       currencyUnit:
-                        type: string
+                        type: [string, "null"]
                   wasPrice:
-                    type:
-                    - object
-                    - 'null'
+                    type: [object, "null"]
                     properties:
                       price:
-                        type: number
+                        type: [number, "null"]
                       priceString:
-                        type: string
+                        type: [string, "null"]
+                  unitPrice:
+                    type: [string, "null"]
+                    description: Formatted unit price (e.g. "14.3 ¢/fl oz")
                   savingsAmount:
-                    type:
-                    - object
-                    - 'null'
+                    type: [object, "null"]
                     properties:
                       amount:
-                        type: number
+                        type: [number, "null"]
                       priceString:
-                        type: string
+                        type: [string, "null"]
                   isPriceReduced:
                     type: boolean
                 required:

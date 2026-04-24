@@ -54,7 +54,7 @@ openweb walmart exec removeFromCart '{"usItemId": "5113175776"}'
 ## Site Internals
 
 ## API Architecture
-- **Read ops (SSR-only)** — no public REST/GraphQL endpoints accessible without auth headers
+- **Read ops (adapter)** — `walmart-read` adapter fetches HTML via in-page `fetch()`, parses `__NEXT_DATA__`, returns trimmed fields. Avoids both PerimeterX CDP blocks and oversized raw SSR responses.
 - Internal APIs (`/orchestra/*/graphql`) return 418 to direct requests
 - Affiliate API (`developer.api.walmart.com`) requires security headers (API key)
 - All useful read data is embedded in `__NEXT_DATA__` within the SSR HTML
@@ -73,14 +73,14 @@ openweb walmart exec removeFromCart '{"usItemId": "5113175776"}'
 - `requires_auth: false`
 
 ## Transport
-- Read ops: `transport: node` — direct HTTP fetch from Node.js, SSR extraction
+- Read ops: `transport: page` — adapter does in-page `fetch()` from warm walmart.com page, parses `__NEXT_DATA__` from HTML response
 - Write ops: `transport: page` — browser-based adapter, requires walmart.com page open in CDP browser
 
 ## Extraction
-- Read ops: `ssr_next_data` on all 3 read operations
-  - Search: `props.pageProps.initialData.searchResult`
-  - Product detail: `props.pageProps.initialData.data.product`
-  - Pricing: `props.pageProps.initialData.data.product.priceInfo`
+- Read ops: adapter-based — `walmart-read` adapter fetches HTML, parses `__NEXT_DATA__`, trims to essential fields
+  - Search: ~20 items with usItemId, name, brand, prices, rating, thumbnail
+  - Product detail: name, brand, description (500 chars), priceInfo, imageInfo (5 images), availability, seller
+  - Pricing: currentPrice, wasPrice, unitPrice, savingsAmount, isPriceReduced
 - Write ops: adapter handles extraction internally
   - Product offerId from SSR `__NEXT_DATA__` via in-page fetch
   - Cart data from GraphQL response

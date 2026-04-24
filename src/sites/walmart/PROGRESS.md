@@ -38,6 +38,23 @@
 **Key discovery:** Walmart's orchestra gateway uses two-tier rejection — PerimeterX 418 for unrecognized clients (no orchestra headers) and a 429 rate-limit for recognized clients exceeding burst quota. The transition between the two is the cleanest health signal for "is my code right".
 **Pitfalls:** Initially attempted to add only `x-o-bu` — still 418. The full Glass header set is required as a bundle; partial sets are still classified as anomalous by the bot detector.
 
+## 2026-04-24 — Userflow QA: response trimming via adapter
+
+**Context:** Blind persona QA (budget family→laundry detergent, parent→organic milk, student→desk lamp) across all 3 read ops revealed massive untrimmed responses: searchProducts 400-600KB, getProductDetail 16-32KB, getProductPricing ~1KB. All ops returned raw `__NEXT_DATA__` subtrees with 100+ fields per item. Schema mismatch: `averageRating`/`numberOfReviews` null on variant products but schema required number/integer.
+
+**Changes:**
+- Created `adapters/walmart-read.ts` — adapter for all 3 read ops using in-page `fetch()` + `__NEXT_DATA__` parse + field trimming. Same pattern as the cart adapter's product fetch (proven to bypass PerimeterX).
+- `searchProducts`: 591KB→11KB. Deduplicates items across itemStacks, caps at 20 items. Returns flat `{title, count, items[]}` instead of nested `itemStacks[]` with 100+ fields per item.
+- `getProductDetail`: 30KB→~1.5KB (inline, no file spill). Returns only name, brand, shortDescription (capped 500 chars), averageRating, numberOfReviews, priceInfo (trimmed), imageInfo (max 5 images), availabilityStatus, sellerName.
+- `getProductPricing`: ~1KB→~200B. Returns only currentPrice, wasPrice, unitPrice, savingsAmount, isPriceReduced.
+- All 3 read ops switched from `ssr_next_data` extraction to adapter-based. Transport for getProductDetail/getProductPricing changed from `node` to `page` (adapter needs warm walmart.com page for in-page fetch).
+- Fixed schema: `averageRating` and `numberOfReviews` now `[number, "null"]`/`[integer, "null"]` in both search and detail schemas. Nullable types on all optional fields.
+- Updated manifest stats: l1_count 3→0, l3_count 2→5.
+
+**Verification:** `pnpm dev verify walmart` → 3/3 PASS (searchProducts, getProductDetail, getProductPricing). Full persona QA: 9/9 calls succeed across all 3 personas.
+
+**Pitfalls:** The `.js` build artifact must be synced (`pnpm build`) when editing adapter `.ts` files — the adapter loader prefers `.ts` in dev mode but stale `.js` can shadow changes in edge cases.
+
 ## 2026-04-20 — Cart 429 root-caused; searchProducts→page; full PASS
 
 **Context:** Stage 5e re-verification of walmart against the user's "I can do everything manually in default Chrome" baseline. Handoff5 had walmart at 2/4 with `removeFromCart` classified as "per-account 429 quota" and `searchProducts` classified as page-handle lifecycle bug.
