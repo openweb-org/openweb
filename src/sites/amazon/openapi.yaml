@@ -140,23 +140,6 @@ paths:
             type: string
           description: "Amazon Standard Identification Number (10-char alphanumeric)"
           example: "B00MVWGQX0"
-        - name: pageNumber
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: Review page number (default 1)
-          example: 1
-        - name: sortBy
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - recent
-              - helpful
-          description: Sort order for reviews
-          example: "recent"
       responses:
         "200":
           description: Product reviews list.

@@ -1,3 +1,23 @@
+## 2026-04-24: Userflow QA — response trimming and fixes
+
+**Personas tested:**
+1. Parent — searched "kids backpack", checked reviews
+2. Tech enthusiast — searched "wireless noise cancelling headphones", checked detail
+3. Home chef — searched "cast iron skillet", checked detail and reviews
+
+**What changed:**
+- searchProducts: fixed grid-layout title extraction — Amazon renders brand in h2 and product name in separate `a.s-line-clamp` element; now combines both when they differ
+- getProductReviews: switched from `/product-reviews/` (now requires sign-in, returned empty) to extracting reviews from `/dp/` product page; fixed title selector that picked up star rating text instead of actual title; removed pageNumber/sortBy params from spec (product page shows top ~8 reviews, no pagination)
+- getProductDetail: cleaned brand field (strip "Visit the X Store" prefix/suffix), added fallback to product overview table when `#bylineInfo` absent; stripped parentheses from reviewCount; fixed description selector that returned heading text "Product Description" instead of content
+- getBestSellers: added domain prefix to relative links
+
+**Why:**
+- searchProducts grid layout is served for certain categories (kids products, apparel) — brand-only titles made results unusable for agents
+- Amazon's standalone reviews page now requires authentication, breaking getProductReviews entirely
+- Brand/reviewCount/description issues produced noisy or incorrect data for agents
+
+**Verification:** pnpm dev verify amazon pending
+
 ## 2026-04-09: Add cart operations (addToCart, getCart)
 
 **What changed:**

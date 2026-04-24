@@ -31,14 +31,19 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
       const cards = document.querySelectorAll('[data-component-type="s-search-result"]');
       return {
         resultCount: cards.length,
-        items: [...cards].map(c => ({
-          asin: c.getAttribute('data-asin') || '',
-          title: c.querySelector('h2 span')?.textContent?.trim() || '',
-          price: c.querySelector('.a-price .a-offscreen')?.textContent?.trim() || '',
-          rating: c.querySelector('.a-icon-alt')?.textContent?.trim() || '',
-          link: 'https://www.amazon.com' + (c.querySelector('h2 a, a.a-link-normal.s-no-outline')?.getAttribute('href') || ''),
-          image: c.querySelector('img.s-image')?.getAttribute('src') || '',
-        })).filter(p => p.asin),
+        items: [...cards].map(c => {
+          const brand = c.querySelector('h2 span')?.textContent?.trim() || '';
+          const productName = c.querySelector('a[class*="s-line-clamp"] span')?.textContent?.trim() || '';
+          const title = productName && productName !== brand ? brand + ' ' + productName : brand;
+          return {
+            asin: c.getAttribute('data-asin') || '',
+            title,
+            price: c.querySelector('.a-price .a-offscreen')?.textContent?.trim() || '',
+            rating: c.querySelector('.a-icon-alt')?.textContent?.trim() || '',
+            link: 'https://www.amazon.com' + (c.querySelector('h2 a, a.a-link-normal.s-no-outline')?.getAttribute('href') || ''),
+            image: c.querySelector('img.s-image')?.getAttribute('src') || '',
+          };
+        }).filter(p => p.asin),
       };
     })()
   `)
@@ -53,14 +58,18 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
     (() => {
       const g = (sel) => document.querySelector(sel)?.textContent?.trim() || '';
       const a = (sel, attr) => document.querySelector(sel)?.getAttribute(attr) || '';
+      const rawBrand = g('#bylineInfo');
+      const brand = rawBrand
+        ? rawBrand.replace(/^Visit the\\s+/i, '').replace(/\\s+Store$/i, '').replace(/^Brand:\\s*/i, '')
+        : [...document.querySelectorAll('#productOverview_feature_div tr')].find(r => r.querySelector('td:first-child span')?.textContent?.trim() === 'Brand')?.querySelector('td:last-child span')?.textContent?.trim() || '';
       return {
         name: g('#productTitle'),
         price: g('.a-price .a-offscreen'),
-        brand: g('#bylineInfo'),
+        brand,
         rating: g('#acrPopover .a-icon-alt'),
-        reviewCount: g('#acrCustomerReviewText'),
+        reviewCount: g('#acrCustomerReviewText').replace(/[()]/g, ''),
         image: a('#landingImage, #imgBlkFront', 'src'),
-        description: g('#productDescription p, #productDescription span'),
+        description: g('#productDescription p'),
         features: [...document.querySelectorAll('#feature-bullets li span.a-list-item')]
           .map(e => e.textContent?.trim())
           .filter(Boolean),
@@ -72,27 +81,27 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
 async function getProductReviews(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const asin = String(params.asin || '')
   if (!asin) throw errors.missingParam('asin')
-  const pageNum = Number(params.pageNumber) || 1
-  const sortBy = String(params.sortBy || 'helpful')
-  let url = `https://www.amazon.com/product-reviews/${asin}?sortBy=${sortBy}`
-  if (pageNum > 1) url += `&pageNumber=${pageNum}`
-  await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
+  await page.goto(`https://www.amazon.com/dp/${asin}`, { waitUntil: 'load', timeout: 30_000 })
   await wait(3000)
   return page.evaluate(`
     (() => {
       const overallRating = document.querySelector('[data-hook="rating-out-of-text"]')?.textContent?.trim() || '';
-      const totalReviews = document.querySelector('[data-hook="cr-filter-info-review-rating-count"]')?.textContent?.trim() || '';
+      const totalReviews = (document.querySelector('#acrCustomerReviewText')?.textContent?.trim() || '').replace(/[()]/g, '');
       const reviews = document.querySelectorAll('[data-hook="review"]');
       return {
         overallRating,
         totalReviews,
-        items: [...reviews].map(r => ({
-          rating: r.querySelector('[data-hook="review-star-rating"] .a-icon-alt')?.textContent?.trim() || '',
-          title: r.querySelector('[data-hook="review-title"] span:not(.a-icon-alt)')?.textContent?.trim() || '',
-          body: r.querySelector('[data-hook="review-body"] span')?.textContent?.trim() || '',
-          author: r.querySelector('.a-profile-name')?.textContent?.trim() || '',
-          date: r.querySelector('[data-hook="review-date"]')?.textContent?.trim() || '',
-        })),
+        items: [...reviews].map(r => {
+          const titleSpans = r.querySelectorAll('[data-hook="review-title"] > span');
+          const title = [...titleSpans].map(s => s.textContent?.trim()).filter(t => t && !t.includes('out of 5 stars')).pop() || '';
+          return {
+            rating: r.querySelector('[data-hook="review-star-rating"] .a-icon-alt')?.textContent?.trim() || '',
+            title,
+            body: r.querySelector('[data-hook="review-body"] span')?.textContent?.trim() || '',
+            author: r.querySelector('.a-profile-name')?.textContent?.trim() || '',
+            date: r.querySelector('[data-hook="review-date"]')?.textContent?.trim() || '',
+          };
+        }),
       };
     })()
   `)
@@ -273,12 +282,13 @@ async function getBestSellers(page: Page, _params: Record<string, unknown>) {
         items: [...items].map((el, i) => {
           const links = [...el.querySelectorAll('a')];
           const titleLink = links.find(a => a.textContent?.trim() && !a.textContent.includes('out of 5') && !a.textContent.startsWith('$'));
+          const href = titleLink?.getAttribute('href') || '';
           return {
             rank: i + 1,
             title: titleLink?.textContent?.trim() || '',
             price: el.querySelector('[class*="price"]')?.textContent?.trim() || '',
             rating: el.querySelector('.a-icon-alt')?.textContent?.trim() || '',
-            link: titleLink?.getAttribute('href') || '',
+            link: href && !href.startsWith('http') ? 'https://www.amazon.com' + href : href,
             image: el.querySelector('img')?.getAttribute('src') || '',
           };
         }).filter(p => p.title),
