@@ -9,7 +9,7 @@
     },
     "amazon": {
       "page_goto": 8,
-      "query_selector": 30
+      "query_selector": 32
     },
     "angellist": {
       "page_goto": 2,
@@ -27,13 +27,20 @@
       "page_on_response": 1,
       "query_selector": 2
     },
+    "cnn": {
+      "query_selector": 11
+    },
     "costco": {
       "page_goto": 3,
       "query_selector": 3
     },
     "craigslist": {
       "page_goto": 1,
-      "query_selector": 26
+      "query_selector": 24
+    },
+    "ebay": {
+      "page_goto": 1,
+      "query_selector": 18
     },
     "expedia": {
       "page_goto": 2,
@@ -103,7 +110,7 @@
     },
     "medium": {
       "page_goto": 2,
-      "query_selector": 11
+      "query_selector": 12
     },
     "opentable": {
       "page_goto": 1
@@ -141,7 +148,7 @@
     },
     "walmart": {
       "page_goto": 1,
-      "next_data": 7
+      "next_data": 16
     },
     "x": {
       "page_goto": 4,
