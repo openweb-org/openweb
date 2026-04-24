@@ -4,11 +4,8 @@
   "cases": [
     {
       "input": {
-        "mode": 1,
-        "oid": 1,
-        "pagination_str": "{\"offset\":\"\"}",
-        "plat": 1,
-        "seek_rpid": "",
+        "oid": 116193444954517,
+        "bvid": "BV1HPNgzFEoq",
         "type": 1
       },
       "assertions": {

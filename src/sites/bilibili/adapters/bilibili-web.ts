@@ -100,13 +100,49 @@ async function fetchApiViaPage(
 
 /* ---------- operation handlers ---------- */
 
+function stripEmTags(obj: unknown): unknown {
+  if (typeof obj === 'string') return obj.replace(/<\/?em[^>]*>/g, '')
+  if (Array.isArray(obj)) return obj.map(stripEmTags)
+  if (obj !== null && typeof obj === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) out[k] = stripEmTags(v)
+    return out
+  }
+  return obj
+}
+
+function trimSearchResponse(resp: unknown): unknown {
+  if (!isApiOk(resp)) return resp
+  const r = resp as Record<string, unknown>
+  const data = r.data as Record<string, unknown> | undefined
+  if (!data) return resp
+  const results = data.result as Array<Record<string, unknown>> | undefined
+  if (!Array.isArray(results)) return resp
+  const videoResults = results.find((r) => r.result_type === 'video')
+  const videos = videoResults?.data as Array<Record<string, unknown>> | undefined
+  if (!Array.isArray(videos)) return { ...r, data: { ...data, result: [] } }
+  const trimmedVideos = videos.map((v) => ({
+    type: v.type, bvid: v.bvid, aid: v.aid, mid: v.mid,
+    author: v.author, title: v.title, description: v.description,
+    pic: v.pic, play: v.play, danmaku: v.danmaku, like: v.like,
+    favorites: v.favorites, review: v.review, duration: v.duration,
+    pubdate: v.pubdate, tag: v.tag, typename: v.typename,
+  }))
+  return {
+    ...r,
+    data: {
+      page: data.page, pagesize: data.pagesize, numResults: data.numResults, numPages: data.numPages,
+      result: stripEmTags(trimmedVideos),
+    },
+  }
+}
+
 async function searchVideos(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
   const { errors } = helpers
   const keyword = String(params.keyword ?? '')
   if (!keyword) throw errors.missingParam('keyword')
   const pg = Number(params.page ?? 1)
 
-  // Navigate to search page — triggers the search API internally
   const searchUrl = `https://search.bilibili.com/all?keyword=${encodeURIComponent(keyword)}&page=${pg}`
   const resp = await interceptApiResponse(
     page,
@@ -114,24 +150,68 @@ async function searchVideos(page: Page, params: Readonly<Record<string, unknown>
     searchUrl,
   ).catch(() => null)
 
-  if (isApiOk(resp)) return resp
+  if (isApiOk(resp)) return trimSearchResponse(resp)
 
-  // Fallback: use in-page fetch (browser handles Wbi signing)
-  return fetchApiViaPage(page, '/x/web-interface/wbi/search/all/v2', {
+  const fallback = await fetchApiViaPage(page, '/x/web-interface/wbi/search/all/v2', {
     keyword,
     page: pg,
     page_size: params.page_size ?? 42,
     search_type: 'video',
   })
+  return trimSearchResponse(fallback)
+}
+
+function trimVideoDetail(resp: unknown): unknown {
+  if (!isApiOk(resp)) return resp
+  const r = resp as Record<string, unknown>
+  const data = r.data as Record<string, unknown> | undefined
+  if (!data?.View) return resp
+  const view = data.View as Record<string, unknown>
+  const stat = view.stat as Record<string, unknown> | undefined
+  const owner = view.owner as Record<string, unknown> | undefined
+  const pages = view.pages as Array<Record<string, unknown>> | undefined
+  return {
+    code: r.code, message: r.message, ttl: r.ttl,
+    data: {
+      View: {
+        bvid: view.bvid, aid: view.aid, cid: view.cid, title: view.title,
+        desc: view.desc, pic: view.pic, pubdate: view.pubdate, duration: view.duration,
+        videos: view.videos, tname: view.tname, copyright: view.copyright,
+        owner: owner ? { mid: owner.mid, name: owner.name, face: owner.face } : undefined,
+        stat: stat ? { view: stat.view, danmaku: stat.danmaku, reply: stat.reply, favorite: stat.favorite, coin: stat.coin, like: stat.like, share: stat.share } : undefined,
+        pages: pages?.map((p) => ({ cid: p.cid, page: p.page, part: p.part, duration: p.duration })),
+      },
+      Tags: data.Tags,
+      Card: data.Card ? { card: (data.Card as Record<string, unknown>).card } : undefined,
+    },
+  }
 }
 
 async function getVideoDetail(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
   const { errors } = helpers
   const bvid = String(params.bvid ?? '')
-  if (!bvid) throw errors.missingParam('bvid')
+  const aid = params.aid != null ? Number(params.aid) : undefined
+  if (!bvid && !aid) throw errors.missingParam('bvid')
 
-  // Use direct page.evaluate fetch — more reliable than intercepting
-  return fetchApiViaPage(page, '/x/web-interface/view', { bvid })
+  const videoUrl = bvid
+    ? `https://www.bilibili.com/video/${bvid}`
+    : `https://www.bilibili.com/video/av${aid}`
+
+  const resp = await interceptApiResponse(
+    page,
+    '/x/web-interface/wbi/view/detail',
+    videoUrl,
+    15000,
+    true,
+  ).catch(() => null)
+  if (isApiOk(resp)) return trimVideoDetail(resp)
+
+  const fallback = await fetchApiViaPage(page, '/x/web-interface/wbi/view/detail', {
+    ...(bvid ? { bvid } : {}),
+    ...(aid ? { aid } : {}),
+    need_view: 1,
+  })
+  return trimVideoDetail(fallback)
 }
 
 async function getPopularVideos(page: Page, params: Readonly<Record<string, unknown>>, _helpers: AdapterHelpers): Promise<unknown> {
@@ -151,28 +231,17 @@ async function getVideoComments(page: Page, params: Readonly<Record<string, unkn
   const { errors } = helpers
   const oid = Number(params.oid)
   if (!oid) throw errors.missingParam('oid')
-  const type = Number(params.type ?? 1)
-  const mode = Number(params.mode ?? 3)
-
-  // Try non-wbi reply endpoint first (doesn't require signing)
-  const result = await fetchApiViaPage(page, '/x/v2/reply/main', {
-    oid,
-    type,
-    mode,
-    pagination_str: JSON.stringify({ offset: '' }),
-  })
-  if (isApiOk(result)) return result
-
-  // Fallback: navigate to video page and intercept the wbi comment API
   const bvid = String(params.bvid ?? '')
-  if (bvid) {
-    return interceptApiResponse(
-      page,
-      '/x/v2/reply/wbi/main',
-      `https://www.bilibili.com/video/${bvid}`,
-    ).catch(() => result)
-  }
-  return result
+  if (!bvid) throw errors.missingParam('bvid')
+
+  const responsePromise = page.waitForResponse(
+    (resp: PwResponse) => resp.status() === 200 && resp.url().includes('/x/v2/reply/wbi/main'),
+    { timeout: 20000 },
+  )
+  await page.goto(`https://www.bilibili.com/video/${bvid}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  const resp = await responsePromise
+  return resp.json()
 }
 
 async function getUserInfo(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
@@ -180,36 +249,49 @@ async function getUserInfo(page: Page, params: Readonly<Record<string, unknown>>
   const mid = Number(params.mid)
   if (!mid) throw errors.missingParam('mid')
 
-  // Try non-wbi endpoint first
-  const result = await fetchApiViaPage(page, '/x/space/acc/info', { mid })
-  if (isApiOk(result)) return result
-
-  // Fallback: navigate to user space page and intercept the wbi endpoint
-  return interceptApiResponse(
+  const resp = await interceptApiResponse(
     page,
     '/x/space/wbi/acc/info',
     `https://space.bilibili.com/${mid}`,
-  ).catch(() => result)
+    20000,
+  )
+  return trimUserProfile(resp)
+}
+
+function trimUserProfile(resp: unknown): unknown {
+  if (!isApiOk(resp)) return resp
+  const r = resp as Record<string, unknown>
+  const d = r.data as Record<string, unknown> | undefined
+  if (!d) return resp
+  const official = d.official as Record<string, unknown> | undefined
+  const vip = d.vip as Record<string, unknown> | undefined
+  const liveRoom = d.live_room as Record<string, unknown> | undefined
+  return {
+    code: r.code, message: r.message, ttl: r.ttl,
+    data: {
+      mid: d.mid, name: d.name, sex: d.sex, face: d.face, sign: d.sign,
+      rank: d.rank, level: d.level, birthday: d.birthday,
+      official: official ? { role: official.role, title: official.title, type: official.type } : undefined,
+      vip: vip ? { type: vip.type, status: vip.status } : undefined,
+      is_followed: d.is_followed,
+      tags: d.tags,
+      school: d.school,
+      live_room: liveRoom ? { status: liveRoom.status, url: liveRoom.url, title: liveRoom.title } : undefined,
+    },
+  }
 }
 
 async function getUserVideos(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
   const { errors } = helpers
   const mid = Number(params.mid)
   if (!mid) throw errors.missingParam('mid')
-  const pn = Number(params.pn ?? 1)
-  const ps = Number(params.ps ?? 30)
-  const order = String(params.order ?? 'pubdate')
 
-  // Try non-wbi endpoint first
-  const result = await fetchApiViaPage(page, '/x/space/arc/search', { mid, pn, ps, order })
-  if (isApiOk(result)) return result
-
-  // Fallback: navigate to user space and intercept the wbi endpoint
   return interceptApiResponse(
     page,
     '/x/space/wbi/arc/search',
     `https://space.bilibili.com/${mid}/video`,
-  ).catch(() => result)
+    20000,
+  )
 }
 
 async function getRecommendedFeed(page: Page, params: Readonly<Record<string, unknown>>, _helpers: AdapterHelpers): Promise<unknown> {
