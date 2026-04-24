@@ -2,8 +2,14 @@
   "operation_id": "searchModels",
   "cases": [
     {
-      "input": { "search": "text-generation", "limit": 5 },
-      "assertions": { "status": 200, "response_schema_valid": true }
+      "input": {
+        "search": "text-generation",
+        "limit": 3
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
     }
   ]
 }

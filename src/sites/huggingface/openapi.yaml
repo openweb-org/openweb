@@ -13,12 +13,15 @@ paths:
   /api/models:
     get:
       operationId: searchModels
-      summary: "Search ML models by keyword — id, author, downloads, pipeline_tag, tags, last modified"
+      summary: "Search ML models by keyword — id, author, downloads, pipeline_tag, library"
       x-openweb:
         permission: read
         build:
           stable_id: huggingface_searchModels_v1
-          tool_version: 1
+          tool_version: 2
+        adapter:
+          name: huggingface
+          operation: searchModels
       parameters:
         - name: search
           in: query
@@ -27,6 +30,8 @@ paths:
             type: string
           description: "Search query (model name, keyword, or author)"
           example: "text-generation"
+          x-openweb:
+            alias: query
         - name: sort
           in: query
           required: false
@@ -74,66 +79,41 @@ paths:
                 items:
                   type: object
                   properties:
-                    _id:
-                      type: string
-                      description: "Internal model ID"
                     id:
                       type: string
                       description: "Model ID in owner/name format (e.g., meta-llama/Llama-2-7b)"
-                    modelId:
-                      type: string
-                      description: "Same as id — model identifier"
                     author:
                       type: string
                       description: "Model author or organization"
-                    sha:
-                      type: string
-                      description: "Latest commit SHA"
-                    lastModified:
-                      type: string
-                      description: "ISO 8601 timestamp of last modification"
-                    private:
-                      type: boolean
-                      description: "Whether the model is private"
-                    disabled:
-                      type: boolean
-                      description: "Whether the model is disabled"
-                    gated:
-                      type:
-                        - boolean
-                        - string
-                      description: "Access gating status (false, true, or 'auto')"
                     pipeline_tag:
-                      type: string
+                      type: [string, "null"]
                       description: "ML task type (e.g., text-generation, image-classification)"
-                    tags:
-                      type: array
-                      items:
-                        type: string
-                      description: "Tags including library, language, license, task"
+                    library_name:
+                      type: [string, "null"]
+                      description: "ML library (e.g., transformers, diffusers, gguf)"
                     downloads:
                       type: integer
                       description: "Total download count"
                     likes:
                       type: integer
                       description: "Number of likes"
-                    library_name:
-                      type: string
-                      description: "ML library (e.g., transformers, diffusers, gguf)"
                     createdAt:
-                      type: string
+                      type: [string, "null"]
                       description: "ISO 8601 creation timestamp"
-                  required: [id, modelId, downloads, likes]
+                  required: [id, downloads, likes]
 
   /api/models/{owner}/{name}:
     get:
       operationId: getModel
-      summary: "Get model details — description, downloads, tags, pipeline_tag, config, card data"
+      summary: "Get model details — description, downloads, tags, pipeline_tag, parameters, card data"
       x-openweb:
         permission: read
         build:
           stable_id: huggingface_getModel_v1
-          tool_version: 1
+          tool_version: 2
+        adapter:
+          name: huggingface
+          operation: getModel
       parameters:
         - name: owner
           in: path
@@ -157,89 +137,65 @@ paths:
               schema:
                 type: object
                 properties:
-                  _id:
-                    type: string
-                    description: "Internal model ID"
                   id:
                     type: string
                     description: "Model ID in owner/name format"
-                  modelId:
-                    type: string
-                    description: "Same as id"
                   author:
                     type: string
                     description: "Model author or organization"
-                  sha:
-                    type: string
-                    description: "Latest commit SHA"
-                  lastModified:
-                    type: string
-                    description: "ISO 8601 timestamp of last modification"
-                  private:
-                    type: boolean
-                    description: "Whether the model is private"
-                  disabled:
-                    type: boolean
-                    description: "Whether the model is disabled"
-                  gated:
-                    type:
-                      - boolean
-                      - string
-                    description: "Access gating status"
                   pipeline_tag:
-                    type: string
+                    type: [string, "null"]
                     description: "ML task type (e.g., text-generation, image-classification)"
-                  tags:
-                    type: array
-                    items:
-                      type: string
-                    description: "Tags including library, language, license, task"
+                  library_name:
+                    type: [string, "null"]
+                    description: "ML library (e.g., transformers, diffusers)"
                   downloads:
                     type: integer
                     description: "Total download count"
                   likes:
                     type: integer
                     description: "Number of likes"
-                  library_name:
+                  lastModified:
                     type: string
-                    description: "ML library (e.g., transformers, diffusers)"
-                  createdAt:
-                    type: string
-                    description: "ISO 8601 creation timestamp"
-                  cardData:
-                    type: object
-                    additionalProperties: true
-                    description: "Parsed model card metadata (license, language, tags, datasets)"
-                  siblings:
+                    description: "ISO 8601 timestamp of last modification"
+                  gated:
+                    type: [boolean, string]
+                    description: "Access gating status (false, true, or 'auto')"
+                  tags:
                     type: array
                     items:
-                      type: object
-                      required: [rfilename]
-                      properties:
-                        rfilename:
-                          type: string
-                          description: "File path in the repository"
-                    description: "List of files in the model repository"
+                      type: string
+                    description: "Tags including library, language, license, task"
+                  cardData:
+                    type: [object, "null"]
+                    description: "Parsed model card metadata (license, language, datasets, tags)"
+                  parameters:
+                    type: [integer, "null"]
+                    description: "Total parameter count from safetensors metadata"
                   spaces:
                     type: array
                     items:
                       type: string
                     description: "Related Spaces using this model"
-                  safetensors:
-                    type: object
-                    additionalProperties: true
-                    description: "Safetensors file metadata (parameters, format)"
-                required: [id, modelId, downloads, likes]
+                  files:
+                    type: array
+                    items:
+                      type: string
+                    description: "File paths in the model repository"
+                required: [id, downloads, likes]
 
   /api/datasets:
     get:
       operationId: searchDatasets
-      summary: "Search datasets by keyword — id, author, downloads, tags, last modified"
+      summary: "Search datasets by keyword — id, author, downloads, tags"
       x-openweb:
         permission: read
         build:
           stable_id: huggingface_searchDatasets_v1
-          tool_version: 1
+          tool_version: 2
+        adapter:
+          name: huggingface
+          operation: searchDatasets
       parameters:
         - name: search
           in: query
@@ -248,6 +204,8 @@ paths:
             type: string
           description: "Search query (dataset name or keyword)"
           example: "sentiment"
+          x-openweb:
+            alias: query
         - name: sort
           in: query
           required: false
@@ -288,42 +246,25 @@ paths:
                 items:
                   type: object
                   properties:
-                    _id:
-                      type: string
-                      description: "Internal dataset ID"
                     id:
                       type: string
                       description: "Dataset ID in owner/name format"
                     author:
                       type: string
                       description: "Dataset author or organization"
-                    sha:
-                      type: string
-                      description: "Latest commit SHA"
-                    lastModified:
-                      type: string
-                      description: "ISO 8601 timestamp of last modification"
-                    private:
-                      type: boolean
-                      description: "Whether the dataset is private"
-                    gated:
-                      type:
-                        - boolean
-                        - string
-                      description: "Access gating status"
-                    tags:
-                      type: array
-                      items:
-                        type: string
-                      description: "Tags including task, language, size, license"
                     downloads:
                       type: integer
                       description: "Total download count"
                     likes:
                       type: integer
                       description: "Number of likes"
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: "Tags including task, language, size, license"
                     createdAt:
-                      type: string
+                      type: [string, "null"]
                       description: "ISO 8601 creation timestamp"
                   required: [id, downloads, likes]
 
@@ -335,7 +276,10 @@ paths:
         permission: read
         build:
           stable_id: huggingface_getDataset_v1
-          tool_version: 1
+          tool_version: 2
+        adapter:
+          name: huggingface
+          operation: getDataset
       parameters:
         - name: owner
           in: path
@@ -359,74 +303,54 @@ paths:
               schema:
                 type: object
                 properties:
-                  _id:
-                    type: string
-                    description: "Internal dataset ID"
                   id:
                     type: string
                     description: "Dataset ID in owner/name format"
                   author:
                     type: string
                     description: "Dataset author or organization"
-                  sha:
-                    type: string
-                    description: "Latest commit SHA"
-                  lastModified:
-                    type: string
-                    description: "ISO 8601 timestamp of last modification"
-                  private:
-                    type: boolean
-                    description: "Whether the dataset is private"
-                  gated:
-                    type:
-                      - boolean
-                      - string
-                    description: "Access gating status"
-                  tags:
-                    type: array
-                    items:
-                      type: string
-                    description: "Tags including task, language, size, license"
                   downloads:
                     type: integer
                     description: "Total download count"
                   likes:
                     type: integer
                     description: "Number of likes"
-                  createdAt:
+                  lastModified:
                     type: string
-                    description: "ISO 8601 creation timestamp"
-                  cardData:
-                    type: object
-                    additionalProperties: true
-                    description: "Parsed dataset card metadata (license, language, task, size)"
-                  description:
-                    type: string
-                    description: "Dataset description from the card"
-                  citation:
-                    type: string
-                    description: "Citation string for the dataset"
-                  siblings:
+                    description: "ISO 8601 timestamp of last modification"
+                  gated:
+                    type: [boolean, string]
+                    description: "Access gating status"
+                  tags:
                     type: array
                     items:
-                      type: object
-                      required: [rfilename]
-                      properties:
-                        rfilename:
-                          type: string
-                          description: "File path in the repository"
-                    description: "List of files in the dataset repository"
+                      type: string
+                    description: "Tags including task, language, size, license"
+                  description:
+                    type: [string, "null"]
+                    description: "Dataset description from card"
+                  cardData:
+                    type: [object, "null"]
+                    description: "Parsed dataset card metadata (license, language, task, size, splits)"
+                  files:
+                    type: array
+                    items:
+                      type: string
+                    description: "File paths in the dataset repository"
                 required: [id, downloads, likes]
 
   /api/spaces:
     get:
       operationId: getSpaces
-      summary: "Browse Spaces (demo apps) — id, author, likes, sdk, tags, last modified"
+      summary: "Browse Spaces (demo apps) — id, author, likes, sdk, tags"
       x-openweb:
         permission: read
         build:
           stable_id: huggingface_getSpaces_v1
-          tool_version: 1
+          tool_version: 2
+        adapter:
+          name: huggingface
+          operation: getSpaces
       parameters:
         - name: search
           in: query
@@ -435,6 +359,8 @@ paths:
             type: string
           description: "Search query (Space name or keyword)"
           example: "chatbot"
+          x-openweb:
+            alias: query
         - name: sort
           in: query
           required: false
@@ -475,49 +401,24 @@ paths:
                 items:
                   type: object
                   properties:
-                    _id:
-                      type: string
-                      description: "Internal Space ID"
                     id:
                       type: string
                       description: "Space ID in owner/name format"
                     author:
                       type: string
                       description: "Space author or organization"
-                    sha:
-                      type: string
-                      description: "Latest commit SHA"
-                    lastModified:
-                      type: string
-                      description: "ISO 8601 timestamp of last modification"
-                    private:
-                      type: boolean
-                      description: "Whether the Space is private"
+                    likes:
+                      type: integer
+                      description: "Number of likes"
+                    sdk:
+                      type: [string, "null"]
+                      description: "SDK used (e.g., gradio, streamlit, docker, static)"
                     tags:
                       type: array
                       items:
                         type: string
                       description: "Tags including sdk, license"
-                    likes:
-                      type: integer
-                      description: "Number of likes"
-                    sdk:
-                      type: string
-                      description: "SDK used (e.g., gradio, streamlit, docker, static)"
-                    runtime:
-                      type: object
-                      properties:
-                        stage:
-                          type: string
-                          description: "Runtime stage (e.g., RUNNING, PAUSED, BUILD_ERROR)"
-                        hardware:
-                          type: object
-                          properties:
-                            current:
-                              type: string
-                              description: "Current hardware (e.g., cpu-basic, gpu-t4-small)"
-                      description: "Space runtime status and hardware info"
                     createdAt:
-                      type: string
+                      type: [string, "null"]
                       description: "ISO 8601 creation timestamp"
                   required: [id, likes]
