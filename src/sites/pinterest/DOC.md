@@ -40,13 +40,13 @@ Visual discovery and bookmarking platform. Social media archetype.
 | getPin | get pin details | id ← searchPins | title, description, link, images, pinner, board, repin/reaction/comment counts | |
 | getBoard | get board details | username + slug (e.g. `WhoWhatWear/travel`) | name, description, pin_count, follower_count, owner, cover images | |
 | getUserProfile | get user profile | username | full_name, about, follower/following/pin/board counts, image | |
-| searchTypeahead | typeahead suggestions | term | label, type, id, images | |
+| searchTypeahead | typeahead suggestions | term | label, type, id, query, url | |
 | savePin | save pin to board | pin_id, board_id | id, board, pinner | write; reverse: unsavePin |
 | unsavePin | remove saved pin from board | pin_id, board_id | status | write; reverse: savePin |
 | followBoard | follow a board | board_id | id, name, url | write; reverse: unfollowBoard |
 | unfollowBoard | unfollow a board | board_id | status | write; reverse: followBoard |
-| getHomeFeed | personalized home feed | page_size | id, images, grid_title, pinner, board, bookmark | paginated via `bookmark` |
-| getNotifications | notification feed | page_size | id, type, message, timestamp, actors, target, bookmark | paginated via `bookmark` |
+| getHomeFeed | personalized home feed | page_size | id, title, image_url, auto_alt_text, bookmark | paginated via `bookmark`; sparse data (node refs) |
+| getNotifications | notification feed | page_size | id, type, category, header_text, content_items, bookmark | paginated via `bookmark` |
 
 ## Quick Start
 

@@ -1,3 +1,41 @@
+## 2026-04-24 — Userflow QA: response trimming and adapter
+
+**Context:** Blind persona workflows (interior designer, wedding planner, DIY enthusiast) against all 7 read ops. All ops returned HTTP 200 but responses were massively bloated with tracking/internal fields.
+
+**Findings:**
+- `searchPins`: 84KB for 5 results → each pin had ~50 tracking fields (`tracking_params`, `is_promoted`, `shopping_flags`, etc.)
+- `getPin`: 20KB for single pin → ~70 fields including `is_quick_promotable`, `shopping_rec_disabled`, `link_utm_applicable_and_replaced`
+- `getBoard`: 9KB → internal fields like `collab_board_email`, `sensitivity_screen`, `blocking_actions`
+- `getUserProfile`: 8KB → ~60 fields including `show_engagement_tab`, `storefront_management_enabled`, `profile_discovered_public`
+- `searchTypeahead`: 9KB → minor bloat (`image_preview_pins`, `resultIndex`)
+- `getHomeFeed`: 45KB for 25 items but **no useful pin data** — returns sparse node references with only flags (`is_video`, `is_oos_product`), pin data no longer inlined. Known Pinterest API change.
+- `getNotifications`: 124KB for 5 items (29KB each!) — deeply nested `content_items` with full pin/image objects. Schema was wrong (had `message`/`timestamp`/`actors` but actual response has `header_text`/`category`/`content_items`).
+
+**Changes:**
+- Created `adapters/pinterest-api.ts` — adapter for all 7 read ops with response trimming via `pageFetch`
+- Trim helpers: `trimPinResult`, `trimPinDetail`, `trimBoardDetail`, `trimUserProfile`, `trimTypeaheadItem`, `trimHomeFeedItem`, `trimNotification`
+- Updated `openapi.yaml`: added `adapter` references for all read ops, corrected response schemas to match trimmed output, removed Pinterest-specific header params from read ops (adapter handles them)
+- Fixed `getNotifications` schema: `message`/`timestamp`/`actors`/`target` → `header_text`/`category`/`content_items`/`unread`/`last_updated_at`
+- Fixed `getHomeFeed` schema: no longer claims full pin data, reflects sparse node refs with extracted `id` (from base64 node_id), `title`, `image_url`, `auto_alt_text`
+- Updated `DOC.md` ops table
+
+**Size reductions:**
+| Operation | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| searchPins (5 results) | 84KB | 9.7KB | 88% |
+| getPin | 20KB | 1.3KB | 94% |
+| getBoard | 9KB | 0.5KB | 95% |
+| getUserProfile | 8KB | 0.4KB | 95% |
+| searchTypeahead | 9KB | 1.8KB | 80% |
+| getHomeFeed (5 items) | 8KB | 0.7KB | 91% |
+| getNotifications (5 items) | 124KB | 6.5KB | 95% |
+
+**Known issues:**
+- `getHomeFeed` returns sparse node refs — Pinterest no longer inlines full pin data in `hifi` field_set_key responses. The adapter extracts pin ID from base64 node_id and title/image from `story_pin_data` when available, but most items have null title/image_url. For full pin details, use `getPin(id)` as a follow-up call.
+- Write ops (savePin, unsavePin, followBoard, unfollowBoard) not adapter-ized — they go through default page transport. Response trimming not critical for write ops (small responses).
+
+---
+
 ## 2026-04-19 — Write-Verify Campaign (resolution)
 
 **Context:** Resume of 2026-04-18 work after the verify cross-op templating runtime landed. Goal: take pinterest from 1/4 → 4/4 PASS.

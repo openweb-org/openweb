@@ -24,6 +24,9 @@ paths:
       summary: "Search pins by keyword — returns pin images, titles, links, board info, pinner info"
       x-openweb:
         permission: read
+        adapter:
+          name: pinterest-api
+          operation: searchPins
         build:
           stable_id: pinterest_searchPins_v1
           tool_version: 2
@@ -42,38 +45,6 @@ paths:
           type: string
         description: 'JSON string with search options. Example: {"options":{"query":"cats","scope":"pins","page_size":25},"context":{}}'
         example: '{"options":{"query":"cats","scope":"pins","page_size":25},"context":{}}'
-      - name: x-requested-with
-        in: header
-        required: true
-        schema:
-          type: string
-          const: XMLHttpRequest
-      - name: x-pinterest-appstate
-        in: header
-        required: true
-        schema:
-          type: string
-          const: active
-      - name: x-pinterest-pws-handler
-        in: header
-        required: true
-        schema:
-          type: string
-          default: "www/search/[scope].js"
-        description: "Pinterest PWS handler path"
-      - name: x-pinterest-source-url
-        in: header
-        required: true
-        schema:
-          type: string
-          default: /search/pins/?q=cats
-        description: "Source URL for Pinterest tracking"
-      - name: accept
-        in: header
-        required: true
-        schema:
-          type: string
-          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -82,54 +53,66 @@ paths:
               schema:
                 type: object
                 properties:
-                  resource_response:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                      data:
-                        type: object
-                        properties:
-                          results:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                type:
-                                  type: string
-                                images:
-                                  type: object
-                                grid_title:
-                                  type: string
-                                description:
-                                  type: string
-                                link:
-                                  type: string
-                                  nullable: true
-                                dominant_color:
-                                  type: string
-                                domain:
-                                  type: string
-                                pinner:
-                                  type: object
-                                board:
-                                  type: object
-                                created_at:
-                                  type: string
-                          bookmark:
-                            type: string
-                            nullable: true
-
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                        grid_title:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        link:
+                          type: string
+                          nullable: true
+                        domain:
+                          type: string
+                        images:
+                          type: object
+                        dominant_color:
+                          type: string
+                        pinner:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            username:
+                              type: string
+                            full_name:
+                              type: string
+                        board:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            url:
+                              type: string
+                        created_at:
+                          type: string
+                        is_video:
+                          type: boolean
+                  bookmark:
+                    type: string
+                    nullable: true
                 required:
-                - resource_response
+                - results
   /resource/PinResource/get/:
     get:
       operationId: getPin
       summary: "Get pin details — image, title, description, link, board, pinner, comments, related pins"
       x-openweb:
         permission: read
+        adapter:
+          name: pinterest-api
+          operation: getPin
         build:
           stable_id: pinterest_getPin_v1
           tool_version: 2
@@ -148,38 +131,6 @@ paths:
           type: string
         description: 'JSON string with pin options. Example: {"options":{"id":"12345","field_set_key":"detailed"},"context":{}}'
         example: '{"options":{"id":"12345","field_set_key":"detailed"},"context":{}}'
-      - name: x-requested-with
-        in: header
-        required: true
-        schema:
-          type: string
-          const: XMLHttpRequest
-      - name: x-pinterest-appstate
-        in: header
-        required: true
-        schema:
-          type: string
-          const: active
-      - name: x-pinterest-pws-handler
-        in: header
-        required: true
-        schema:
-          type: string
-          default: "www/[...path].js"
-        description: "Pinterest PWS handler path"
-      - name: x-pinterest-source-url
-        in: header
-        required: true
-        schema:
-          type: string
-          default: /pin/12345/
-        description: "Source URL for Pinterest tracking"
-      - name: accept
-        in: header
-        required: true
-        schema:
-          type: string
-          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -188,48 +139,68 @@ paths:
               schema:
                 type: object
                 properties:
-                  resource_response:
+                  id:
+                    type: string
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  grid_title:
+                    type: string
+                  description:
+                    type: string
+                  link:
+                    type: string
+                    nullable: true
+                  domain:
+                    type: string
+                  images:
+                    type: object
+                  dominant_color:
+                    type: string
+                  pinner:
                     type: object
                     properties:
-                      status:
+                      id:
                         type: string
-                      data:
-                        type: object
-                        properties:
-                          id:
-                            type: string
-                          type:
-                            type: string
-                          title:
-                            type: string
-                          description:
-                            type: string
-                          link:
-                            type: string
-                            nullable: true
-                          images:
-                            type: object
-                          dominant_color:
-                            type: string
-                          pinner:
-                            type: object
-                          board:
-                            type: object
-                          comment_count:
-                            type: integer
-                          repin_count:
-                            type: integer
-                          reaction_counts:
-                            type: object
-
+                      username:
+                        type: string
+                      full_name:
+                        type: string
+                  board:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      url:
+                        type: string
+                  repin_count:
+                    type: integer
+                  comment_count:
+                    type: integer
+                  share_count:
+                    type: integer
+                  reaction_counts:
+                    type: object
+                  created_at:
+                    type: string
+                  is_video:
+                    type: boolean
+                  category:
+                    type: string
                 required:
-                - resource_response
+                - id
   /resource/BoardResource/get/:
     get:
       operationId: getBoard
       summary: "Get board details — name, description, pin count, follower count, owner, cover images"
       x-openweb:
         permission: read
+        adapter:
+          name: pinterest-api
+          operation: getBoard
         build:
           stable_id: pinterest_getBoard_v1
           tool_version: 2
@@ -248,38 +219,6 @@ paths:
           type: string
         description: 'JSON string with board options. Requires username and slug as separate fields. Example: {"options":{"username":"WhoWhatWear","slug":"travel","field_set_key":"detailed"},"context":{}}'
         example: '{"options":{"username":"WhoWhatWear","slug":"travel","field_set_key":"detailed"},"context":{}}'
-      - name: x-requested-with
-        in: header
-        required: true
-        schema:
-          type: string
-          const: XMLHttpRequest
-      - name: x-pinterest-appstate
-        in: header
-        required: true
-        schema:
-          type: string
-          const: active
-      - name: x-pinterest-pws-handler
-        in: header
-        required: true
-        schema:
-          type: string
-          default: "www/[...path].js"
-        description: "Pinterest PWS handler path"
-      - name: x-pinterest-source-url
-        in: header
-        required: true
-        schema:
-          type: string
-          default: /
-        description: "Source URL for Pinterest tracking"
-      - name: accept
-        in: header
-        required: true
-        schema:
-          type: string
-          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -288,41 +227,48 @@ paths:
               schema:
                 type: object
                 properties:
-                  resource_response:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  url:
+                    type: string
+                  pin_count:
+                    type: integer
+                  follower_count:
+                    type: integer
+                  section_count:
+                    type: integer
+                  collaborator_count:
+                    type: integer
+                  is_collaborative:
+                    type: boolean
+                  privacy:
+                    type: string
+                  image_cover_url:
+                    type: string
+                  owner:
                     type: object
                     properties:
-                      status:
+                      id:
                         type: string
-                      data:
-                        type: object
-                        properties:
-                          id:
-                            type: string
-                          name:
-                            type: string
-                          description:
-                            type: string
-                          url:
-                            type: string
-                          pin_count:
-                            type: integer
-                          follower_count:
-                            type: integer
-                          owner:
-                            type: object
-                          image_cover_url:
-                            type: string
-                          privacy:
-                            type: string
-
+                      username:
+                        type: string
+                      full_name:
+                        type: string
                 required:
-                - resource_response
+                - id
   /resource/UserResource/get/:
     get:
       operationId: getUserProfile
       summary: "Get user profile — username, full name, bio, follower/following counts, pin count, boards"
       x-openweb:
         permission: read
+        adapter:
+          name: pinterest-api
+          operation: getUserProfile
         build:
           stable_id: pinterest_getUserProfile_v1
           tool_version: 2
@@ -341,38 +287,6 @@ paths:
           type: string
         description: 'JSON string with user options. Use username OR user_id. Example: {"options":{"username":"pinterest","field_set_key":"profile"},"context":{}}'
         example: '{"options":{"username":"pinterest","field_set_key":"profile"},"context":{}}'
-      - name: x-requested-with
-        in: header
-        required: true
-        schema:
-          type: string
-          const: XMLHttpRequest
-      - name: x-pinterest-appstate
-        in: header
-        required: true
-        schema:
-          type: string
-          const: active
-      - name: x-pinterest-pws-handler
-        in: header
-        required: true
-        schema:
-          type: string
-          default: "www/[...path].js"
-        description: "Pinterest PWS handler path"
-      - name: x-pinterest-source-url
-        in: header
-        required: true
-        schema:
-          type: string
-          default: /
-        description: "Source URL for Pinterest tracking"
-      - name: accept
-        in: header
-        required: true
-        schema:
-          type: string
-          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -381,45 +295,41 @@ paths:
               schema:
                 type: object
                 properties:
-                  resource_response:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                      data:
-                        type: object
-                        properties:
-                          id:
-                            type: string
-                          username:
-                            type: string
-                          full_name:
-                            type: string
-                          about:
-                            type: string
-                          follower_count:
-                            type: integer
-                          following_count:
-                            type: integer
-                          pin_count:
-                            type: integer
-                          board_count:
-                            type: integer
-                          image_medium_url:
-                            type: string
-                          domain_url:
-                            type: string
-                          website_url:
-                            type: string
-
+                  id:
+                    type: string
+                  username:
+                    type: string
+                  full_name:
+                    type: string
+                  about:
+                    type: string
+                  follower_count:
+                    type: integer
+                  following_count:
+                    type: integer
+                  pin_count:
+                    type: integer
+                  board_count:
+                    type: integer
+                  image_medium_url:
+                    type: string
+                  website_url:
+                    type: string
+                  domain_url:
+                    type: string
+                  is_verified_merchant:
+                    type: boolean
                 required:
-                - resource_response
+                - id
   /resource/AdvancedTypeaheadResource/get/:
     get:
       operationId: searchTypeahead
       summary: "Search typeahead suggestions — returns pin, board, and user suggestions as you type"
       x-openweb:
         permission: read
+        adapter:
+          name: pinterest-api
+          operation: searchTypeahead
         build:
           stable_id: pinterest_searchTypeahead_v1
           tool_version: 2
@@ -438,38 +348,6 @@ paths:
           type: string
         description: 'JSON string with typeahead options. Example: {"options":{"term":"cats","count":5},"context":{}}'
         example: '{"options":{"term":"cats","count":5},"context":{}}'
-      - name: x-requested-with
-        in: header
-        required: true
-        schema:
-          type: string
-          const: XMLHttpRequest
-      - name: x-pinterest-appstate
-        in: header
-        required: true
-        schema:
-          type: string
-          const: active
-      - name: x-pinterest-pws-handler
-        in: header
-        required: true
-        schema:
-          type: string
-          default: "www/index.js"
-        description: "Pinterest PWS handler path"
-      - name: x-pinterest-source-url
-        in: header
-        required: true
-        schema:
-          type: string
-          default: /
-        description: "Source URL for Pinterest tracking"
-      - name: accept
-        in: header
-        required: true
-        schema:
-          type: string
-          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -478,30 +356,23 @@ paths:
               schema:
                 type: object
                 properties:
-                  resource_response:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                      data:
-                        type: object
-                        properties:
-                          items:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                label:
-                                  type: string
-                                type:
-                                  type: string
-                                id:
-                                  type: string
-                                images:
-                                  type: object
-
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        label:
+                          type: string
+                        id:
+                          type: string
+                        query:
+                          type: string
+                        url:
+                          type: string
                 required:
-                - resource_response
+                - items
   /resource/RepinResource/create/:
     post:
       operationId: savePin
@@ -789,6 +660,9 @@ paths:
       summary: "Get personalized home feed — returns recommended pins based on user interests"
       x-openweb:
         permission: read
+        adapter:
+          name: pinterest-api
+          operation: getHomeFeed
         build:
           stable_id: pinterest_getHomeFeed_v1
           tool_version: 2
@@ -807,38 +681,6 @@ paths:
           type: string
         description: 'JSON string with feed options. Example: {"options":{"field_set_key":"hifi","in_nux":false,"prependPartner":false,"page_size":25},"context":{}}'
         example: '{"options":{"field_set_key":"hifi","in_nux":false,"prependPartner":false,"page_size":25},"context":{}}'
-      - name: x-requested-with
-        in: header
-        required: true
-        schema:
-          type: string
-          const: XMLHttpRequest
-      - name: x-pinterest-appstate
-        in: header
-        required: true
-        schema:
-          type: string
-          const: active
-      - name: x-pinterest-pws-handler
-        in: header
-        required: true
-        schema:
-          type: string
-          default: "www/index.js"
-        description: "Pinterest PWS handler path"
-      - name: x-pinterest-source-url
-        in: header
-        required: true
-        schema:
-          type: string
-          default: /
-        description: "Source URL for Pinterest tracking"
-      - name: accept
-        in: header
-        required: true
-        schema:
-          type: string
-          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -847,45 +689,39 @@ paths:
               schema:
                 type: object
                 properties:
-                  resource_response:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                      data:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            type:
-                              type: string
-                            images:
-                              type: object
-                            grid_title:
-                              type: string
-                            description:
-                              type: string
-                            link:
-                              type: string
-                              nullable: true
-                            pinner:
-                              type: object
-                            board:
-                              type: object
-                      bookmark:
-                        type: string
-                        nullable: true
-
+                  pins:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          nullable: true
+                        title:
+                          type: string
+                          nullable: true
+                        image_url:
+                          type: string
+                          nullable: true
+                        auto_alt_text:
+                          type: string
+                          nullable: true
+                        is_video:
+                          type: boolean
+                  bookmark:
+                    type: string
+                    nullable: true
                 required:
-                - resource_response
+                - pins
   /resource/NewsHubResource/get/:
     get:
       operationId: getNotifications
       summary: "Get notification feed — recent activity like repins, follows, comments on your pins"
       x-openweb:
         permission: read
+        adapter:
+          name: pinterest-api
+          operation: getNotifications
         build:
           stable_id: pinterest_getNotifications_v1
           tool_version: 2
@@ -904,38 +740,6 @@ paths:
           type: string
         description: 'JSON string with notification options. Example: {"options":{"field_set_key":"default","page_size":25},"context":{}}'
         example: '{"options":{"field_set_key":"default","page_size":25},"context":{}}'
-      - name: x-requested-with
-        in: header
-        required: true
-        schema:
-          type: string
-          const: XMLHttpRequest
-      - name: x-pinterest-appstate
-        in: header
-        required: true
-        schema:
-          type: string
-          const: active
-      - name: x-pinterest-pws-handler
-        in: header
-        required: true
-        schema:
-          type: string
-          default: "www/notifications.js"
-        description: "Pinterest PWS handler path"
-      - name: x-pinterest-source-url
-        in: header
-        required: true
-        schema:
-          type: string
-          default: /notifications/
-        description: "Source URL for Pinterest tracking"
-      - name: accept
-        in: header
-        required: true
-        schema:
-          type: string
-          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -944,32 +748,36 @@ paths:
               schema:
                 type: object
                 properties:
-                  resource_response:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                      data:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            type:
-                              type: string
-                            message:
-                              type: string
-                            timestamp:
-                              type: string
-                            actors:
-                              type: array
-                              items:
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                        category:
+                          type: string
+                        header_text:
+                          type: string
+                        unread:
+                          type: boolean
+                        last_updated_at:
+                          type: string
+                        content_items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              event_type:
+                                type: integer
+                              last_updated_at:
+                                type: string
+                              content_object:
                                 type: object
-                            target:
-                              type: object
-                      bookmark:
-                        type: string
-                        nullable: true
+                  bookmark:
+                    type: string
+                    nullable: true
                 required:
-                - resource_response
+                - notifications
