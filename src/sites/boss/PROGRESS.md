@@ -1,3 +1,33 @@
+## 2026-04-25 — Userflow QA
+
+**Workflows tested:**
+1. **Job seeker in Beijing**: getCities → searchJobs("Python", 101010100) → getJobDetail → getCompanyProfile
+2. **Career researcher in Shanghai**: getFilterConditions → getSalary("产品经理", 101020100) → searchJobs cross-check
+3. **Recruiter in Shenzhen**: getIndustries → searchJobs("前端", 101280600) → getJobDetail → getCompanyProfile
+
+**Gaps found:**
+- **Response bloat (getCities)**: 934KB raw, 17 fields per entry with 15 null/empty — only code+name useful
+- **Response bloat (getIndustries)**: 39KB raw, same null-field bloat pattern
+- **Page ops blocked by bot detection**: searchJobs, getJobDetail, getCompanyProfile, getSalary all return empty results — zhipin.com bot detection redirects headless browsers within 1-3s (known since 2026-04-01, persists)
+
+**Fixes:**
+- Added `adapters/boss.ts` with `nodeFetch`-based adapter trimming for all 3 reference data ops
+- getCities: strips 15 null fields per entry, keeps code+name only at province→city level (drops district level)
+- getIndustries: strips null fields, returns flat array of `{code, name, subLevelModelList}` (no wrapper)
+- getFilterConditions: unwraps `{code, message, zpData}` envelope, drops payTypeList/partTimeList (irrelevant to job search)
+- Updated response schemas in `openapi.yaml` to match trimmed adapter output
+
+**Before/after sizes:**
+| Operation | Before | After | Reduction |
+|---|---|---|---|
+| getCities | 934KB | 16KB | 57× |
+| getIndustries | 39KB | 6KB | 6× |
+| getFilterConditions | 2KB | 1.5KB | minor (envelope removal) |
+
+**Blocker:** Page ops (searchJobs, getJobDetail, getCompanyProfile, getSalary) remain blocked by bot detection. The site uses aggressive headless browser detection that redirects/blocks within 1-3s. No workaround found — would require session cookies from a real browser or a different extraction approach.
+
+**Verification:** `pnpm dev verify boss` — 7/7 PASS
+
 ## 2026-04-17 — Phase 3 Normalize-Adapter
 
 **Context:** Convert adapter-based ops to spec extraction primitives so the runtime drives extraction directly from `x-openweb.extraction` blocks.

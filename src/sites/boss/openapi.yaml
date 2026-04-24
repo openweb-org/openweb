@@ -475,6 +475,9 @@ paths:
       x-openweb:
         permission: read
         transport: node
+        adapter:
+          name: boss
+          operation: getCities
         build:
           stable_id: boss0005
           signature_id: boss0005s
@@ -484,86 +487,31 @@ paths:
           - status-match
       responses:
         '200':
-          description: City list with codes.
+          description: City list with codes (trimmed — code+name only).
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  code:
-                    type: integer
-                  message:
-                    type: string
-                  zpData:
-                    type: object
-                    properties:
-                      hotCityList:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            code:
-                              type: integer
-                              description: City code for search queries.
-                            name:
-                              type: string
-                      cityList:
-                        type: array
-                        description: Province-grouped city hierarchy.
-                        items:
-                          type: object
-                          properties:
-                            code:
-                              type: integer
-                              description: Province code.
-                            name:
-                              type: string
-                            subLevelModelList:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  code:
-                                    type: integer
-                                    description: City code for search queries.
-                                  name:
-                                    type: string
-
-                required:
-                - zpData
-  /wapi/zpCommon/data/industry.json:
-    get:
-      operationId: getIndustries
-      summary: Get industry categories — top-level industries with sub-categories and codes
-      x-openweb:
-        permission: read
-        transport: node
-        build:
-          stable_id: boss0006
-          signature_id: boss0006s
-          tool_version: 1
-          verified: true
-          signals:
-          - status-match
-      responses:
-        '200':
-          description: Industry list.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                  message:
-                    type: string
-                  zpData:
+                  hotCityList:
                     type: array
                     items:
                       type: object
                       properties:
                         code:
                           type: integer
+                          description: City code for search queries.
+                        name:
+                          type: string
+                  cityList:
+                    type: array
+                    description: Province-grouped city hierarchy (province → city).
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: integer
+                          description: Province code.
                         name:
                           type: string
                         subLevelModelList:
@@ -573,11 +521,52 @@ paths:
                             properties:
                               code:
                                 type: integer
+                                description: City code for search queries.
                               name:
                                 type: string
-
                 required:
-                - zpData
+                - hotCityList
+                - cityList
+  /wapi/zpCommon/data/industry.json:
+    get:
+      operationId: getIndustries
+      summary: Get industry categories — top-level industries with sub-categories and codes
+      x-openweb:
+        permission: read
+        transport: node
+        adapter:
+          name: boss
+          operation: getIndustries
+        build:
+          stable_id: boss0006
+          signature_id: boss0006s
+          tool_version: 1
+          verified: true
+          signals:
+          - status-match
+      responses:
+        '200':
+          description: Industry list (trimmed — code+name only).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: integer
+                    name:
+                      type: string
+                    subLevelModelList:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                          name:
+                            type: string
   /wapi/zpgeek/pc/all/filter/conditions.json:
     get:
       operationId: getFilterConditions
@@ -585,6 +574,9 @@ paths:
       x-openweb:
         permission: read
         transport: node
+        adapter:
+          name: boss
+          operation: getFilterConditions
         build:
           stable_id: boss0007
           signature_id: boss0007s
@@ -594,75 +586,68 @@ paths:
           - status-match
       responses:
         '200':
-          description: Filter condition lists.
+          description: Filter condition lists (trimmed — code+name only).
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  code:
-                    type: integer
-                  message:
-                    type: string
-                  zpData:
-                    type: object
-                    properties:
-                      salaryList:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            code:
-                              type: integer
-                            name:
-                              type: string
-                      experienceList:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            code:
-                              type: integer
-                            name:
-                              type: string
-                      degreeList:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            code:
-                              type: integer
-                            name:
-                              type: string
-                      stageList:
-                        type: array
-                        description: Company funding stage options.
-                        items:
-                          type: object
-                          properties:
-                            code:
-                              type: integer
-                            name:
-                              type: string
-                      scaleList:
-                        type: array
-                        description: Company size options.
-                        items:
-                          type: object
-                          properties:
-                            code:
-                              type: integer
-                            name:
-                              type: string
-                      jobTypeList:
-                        type: array
-                        description: Job type options (full-time, part-time).
-                        items:
-                          type: object
-                          properties:
-                            code:
-                              type: integer
-                            name:
-                              type: string
+                  salaryList:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: integer
+                        name:
+                          type: string
+                  experienceList:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: integer
+                        name:
+                          type: string
+                  degreeList:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: integer
+                        name:
+                          type: string
+                  stageList:
+                    type: array
+                    description: Company funding stage options.
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: integer
+                        name:
+                          type: string
+                  scaleList:
+                    type: array
+                    description: Company size options.
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: integer
+                        name:
+                          type: string
+                  jobTypeList:
+                    type: array
+                    description: Job type options (full-time, part-time).
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: integer
+                        name:
+                          type: string
                 required:
-                - zpData
+                - salaryList
