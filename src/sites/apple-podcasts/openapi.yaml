@@ -27,6 +27,9 @@ paths:
       summary: "Search podcasts by keyword — returns podcast titles, authors, artwork, ratings, episode counts"
       x-openweb:
         permission: read
+        adapter:
+          name: apple-podcasts-api
+          operation: searchPodcasts
         build:
           stable_id: ap0001
           tool_version: 2
@@ -114,16 +117,21 @@ paths:
                                     type: string
                                   type:
                                     type: string
+                                    description: "Entity type: podcasts, podcast-episodes, podcast-channels, categories"
                                   attributes:
                                     type: object
+                                    description: "Trimmed — artwork colors, offers, subscribable, displayType, kind, mediaKind, mediaKinds, guid, copyright, createdDate stripped"
                 required:
                 - results
   /v1/catalog/us/podcasts/{id}:
     get:
       operationId: getPodcast
-      summary: "Get podcast details — title, author, description, artwork, feed URL, episode list, ratings"
+      summary: "Get podcast details — title, author, description, artwork, episode list, ratings"
       x-openweb:
         permission: read
+        adapter:
+          name: apple-podcasts-api
+          operation: getPodcast
         build:
           stable_id: ap0002
           tool_version: 2
@@ -138,14 +146,12 @@ paths:
       - name: extend
         in: query
         required: false
-        description: "Additional fields: editorialArtwork, feedUrl, userRating, availableEpisodeCount"
+        description: "Additional fields: userRating, availableEpisodeCount (feedUrl and editorialArtwork are not returned by current API)"
         schema:
           type: array
           items:
             type: string
         example:
-        - editorialArtwork
-        - feedUrl
         - userRating
       - name: include
         in: query
@@ -174,7 +180,7 @@ paths:
         example: 20
       responses:
         "200":
-          description: Podcast detail with optional related resources.
+          description: Podcast detail with optional related resources (trimmed).
           content:
             application/json:
               schema:
@@ -214,20 +220,52 @@ paths:
                               type: array
                               items:
                                 type: string
-                            feedUrl:
-                              type: string
                             url:
                               type: string
                             contentRating:
                               type: string
                             trackCount:
                               type: integer
+                            releaseDateTime:
+                              type: string
+                            languageTag:
+                              type: string
+                            userRating:
+                              type: object
+                              description: "Present when extend includes userRating"
+                              properties:
+                                value:
+                                  type: number
+                                ratingCount:
+                                  type: integer
                         relationships:
                           type: object
-                  included:
-                    type: array
-                    items:
-                      type: object
+                          properties:
+                            episodes:
+                              type: object
+                              properties:
+                                data:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      id:
+                                        type: string
+                                      type:
+                                        type: string
+                                      attributes:
+                                        type: object
+                                        properties:
+                                          name:
+                                            type: string
+                                          description:
+                                            type: object
+                                          durationInMilliseconds:
+                                            type: integer
+                                          releaseDateTime:
+                                            type: string
+                                          url:
+                                            type: string
                 required:
                 - data
   /v1/catalog/us/search/suggestions:
@@ -236,6 +274,9 @@ paths:
       summary: "Get search autocomplete suggestions — podcast titles, episode titles matching prefix"
       x-openweb:
         permission: read
+        adapter:
+          name: apple-podcasts-api
+          operation: getSearchSuggestions
         build:
           stable_id: ap0003
           tool_version: 2
@@ -303,9 +344,12 @@ paths:
   /v1/editorial/us/groupings:
     get:
       operationId: getTopCharts
-      summary: "Get editorial groupings (top charts) — featured podcasts, top shows, new releases"
+      summary: "Get editorial groupings — browse categories, editorial tabs, curated sections"
       x-openweb:
         permission: read
+        adapter:
+          name: apple-podcasts-api
+          operation: getTopCharts
         build:
           stable_id: ap0004
           tool_version: 2
