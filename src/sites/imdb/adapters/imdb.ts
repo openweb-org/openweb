@@ -22,6 +22,17 @@ async function gql<T = Record<string, unknown>>(query: string, variables?: Recor
 
 // ── Fragments ───────────────────────────────────────
 
+const TITLE_SEARCH_FIELDS = `
+  id
+  titleText { text }
+  titleType { text id }
+  releaseYear { year }
+  ratingsSummary { aggregateRating voteCount }
+  runtime { seconds }
+  certificate { rating }
+  genres { genres { text } }
+`
+
 const TITLE_CORE_FIELDS = `
   id
   titleText { text }
@@ -51,6 +62,16 @@ const TITLE_DETAIL_FIELDS = `
   prestigiousAwardSummary { wins nominations }
 `
 
+// ── Helpers ─────────────────────────────────────────
+
+function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0)) out[k] = v
+  }
+  return out as Partial<T>
+}
+
 // ── Operations ──────────────────────────────────────
 
 async function searchTitles(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
@@ -60,30 +81,28 @@ async function searchTitles(_page: Page | null, params: Readonly<Record<string, 
   const data = await gql<{ mainSearch: { edges: Array<{ node: { entity: Record<string, any> } }> } }>(`
     query SearchTitles($term: String!) {
       mainSearch(first: 20, options: { searchTerm: $term, type: TITLE }) {
-        edges { node { entity { ... on Title { ${TITLE_CORE_FIELDS} } } } }
+        edges { node { entity { ... on Title { ${TITLE_SEARCH_FIELDS} } } } }
       }
     }
   `, { term: q })
 
   const results = data.mainSearch.edges
     .map(e => e.node.entity)
-    .filter(e => e.id) // filter out non-title entities
+    .filter(e => e.id)
 
   return {
     query: q,
     resultCount: results.length,
-    results: results.map(t => ({
+    results: results.map(t => compact({
       imdbId: t.id,
       title: t.titleText?.text ?? null,
       year: t.releaseYear?.year ?? null,
       type: t.titleType?.text || t.titleType?.id || null,
       genres: (t.genres?.genres ?? []).map((g: any) => g.text),
-      plot: t.plot?.plotText?.plainText ?? null,
       rating: t.ratingsSummary?.aggregateRating ?? null,
-      voteCount: t.ratingsSummary?.voteCount ?? null,
+      voteCount: t.ratingsSummary?.voteCount || null,
       runtime: t.runtime?.seconds ? Math.round(t.runtime.seconds / 60) : null,
       certificate: t.certificate?.rating ?? null,
-      image: t.primaryImage?.url ?? null,
     })),
   }
 }

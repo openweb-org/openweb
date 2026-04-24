@@ -14,7 +14,7 @@ paths:
   /find:
     get:
       operationId: searchTitles
-      summary: 'Search movies and TV shows by keyword — returns title, year, rating, genres, plot'
+      summary: 'Search movies and TV shows by keyword — returns title, year, rating, genres'
       x-openweb:
         permission: read
         transport: node
@@ -87,11 +87,6 @@ paths:
                           items:
                             type: string
                           description: Genre list.
-                        plot:
-                          type:
-                            - string
-                            - 'null'
-                          description: Short plot summary.
                         rating:
                           type:
                             - number
@@ -112,11 +107,6 @@ paths:
                             - string
                             - 'null'
                           description: 'Content rating (e.g. "PG-13", "R").'
-                        image:
-                          type:
-                            - string
-                            - 'null'
-                          description: Poster image URL.
   /title/{imdbId}:
     get:
       operationId: getTitleDetail

@@ -1,4 +1,22 @@
-## 2026-04-09: Polish — docs, schema, examples
+## 2026-04-24 — Userflow QA: response trimming for searchTitles
+
+**Context:** Ran 3 blind persona workflows (movie night planner, TV show binger, film buff). All 4 ops functionally correct. searchTitles responses (5.5–7.8KB) spilled to temp files due to exceeding the 4096-byte inline threshold.
+
+**Changes:**
+- Added `TITLE_SEARCH_FIELDS` GraphQL fragment — lighter than `TITLE_CORE_FIELDS`, omits `plot`, `primaryImage`, `originalTitleText`, `endYear`, `displayableProperty`
+- Added `compact()` helper to strip null/undefined/empty-array fields from search results
+- Removed `image` and `plot` fields from searchTitles output (available via getTitleDetail)
+- Updated openapi.yaml schema to match: removed `image` and `plot` from searchTitles response, updated operation summary
+
+**Result:** Search responses dropped from 5.5–7.8KB to 2.6–3.2KB — all queries now return inline.
+
+**Gaps documented (not fixed — op coverage, not bugs):**
+- No person search (searchPeople) — searching "Tom Hanks" returns titles about him, not his filmography
+- No getPersonDetail/getFilmography op — film buff persona requires knowing an imdbId upfront
+
+**Verification:** `pnpm dev verify imdb` — 4/4 ops PASS.
+
+
 
 **What changed:**
 - PROGRESS.md: created
