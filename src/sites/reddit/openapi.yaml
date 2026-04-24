@@ -19,6 +19,10 @@ paths:
         created timestamp, thumbnail, selftext, flair, awards
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: reddit-read
+          operation: getSubredditPosts
         build:
           stable_id: 9534943fee0ebe7a
           tool_version: 2
@@ -130,6 +134,8 @@ paths:
                                 link_flair_text:
                                   type: string
                                   nullable: true
+                                upvote_ratio:
+                                  type: number
 
                 required:
                 - data
@@ -141,6 +147,10 @@ paths:
         comment count, subreddit, URL, created timestamp
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: reddit-read
+          operation: getPopularPosts
         build:
           stable_id: a134943fee0ebe7b
           tool_version: 2
@@ -221,6 +231,8 @@ paths:
                                 link_flair_text:
                                   type: string
                                   nullable: true
+                                upvote_ratio:
+                                  type: number
 
                 required:
                 - data
@@ -232,6 +244,10 @@ paths:
         subreddit, URL, selftext snippet, created timestamp
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: reddit-read
+          operation: searchPosts
         build:
           stable_id: 2c3d7a7c71f0c7ea
           tool_version: 2
@@ -348,6 +364,11 @@ paths:
                                   type: string
                                 domain:
                                   type: string
+                                link_flair_text:
+                                  type: string
+                                  nullable: true
+                                upvote_ratio:
+                                  type: number
 
                 required:
                 - data
@@ -359,6 +380,10 @@ paths:
         comment tree with author, body, score, replies, created timestamp
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: reddit-read
+          operation: getPostComments
         build:
           stable_id: 361929b38dce67b4
           tool_version: 2
@@ -476,6 +501,10 @@ paths:
         created date, description, avatar URL, is_gold, verified
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: reddit-read
+          operation: getUserProfile
         build:
           stable_id: b234567890abcdef
           tool_version: 2
@@ -539,6 +568,10 @@ paths:
         created timestamp, type (post or comment)
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: reddit-read
+          operation: getUserPosts
         build:
           stable_id: c345678901abcdef
           tool_version: 2
@@ -645,6 +678,10 @@ paths:
         count, active users, created date, rules
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: reddit-read
+          operation: getSubredditAbout
         build:
           stable_id: rd0006
           tool_version: 1
