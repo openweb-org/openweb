@@ -1,5 +1,17 @@
 # Spotify — Progress
 
+## 2026-04-24 — Userflow QA: response trimming and getPlaylist metadata fix
+
+**Context:** Blind userflow QA across 3 personas (Runner, Podcast listener, Artist explorer). All 8 read ops returned 200 but getPlaylist was missing all metadata and responses contained 55–115KB of GraphQL bloat.
+**Changes:**
+- **getPlaylist metadata fix:** `fetchPlaylistContents` hash only returns `{content}`. Added `fetchPlaylistMetadata` hash (`a65e1219...`) — two sequential calls, merge metadata (name, description, followers, owner, images) with full track content.
+- **searchMusic schema:** Added `playlists` and `podcasts` response fields (returned by API but undocumented).
+- **Response trimming:** `trimResponse()` strips `__typename`, `extractedColors`, `playability`, `relinkingInformation`, `associationsV3`, `saved`, `relatedContent`, `goods`, `visuals`, and other GraphQL/UI-only fields. Applied to all pathfinder and spclient returns. Size reductions: searchMusic 95→37KB, getArtist 93→54KB, getTrack 55→~2KB, getPlaylist 22KB(no metadata)→11KB(with metadata).
+- **getTrack artist trimming:** Stripped embedded artist `discography` from `firstArtist`/`otherArtists` (25KB per artist of redundant data — use getArtist for full profiles).
+- **Schema fixes:** Playlist image `width`/`height` now allow null (generated covers). Removed `relatedContent` from getArtist schema (stripped in response trimming).
+**Verification:** All 7 read ops PASS. No schema warnings.
+**Key files:** `src/sites/spotify/adapters/spotify-pathfinder.ts`, `src/sites/spotify/openapi.yaml`
+
 ## 2026-04-20 — Playlist writes via spclient (api.spotify.com 429 retracted)
 
 **Context:** Stage 5e — `addToPlaylist`, `removeFromPlaylist`, and `createPlaylist` were failing with 429 against `api.spotify.com/v1/playlists/...`. Prior handoffs called this a per-account quota; user confirmed they could perform the same actions in default Chrome, ruling that out.

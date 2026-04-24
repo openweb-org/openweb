@@ -218,11 +218,87 @@ paths:
                                                   name:
                                                     type: string
                                                     description: Artist name.
+                      playlists:
+                        type: object
+                        description: Matching playlists.
+                        required: [totalCount, items]
+                        properties:
+                          totalCount:
+                            type: integer
+                            description: Total number of matching playlists.
+                          items:
+                            type: array
+                            description: Playlist result entries.
+                            items:
+                              type: object
+                              required: [data]
+                              properties:
+                                data:
+                                  type: object
+                                  description: Playlist data.
+                                  required: [name, uri]
+                                  properties:
+                                    name:
+                                      type: string
+                                      description: Playlist name.
+                                    uri:
+                                      type: string
+                                      description: "spotify:playlist:ID"
+                                    description:
+                                      type: string
+                                      description: Playlist description.
+                                    ownerV2:
+                                      type: object
+                                      description: Playlist owner.
+                                      properties:
+                                        data:
+                                          type: object
+                                          properties:
+                                            name:
+                                              type: string
+                                              description: Owner display name.
+                                            uri:
+                                              type: string
+                                              description: Owner Spotify URI.
+                      podcasts:
+                        type: object
+                        description: Matching podcasts/shows.
+                        required: [totalCount, items]
+                        properties:
+                          totalCount:
+                            type: integer
+                            description: Total number of matching podcasts.
+                          items:
+                            type: array
+                            description: Podcast result entries.
+                            items:
+                              type: object
+                              required: [data]
+                              properties:
+                                data:
+                                  type: object
+                                  description: Podcast data.
+                                  required: [name, uri]
+                                  properties:
+                                    name:
+                                      type: string
+                                      description: Podcast/show name.
+                                    uri:
+                                      type: string
+                                      description: "spotify:show:ID"
+                                    publisher:
+                                      type: object
+                                      description: Podcast publisher.
+                                      required: [name]
+                                      properties:
+                                        name:
+                                          type: string
+                                          description: Publisher name.
 
   /internal/getArtist:
     post:
       operationId: getArtist
-      summary: "Get artist — name, bio, followers, monthly listeners, world rank, top tracks, albums, related artists"
+      summary: "Get artist — name, bio, followers, monthly listeners, world rank, top tracks, albums"
       x-openweb:
         permission: read
         adapter:
@@ -370,33 +446,6 @@ paths:
                               totalCount:
                                 type: integer
                                 description: Total singles count.
-                      relatedContent:
-                        type: object
-                        description: Related content.
-                        properties:
-                          relatedArtists:
-                            type: object
-                            description: Similar artists.
-                            required: [items]
-                            properties:
-                              items:
-                                type: array
-                                description: Related artist entries.
-                                items:
-                                  type: object
-                                  required: [uri, profile]
-                                  properties:
-                                    uri:
-                                      type: string
-                                      description: "spotify:artist:ID"
-                                    profile:
-                                      type: object
-                                      description: Artist profile.
-                                      required: [name]
-                                      properties:
-                                        name:
-                                          type: string
-                                          description: Artist name.
 
   /internal/getArtistDiscography:
     post:
@@ -894,11 +943,11 @@ paths:
                                         type: string
                                         description: Image URL.
                                       width:
-                                        type: integer
-                                        description: Image width in pixels.
+                                        type: [integer, "null"]
+                                        description: Image width in pixels (null for generated covers).
                                       height:
-                                        type: integer
-                                        description: Image height in pixels.
+                                        type: [integer, "null"]
+                                        description: Image height in pixels (null for generated covers).
                       content:
                         type: object
                         description: Playlist track content.

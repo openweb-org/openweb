@@ -61,6 +61,11 @@ const GRAPHQL_OPERATIONS: Record<string, OperationConfig> = {
     hash: '32b05e92e438438408674f95d0fdad8082865dc32acd55bd97f5113b8579092b',
     defaultVariables: { offset: 0, limit: 100, includeEpisodeContentRatingsV2: false },
   },
+  getPlaylistMetadata: {
+    operationName: 'fetchPlaylistMetadata',
+    hash: 'a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4',
+    defaultVariables: { offset: 0, limit: 0, enableWatchFeedEntrypoint: false },
+  },
   getRecommendations: {
     operationName: 'internalLinkRecommenderTrack',
     hash: 'c77098ee9d6ee8ad3eb844938722db60570d040b49f41f5ec6e7be9160a7c86b',
@@ -93,6 +98,32 @@ async function extractToken(page: Page, errors: ErrorHelpers): Promise<{ accessT
   await page.waitForTimeout(500)
 
   return { accessToken, clientToken }
+}
+
+const STRIP_KEYS = new Set([
+  '__typename', 'extractedColors', 'playability', 'relinkingInformation',
+  'associationsV3', 'saved', 'colorRaw', 'visualIdentity',
+  'abuseReportingEnabled', 'basePermission', 'currentUserCapabilities',
+  'revisionId', 'members', 'following', 'format', 'attributes',
+  'report_abuse_disabled', 'has_spotify_name', 'has_spotify_image',
+  'color', 'allow_follows', 'show_follows', 'chipOrder',
+  'goods', 'headerImage', 'preRelease', 'watchFeedEntrypoint',
+  'unmappedMusicVideos', 'relatedMusicVideos', 'pinnedItem',
+  'externalLinks', 'visuals', 'relatedContent',
+])
+
+function trimResponse(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj
+  if (Array.isArray(obj)) return obj.map(trimResponse)
+  if (typeof obj === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      if (STRIP_KEYS.has(k)) continue
+      out[k] = trimResponse(v)
+    }
+    return out
+  }
+  return obj
 }
 
 async function pathfinderFetch(
@@ -146,7 +177,7 @@ async function pathfinderFetch(
     throw errors.apiError('Spotify', msg)
   }
 
-  return json.data
+  return trimResponse(json.data)
 }
 
 async function userProfileFetch(
@@ -187,7 +218,7 @@ async function userProfileFetch(
     throw errors.httpError(result.status)
   }
 
-  return JSON.parse(result.text)
+  return trimResponse(JSON.parse(result.text))
 }
 
 async function spotifyApiFetch(
@@ -454,19 +485,50 @@ const runner: CustomRunner = {
       return userProfileFetch(page, params, cachedTokens.accessToken, cachedTokens.clientToken, errors)
     }
 
+    // getPlaylist: merge metadata + content from two separate persisted queries
+    if (operation === 'getPlaylist') {
+      const metaConfig = GRAPHQL_OPERATIONS.getPlaylistMetadata!
+      const contentConfig = graphqlConfig!
+      const metaVars = { ...metaConfig.defaultVariables, uri: params.uri }
+      const contentVars = { ...contentConfig.defaultVariables, ...params }
+      const metaData = await pathfinderFetch(page, metaConfig, metaVars, cachedTokens.accessToken, cachedTokens.clientToken, errors) as Record<string, unknown>
+      const contentData = await pathfinderFetch(page, contentConfig, contentVars, cachedTokens.accessToken, cachedTokens.clientToken, errors) as Record<string, unknown>
+      const metaPlaylist = (metaData.playlistV2 ?? {}) as Record<string, unknown>
+      const contentPlaylist = (contentData.playlistV2 ?? {}) as Record<string, unknown>
+      return { playlistV2: { ...metaPlaylist, content: contentPlaylist.content } }
+    }
+
     // GraphQL pathfinder operation
     if (!graphqlConfig) throw errors.unknownOp(operation)
     const variables = { ...graphqlConfig.defaultVariables, ...params }
 
+    let result: unknown
     try {
-      return await pathfinderFetch(page, graphqlConfig, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+      result = await pathfinderFetch(page, graphqlConfig, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
     } catch (err) {
       if (isNeedsLogin(err)) {
         cachedTokens = await extractToken(page, errors)
-        return pathfinderFetch(page, graphqlConfig, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+        result = await pathfinderFetch(page, graphqlConfig, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+      } else {
+        throw err
       }
-      throw err
     }
+
+    if (operation === 'getTrack') {
+      const track = (result as Record<string, unknown>).trackUnion as Record<string, unknown> | undefined
+      if (track) {
+        for (const key of ['firstArtist', 'otherArtists'] as const) {
+          const group = track[key] as { items?: Record<string, unknown>[] } | undefined
+          if (group?.items) {
+            for (const item of group.items) {
+              delete item.discography
+            }
+          }
+        }
+      }
+    }
+
+    return result
   },
 }
 
