@@ -84,7 +84,7 @@ paths:
           description: Sort order (best flight, price, duration, takeoff time, landing time).
       responses:
         "200":
-          description: Flight search results with progressive polling data.
+          description: Trimmed flight search results (top 20 core results, top 3 booking options each).
           content:
             application/json:
               schema:
@@ -92,55 +92,69 @@ paths:
                 properties:
                   searchId:
                     type: string
-                    description: Unique search session ID.
                   status:
                     type: string
-                    description: Search completion status.
+                  sortMode:
+                    type: string
                   totalCount:
                     type: integer
-                    description: Total number of matching flights.
                   filteredCount:
                     type: integer
-                    description: Number of flights after filters.
                   results:
                     type: array
-                    description: Flight result entries.
                     items:
                       type: object
                       properties:
                         resultId:
                           type: string
-                        type:
-                          type: string
-                          description: Result type (e.g. "fsr").
-                        bookingOptions:
+                        isBest:
+                          type: boolean
+                        isCheapest:
+                          type: boolean
+                        legs:
                           type: array
                           items:
                             type: object
                             properties:
-                              bookingUrl:
-                                type: object
-                                properties:
-                                  url:
-                                    type: string
+                              id:
+                                type: string
+                                description: References a key in the top-level legs map.
+                              segments:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                        bookingOptions:
+                          type: array
+                          description: Top 3 cheapest booking options.
+                          items:
+                            type: object
+                            properties:
                               providerCode:
                                 type: string
-                              displayPrice:
-                                type: object
-                                properties:
-                                  price:
-                                    type: number
-                                  totalPrice:
-                                    type: number
+                              price:
+                                type: number
+                                description: Per-person price.
+                              totalPrice:
+                                type: number
+                                description: Total price including taxes/fees.
+                              currency:
+                                type: string
                   legs:
                     type: object
-                    description: Map of leg IDs → leg details (duration, segments, times).
+                    description: Map of leg IDs → leg details.
                     additionalProperties:
                       type: object
                       properties:
                         duration:
                           type: integer
                           description: Total leg duration in minutes.
+                        departure:
+                          type: string
+                        arrival:
+                          type: string
                         segments:
                           type: array
                           items:
@@ -148,12 +162,6 @@ paths:
                             properties:
                               id:
                                 type: string
-                        arrival:
-                          type: string
-                          format: date-time
-                        departure:
-                          type: string
-                          format: date-time
                   segments:
                     type: object
                     description: Map of segment IDs → flight segment details.
@@ -168,12 +176,10 @@ paths:
                           type: string
                         destination:
                           type: string
-                        arrival:
-                          type: string
-                          format: date-time
                         departure:
                           type: string
-                          format: date-time
+                        arrival:
+                          type: string
                         duration:
                           type: integer
                           description: Segment duration in minutes.
@@ -186,8 +192,6 @@ paths:
                   airports:
                     type: object
                     description: Map of airport codes → airport info.
-                  sortMode:
-                    type: string
                 required:
                   - results
   /hotels/search:
@@ -208,7 +212,7 @@ paths:
           required: true
           schema:
             type: string
-          description: City or location (e.g. "New-York", "San-Francisco,CA", "London"). Use dashes for spaces.
+          description: City or location (e.g. "New-York", "San-Francisco", "London"). Use dashes for spaces.
         - name: checkInDate
           in: query
           required: true
@@ -253,7 +257,7 @@ paths:
           description: Sort order.
       responses:
         "200":
-          description: Hotel search results with pricing and provider comparison.
+          description: Trimmed hotel search results (top 20, top 3 providers each).
           content:
             application/json:
               schema:
@@ -263,6 +267,8 @@ paths:
                     type: string
                   status:
                     type: string
+                  sortMode:
+                    type: string
                   totalCount:
                     type: integer
                   filteredCount:
@@ -271,6 +277,67 @@ paths:
                     type: array
                     items:
                       type: object
-                      description: Hotel result with name, rating, prices from multiple providers.
+                      properties:
+                        name:
+                          type: string
+                        stars:
+                          type: number
+                        rating:
+                          type:
+                            - number
+                            - "null"
+                          description: Guest rating score (0-10).
+                        ratingText:
+                          type:
+                            - string
+                            - "null"
+                          description: Rating category (e.g. "Very good", "Wonderful").
+                        reviews:
+                          type:
+                            - integer
+                            - "null"
+                        location:
+                          type:
+                            - string
+                            - "null"
+                        distance:
+                          type:
+                            - string
+                            - "null"
+                          description: Distance from city center (e.g. "0.7 mi").
+                        providers:
+                          type: array
+                          description: Top 3 booking providers with prices.
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              providerCode:
+                                type: string
+                              price:
+                                type: number
+                                description: Nightly price.
+                              totalPrice:
+                                type: number
+                                description: Total stay price.
+                              currency:
+                                type: string
+                              freebies:
+                                type: array
+                                items:
+                                  type: string
+                                description: Free perks (e.g. "Free breakfast", "Free cancellation").
+                        detailUrl:
+                          type:
+                            - string
+                            - "null"
+                        amenities:
+                          type: array
+                          items:
+                            type: string
+                        savingsPercent:
+                          type: integer
+                          description: Percentage savings vs usual price. Only present when applicable.
                 required:
                   - results

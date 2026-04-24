@@ -13,5 +13,6 @@
     "l2_count": 0,
     "l3_count": 2,
     "ws_count": 0
-  }
+  },
+  "quarantined": false
 }

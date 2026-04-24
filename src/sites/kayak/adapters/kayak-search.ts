@@ -1,16 +1,6 @@
 import type { Page, Response as PwResponse } from 'patchright'
 
 import type { CustomRunner } from '../../../types/adapter.js'
-/**
- * Kayak L3 adapter — intercept + extraction.
- *
- * Flights & Cars: intercept progressive poll API responses.
- * Hotels: DOM extraction from SSR map view (map mode doesn't use poll API).
- *
- * Poll endpoints (flights/cars):
- *   Flights: POST /i/api/search/dynamic/flights/poll
- *   Cars:    POST /i/api/search/v1/cars/poll
- */
 
 /* ---------- types ---------- */
 
@@ -20,34 +10,17 @@ type ErrorHelpers = {
   apiError(label: string, msg: string): Error
 }
 
-/* ---------- Akamai warm-up ---------- */
-
-/**
- * Navigate to kayak.com homepage if the page isn't already there. The Akamai
- * `_abck` cookie wait now lives in `runner.warmReady` (see bottom of file) —
- * the runtime polls it during warmSession() before run() starts.
- */
-async function ensureOnKayakHome(page: Page): Promise<void> {
-  const url = 'https://www.kayak.com'
-  const currentUrl = page.url()
-  if (!currentUrl.includes('kayak.com') || currentUrl.includes('chrome-error')) {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
-  }
-}
+type AnyRecord = Record<string, unknown>
 
 /* ---------- shared intercept ---------- */
 
-/**
- * Navigate to a Kayak search URL and intercept the progressive poll responses.
- * Returns the most complete poll response (highest result count).
- */
 async function interceptPoll(
   page: Page,
   navigateUrl: string,
   pollUrlMatch: string,
   timeout = 30_000,
-): Promise<Record<string, unknown> | null> {
-  let best: Record<string, unknown> | null = null
+): Promise<AnyRecord | null> {
+  let best: AnyRecord | null = null
   let bestCount = 0
 
   const handler = async (resp: PwResponse) => {
@@ -55,7 +28,7 @@ async function interceptPoll(
     if (resp.status() !== 200) return
     try {
       const body = await resp.body()
-      const json = JSON.parse(body.toString()) as Record<string, unknown>
+      const json = JSON.parse(body.toString()) as AnyRecord
       const results = json.results as unknown[] | undefined
       const count = Array.isArray(results) ? results.length : 0
       if (count > bestCount) {
@@ -71,7 +44,6 @@ async function interceptPoll(
     const deadline = Date.now() + timeout
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 1000))
-      // Stop early if we have results and status indicates completion
       if (best) {
         const status = best.status as string | undefined
         const searchStatus = best.searchStatus as string | undefined
@@ -85,11 +57,140 @@ async function interceptPoll(
   return best
 }
 
+/* ---------- response trimming ---------- */
+
+const MAX_FLIGHT_RESULTS = 20
+const MAX_BOOKING_OPTIONS = 3
+const MAX_HOTEL_RESULTS = 20
+const MAX_HOTEL_PROVIDERS = 3
+
+function trimFlightResponse(data: AnyRecord): AnyRecord {
+  const rawResults = data.results as AnyRecord[] | undefined
+  const coreResults = (rawResults ?? []).filter(r => r.type === 'core')
+  const trimmed = coreResults.slice(0, MAX_FLIGHT_RESULTS).map(r => {
+    const bookingOptions = (r.bookingOptions as AnyRecord[] ?? [])
+      .slice(0, MAX_BOOKING_OPTIONS)
+      .map(opt => ({
+        providerCode: opt.providerCode,
+        price: (opt.displayPrice as AnyRecord)?.price,
+        totalPrice: ((opt.fees as AnyRecord)?.totalPrice as AnyRecord)?.price ?? (opt.displayPrice as AnyRecord)?.price,
+        currency: (opt.displayPrice as AnyRecord)?.currency,
+      }))
+    return {
+      resultId: r.resultId,
+      ...(r.isBest ? { isBest: true } : {}),
+      ...(r.isCheapest ? { isCheapest: true } : {}),
+      legs: r.legs,
+      bookingOptions,
+    }
+  })
+
+  const usedLegIds = new Set<string>()
+  const usedSegmentIds = new Set<string>()
+  for (const r of trimmed) {
+    for (const leg of r.legs as AnyRecord[]) {
+      const legId = (leg.id ?? leg.legId ?? leg) as string
+      usedLegIds.add(legId)
+    }
+  }
+
+  const legs = data.legs as AnyRecord | undefined
+  const trimmedLegs: AnyRecord = {}
+  if (legs) {
+    for (const [id, leg] of Object.entries(legs)) {
+      if (!usedLegIds.has(id)) continue
+      const legData = leg as AnyRecord
+      trimmedLegs[id] = {
+        duration: legData.duration,
+        departure: legData.departure,
+        arrival: legData.arrival,
+        segments: (legData.segments as AnyRecord[])?.map(s => {
+          usedSegmentIds.add(s.id as string)
+          return { id: s.id }
+        }),
+      }
+    }
+  }
+
+  const segments = data.segments as AnyRecord | undefined
+  const trimmedSegments: AnyRecord = {}
+  if (segments) {
+    for (const [id, seg] of Object.entries(segments)) {
+      if (!usedSegmentIds.has(id)) continue
+      const s = seg as AnyRecord
+      trimmedSegments[id] = {
+        airline: s.airline,
+        flightNumber: s.flightNumber,
+        origin: s.origin,
+        destination: s.destination,
+        departure: s.departure,
+        arrival: s.arrival,
+        duration: s.duration,
+        equipmentTypeName: s.equipmentTypeName,
+      }
+    }
+  }
+
+  return {
+    searchId: data.searchId,
+    status: data.status,
+    sortMode: data.sortMode,
+    totalCount: data.totalCount,
+    filteredCount: data.filteredCount,
+    results: trimmed,
+    legs: trimmedLegs,
+    segments: trimmedSegments,
+    airlines: data.airlines,
+    airports: data.airports,
+  }
+}
+
+function trimHotelResponse(data: AnyRecord): AnyRecord {
+  const rawResults = data.results as AnyRecord[] | undefined
+  const coreResults = (rawResults ?? []).filter(r => r.resultType === 'core')
+  const trimmed = coreResults.slice(0, MAX_HOTEL_RESULTS).map(r => {
+    const rating = r.rating as AnyRecord | undefined
+    const providers = (r.providers as AnyRecord[] ?? [])
+      .slice(0, MAX_HOTEL_PROVIDERS)
+      .map(p => ({
+        name: p.localizedProviderName,
+        providerCode: p.providerCode,
+        price: (p.price as AnyRecord)?.price,
+        totalPrice: (p.totalPrice as AnyRecord)?.price,
+        currency: (p.price as AnyRecord)?.currency,
+        ...(p.freebies ? { freebies: (p.freebies as AnyRecord[]).map(f => f.localizedFreebie).filter(Boolean) } : {}),
+      }))
+    const geo = r.geolocation as AnyRecord | undefined
+    return {
+      name: r.localizedHotelName,
+      stars: r.stars,
+      rating: rating?.score ?? null,
+      ratingText: rating?.localizedRatingCategory ?? null,
+      reviews: rating?.reviewCount ?? null,
+      location: geo?.localizedCity ?? null,
+      distance: geo?.localizedDisplayDistance ?? null,
+      providers,
+      detailUrl: r.detailsUrl ?? null,
+      amenities: (r.amenities as AnyRecord[] | undefined)?.map(a => a.localizedName).filter(Boolean),
+      ...(r.savingsPercent ? { savingsPercent: r.savingsPercent } : {}),
+    }
+  })
+
+  return {
+    searchId: data.searchId,
+    status: data.status,
+    sortMode: data.sortMode,
+    totalCount: data.totalCount,
+    filteredCount: data.filteredCount,
+    results: trimmed,
+  }
+}
+
 /* ---------- operation handlers ---------- */
 
 async function searchFlights(
   page: Page,
-  params: Record<string, unknown>,
+  params: AnyRecord,
   errors: ErrorHelpers,
 ): Promise<unknown> {
   const origin = String(params.origin ?? 'SFO')
@@ -102,7 +203,6 @@ async function searchFlights(
 
   if (!departureDate) throw errors.apiError('searchFlights', 'departureDate is required')
 
-  // Build Kayak flight search URL
   let url = `https://www.kayak.com/flights/${origin}-${destination}/${departureDate}`
   if (returnDate) url += `/${returnDate}`
   url += `?sort=${sort}`
@@ -114,12 +214,12 @@ async function searchFlights(
     throw errors.apiError('searchFlights', 'No flight results captured — search may have timed out or been blocked')
   }
 
-  return data
+  return trimFlightResponse(data)
 }
 
 async function searchHotels(
   page: Page,
-  params: Record<string, unknown>,
+  params: AnyRecord,
   errors: ErrorHelpers,
 ): Promise<unknown> {
   const destination = String(params.destination ?? params.location ?? 'New-York')
@@ -133,66 +233,22 @@ async function searchHotels(
     throw errors.apiError('searchHotels', 'checkInDate and checkOutDate are required')
   }
 
-  // Hotels use DOM extraction (map mode is SSR, no poll API).
-  // Ensure Akamai cookies are present before navigating to search results.
   const location = destination.replace(/\s+/g, '-')
   let url = `https://www.kayak.com/hotels/${location}/${checkInDate}/${checkOutDate}/${guests}adults`
   if (rooms > 1) url += `/${rooms}rooms`
   url += `?sort=${sort}`
 
-  await ensureOnKayakHome(page)
-
-  // Navigation may timeout on load event (ad-heavy page), but DOM renders earlier
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
-  // Wait for hotel result cards to render — fail explicitly if they don't appear
-  await page.waitForSelector('[class*="resultInner"]', { timeout: 20_000 })
-
-  // Extract hotel data from SSR-rendered DOM
-  const results = await page.evaluate(() => {
-    const cards = document.querySelectorAll('[class*="resultInner"]')
-    return Array.from(cards).map(card => {
-      const text = (card as HTMLElement).innerText
-      const lines = text.split('\n').filter(l => l.trim().length > 0)
-
-      // Name: first substantial line (skip Save, Share, Compare)
-      let name = ''
-      for (const l of lines) {
-        const t = l.trim()
-        if (t.length > 5 && !['Save', 'Share', 'Compare'].includes(t)) { name = t; break }
-      }
-
-      const ratingMatch = text.match(/(\d+\.\d)\s+(\w[\w\s]*?)\((\d[\d,]*)\)/)
-      const starsMatch = text.match(/(\d)\s*stars?/i)
-      const priceMatch = text.match(/\$(\d[\d,]+)/)
-      const nameLink = card.querySelector('[class*="FLpo-hotel-name"] a, [class*="hotel-name"] a, a[class*="name"]')
-      const linkHref = nameLink?.getAttribute('href') ?? ''
-
-      return {
-        name,
-        rating: ratingMatch ? Number(ratingMatch[1]) : null,
-        ratingText: ratingMatch ? ratingMatch[2].trim() : null,
-        reviews: ratingMatch ? Number(ratingMatch[3].replace(/,/g, '')) : null,
-        stars: starsMatch ? Number(starsMatch[1]) : null,
-        price: priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : null,
-        detailUrl: linkHref || null,
-      }
-    })
-  })
-
-  if (results.length === 0) {
-    throw errors.apiError('searchHotels', 'No hotel results found — page may not have loaded or location not recognized')
+  const data = await interceptPoll(page, url, '/search/dynamic/hotels/poll')
+  if (!data) {
+    throw errors.apiError('searchHotels', 'No hotel results captured — search may have timed out or been blocked')
   }
 
-  return {
-    searchUrl: page.url(),
-    totalCount: results.length,
-    results,
-  }
+  return trimHotelResponse(data)
 }
 
 async function searchCars(
   page: Page,
-  params: Record<string, unknown>,
+  params: AnyRecord,
   errors: ErrorHelpers,
 ): Promise<unknown> {
   const location = String(params.location ?? params.pickupLocation ?? 'LAX')
@@ -220,7 +276,7 @@ async function searchCars(
 
 const OPERATIONS: Record<
   string,
-  (page: Page, params: Record<string, unknown>, errors: ErrorHelpers) => Promise<unknown>
+  (page: Page, params: AnyRecord, errors: ErrorHelpers) => Promise<unknown>
 > = {
   searchFlights,
   searchHotels,
@@ -232,9 +288,6 @@ const adapter: CustomRunner = {
   description: 'Kayak search — flights, hotels, cars via poll interception',
   warmTimeoutMs: 8_000,
 
-  /** Akamai Bot Manager `_abck` cookie must exist before making requests.
-   *  Polled during warmSession() — when not on kayak.com yet, returns false
-   *  until the page navigates (handler does that via ensureOnKayakHome). */
   async warmReady(page: Page): Promise<boolean> {
     const cookies = await page.context().cookies('https://www.kayak.com')
     return cookies.some((c) => c.name === '_abck')
