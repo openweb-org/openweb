@@ -57,3 +57,16 @@
 **Verification:** No FAILs after change. All 4 ops PASS via direct `pnpm dev indeed exec <op>`. Sequential `pnpm dev verify indeed` still shows 5 DRIFTs — these are runtime-level flakes, not spec drift.
 **Root cause (deferred):** Sequential verify reuses a single page across N ops. `window._initialData` (and similar SSR globals) from the prior op's navigation persists, polluting `page_global_data` extraction for subsequent ops. Schemas pass cleanly when each op runs from a fresh page. Fix lives in `src/runtime/*` (page reuse / state clearing in extraction-executor or browser-lifecycle) — out of scope for this sweep. See `doc/todo/verify-fix-0418/outcome.md` follow-up #2.
 **Pitfall:** Site spec must be mirrored to `~/.openweb/sites/indeed/openapi.yaml` for `pnpm dev verify` to pick up changes — runtime resolves `~/.openweb` before `src/sites/`.
+
+## 2026-04-25 — Userflow QA: BLOCKED by Cloudflare CAPTCHA
+
+**Context:** Attempted userflow QA with 3 blind persona workflows:
+1. Job seeker — `searchJobs` → `getJobDetail` → `getCompanyOverview` (software engineer, NYC)
+2. Salary researcher — `autocompleteJobTitle` → `getSalary` (nurse)
+3. Company deep-dive — `getCompanyOverview` → `getCompanyReviews` → `getCompanySalaries`
+
+**Result:** All 8 operations blocked by Cloudflare challenge page ("Just a moment..."). `pnpm dev verify indeed` confirms 0/8 ops pass — full `bot_blocked` across the board. Autocomplete ops (which use in-page `fetch()` to `autocomplete.indeed.com`) also fail because the initial page navigation to `indeed.com` is itself blocked.
+
+**Blocker:** Indeed has deployed Cloudflare Bot Management that the current headless Chrome 114 runtime cannot bypass. This is not a warm-session or anti-bot sensor issue — the challenge fires on initial navigation before any extraction runs.
+
+**No code changes.** Userflow QA cannot proceed until bot detection is resolved (likely requires browser fingerprint upgrades or proxy rotation at the runtime level).
