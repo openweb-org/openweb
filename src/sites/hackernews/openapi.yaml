@@ -144,14 +144,14 @@ paths:
   /search~getBestStories:
     get:
       operationId: getBestStories
-      summary: 'Highest-voted stories sorted by relevance'
+      summary: 'All-time highest-voted stories across HN history'
       x-openweb:
         permission: read
         actual_path: /api/v1/search
         unwrap: hits
         build:
           stable_id: hn0003
-          tool_version: 2
+          tool_version: 3
           verified: true
       parameters:
       - name: tags
@@ -202,17 +202,17 @@ paths:
                   required:
                   - objectID
                   - title
-  /search~getAskStories:
+  /search_by_date~getAskStories:
     get:
       operationId: getAskStories
-      summary: 'Ask HN posts'
+      summary: 'Recent Ask HN posts sorted by date'
       x-openweb:
         permission: read
-        actual_path: /api/v1/search
+        actual_path: /api/v1/search_by_date
         unwrap: hits
         build:
           stable_id: hn0004
-          tool_version: 2
+          tool_version: 3
           verified: true
       parameters:
       - name: tags
@@ -263,17 +263,17 @@ paths:
                   required:
                   - objectID
                   - title
-  /search~getShowStories:
+  /search_by_date~getShowStories:
     get:
       operationId: getShowStories
-      summary: 'Show HN posts'
+      summary: 'Recent Show HN posts sorted by date'
       x-openweb:
         permission: read
-        actual_path: /api/v1/search
+        actual_path: /api/v1/search_by_date
         unwrap: hits
         build:
           stable_id: hn0005
-          tool_version: 2
+          tool_version: 3
           verified: true
       parameters:
       - name: tags
@@ -706,17 +706,17 @@ paths:
                       type: integer
                   required:
                   - objectID
-  /search~getStoriesByDomain:
+  /search_by_date~getStoriesByDomain:
     get:
       operationId: getStoriesByDomain
-      summary: 'Stories submitted from a specific domain'
+      summary: 'Recent stories submitted from a specific domain'
       x-openweb:
         permission: read
-        actual_path: /api/v1/search
+        actual_path: /api/v1/search_by_date
         unwrap: hits
         build:
           stable_id: hn0012
-          tool_version: 3
+          tool_version: 4
           verified: true
       parameters:
       - name: tags

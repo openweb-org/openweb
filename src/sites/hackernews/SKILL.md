@@ -40,16 +40,16 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 |-----------|--------|-----------|------------|-----------|
 | getTopStories | browse top stories | — | objectID, title, url, author, points, num_comments | L1 node (Algolia) |
 | getNewestStories | browse newest | — | same as above | L1 node (Algolia) |
-| getBestStories | browse highest-voted | — | same as above | L1 node (Algolia) |
-| getAskStories | browse Ask HN | — | same as above | L1 node (Algolia) |
-| getShowStories | browse Show HN | — | same as above | L1 node (Algolia) |
+| getBestStories | all-time highest-voted | — | same as above | L1 node (Algolia) |
+| getAskStories | recent Ask HN | — | same as above | L1 node (Algolia) |
+| getShowStories | recent Show HN | — | same as above | L1 node (Algolia) |
 | getJobPostings | browse jobs | — | objectID, title, url, created_at | L1 node (Algolia) |
 | getFrontPageStories | time-based front page | — | same as feeds | L1 node (Algolia) |
 | getStoryDetail | story + comment tree | id (item ID) | id, title, url, points, children[] | L1 node (Algolia) |
 | getUserProfile | user profile | id (username) | id, karma, created, about | L1 node (Firebase) |
 | getNewComments | newest comments | — | objectID, author, comment_text, story_title | L1 node (Algolia) |
 | getStoryComments | comment thread | id, limit? | storyId, commentCount, comments[] | adapter (Algolia) |
-| getStoriesByDomain | domain stories | query (domain) | objectID, title, url, author, points | L1 node (Algolia) |
+| getStoriesByDomain | recent domain stories | query (domain) | objectID, title, url, author, points | L1 node (Algolia) |
 | getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter (Algolia) |
 | getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter (Algolia) |
 | upvoteStory | upvote item | id <- feeds/getStoryDetail | ok, id | adapter (page) |

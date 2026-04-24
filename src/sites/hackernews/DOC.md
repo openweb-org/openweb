@@ -34,16 +34,16 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 |-----------|--------|-----------|------------|-----------|
 | getTopStories | browse top stories | — | objectID, title, url, author, points, num_comments | L1 node (Algolia) |
 | getNewestStories | browse newest | — | same as above | L1 node (Algolia) |
-| getBestStories | browse highest-voted | — | same as above | L1 node (Algolia) |
-| getAskStories | browse Ask HN | — | same as above | L1 node (Algolia) |
-| getShowStories | browse Show HN | — | same as above | L1 node (Algolia) |
+| getBestStories | all-time highest-voted | — | same as above | L1 node (Algolia) |
+| getAskStories | recent Ask HN | — | same as above | L1 node (Algolia) |
+| getShowStories | recent Show HN | — | same as above | L1 node (Algolia) |
 | getJobPostings | browse jobs | — | objectID, title, url, created_at | L1 node (Algolia) |
 | getFrontPageStories | time-based front page | — | same as feeds | L1 node (Algolia) |
 | getStoryDetail | story + comment tree | id (item ID) | id, title, url, points, children[] | L1 node (Algolia) |
 | getUserProfile | user profile | id (username) | id, karma, created, about | L1 node (Firebase) |
 | getNewComments | newest comments | — | objectID, author, comment_text, story_title | L1 node (Algolia) |
 | getStoryComments | comment thread | id, limit? | storyId, commentCount, comments[] | adapter node (Algolia) |
-| getStoriesByDomain | domain stories | query (domain) | objectID, title, url, author, points | L1 node (Algolia) |
+| getStoriesByDomain | recent domain stories | query (domain) | objectID, title, url, author, points | L1 node (Algolia) |
 | getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter node (Algolia) |
 | getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter node (Algolia) |
 | upvoteStory | upvote item | id | ok, id | adapter (page) |
@@ -144,5 +144,7 @@ The delete-confirm step also fails if the comment is outside HN's ~2-hour delete
 ## Known Issues
 - Algolia data has ~30s delay from HN (near-real-time, not instant)
 - Firebase `user.submitted` returns all IDs (can be thousands) — Algolia is more efficient for user activity
+- `getBestStories` returns all-time highest-voted stories (not recent best) — use `getTopStories` for current popular content
+- Algolia responses include `_highlightResult` and `_tags` metadata — no adapter-level stripping available
 - No bot detection from any API
 - Write ops still need DOM for auth token extraction (no alternative)

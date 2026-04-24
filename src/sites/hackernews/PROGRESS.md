@@ -1,3 +1,35 @@
+## 2026-04-24 — Userflow QA: stale results in getAskStories, getShowStories, getStoriesByDomain
+
+**Context:** Userflow QA with 3 personas (developer staying current, founder tracking launches, recruiter spotting talent). Ran all read ops blind, chained them end-to-end.
+
+**What broke:**
+- `getAskStories` returned all-time top Ask HN posts (first result: 2023 FCC AMA with 3387 points). A founder checking "what are people asking on HN" expects today's posts, not a 3-year-old thread.
+- `getShowStories` returned all-time top Show HN (first result: 2012 "This up votes itself" with 3531 points). A developer checking Show HN expects recent projects.
+- `getStoriesByDomain '{"query":"github.com"}'` returned all-time top github.com stories (first result: 2020 youtube-dl DMCA with 4240 points). Users expect recent submissions from the domain.
+
+**Root cause:** All three ops used the Algolia `/search` endpoint (sorts by popularity/relevance) without any recency constraint. Unlike `getTopStories` which filters by `front_page` tag (naturally limits to current front page), `ask_hn`/`show_hn`/`story` tags span all history, so highest-voted-ever dominates.
+
+**What was fixed:**
+1. `getAskStories`: switched from `/api/v1/search` to `/api/v1/search_by_date` — returns newest Ask HN posts
+2. `getShowStories`: switched to `/api/v1/search_by_date` — returns newest Show HN posts
+3. `getStoriesByDomain`: switched to `/api/v1/search_by_date` — returns newest stories from the domain
+4. `getBestStories`: kept on `/search` (all-time ranking is the correct behavior for "best") but updated summary to "All-time highest-voted stories across HN history" to set expectations
+5. Bumped `tool_version` on all 4 affected ops
+
+**What worked well:**
+- getTopStories, getFrontPageStories, getNewestStories, getJobPostings — all return current/recent data
+- getStoryDetail → full comment tree with nested children
+- getUserProfile → getUserSubmissions → getUserComments chain flows cleanly
+- getStoryComments returns `[]` for brand-new stories (Algolia indexing lag ~30s) — correct, not a bug
+
+**Minor observations (not fixed — no adapter-level stripping available):**
+- All Algolia responses include `_highlightResult` and `_tags` metadata noise. Would need adapter-level response transform to strip.
+- getUserProfile `about` field contains raw HTML entities (`&#x2F;` etc.) — this is HN's own encoding, not an OpenWeb issue.
+
+**Verification:** All 3 workflows pass end-to-end after fix. `pnpm build` required to propagate spec changes.
+
+---
+
 ## 2026-04-19 — HMAC unvote/delete ops
 
 **Context:** HN HMAC probe to add the missing inverse ops (`unvoteStory`, `deleteComment`) so every write op has a clean rollback partner. Per write-verify handoff §5.5, the HN HMAC was an unknown — fallback was to drop all 4 HN write ops if the token model was incompatible with verify's session.
