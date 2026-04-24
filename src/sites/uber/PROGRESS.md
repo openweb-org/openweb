@@ -36,3 +36,40 @@
 
 **Blocker:** Cannot complete green verify without user re-logging into Uber in the openweb-managed Chrome profile. Recommend killing the orphan Chrome (the older profile not registered in `~/.openweb/browser.profile`) to eliminate the IPv4/IPv6 port-collision class of bug.
 
+## 2026-04-25: Userflow QA — searchLocations verified, auth blocker persists
+
+**Context:** Blind persona-driven QA of all 3 operations.
+
+**Workflows tested:**
+
+1. **Tourist in NYC** — searchLocations("Times Square") → searchLocations("JFK Airport") → getRideEstimate(Times Square → JFK)
+2. **Commuter in SF** — searchLocations("SFO Airport") → searchLocations("Union Square San Francisco") → getRideEstimate(SFO → Union Square)
+3. **Expense reviewer** — getRideHistory(limit=5)
+
+**Results:**
+
+| Operation | Status | Notes |
+|-----------|--------|-------|
+| searchLocations | PASS | No auth required. Clean 700-1100 byte responses. |
+| getRideEstimate | BLOCKED | Requires Uber login — times out in auth cascade. |
+| getRideHistory | BLOCKED | Requires Uber login — same auth dependency. |
+
+**Edge cases tested (searchLocations):**
+- Empty query → correct INVALID_PARAMS error
+- DROPOFF type → works (returns relevant locations)
+- Zero lat/lng (no geo bias) → works (returns global results)
+- Generic queries ("Starbucks") → returns nearby results when coords provided
+- Address search ("123 Main Street") → resolves correctly
+
+**Gaps found and fixed:**
+- **Type safety:** Local `Errors` type was missing `needsLogin()` declaration — called on lines 46/54 but not in the type. Fixed by adding it. No runtime behavior change (worked via `as unknown as Helpers` cast) but now type-correct.
+
+**Response quality (searchLocations):**
+- Adapter already trims well: raw GraphQL → 5-field objects (id, name, address, lat/lng, type, source)
+- Response sizes: 700-1100 bytes — no bloat
+- Op chaining works: searchLocations coordinates feed directly into getRideEstimate params
+
+**Verification:** `pnpm dev verify uber --ops searchLocations` → PASS. Full verify still 1/3 (searchLocations only) due to auth blocker.
+
+**Blocker (unchanged):** getRideEstimate and getRideHistory require active Uber session cookies in the managed Chrome profile. User must log in via `pnpm dev browser show` → navigate to m.uber.com → complete Uber login flow. No code fix possible — this is an environmental auth dependency.
+

@@ -15,6 +15,7 @@ import type { CustomRunner } from '../../../types/adapter.js'
 type Errors = {
   unknownOp(op: string): Error
   missingParam(name: string): Error
+  needsLogin(): Error
   fatal(msg: string): Error
   retriable(msg: string): Error
   wrap(error: unknown): Error
