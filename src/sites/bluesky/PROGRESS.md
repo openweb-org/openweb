@@ -1,3 +1,28 @@
+## 2026-04-24 — Response trimming adapters (QA userflow)
+
+**Context:** Userflow QA across 3 personas (researcher, early adopter, journalist) found all 10 read ops functional but response bloat caused 4/10 to truncate to temp files. Root cause: raw AT Protocol responses include full author objects (associated, verification, viewer, labels), duplicate embed data (record.embed blob refs + embed view), and deeply nested reply trees.
+
+**Changes:**
+- **New `bluesky-public.ts` adapter** — CustomRunner using `nodeFetch` for 8 public API ops (getProfile, getPostThread, getFeed, getAuthorFeed, searchActors, getFollowers, getFollows, getPosts). Trims authors to essentials (did, handle, displayName, avatar, description, counts, verifiedStatus). Strips record.embed duplicates. Simplifies embed views. Caps thread replies at 30 with `repliesTruncated` count. Feed reply context uses lightweight refs (handle, text preview, URI).
+- **Updated `bluesky-pds.ts` adapter** — Added trimming to searchPosts (posts → trimPost) and getNotifications (notifications → trimNotification). Write ops unchanged.
+- **Updated `openapi.yaml`** — Added `adapter: { name: bluesky-public, operation: <op> }` to all 8 public API operation x-openweb blocks.
+
+**Results (limit=3 unless noted):**
+| Operation | Before | After | Inline? |
+|-----------|--------|-------|---------|
+| getProfile | ~1.3KB | 783b | Yes |
+| searchActors | ~1.5KB | 2.2KB | Yes |
+| getAuthorFeed | 9.2KB truncated | 3.9KB | Yes |
+| getFeed | ~6KB inline | 3.5KB | Yes |
+| getFollowers | ~2KB | 1.2KB | Yes |
+| getFollows | ~3KB | 3KB | Yes |
+| getPosts | ~1.5KB | 1.1KB | Yes |
+| getPostThread | 334KB truncated | 35KB file | Expected (198→30 replies) |
+| searchPosts | 8.7KB truncated | 2.5KB | Yes |
+| getNotifications | ~3KB | 2.9KB | Yes |
+
+**Key files:** `src/sites/bluesky/adapters/bluesky-public.ts`, `src/sites/bluesky/adapters/bluesky-pds.ts`, `src/sites/bluesky/openapi.yaml`
+
 ## 2026-04-20 — Restored from .skip after handoff4 quarantine (handoff5)
 
 **Context:** Handoff4 left bluesky in `openapi.yaml.skip` overnight with all ops in a "login-loop" failure mode — every read op landed in the auth cascade despite the underlying account being valid.

@@ -17,6 +17,9 @@ paths:
       summary: "Get user profile — display name, handle, bio, avatar, follower/following counts, post count"
       x-openweb:
         permission: read
+        adapter:
+          name: bluesky-public
+          operation: getProfile
         build:
           stable_id: bsky_getProfile_v2
           tool_version: 2
@@ -78,6 +81,9 @@ paths:
       summary: "Get post with reply thread — post content, author, embed, like/repost/reply counts, parent and reply chain"
       x-openweb:
         permission: read
+        adapter:
+          name: bluesky-public
+          operation: getPostThread
         build:
           stable_id: bsky_getPostThread_v2
           tool_version: 2
@@ -163,6 +169,9 @@ paths:
       summary: "Get a custom feed — posts from a feed generator (e.g. 'Discover', 'What's Hot'), with full post data, author info, embeds"
       x-openweb:
         permission: read
+        adapter:
+          name: bluesky-public
+          operation: getFeed
         build:
           stable_id: bsky_getFeed_v2
           tool_version: 2
@@ -369,6 +378,9 @@ paths:
       summary: "Get a user's posts — full post data with embeds, engagement counts, reply/repost indicators"
       x-openweb:
         permission: read
+        adapter:
+          name: bluesky-public
+          operation: getAuthorFeed
         build:
           stable_id: bsky_getAuthorFeed_v2
           tool_version: 2
@@ -464,6 +476,9 @@ paths:
       summary: "Search users by keyword — returns profiles with handle, display name, bio, avatar, follower counts"
       x-openweb:
         permission: read
+        adapter:
+          name: bluesky-public
+          operation: searchActors
         build:
           stable_id: bsky_searchActors_v2
           tool_version: 2
@@ -534,6 +549,9 @@ paths:
       summary: "Get user's followers — profiles of accounts following the specified user"
       x-openweb:
         permission: read
+        adapter:
+          name: bluesky-public
+          operation: getFollowers
         build:
           stable_id: bsky_getFollowers_v2
           tool_version: 2
@@ -620,6 +638,9 @@ paths:
       summary: "Get accounts a user follows — profiles of followed accounts"
       x-openweb:
         permission: read
+        adapter:
+          name: bluesky-public
+          operation: getFollows
         build:
           stable_id: bsky_getFollows_v2
           tool_version: 2
@@ -706,6 +727,9 @@ paths:
       summary: "Batch fetch posts by AT URI — full post data for up to 25 posts"
       x-openweb:
         permission: read
+        adapter:
+          name: bluesky-public
+          operation: getPosts
         build:
           stable_id: bsky_getPosts_v2
           tool_version: 2

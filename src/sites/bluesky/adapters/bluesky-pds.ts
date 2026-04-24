@@ -137,6 +137,46 @@ async function deleteRecord(page: Page, collection: string, rkey: string, errors
   return { success: true }
 }
 
+/* --- trimming --- */
+
+function trimAuthor(a: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { did: a.did, handle: a.handle }
+  if (a.displayName) out.displayName = a.displayName
+  if (a.avatar) out.avatar = a.avatar
+  if (a.description) out.description = a.description
+  const v = a.verification as Record<string, unknown> | undefined
+  if (v?.verifiedStatus && v.verifiedStatus !== 'none') out.verifiedStatus = v.verifiedStatus
+  return out
+}
+
+function trimPost(p: Record<string, unknown>): Record<string, unknown> {
+  const author = p.author as Record<string, unknown> | undefined
+  const record = p.record as Record<string, unknown> | undefined
+  const out: Record<string, unknown> = {
+    uri: p.uri, cid: p.cid,
+    author: author ? trimAuthor(author) : undefined,
+    record: record ? { text: record.text, createdAt: record.createdAt, langs: record.langs } : undefined,
+    likeCount: p.likeCount, repostCount: p.repostCount,
+    replyCount: p.replyCount, quoteCount: p.quoteCount,
+    indexedAt: p.indexedAt,
+  }
+  return out
+}
+
+function trimNotification(n: Record<string, unknown>): Record<string, unknown> {
+  const author = n.author as Record<string, unknown> | undefined
+  const record = n.record as Record<string, unknown> | undefined
+  return {
+    uri: n.uri,
+    author: author ? trimAuthor(author) : undefined,
+    reason: n.reason,
+    reasonSubject: n.reasonSubject,
+    record: record ? { text: record.text, createdAt: record.createdAt } : undefined,
+    isRead: n.isRead,
+    indexedAt: n.indexedAt,
+  }
+}
+
 /* --- operations --- */
 
 type OpHandler = (page: Page, params: Readonly<Record<string, unknown>>, errors: Errors) => Promise<unknown>
@@ -144,7 +184,12 @@ type OpHandler = (page: Page, params: Readonly<Record<string, unknown>>, errors:
 const OPERATIONS: Record<string, OpHandler> = {
   async searchPosts(page, params, errors) {
     const { pds, jwt } = await requireSession(page, errors)
-    return pdsGet(page, `${pds}/xrpc/app.bsky.feed.searchPosts?${toQueryString(params)}`, jwt, errors)
+    const raw = await pdsGet(page, `${pds}/xrpc/app.bsky.feed.searchPosts?${toQueryString(params)}`, jwt, errors) as Record<string, unknown>
+    const posts = (raw.posts as Array<Record<string, unknown>>) ?? []
+    const out: Record<string, unknown> = { posts: posts.map(trimPost) }
+    if (raw.cursor) out.cursor = raw.cursor
+    if (raw.hitsTotal) out.hitsTotal = raw.hitsTotal
+    return out
   },
 
   async createPost(page, params, errors) {
@@ -256,7 +301,12 @@ const OPERATIONS: Record<string, OpHandler> = {
 
   async getNotifications(page, params, errors) {
     const { pds, jwt } = await requireSession(page, errors)
-    return pdsGet(page, `${pds}/xrpc/app.bsky.notification.listNotifications?${toQueryString(params)}`, jwt, errors)
+    const raw = await pdsGet(page, `${pds}/xrpc/app.bsky.notification.listNotifications?${toQueryString(params)}`, jwt, errors) as Record<string, unknown>
+    const notifications = (raw.notifications as Array<Record<string, unknown>>) ?? []
+    const out: Record<string, unknown> = { notifications: notifications.map(trimNotification) }
+    if (raw.cursor) out.cursor = raw.cursor
+    if (raw.seenAt) out.seenAt = raw.seenAt
+    return out
   },
 }
 
