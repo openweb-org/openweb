@@ -647,7 +647,7 @@ paths:
           schema:
             type: string
           example: "103644278"
-          description: "LinkedIn geo ID for location filter (e.g. 103644278 for United States, 102571732 for San Francisco Bay Area)"
+          description: "LinkedIn geo ID for location filter (e.g. 103644278 for United States, 90000084 for San Francisco Bay Area). Use searchGeo to look up geoIds by name."
         - name: count
           in: query
           required: false
@@ -727,3 +727,44 @@ paths:
                     items:
                       type: object
                       description: A referenced entity.
+
+  /internal/searchGeo:
+    get:
+      operationId: searchGeo
+      summary: "Search for LinkedIn geo IDs by location name — use returned geoId with searchJobs"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: d9e0f1a2b3c45679
+          tool_version: 2
+          verified: true
+          signals: [adapter-verified]
+        adapter:
+          name: linkedin-graphql
+          operation: searchGeo
+      parameters:
+        - name: keywords
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "San Francisco Bay Area"
+          description: "Location name to search (city, metro area, state, or country)"
+      responses:
+        "200":
+          description: Geo typeahead results with LinkedIn geo URNs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    description: Primary response payload with typeahead results.
+                  included:
+                    type: array
+                    description: "Geo entities — extract geoId from entityUrn (urn:li:fsd_geo:{geoId})."
+                    items:
+                      type: object
+                      description: A geo entity with entityUrn and location name.

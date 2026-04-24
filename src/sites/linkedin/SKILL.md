@@ -14,8 +14,9 @@ Professional networking platform — social media archetype with Voyager REST/Gr
 2. `getNewsStorylines(variables)` → trending topics, curated news
 
 ### Search people, jobs, or content
-1. `searchJobs(keywords, geoId?, count?, start?)` → job cards → `jobId`
-2. `getJobDetail(jobId ← searchJobs)` → full posting with description, requirements, salary
+1. `searchGeo(keywords)` → geo results → `geoId` (from `included[].entityUrn` suffix)
+2. `searchJobs(keywords, geoId?, count?, start?)` → job cards → `jobId`
+3. `getJobDetail(jobId ← searchJobs)` → full posting with description, requirements, salary
 
 ### Check connections and invitations
 1. `getConnectionsSummary()` → total count, new connections
@@ -39,6 +40,7 @@ Professional networking platform — social media archetype with Voyager REST/Gr
 | getNewsStorylines | trending news | — | topics, articles, industry updates | via GraphQL adapter |
 | getCompany | company page | universalName (URL slug) | name, industry, size, followers | via GraphQL adapter |
 | getMyNetworkNotifications | network updates | — | connection suggestions | |
+| searchGeo | search geo IDs | keywords (location name) | geo URNs with geoId | use geoId with searchJobs |
 | searchJobs | search for jobs | keywords, geoId?, count?, start? | job cards: title, company, location, posting date | via GraphQL adapter |
 | getJobDetail | get job posting details | jobId ← searchJobs or URL | description, requirements, company, salary, applicants | via GraphQL adapter |
 
@@ -65,6 +67,9 @@ openweb linkedin exec getNotificationCards '{"decorationId":"com.linkedin.voyage
 
 # Search for jobs
 openweb linkedin exec searchJobs '{"keywords":"software engineer","geoId":"103644278","count":25}'
+
+# Look up a geoId by location name
+openweb linkedin exec searchGeo '{"keywords":"San Francisco Bay Area"}'
 
 # Get job posting details
 openweb linkedin exec getJobDetail '{"jobId":"3945709057"}'

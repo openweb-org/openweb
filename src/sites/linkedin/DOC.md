@@ -14,8 +14,9 @@ Professional networking platform — social media archetype with Voyager REST/Gr
 2. `getNewsStorylines(variables)` → trending topics, curated news
 
 ### Search people, jobs, or content
-1. `searchJobs(keywords, geoId?, count?, start?)` → job cards with titles, companies, locations
-2. `getJobDetail(jobId)` → full posting with description, requirements, salary
+1. `searchGeo(keywords)` → geo results → `geoId` (from `included[].entityUrn` suffix)
+2. `searchJobs(keywords, geoId?, count?, start?)` → job cards with titles, companies, locations
+3. `getJobDetail(jobId)` → full posting with description, requirements, salary
 
 ### Check connections and invitations
 1. `getConnectionsSummary()` → total count, new connections
@@ -39,6 +40,7 @@ Professional networking platform — social media archetype with Voyager REST/Gr
 | getNewsStorylines | trending news | — | topics, articles, industry updates | via GraphQL adapter |
 | getCompany | company page | universalName (URL slug) | name, industry, size, followers | via GraphQL adapter |
 | getMyNetworkNotifications | network updates | — | connection suggestions | |
+| searchGeo | search geo IDs | keywords (location name) | geo URNs with geoId | use geoId with searchJobs |
 | searchJobs | search for jobs | keywords, geoId?, count?, start? | job cards: title, company, location, posting date | via GraphQL adapter |
 | getJobDetail | get job posting details | jobId ← searchJobs or URL | description, requirements, company, salary, applicants | via GraphQL adapter |
 
@@ -65,6 +67,9 @@ openweb linkedin exec getNotificationCards '{"decorationId":"com.linkedin.voyage
 
 # Search for jobs
 openweb linkedin exec searchJobs '{"keywords":"software engineer","geoId":"103644278","count":25}'
+
+# Look up a geoId by location name
+openweb linkedin exec searchGeo '{"keywords":"San Francisco Bay Area"}'
 
 # Get job posting details
 openweb linkedin exec getJobDetail '{"jobId":"3945709057"}'
@@ -101,3 +106,5 @@ LinkedIn uses a hybrid Voyager REST + GraphQL API:
 - **GraphQL queryIds are versioned**: queryIds rotate with LinkedIn deploys. The adapter resolves them dynamically by scanning JS bundles, but if operations start returning HTTP 400, the bundle regex may need updating.
 - **Rest.li tuple encoding**: Variables must use LinkedIn's tuple format `(key:value)`, not JSON. Nested tuples and List() are supported.
 - **Decoration IDs**: Profile and notification endpoints use `decorationId` to control response depth. Wrong decoration may return partial data.
+- **SDUI migration (2026-04)**: LinkedIn's job detail page migrated to Server-Driven UI (React Server Components). The Voyager GraphQL `full-job-posting-detail-section` API still works but `JOB_DESCRIPTION_CARD` must be included in `cardSectionTypes` to get descriptions. The `full-job-posting-detail-section` queryId is only in the jobs page bundles, not the feed page bundles — `cachedQueryIds` must be populated from a page that loads these bundles.
+- **searchGeo uses REST endpoint**: `voyagerSearchDashReusableTypeahead` is a REST.li service, not a GraphQL registered query. Its registration in the bundle uses a service name mapping (`SearchDashReusableTypeahead:"voyagerSearchDashReusableTypeahead"`) rather than the `kind:"query"` pattern that `loadQueryIds` scans. The adapter uses `restGet` directly (like `searchJobs`), avoiding the GraphQL queryId resolution entirely.

@@ -256,9 +256,28 @@ const OPERATIONS: Record<string, Handler> = {
     const { errors } = helpers
     const jobId = String(params.jobId ?? '')
     if (!jobId) throw errors.missingParam('jobId')
-    const variables = `(cardSectionTypes:List(TOP_CARD,HOW_YOU_FIT_CARD),jobPostingUrn:urn%3Ali%3Afsd_jobPosting%3A${jobId},includeSecondaryActionsV2:true,jobDetailsContext:(isJobSearch:true))`
+    const variables = `(cardSectionTypes:List(TOP_CARD,HOW_YOU_FIT_CARD,JOB_DESCRIPTION_CARD),jobPostingUrn:urn%3Ali%3Afsd_jobPosting%3A${jobId},includeSecondaryActionsV2:true,jobDetailsContext:(isJobSearch:true))`
     const queryId = await getQueryId(page, QUERY_NAME.getJobDetail, errors)
     return doGraphqlGet(page, queryId, variables, true, errors)
+  },
+
+  searchGeo: async (page, params, helpers) => {
+    const { errors } = helpers
+    const keywords = String(params.keywords ?? '')
+    if (!keywords) throw errors.missingParam('keywords')
+    const encoded = encodeURIComponent(keywords)
+    const queryParts = [
+      'q=type',
+      'type=GEO',
+      `keywords=${encoded}`,
+      'query=(typeaheadFilterQuery:(geoSearchTypes:List(POPULATED_PLACE,ADMIN_DIVISION_1,ADMIN_DIVISION_2,COUNTRY_REGION,MARKET_AREA,COUNTRY_CLUSTER)),typeaheadUseCase:JOBS)',
+    ]
+    const result = (await restGet(page, '/voyager/api/voyagerSearchDashReusableTypeahead', queryParts)) as {
+      status: number
+      text: string
+    }
+    if (result.status >= 400) throw errors.httpError(result.status)
+    return JSON.parse(result.text)
   },
 }
 

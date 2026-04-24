@@ -13,6 +13,17 @@
         "status": 200,
         "response_schema_valid": true
       }
+    },
+    {
+      "input": {
+        "keywords": "software engineer",
+        "geoId": "90000084",
+        "count": 10
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
     }
   ]
 }
