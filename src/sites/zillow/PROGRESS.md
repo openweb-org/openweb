@@ -1,3 +1,45 @@
+## 2026-04-24: Userflow QA — response trimming, rental schema, region expansion
+
+**What changed:**
+- **Adapter: response trimming** — searchProperties now strips non-schema fields from each listing
+  (`carouselPhotosComposable`, `list`, `brokerName`, 20+ internal keys), caps results at 20, drops
+  `searchList`/`relaxedResults`/extra `searchResults` keys. Response size: ~200KB → ~19KB (sale), ~14KB (rental).
+- **Adapter: region expansion** — added 22 cities to `knownRegions` (San Jose, San Diego, Phoenix, Dallas,
+  Nashville, Charlotte, Raleigh, Boston, Philadelphia, Minneapolis, Washington DC, Atlanta, Las Vegas,
+  Salt Lake City, Indianapolis, Columbus, Tampa, Detroit, Pittsburgh, Sacramento, Kansas City, Orlando).
+  Unknown regionIds previously fell back silently to San Francisco.
+- **Adapter: rental normalization** — rental (building) listings trimmed to rental-specific fields
+  (`minBaseRent`, `maxBaseRent`, `buildingName`, `availabilityCount`, `units`); sale-only fields
+  (`price`/`beds`/`baths`/`area`) correctly absent.
+- **Schema: required fields relaxed** — listResults items `required` changed from
+  `[zpid, detailUrl, price, unformattedPrice, address, beds, baths, area, latLong]` to
+  `[zpid, detailUrl, address, latLong]`. Rental listings never have sale-only fields.
+- **Schema: rental fields added** — `buildingName`, `minBaseRent`, `maxBaseRent`, `availabilityCount`,
+  `units[]` (beds, price) added to listResults item schema.
+- **Schema: totalResultCount** — added to searchResults response (peer of listResults).
+- **Detail: photo flattening** — extraction expression now resolves multi-resolution photo objects to
+  single highest-resolution URL string. Response size: ~11KB → ~2KB.
+- **Detail: description truncation** — capped at 500 chars to reduce response size.
+
+**Why:**
+- Blind userflow QA across 3 personas revealed rental schema breakage, missing regions, and
+  excessive response sizes that would overflow agent context windows.
+
+**Personas tested:**
+1. Homebuyer — "homes for sale San Jose under $1M": searchProperties (20 results, San Jose city),
+   getPropertyDetail, getZestimate, getNeighborhood all return data
+2. Renter — "1BR apartment Austin TX": searchProperties (20 rental buildings w/ units, no schema warnings)
+3. Investor — "multi-family homes Denver": searchProperties (20 results), chained detail/zestimate/neighborhood
+
+**Known limitations:**
+- `filterState` (price, beds) not applied — adapter navigates to city landing page, doesn't pass API filters
+  (Zillow PerimeterX blocks the PUT search API). Results are Zillow's default sort for the region.
+- walkScore/transitScore/bikeScore always null — loaded dynamically, not in __NEXT_DATA__
+- nearbyHomes sometimes null depending on property
+- zestimateHistory always null (not available in SSR data)
+
+**Key files:** `adapters/zillow-detail.ts`, `openapi.yaml`
+
 ## 2026-04-17 — Phase 3 Normalize-Adapter (4ac2f3b)
 
 **Context:** Move extraction logic from adapter handlers into spec `x-openweb.extraction` blocks so the runtime can drive extraction directly.

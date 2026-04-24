@@ -225,7 +225,7 @@ paths:
                             items:
                               type: object
                               description: A property listing result.
-                              required: [zpid, detailUrl, price, unformattedPrice, address, beds, baths, area, latLong]
+                              required: [zpid, detailUrl, address, latLong]
                               properties:
                                 zpid:
                                   type: string
@@ -356,6 +356,33 @@ paths:
                                 isFeaturedListing:
                                   type: boolean
                                   description: Whether this is a featured/promoted listing.
+                                buildingName:
+                                  type: string
+                                  description: Building name (rental listings only).
+                                minBaseRent:
+                                  type: integer
+                                  description: Minimum base rent in dollars (rental listings only).
+                                maxBaseRent:
+                                  type: integer
+                                  description: Maximum base rent in dollars (rental listings only).
+                                availabilityCount:
+                                  type: integer
+                                  description: Number of available units (rental listings only).
+                                units:
+                                  type: array
+                                  description: Available unit types with pricing (rental listings only).
+                                  items:
+                                    type: object
+                                    properties:
+                                      beds:
+                                        type: string
+                                        description: Number of bedrooms (e.g. "1", "2").
+                                      price:
+                                        type: string
+                                        description: Formatted rent price (e.g. "$756+").
+                          totalResultCount:
+                            type: integer
+                            description: Total number of results matching the search criteria.
                           mapResults:
                             type: array
                             description: Map pin results (minimal data for map rendering).
@@ -436,7 +463,15 @@ paths:
                 (Array.isArray(p.compsCarouselPropertyPhotos) && p.compsCarouselPropertyPhotos.length > 0 && p.compsCarouselPropertyPhotos) ||
                 (Array.isArray(p.thumb) && p.thumb) ||
                 [];
-              const photos = photoSource.slice(0, 10).map((ph) => ph.mixedSources ?? ph.url ?? null);
+              const photos = photoSource.slice(0, 10).map((ph) => {
+                const ms = ph.mixedSources ?? {};
+                const jpegs = ms.jpeg ?? ms.webp ?? [];
+                if (Array.isArray(jpegs) && jpegs.length > 0) {
+                  const best = jpegs.reduce((a, b) => ((b.width ?? 0) > (a.width ?? 0) ? b : a));
+                  return best.url ?? null;
+                }
+                return typeof ph === 'string' ? ph : (ph.url ?? null);
+              });
               return {
                 zpid: p.zpid ?? null,
                 address: addr ? {
@@ -454,7 +489,7 @@ paths:
                 homeType: p.homeType ?? null,
                 homeStatus: p.homeStatus ?? null,
                 yearBuilt: resoFacts.yearBuilt ?? null,
-                description: p.description ?? null,
+                description: p.description ? p.description.slice(0, 500) : null,
                 zestimate: p.zestimate ?? null,
                 rentZestimate: p.rentZestimate ?? null,
                 taxAssessedValue: (taxFirst && taxFirst.value) ?? null,
@@ -538,7 +573,7 @@ paths:
                     description: Year the property was built.
                   description:
                     type: [string, "null"]
-                    description: Property listing description
+                    description: Property listing description (truncated to 500 chars)
                   zestimate:
                     type: [integer, "null"]
                     description: Zillow estimated home value
@@ -559,10 +594,10 @@ paths:
                     description: Number of times this listing was favorited.
                   photos:
                     type: [array, "null"]
-                    description: Up to 10 photo URLs or mixed-source objects.
+                    description: Up to 10 photo URLs (highest resolution available).
                     items:
-                      type: [object, string, "null"]
-                      description: Photo URL string or photo object.
+                      type: [string, "null"]
+                      description: Photo URL string.
                   url:
                     type: [string, "null"]
                     description: Canonical Zillow property URL

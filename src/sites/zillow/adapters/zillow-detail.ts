@@ -56,6 +56,55 @@ async function navigateWithPxRetry(page: Page, url: string, maxRetries = 4): Pro
   return false
 }
 
+/* ---------- Response trimming ---------- */
+
+const SALE_KEEP = new Set([
+  'zpid', 'detailUrl', 'statusType', 'statusText', 'price', 'unformattedPrice',
+  'address', 'addressStreet', 'addressCity', 'addressState', 'addressZipcode',
+  'beds', 'baths', 'area', 'latLong', 'imgSrc', 'zestimate',
+  'hdpData', 'has3DModel', 'hasVideo', 'isFeaturedListing',
+])
+
+const RENTAL_KEEP = new Set([
+  'zpid', 'detailUrl', 'statusType', 'statusText',
+  'address', 'addressStreet', 'addressCity', 'addressState', 'addressZipcode',
+  'latLong', 'imgSrc', 'isFeaturedListing',
+  'buildingName', 'minBaseRent', 'maxBaseRent', 'availabilityCount', 'units',
+])
+
+function trimHdpData(hdp: Record<string, unknown>): Record<string, unknown> | undefined {
+  const info = hdp?.homeInfo as Record<string, unknown> | undefined
+  if (!info) return undefined
+  const keep = [
+    'zpid', 'streetAddress', 'zipcode', 'city', 'state', 'price',
+    'bathrooms', 'bedrooms', 'livingArea', 'homeType', 'homeStatus',
+    'daysOnZillow', 'zestimate', 'rentZestimate', 'taxAssessedValue',
+    'lotAreaValue', 'lotAreaUnit',
+  ]
+  const trimmed: Record<string, unknown> = {}
+  for (const k of keep) {
+    if (info[k] != null) trimmed[k] = info[k]
+  }
+  return Object.keys(trimmed).length ? { homeInfo: trimmed } : undefined
+}
+
+function trimListing(r: Record<string, unknown>): Record<string, unknown> {
+  const isRental = r.isBuilding === true || r.statusType === 'FOR_RENT'
+  const allowed = isRental ? RENTAL_KEEP : SALE_KEEP
+  const out: Record<string, unknown> = {}
+  for (const k of allowed) {
+    if (r[k] != null) {
+      if (k === 'hdpData') {
+        const hd = trimHdpData(r[k] as Record<string, unknown>)
+        if (hd) out[k] = hd
+      } else {
+        out[k] = r[k]
+      }
+    }
+  }
+  return out
+}
+
 /* ---------- searchProperties ---------- */
 
 async function searchProperties(
@@ -81,6 +130,28 @@ async function searchProperties(
       54296: 'austin-tx',
       17885: 'denver-co',
       26396: 'portland-or',
+      33839: 'san-jose-ca',
+      11298: 'san-diego-ca',
+      40326: 'phoenix-az',
+      18959: 'dallas-tx',
+      13945: 'nashville-tn',
+      5983: 'charlotte-nc',
+      47906: 'raleigh-nc',
+      3101: 'boston-ma',
+      24043: 'philadelphia-pa',
+      13211: 'minneapolis-mn',
+      394913: 'washington-dc',
+      36086: 'atlanta-ga',
+      25415: 'las-vegas-nv',
+      27485: 'salt-lake-city-ut',
+      42286: 'indianapolis-in',
+      51921: 'columbus-oh',
+      38128: 'tampa-fl',
+      15108: 'detroit-mi',
+      19701: 'pittsburgh-pa',
+      31104: 'sacramento-ca',
+      50290: 'kansas-city-mo',
+      5880: 'orlando-fl',
     }
     const slug = knownRegions[regionId]
     if (slug) searchUrl = `https://www.zillow.com/${slug}/`
@@ -122,7 +193,19 @@ async function searchProperties(
     return { cat1: { searchResults: { listResults: [], mapResults: [] } } }
   }
 
-  return { cat1: searchResults }
+  const raw = searchResults.searchResults ?? searchResults
+  const listResults = Array.isArray(raw.listResults) ? raw.listResults.slice(0, 20) : []
+  const trimmed = listResults.map(trimListing)
+
+  return {
+    cat1: {
+      searchResults: {
+        listResults: trimmed,
+        totalResultCount:
+          searchResults.searchList?.totalResultCount ?? listResults.length,
+      },
+    },
+  }
 }
 
 /* ---------- Adapter export ---------- */
