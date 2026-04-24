@@ -20,6 +20,27 @@ paths:
         actual_path: /gql
         unwrap: data
         wrap: variables
+        graphql_query: |-
+          query SearchChannels($query: String!, $platform: String!) {
+            searchFor(userQuery: $query, platform: $platform) {
+              channels {
+                cursor
+                edges {
+                  item {
+                    ... on User {
+                      id
+                      login
+                      displayName
+                      description
+                      profileImageURL(width: 150)
+                      followers { totalCount }
+                      broadcastSettings { title }
+                    }
+                  }
+                }
+              }
+            }
+          }
         build:
           verified: true
           stable_id: tw0001
@@ -47,32 +68,15 @@ paths:
               required:
                 - query
               properties:
-                operationName:
-                  type: string
-                  const: SearchResultsPage_SearchResults
                 query:
                   type: string
                   description: Search keyword (e.g. "valorant", "minecraft", a streamer name).
                 platform:
                   type: string
                   default: web
-                options:
-                  type: object
-                  default:
-                    targets: null
-                    shouldSkipDiscoveryControl: false
-                requestID:
-                  type: string
-                  default: ''
-                extensions:
-                  type: object
-                  const:
-                    persistedQuery:
-                      version: 1
-                      sha256Hash: a7c600111acc4d1b294eafa364600556227939e2ff88505faa73035b57a83b22
       responses:
         '200':
-          description: Search results with matching channels.
+          description: Trimmed search results with matching channels.
           content:
             application/json:
               schema:
@@ -153,6 +157,25 @@ paths:
         actual_path: /gql
         unwrap: data
         wrap: variables
+        graphql_query: |-
+          query GetChannel($channelLogin: String!, $skipSchedule: Boolean!) {
+            user(login: $channelLogin) {
+              id
+              displayName
+              description
+              profileImageURL(width: 300)
+              primaryColorHex
+              followers { totalCount }
+              roles { isPartner isAffiliate }
+              channel {
+                socialMedias { name title url }
+                schedule @skip(if: $skipSchedule) {
+                  nextSegment { startAt title hasReminder }
+                }
+              }
+              lastBroadcast { game { displayName } }
+            }
+          }
         build:
           verified: true
           stable_id: tw0002
@@ -180,24 +203,15 @@ paths:
               required:
                 - channelLogin
               properties:
-                operationName:
-                  type: string
-                  const: ChannelRoot_AboutPanel
                 channelLogin:
                   type: string
                   description: Channel login name (e.g. "shroud", "pokimane").
                 skipSchedule:
                   type: boolean
                   default: false
-                extensions:
-                  type: object
-                  const:
-                    persistedQuery:
-                      version: 1
-                      sha256Hash: 3b9cd4edd28e8e6f7ba6152a56157bc2b1c1a8f6e81d70808ad1b85250e5288f
       responses:
         '200':
-          description: Channel profile information.
+          description: Channel profile information (trimmed).
           content:
             application/json:
               schema:
@@ -288,6 +302,17 @@ paths:
                                   hasReminder:
                                     type: boolean
                                     description: Whether the viewer has set a reminder.
+                      lastBroadcast:
+                        type: [object, 'null']
+                        description: Most recent broadcast info.
+                        properties:
+                          game:
+                            type: [object, 'null']
+                            description: Game/category of last broadcast.
+                            properties:
+                              displayName:
+                                type: string
+                                description: Display name of the game/category.
 
   /gql~getStream:
     post:
@@ -298,6 +323,19 @@ paths:
         actual_path: /gql
         unwrap: data
         wrap: variables
+        graphql_query: |-
+          query GetStream($channelLogin: String!) {
+            user(login: $channelLogin) {
+              id
+              lastBroadcast { title }
+              stream {
+                id
+                type
+                createdAt
+                game { id slug name }
+              }
+            }
+          }
         build:
           verified: true
           stable_id: tw0003
@@ -325,21 +363,12 @@ paths:
               required:
                 - channelLogin
               properties:
-                operationName:
-                  type: string
-                  const: StreamMetadata
                 channelLogin:
                   type: string
                   description: Channel login name (e.g. "shroud", "xqc").
-                extensions:
-                  type: object
-                  const:
-                    persistedQuery:
-                      version: 1
-                      sha256Hash: ad022ca32220d5523d03a23cbcb5beaa1e0999889c1f8f78f9f2520dafb5cae6
       responses:
         '200':
-          description: Stream status (null user means channel not found, null stream means offline).
+          description: Stream status — trimmed to stream + last broadcast (null user means channel not found, null stream means offline).
           content:
             application/json:
               schema:
@@ -356,19 +385,6 @@ paths:
                       id:
                         type: string
                         description: Unique channel ID.
-                      profileImageURL:
-                        type: string
-                        description: URL of the channel profile image.
-                      primaryColorHex:
-                        type: string
-                        description: Channel brand color as hex (e.g. "9147FF").
-                      roles:
-                        type: object
-                        description: Channel partnership/affiliate status.
-                        properties:
-                          isPartner:
-                            type: boolean
-                            description: Whether the channel is a Twitch Partner.
                       lastBroadcast:
                         type: [object, 'null']
                         description: Most recent broadcast info (null if never streamed).
@@ -412,6 +428,22 @@ paths:
         actual_path: /gql
         unwrap: data
         wrap: variables
+        graphql_query: |-
+          query GetTopGames($limit: Int) {
+            games(first: $limit, options: {sort: VIEWER_COUNT}) {
+              edges {
+                node {
+                  id
+                  slug
+                  displayName
+                  viewersCount
+                  broadcastersCount
+                  avatarURL
+                  tags(tagType: CONTENT) { localizedName }
+                }
+              }
+            }
+          }
         build:
           verified: true
           stable_id: tw0004
@@ -437,38 +469,21 @@ paths:
             schema:
               type: object
               properties:
-                operationName:
-                  type: string
-                  const: BrowsePage_AllDirectories
                 limit:
                   type: integer
                   default: 30
                   description: Number of categories to return (default 30).
-                options:
-                  type: object
-                  default:
-                    recommendationsContext:
-                      platform: web
-                    requestID: ''
-                    sort: VIEWER_COUNT
-                    tags: []
-                extensions:
-                  type: object
-                  const:
-                    persistedQuery:
-                      version: 1
-                      sha256Hash: 2f67f71ba89f3c0ed26a141ec00da1defecb2303595f5cda4298169549783d9e
       responses:
         '200':
-          description: Top categories/games.
+          description: Top categories/games sorted by viewer count (trimmed).
           content:
             application/json:
               schema:
                 type: object
                 required:
-                  - directoriesWithTags
+                  - games
                 properties:
-                  directoriesWithTags:
+                  games:
                     type: object
                     description: Paginated top categories/games container.
                     required:
@@ -511,7 +526,7 @@ paths:
                                   description: URL of the category box art image.
                                 tags:
                                   type: array
-                                  description: Tags applied to this category.
+                                  description: Content tags applied to this category.
                                   items:
                                     type: object
                                     description: A category tag.
@@ -586,7 +601,7 @@ paths:
                   description: Number of streams to return (default 25).
       responses:
         '200':
-          description: Top live streams sorted by viewer count.
+          description: Top live streams sorted by viewer count (trimmed).
           content:
             application/json:
               schema:
@@ -668,12 +683,33 @@ paths:
   /gql~getClips:
     post:
       operationId: getClips
-      summary: Get popular clips for a channel — clip titles, view counts, durations, game names
+      summary: Get popular clips for a channel (last week) — clip titles, view counts, durations, game names
       x-openweb:
         permission: read
         actual_path: /gql
         unwrap: data
         wrap: variables
+        graphql_query: |-
+          query GetClips($login: String!, $limit: Int, $cursor: Cursor) {
+            user(login: $login) {
+              clips(first: $limit, criteria: {filter: LAST_WEEK}, after: $cursor) {
+                edges {
+                  cursor
+                  node {
+                    id
+                    slug
+                    title
+                    viewCount
+                    createdAt
+                    durationSeconds
+                    thumbnailURL
+                    broadcaster { login displayName }
+                    game { name }
+                  }
+                }
+              }
+            }
+          }
         build:
           verified: false
           stable_id: tw0006
@@ -701,9 +737,6 @@ paths:
               required:
                 - login
               properties:
-                operationName:
-                  type: string
-                  const: ClipsCards__User
                 login:
                   type: string
                   description: Channel login name (e.g. "shroud", "pokimane").
@@ -711,28 +744,13 @@ paths:
                   type: integer
                   default: 20
                   description: Number of clips to return (default 20).
-                criteria:
-                  type: object
-                  default:
-                    filter: LAST_WEEK
-                  properties:
-                    filter:
-                      type: string
-                      description: 'Time filter: LAST_DAY, LAST_WEEK, LAST_MONTH, or ALL_TIME.'
-                      default: LAST_WEEK
                 cursor:
                   type: [string, 'null']
                   default: null
                   description: Pagination cursor from previous response.
-                extensions:
-                  type: object
-                  const:
-                    persistedQuery:
-                      version: 1
-                      sha256Hash: 90c33f5e6465122fba8f9371e2a97076f9ed06c6fed3788d002ab9eba8f91d88
       responses:
         '200':
-          description: Clips for the specified channel.
+          description: Clips for the specified channel (trimmed).
           content:
             application/json:
               schema:
@@ -827,6 +845,27 @@ paths:
         actual_path: /gql
         unwrap: data
         wrap: variables
+        graphql_query: |-
+          query GetVideos($channelOwnerLogin: String!, $limit: Int, $broadcastType: BroadcastType, $videoSort: VideoSort, $cursor: Cursor) {
+            user(login: $channelOwnerLogin) {
+              videos(first: $limit, type: $broadcastType, sort: $videoSort, after: $cursor) {
+                edges {
+                  cursor
+                  node {
+                    id
+                    title
+                    viewCount
+                    createdAt
+                    lengthSeconds
+                    broadcastType
+                    previewThumbnailURL(width: 320, height: 180)
+                    owner { login displayName }
+                    game { name }
+                  }
+                }
+              }
+            }
+          }
         build:
           verified: false
           stable_id: tw0007
@@ -854,9 +893,6 @@ paths:
               required:
                 - channelOwnerLogin
               properties:
-                operationName:
-                  type: string
-                  const: FilterableVideoTower_Videos
                 channelOwnerLogin:
                   type: string
                   description: Channel login name (e.g. "shroud", "pokimane").
@@ -876,15 +912,9 @@ paths:
                   type: [string, 'null']
                   default: null
                   description: Pagination cursor from previous response.
-                extensions:
-                  type: object
-                  const:
-                    persistedQuery:
-                      version: 1
-                      sha256Hash: 67004f7881e65c297936f32c75246470629557a393788fb5a69d6d9a25a8fd5f
       responses:
         '200':
-          description: Videos for the specified channel.
+          description: Videos for the specified channel (trimmed).
           content:
             application/json:
               schema:
