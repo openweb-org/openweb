@@ -22,16 +22,17 @@ paths:
       summary: Get market ticker bar — id, shortName, price, percentChange1Day, lastYield
       x-openweb:
         permission: read
+        verify_status: requires_interactive_solve
         build:
           verified: true
           stable_id: bb0001
           signature_id: bb0001s
           tool_version: 1
           signals:
-            - next_data
-        extraction:
-          type: ssr_next_data
-          path: props.pageProps.initialState.tickerBar
+            - adapter-verified
+        adapter:
+          name: bloomberg
+          operation: getTickerBar
       parameters: []
       responses:
         '200':
@@ -47,73 +48,34 @@ paths:
                     id:
                       type: string
                       description: Bloomberg ticker ID (e.g. "SPX:IND", "CCMP:IND", "CL1:COM").
-                    name:
-                      type: string
-                      description: Full security name.
-                    longName:
-                      type: [string, 'null']
-                      description: Extended security name.
                     shortName:
                       type: string
                       description: Abbreviated security name (display label).
+                    price:
+                      type: [number, 'null']
                     percentChange1Day:
                       type: [number, 'null']
                       description: Daily percent change.
-                    price:
-                      type: [number, 'null']
                     lastYield:
                       type: [number, 'null']
                       description: Yield for bonds, null for equities/commodities.
-                    realTimeTickerDescription:
-                      type: [string, 'null']
-                      description: Real-time ticker description text.
   /news-headlines:
     get:
       operationId: getNewsHeadlines
       summary: Get top financial news headlines from Bloomberg homepage — headline, abstract, author, topics
       x-openweb:
         permission: read
+        verify_status: requires_interactive_solve
         build:
           verified: true
           stable_id: bb0002
           signature_id: bb0002s
           tool_version: 1
           signals:
-            - next_data
-        extraction:
-          type: page_global_data
-          page_url: /
-          expression: |
-            (() => {
-              const el = document.getElementById('__NEXT_DATA__');
-              if (!el) return { items: [] };
-              const data = JSON.parse(el.textContent);
-              const modules = data.props?.pageProps?.initialState?.modulesById || {};
-              const seen = new Set();
-              const items = [];
-              for (const mod of Object.values(modules)) {
-                const stories = mod?.stories || mod?.items || mod?.data;
-                if (!Array.isArray(stories)) continue;
-                for (const s of stories) {
-                  if (!s.headline || seen.has(s.id)) continue;
-                  seen.add(s.id);
-                  items.push({
-                    id: s.id,
-                    headline: s.headline,
-                    abstract: s.abstract || null,
-                    url: s.url || null,
-                    publishedAt: s.publishedAt || null,
-                    updatedAt: s.updatedAt || null,
-                    byline: s.byline || null,
-                    brand: s.brand || s.brandLabel || null,
-                    type: s.type || null,
-                    imageUrl: s.thumbnailImage?.url || s.image?.url || null,
-                    topics: s.topics || [],
-                  });
-                }
-              }
-              return { count: items.length, items: items.slice(0, 50) };
-            })()
+            - adapter-verified
+        adapter:
+          name: bloomberg
+          operation: getNewsHeadlines
       parameters: []
       responses:
         '200':
@@ -126,7 +88,7 @@ paths:
                 properties:
                   count:
                     type: integer
-                    description: Total number of headlines returned.
+                    description: Number of headlines returned (max 25).
                   items:
                     type: array
                     description: Array of headline objects.
@@ -140,81 +102,35 @@ paths:
                         headline:
                           type: string
                           description: Story headline text.
-                        abstract:
-                          type: [string, 'null']
-                          description: Story summary or lead paragraph.
                         url:
                           type: [string, 'null']
                           description: Relative URL to full story.
                         publishedAt:
                           type: [string, 'null']
                           description: ISO 8601 publication timestamp.
-                        updatedAt:
-                          type: [string, 'null']
-                          description: ISO 8601 last update timestamp.
                         byline:
                           type: [string, 'null']
                           description: Author byline.
                         brand:
                           type: [string, 'null']
                           description: Bloomberg brand or section label.
-                        type:
-                          type: [string, 'null']
-                          description: Content type (e.g. "article", "video").
-                        imageUrl:
-                          type: [string, 'null']
-                          description: Thumbnail image URL.
-                        topics:
-                          type: array
-                          description: Associated topic tags.
-                          items:
-                            type: object
-                            required: [name]
-                            properties:
-                              name:
-                                type: string
-                                description: Topic name.
-                              url:
-                                type: [string, 'null']
-                                description: Topic page URL.
   /latest-news:
     get:
       operationId: getLatestNews
       summary: Get latest breaking news from Bloomberg — headline, abstract, author, published time
       x-openweb:
         permission: read
+        verify_status: requires_interactive_solve
         build:
           verified: true
           stable_id: bb0009
           signature_id: bb0009s
           tool_version: 1
           signals:
-            - next_data
-        extraction:
-          type: page_global_data
-          page_url: /
-          expression: |
-            (() => {
-              const el = document.getElementById('__NEXT_DATA__');
-              if (!el) return { items: [] };
-              const data = JSON.parse(el.textContent);
-              const modules = data.props?.pageProps?.initialState?.modulesById || {};
-              const latest = modules.latest || modules.news_now || modules.shadow_latest;
-              if (!latest) return { items: [] };
-              const stories = latest.stories || latest.items || latest.data || [];
-              return {
-                count: stories.length,
-                items: stories.slice(0, 30).map(s => ({
-                  id: s.id,
-                  headline: s.headline,
-                  abstract: s.abstract || null,
-                  url: s.url || null,
-                  publishedAt: s.publishedAt || null,
-                  byline: s.byline || null,
-                  brand: s.brand || null,
-                })),
-              };
-            })()
+            - adapter-verified
+        adapter:
+          name: bloomberg
+          operation: getLatestNews
       parameters: []
       responses:
         '200':
@@ -452,42 +368,14 @@ paths:
           signature_id: bb0012s
           tool_version: 1
           signals:
-            - next_data
-        extraction:
-          type: page_global_data
-          expression: |
-            (() => {
-              const el = document.getElementById('__NEXT_DATA__');
-              if (!el) return null;
-              try {
-                const data = JSON.parse(el.textContent);
-                const pp = data.props?.pageProps || {};
-                const state = pp.initialState || pp;
-                const q = state.quote || state.security || pp.quote || {};
-                const pm1y = q.priceMovements1Year || q.priceTimeSeries?.oneYear || [];
-                const pm5y = q.priceMovements5Years || q.priceTimeSeries?.fiveYear || [];
-                const mapPts = (arr) => Array.isArray(arr)
-                  ? arr.slice(0, 260).map(p => ({ dateTime: p.dateTime || p.date || null, value: p.value || p.price || null }))
-                  : [];
-                return {
-                  ticker: q.ticker || q.id || null,
-                  name: q.name || q.longName || q.shortName || null,
-                  price: q.price || q.lastPrice || null,
-                  currency: q.currency || q.priceCurrency || null,
-                  priceChange: q.priceChange1Day || q.netChange || null,
-                  percentChange: q.percentChange1Day || q.pctChange1Day || null,
-                  open: q.openPrice || q.open || null,
-                  dayHigh: q.highPrice || q.dayHigh || null,
-                  dayLow: q.lowPrice || q.dayLow || null,
-                  previousClose: q.previousClosingPriceOneTradingDayAgo || q.prevClose || null,
-                  volume: q.volume || null,
-                  marketCap: q.marketCap || null,
-                  isExchangeDelayed: q.isExchangeDelayed ?? true,
-                  priceHistory1Y: mapPts(pm1y),
-                  priceHistory5Y: mapPts(pm5y),
-                };
-              } catch { return null; }
-            })()
+            - adapter-verified
+        adapter:
+          name: bloomberg
+          operation: getStockChart
+        page_plan:
+          entry_url: https://www.bloomberg.com/quote/{ticker}
+          wait_until: domcontentloaded
+          settle_ms: 4000
       parameters:
         - name: ticker
           in: path
@@ -539,11 +427,8 @@ paths:
                     type: [number, 'null']
                     description: Trading volume.
                   marketCap:
-                    type: [number, 'null']
-                    description: Market capitalization.
-                  isExchangeDelayed:
-                    type: boolean
-                    description: Whether quote data is delayed (typically 15 minutes).
+                    type: [string, 'null']
+                    description: Market capitalization (formatted, e.g. "3.964T").
                   priceHistory1Y:
                     type: array
                     description: 1-year price history (daily points).
