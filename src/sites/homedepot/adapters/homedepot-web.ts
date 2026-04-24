@@ -22,6 +22,27 @@ interface GqlNode { readonly [key: string]: GqlNode }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+function formatPrice(pricing: GqlNode): string {
+  const alt = pricing?.alternatePriceDisplay
+  if (typeof alt === 'string' && alt) return alt
+  const msg = pricing?.message
+  if (typeof msg === 'string' && msg) return msg
+  const val = pricing?.value ?? pricing?.original
+  if (val != null && typeof val === 'number') return `$${val.toFixed(2)}`
+  return ''
+}
+
+function stripTypename<T>(obj: T): T {
+  if (obj == null || typeof obj !== 'object') return obj
+  if (Array.isArray(obj)) return obj.map(stripTypename) as T
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    if (k === '__typename') continue
+    out[k] = stripTypename(v)
+  }
+  return out as T
+}
+
 const BASE = 'https://www.homedepot.com'
 const GRAPHQL_PATH = '/federation-gateway/graphql'
 
@@ -78,7 +99,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
     modelNumber: p.identifiers?.modelNumber || '',
     url: p.identifiers?.canonicalUrl ? `${BASE}${p.identifiers.canonicalUrl}` : '',
     price: p.pricing?.value ?? p.pricing?.original ?? null,
-    priceDisplay: p.pricing?.alternatePriceDisplay || p.pricing?.message || '',
+    priceDisplay: formatPrice(p.pricing),
     rating: p.reviews?.ratingsReviews?.averageRating != null ? Number(p.reviews.ratingsReviews.averageRating) : null,
     reviewCount: Number(p.reviews?.ratingsReviews?.totalReviews) || 0,
     image: p.media?.images?.[0]?.url || '',
@@ -125,7 +146,7 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
     description: det.description || '',
     highlights: det.highlights || [],
     price: pricing.value ?? pricing.original ?? null,
-    priceDisplay: pricing.alternatePriceDisplay || pricing.message || '',
+    priceDisplay: formatPrice(pricing),
     rating: reviews.averageRating != null ? Number(reviews.averageRating) : null,
     reviewCount: Number(reviews.totalReviews) || 0,
     images,
@@ -221,7 +242,7 @@ async function getProductPricing(page: Page, params: Record<string, unknown>, er
       value: alt.unit.value,
       unitOfMeasure: alt.unit.caseUnitOfMeasure || '',
     } : null,
-    bulkPricing: alt.bulk ?? null,
+    bulkPricing: alt.bulk ? stripTypename(alt.bulk) : null,
     conditionalPromotions: conditionals.length > 0 ? conditionals : null,
   }
 }
