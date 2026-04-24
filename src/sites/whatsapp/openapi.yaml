@@ -226,6 +226,11 @@ paths:
                       - 'null'
                     type:
                       type: string
+                    sender:
+                      type:
+                      - string
+                      - 'null'
+                      description: Sender ID (present for group messages only)
                   required:
                   - id
                   - body

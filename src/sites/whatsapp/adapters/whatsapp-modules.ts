@@ -63,7 +63,7 @@ const OPERATIONS: Record<string, Handler> = {
       return col.getModelsArray().slice(0, limit).map((c) => ({
         id: (c.id as Record<string, unknown>)?._serialized ?? String(c.id),
         name: c.name ?? c.formattedTitle ?? 'unnamed',
-        isGroup: c.isGroup ?? false,
+        isGroup: c.id ? (c.id as Record<string, unknown>).server === 'g.us' : false,
         unreadCount: c.unreadCount ?? 0,
         timestamp: c.t ?? null,
       }))
@@ -82,13 +82,25 @@ const OPERATIONS: Record<string, Handler> = {
         )
         if (!chat) throw new Error(`Chat not found: ${args.chatId}`)
         const msgs = chat.msgs as { getModelsArray: () => Array<Record<string, unknown>> }
-        return msgs.getModelsArray().slice(-args.limit).map((m) => ({
-          id: (m.id as Record<string, unknown>)?._serialized ?? String(m.id),
-          fromMe: (m.id as Record<string, unknown>)?.fromMe ?? false,
-          body: typeof m.body === 'string' ? m.body.substring(0, 500) : '',
-          timestamp: m.t ?? null,
-          type: m.type ?? 'unknown',
-        }))
+        const isGroup = chat.id ? (chat.id as Record<string, unknown>).server === 'g.us' : false
+        return msgs.getModelsArray().slice(-args.limit).map((m) => {
+          const type = String(m.type ?? 'unknown')
+          const textTypes = new Set(['chat', 'gp2', 'notification_template', 'e2e_notification', 'call_log'])
+          const body = textTypes.has(type) && typeof m.body === 'string' ? m.body.substring(0, 500) : ''
+          const mid = m.id as Record<string, unknown> | undefined
+          const entry: Record<string, unknown> = {
+            id: mid?._serialized ?? String(m.id),
+            fromMe: mid?.fromMe ?? false,
+            body,
+            timestamp: m.t ?? null,
+            type,
+          }
+          if (isGroup) {
+            const author = m.author ?? mid?.participant ?? mid?.remote
+            entry.sender = author ? String((author as Record<string, unknown>)?._serialized ?? author) : null
+          }
+          return entry
+        })
       },
       { chatId: params.chatId as string, limit: (params.limit as number) ?? 50 },
     )
@@ -100,11 +112,37 @@ const OPERATIONS: Record<string, Handler> = {
       const col = req('WAWebContactCollection').ContactCollection as {
         getModelsArray: () => Array<Record<string, unknown>>
       }
-      return col.getModelsArray().slice(0, limit).map((c) => ({
-        id: (c.id as Record<string, unknown>)?._serialized ?? String(c.id),
-        name: c.name ?? c.pushname ?? 'unnamed',
-        isMe: c.isMe ?? false,
-      }))
+      let meId: string | null = null
+      try {
+        for (const modName of ['WAWebUserPrefsMeUser', 'WAWebWidFactory', 'WASmaxWap']) {
+          try {
+            const mod = req(modName) as Record<string, unknown>
+            const getter = mod.getMeUser ?? mod.getMe ?? mod.getMeWid
+            if (typeof getter === 'function') {
+              const me = (getter as () => Record<string, unknown>)()
+              meId = me ? String((me.id ?? me as Record<string, unknown>)?._serialized ?? me.wid?._serialized ?? me ?? '') : null
+              if (meId) break
+            }
+            const wid = mod.wid ?? mod.me
+            if (wid) {
+              meId = String((wid as Record<string, unknown>)?._serialized ?? wid)
+              break
+            }
+          } catch { /* try next */ }
+        }
+        if (!meId) {
+          const conn = (window as Record<string, Record<string, unknown>>).Store?.Conn
+          if (conn?.wid) meId = String((conn.wid as Record<string, unknown>)?._serialized ?? conn.wid)
+        }
+      } catch { /* no me ID available */ }
+      return col.getModelsArray().slice(0, limit).map((c) => {
+        const cid = (c.id as Record<string, unknown>)?._serialized ?? String(c.id)
+        return {
+          id: cid,
+          name: c.name ?? c.pushname ?? c.verifiedName ?? c.shortName ?? c.formattedName ?? 'unnamed',
+          isMe: cid === meId || c.isMe === true || c.isUser === true,
+        }
+      })
     }, (params.limit as number) ?? 100)
   },
 
@@ -131,8 +169,10 @@ const OPERATIONS: Record<string, Handler> = {
           const msgs = c.msgs as { getModelsArray?: () => Array<Record<string, unknown>> } | undefined
           const last = msgs?.getModelsArray?.().at(-1)
           if (!last) return null
+          const lastType = String(last.type ?? 'unknown')
+          const textTypes = new Set(['chat', 'gp2', 'notification_template', 'e2e_notification', 'call_log'])
           return {
-            body: typeof last.body === 'string' ? last.body.substring(0, 200) : '',
+            body: textTypes.has(lastType) && typeof last.body === 'string' ? last.body.substring(0, 200) : '',
             fromMe: (last.id as Record<string, unknown>)?.fromMe ?? false,
             timestamp: last.t ?? null,
           }
