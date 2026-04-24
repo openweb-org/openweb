@@ -27,6 +27,21 @@ function attr(el: string, name: string): string | null {
   return m ? m[1] : null
 }
 
+/** Extract cast from the HTML cast-and-crew section (fallback when LD+JSON lacks actor). */
+function parseCastFromHtml(html: string): Array<{ name: string | null; url: string | null }> {
+  const section = html.match(/<section[^>]*cast-and-crew[^>]*>([\s\S]*?)<\/section>/)?.[0]
+  if (!section) return []
+  const links = [...section.matchAll(/<a[^>]*href="(\/celebrity\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/g)]
+  const cast: Array<{ name: string | null; url: string | null }> = []
+  for (const [, href, inner] of links) {
+    const role = inner.match(/data-qa="person-role"[^>]*>([^<]+)/)?.[1]?.trim().toLowerCase() ?? ''
+    if (role.includes('director') || role.includes('screenwriter') || role.includes('producer')) continue
+    const name = inner.match(/data-qa="person-name"[^>]*>([^<]+)/)?.[1]?.trim() ?? null
+    if (name) cast.push({ name: decodeEntities(name), url: `https://www.rottentomatoes.com${href}` })
+  }
+  return cast
+}
+
 /** Decode common HTML entities. */
 function decodeEntities(s: string): string {
   return s
@@ -147,13 +162,13 @@ async function getMovieDetail(
     ? decodeEntities(synopsisMatch[1].trim())
     : (ld.description as string) || null
 
-  // Cast from LD+JSON
+  // Cast from LD+JSON, falling back to HTML cast-and-crew section (animated movies lack LD+JSON actor)
   const actors = Array.isArray(ld.actor)
     ? (ld.actor as Array<Record<string, unknown>>).map((a) => ({
         name: (a.name as string) ?? null,
         url: (a.sameAs as string) ?? null,
       }))
-    : []
+    : parseCastFromHtml(html)
 
   const directors = Array.isArray(ld.director)
     ? (ld.director as Array<Record<string, unknown>>).map((d) => ({

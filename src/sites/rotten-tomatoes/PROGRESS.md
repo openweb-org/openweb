@@ -1,3 +1,24 @@
+## 2026-04-24: QA — cast fallback for animated movies
+
+**What changed:**
+- Added `parseCastFromHtml()` fallback: extracts cast from HTML `cast-and-crew` section when LD+JSON lacks `actor` field
+- Filters out directors/screenwriters/producers from HTML cast results
+- Decodes HTML entities in parsed names (e.g. `&#39;` → `'` for "Auli'i Cravalho")
+
+**QA findings:**
+- searchMovies: works for specific titles; keyword search like "in theaters" returns title matches, not browse/discovery (RT limitation)
+- getMovieDetail: live-action movies (Thunderbolts*) fully populated; animated movies (Inside Out 2, Moana 2) had empty `cast` array — LD+JSON omits `actor` for animated films
+- getTomatoMeter: clean across all test cases
+- 404 on nonexistent slugs returns proper error
+
+**Why:**
+- LD+JSON `actor` field is absent for animated movies on Rotten Tomatoes
+- HTML `cast-and-crew` section is always present and has full cast data with celebrity links
+
+**Verification:** `pnpm dev verify rotten-tomatoes` → 3/3 PASS
+
+---
+
 ## 2026-04-11: Transport upgrade — DOM extraction → node-native HTML parsing
 
 **What changed:**
