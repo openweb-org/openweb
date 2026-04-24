@@ -22,6 +22,9 @@ paths:
       summary: "Search stocks by keyword — code, name, exchange, current price, industry, percentage change"
       x-openweb:
         permission: read
+        adapter:
+          name: xueqiu
+          operation: searchStocks
         build:
           stable_id: afa699cb57a04a9f
           tool_version: 2
@@ -116,6 +119,9 @@ paths:
       summary: "Get real-time stock quote — current price, percent change, volume, market cap, open, high, low, turnover rate"
       x-openweb:
         permission: read
+        adapter:
+          name: xueqiu
+          operation: getStockQuote
         build:
           stable_id: 569882a05450bce5
           tool_version: 2
@@ -231,6 +237,9 @@ paths:
       summary: "Get order book (pankou) — bid/ask prices and volumes at 5 levels"
       x-openweb:
         permission: read
+        adapter:
+          name: xueqiu
+          operation: getOrderBook
         build:
           stable_id: 4c8b5652775743f8
           tool_version: 2
@@ -348,8 +357,11 @@ paths:
       summary: "Get hot market events — trending topics with tags, heat score, discussion count, content summary"
       x-openweb:
         permission: read
+        transport: page
+        adapter:
+          name: xueqiu
+          operation: getHotEvents
         build:
-          stable_id: d3683c54af1381a1
           tool_version: 2
           verified: false
           signals:
@@ -418,6 +430,9 @@ paths:
       x-openweb:
         permission: read
         transport: page
+        adapter:
+          name: xueqiu
+          operation: getTimeline
         build:
           stable_id: 59966686f2749634
           tool_version: 2
@@ -530,6 +545,9 @@ paths:
       x-openweb:
         permission: read
         transport: page
+        adapter:
+          name: xueqiu
+          operation: getStockKline
         build:
           stable_id: a7c3e1f0b2d49856
           tool_version: 2
@@ -635,6 +653,9 @@ paths:
       x-openweb:
         permission: read
         transport: page
+        adapter:
+          name: xueqiu
+          operation: getStockFinancials
         build:
           stable_id: b4d2f6e1c3a58970
           tool_version: 2
@@ -795,12 +816,16 @@ paths:
       summary: "Get user comments and discussions about a stock — post title, text, author, reply count, retweet count, timestamps"
       x-openweb:
         permission: read
+        transport: page
+        adapter:
+          name: xueqiu
+          operation: getStockComments
         build:
           stable_id: c5e3a7d1f4b68092
           tool_version: 2
-          verified: true
+          verified: false
           signals:
-            - node-verified
+            - requires-login
       parameters:
         - name: symbol
           in: query
@@ -921,6 +946,9 @@ paths:
       x-openweb:
         permission: read
         transport: page
+        adapter:
+          name: xueqiu
+          operation: getWatchlist
         build:
           stable_id: d6f4b8e2a5c79103
           tool_version: 2
@@ -1014,6 +1042,10 @@ paths:
       summary: "Get stocks in same industry — symbol, name, price, change%, volume, PE ratio, market cap"
       x-openweb:
         permission: read
+        transport: page
+        adapter:
+          name: xueqiu
+          operation: getIndustryStocks
         build:
           stable_id: 532260faa3e5268e
           tool_version: 2

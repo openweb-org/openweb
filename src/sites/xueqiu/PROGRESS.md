@@ -1,3 +1,40 @@
+## 2026-04-25: Userflow QA — response trimming and WAF bypass
+
+**Workflows tested:**
+1. Retail investor researching Moutai (茅台): searchStocks → getStockQuote → getOrderBook → getStockKline → getStockFinancials
+2. Market sentiment tracker: getHotEvents → getTimeline → getStockComments
+3. Sector analyst comparing baijiu stocks: searchStocks → getIndustryStocks → getStockQuote (batch)
+
+**Gaps found:**
+- getHotEvents, getStockComments, getIndustryStocks blocked by Aliyun WAF on node transport (return JS challenge HTML instead of JSON)
+- getTimeline response bloat: 29KB for 5 posts (user objects have 40+ fields, original_status has 100+ fields, HTML in descriptions)
+- getStockQuote: ~15 null fields per item (trade_volume, side, trade_session, etc.)
+- getOrderBook: null padding for levels 6–10, bn/by/sn/sy null fields
+- getStockComments requires login (error_code 10020 "请刷新页面后重试")
+- getIndustryStocks and getWatchlist require login (empty data / error_code 60201)
+
+**Fixes:**
+- New adapter `adapters/xueqiu.ts`: response trimming for all 10 ops
+- Switched getHotEvents, getStockComments, getIndustryStocks to page transport (bypasses Aliyun WAF)
+- All ops now use page-context fetch (browser cookies, no WAF issues)
+- Marked getStockComments as `verified: false` + `requires-login` (was previously `node-verified` but actually needs login session)
+- Removed getStockComments.example.json (login-required)
+
+**Before/after response sizes:**
+| Operation | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| searchStocks | 359B | 163B | 55% |
+| getStockQuote | 678B | 400B | 41% |
+| getOrderBook | 942B | 366B | 61% |
+| getStockKline | 3,299B | 2,948B | 11% |
+| getStockFinancials | 2,472B | 1,487B | 40% |
+| getTimeline | 29,147B | 3,225B | **89%** |
+| getHotEvents | WAF blocked | 4,350B | **fixed** |
+| getStockComments | WAF blocked | requires-login | documented |
+
+**Verification:** 7/7 verifiable ops PASS via `openweb verify xueqiu`
+**Known blockers:** getStockComments, getIndustryStocks, getWatchlist require login session
+
 ## 2026-04-09: Enhance to 10 operations
 
 **What changed:**
