@@ -1,0 +1,15 @@
+{
+  "operation_id": "getMessage",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "conversationId": "419088"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

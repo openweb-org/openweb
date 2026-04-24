@@ -80,19 +80,6 @@ const Q_POST = `query InvestPostQuery($postId: ID!) {
   }
 }`
 
-const Q_DATAROOM = `query MemberDataRoom($senderOrgHandle: String!, $dataRoomHandle: String!, $previewAs: String) {
-  listDataRoomSections(senderOrgHandle: $senderOrgHandle, dataRoomHandle: $dataRoomHandle, previewAs: $previewAs) {
-    id type internalKey orderKey
-    config { header layout }
-    pmstate
-    dataRoomSectionFiles {
-      id
-      dataRoomFile {
-        file { id originalFilename mimeType extension thumbnail }
-      }
-    }
-  }
-}`
 
 interface ViewerInfo {
   userId: string
@@ -123,20 +110,31 @@ async function mainWorldEval(page: Page, expression: string): Promise<any> {
   return result.result.value
 }
 
-async function ensureVenturePage(page: Page): Promise<void> {
+async function ensureVenturePage(page: Page, helpers: AdapterHelpers): Promise<void> {
   const url = page.url()
   if (!url.startsWith(VENTURE_ORIGIN) || url.includes('/login')) {
-    await page.goto(`${VENTURE_ORIGIN}/v/`, { waitUntil: 'networkidle', timeout: 25_000 })
+    try {
+      await page.goto(`${VENTURE_ORIGIN}/v/`, { waitUntil: 'networkidle', timeout: 15_000 })
+    } catch (e: any) {
+      if (e.message?.includes('ERR_TOO_MANY_REDIRECTS') || e.message?.includes('Timeout')) throw helpers.errors.needsLogin()
+      throw e
+    }
   }
-  await page.waitForFunction(() => !!(window as any).__APOLLO_CLIENT__, { timeout: 15_000 })
+  if (page.url().includes('/login')) throw helpers.errors.needsLogin()
+  try {
+    await page.waitForFunction(() => !!(window as any).__APOLLO_CLIENT__, { timeout: 15_000 })
+  } catch {
+    throw helpers.errors.needsLogin()
+  }
 }
 
 async function ventureGql(
   page: Page,
   query: string,
   variables: Record<string, unknown>,
+  helpers: AdapterHelpers,
 ): Promise<any> {
-  await ensureVenturePage(page)
+  await ensureVenturePage(page, helpers)
   const script = `(async () => {
     if (!window.__gqlParse) {
       const { parse } = await import('https://esm.sh/graphql@16.8.1/language/parser');
@@ -154,11 +152,11 @@ async function ventureGql(
   return JSON.parse(raw)
 }
 
-async function resolveViewer(page: Page): Promise<ViewerInfo> {
+async function resolveViewer(page: Page, helpers: AdapterHelpers): Promise<ViewerInfo> {
   if (cachedViewer) return cachedViewer
-  const data = await ventureGql(page, Q_VIEWER, {})
+  const data = await ventureGql(page, Q_VIEWER, {}, helpers)
   const user = data?.currentUser
-  if (!user?.id) throw new Error('Not logged in — run: openweb login angellist')
+  if (!user?.id) throw helpers.errors.needsLogin()
   cachedViewer = {
     userId: user.id,
     investAccountId: user.investAccounts?.[0]?.id ?? '',
@@ -180,12 +178,12 @@ function clean(obj: unknown): unknown {
   return obj
 }
 
-async function listInvites(page: Page, _params: Record<string, unknown>, _h: AdapterHelpers) {
-  const v = await resolveViewer(page)
+async function listInvites(page: Page, _params: Record<string, unknown>, helpers: AdapterHelpers) {
+  const v = await resolveViewer(page, helpers)
   const data = await ventureGql(page, Q_CURRENT_INVITES, {
     userId: v.userId,
     investAccountId: v.investAccountId,
-  })
+  }, helpers)
   return clean((data?.invest?.currentDealInvites ?? []).map((inv: any) => ({
     id: inv.id,
     invitedAt: inv.invitedAt,
@@ -261,14 +259,14 @@ async function getInvite(page: Page, params: Record<string, unknown>, helpers: A
   })
 }
 
-async function listMessages(page: Page, params: Record<string, unknown>, _h: AdapterHelpers) {
-  const v = await resolveViewer(page)
+async function listMessages(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
+  const v = await resolveViewer(page, helpers)
   const data = await ventureGql(page, Q_CONVERSATIONS, {
     userSlug: v.userSlug,
     searchQuery: params.searchQuery ? String(params.searchQuery) : '',
     limit: Number(params.limit) || 20,
     ...(params.cursor ? { cursor: String(params.cursor) } : {}),
-  })
+  }, helpers)
   const convo = data?.venture?.conversations
   return clean({
     hasNextPage: convo?.pageInfo?.hasNextPage,
@@ -293,7 +291,7 @@ async function listMessages(page: Page, params: Record<string, unknown>, _h: Ada
 }
 
 async function getMessage(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
-  const v = await resolveViewer(page)
+  const v = await resolveViewer(page, helpers)
   const conversationId = String(params.conversationId || '')
   if (!conversationId) throw helpers.errors.missingParam('conversationId')
   const data = await ventureGql(page, Q_CONVERSATION, {
@@ -301,7 +299,7 @@ async function getMessage(page: Page, params: Record<string, unknown>, helpers: 
     conversationId,
     searchQuery: '',
     limit: Number(params.limit) || 25,
-  })
+  }, helpers)
   const c = data?.venture?.conversation
   return clean({
     id: c?.id,
@@ -320,12 +318,12 @@ async function getMessage(page: Page, params: Record<string, unknown>, helpers: 
   })
 }
 
-async function listPosts(page: Page, params: Record<string, unknown>, _h: AdapterHelpers) {
+async function listPosts(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
   const data = await ventureGql(page, Q_POSTS, {
     searchQuery: params.searchQuery ? String(params.searchQuery) : '',
     limit: Number(params.limit) || 20,
     ...(params.cursor ? { cursor: String(params.cursor) } : {}),
-  })
+  }, helpers)
   const posts = data?.invest?.posts
   return clean({
     hasNextPage: posts?.pageInfo?.hasNextPage,
@@ -345,7 +343,7 @@ async function listPosts(page: Page, params: Record<string, unknown>, _h: Adapte
 async function getPost(page: Page, params: Record<string, unknown>, helpers: AdapterHelpers) {
   const postId = String(params.postId || '')
   if (!postId) throw helpers.errors.missingParam('postId')
-  const data = await ventureGql(page, Q_POST, { postId })
+  const data = await ventureGql(page, Q_POST, { postId }, helpers)
   const p = data?.invest?.post
   return clean({
     id: p?.id,
