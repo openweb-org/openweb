@@ -18,7 +18,7 @@ paths:
         permission: read
         build:
           stable_id: gf0001
-          tool_version: 2
+          tool_version: 3
           verified: true
           signals:
           - adapter-verified
@@ -225,6 +225,12 @@ paths:
         schema:
           type: string
         description: Encoded itinerary parameters.
+      - name: tfu
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Flight selection parameters. Required to view a specific itinerary.
       responses:
         '200':
           description: Booking details for a specific flight itinerary.
@@ -282,7 +288,7 @@ paths:
         permission: read
         build:
           stable_id: gf0004
-          tool_version: 1
+          tool_version: 2
           verified: false
           signals:
           - adapter-verified

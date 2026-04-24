@@ -141,11 +141,14 @@ async function searchFlights(
 	// Route info from ds1[1]
 	const routeInfo = ds1[1] as unknown[][]
 	const originCity = routeInfo?.[0]?.[0]?.[0]?.[1] as string || ''
-	const originCode = (routeInfo?.[0]?.[0]?.[0]?.[2] as unknown[])?.[5] as string || ''
+	const originCode = (routeInfo?.[0]?.[0]?.[0]?.[2] as unknown[])?.[5] as string
+		|| (routeInfo?.[0]?.[0]?.[0]?.[0] as unknown[])?.[0] as string || ''
 	const destCity = routeInfo?.[0]?.[1]?.[0]?.[1] as string ||
 		routeInfo?.[1]?.[0]?.[0]?.[1] as string || ''
-	const destCode = (routeInfo?.[0]?.[1]?.[0]?.[2] as unknown[])?.[5] as string ||
-		(routeInfo?.[1]?.[0]?.[0]?.[2] as unknown[])?.[5] as string || ''
+	const destCode = (routeInfo?.[0]?.[1]?.[0]?.[2] as unknown[])?.[5] as string
+		|| (routeInfo?.[0]?.[1]?.[0]?.[0] as unknown[])?.[0] as string
+		|| (routeInfo?.[1]?.[0]?.[0]?.[2] as unknown[])?.[5] as string
+		|| (routeInfo?.[1]?.[0]?.[0]?.[0] as unknown[])?.[0] as string || ''
 
 	// Best flights from ds1[2], other flights from ds1[3]
 	const flights: Record<string, unknown>[] = []
@@ -316,9 +319,7 @@ async function exploreDestinations(page: Page): Promise<unknown> {
 			if (parts.length < 3) continue
 
 			const beforePrice = parts[0]
-			const flightPriceMatch = parts[1].match(/^(\d+)/)
 			const hotelPriceMatch = parts[parts.length - 1].match(/^(\d+)/)
-			if (!flightPriceMatch) continue
 
 			const dateMatch = beforePrice.match(
 				/((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+\s*[–—]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+)?\d+)/i,
@@ -327,15 +328,31 @@ async function exploreDestinations(page: Page): Promise<unknown> {
 				? beforePrice.slice(0, dateMatch.index).trim()
 				: beforePrice.trim()
 			const dates = dateMatch ? dateMatch[1].trim() : ''
-			const middlePart = parts[1].replace(/^\d+/, '')
-			const stopsMatch = middlePart.match(/(Nonstop|\d+\s*stops?)/i)
-			const durationMatch = middlePart.match(/(\d+\s*hr(?:\s*\d+\s*min)?|\d+\s*min)/)
+
+			const segment = parts[1]
+			const combined = segment.match(/^(\d+?)(Nonstop|\d\s*stops?)/i)
+			let flightPrice: number
+			let stops: string
+			let afterPrice: string
+			if (combined) {
+				flightPrice = Number.parseInt(combined[1])
+				stops = combined[2]
+				afterPrice = segment.slice(combined[0].length)
+			} else {
+				const pm = segment.match(/^(\d+)/)
+				if (!pm) continue
+				flightPrice = Number.parseInt(pm[1])
+				afterPrice = segment.slice(pm[0].length)
+				const sm = afterPrice.match(/(Nonstop|\d+\s*stops?)/i)
+				stops = sm ? sm[1] : ''
+			}
+			const durationMatch = afterPrice.match(/(\d+\s*hr(?:\s*\d+\s*min)?|\d+\s*min)/)
 
 			destinations.push({
 				destination,
 				dates,
-				flightPrice: Number.parseInt(flightPriceMatch[1]),
-				stops: stopsMatch ? stopsMatch[1] : '',
+				flightPrice,
+				stops,
 				duration: durationMatch ? durationMatch[1].trim() : '',
 				hotelPricePerNight: hotelPriceMatch
 					? Number.parseInt(hotelPriceMatch[1])
