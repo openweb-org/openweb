@@ -14,7 +14,7 @@ paths:
   /sch/i.html:
     get:
       operationId: searchItems
-      summary: Search eBay items by keyword — title, price, condition, item ID, image
+      summary: Search eBay items by keyword — title, price, condition, item ID
       x-openweb:
         permission: read
         build:
@@ -24,35 +24,9 @@ paths:
           tool_version: 1
           signals:
             - dom
-        extraction:
-          type: page_global_data
-          page_url: /sch/i.html
-          expression: |
-            (() => {
-              const cards = document.querySelectorAll('.s-card');
-              const results = [];
-              for (const card of cards) {
-                const link = card.querySelector('a[href*="/itm/"]');
-                if (!link) continue;
-                const href = link.getAttribute('href') || '';
-                const hrefMatch = href.match(/\/itm\/(\d+)/);
-                if (hrefMatch && hrefMatch[1] === '123456') continue;
-                const itemId = card.getAttribute('data-listingid') || (hrefMatch ? hrefMatch[1] : '');
-                if (!itemId) continue;
-                const title = card.querySelector('.s-card__title')?.textContent?.trim() || '';
-                const price = card.querySelector('.s-card__price')?.textContent?.trim() || '';
-                const subtitle = card.querySelector('.s-card__subtitle')?.textContent?.trim() || '';
-                const img = card.querySelector('img');
-                const image = img?.getAttribute('src') || '';
-                results.push({
-                  itemId,
-                  title: title.replace(/Opens in a new window or tab$/i, '').trim(),
-                  price, condition: subtitle, image,
-                  link: 'https://www.ebay.com/itm/' + itemId,
-                });
-              }
-              return { resultCount: results.length, items: results };
-            })()
+        adapter:
+          name: ebay
+          operation: searchItems
       parameters:
         - name: keywords
           in: query
@@ -100,9 +74,6 @@ paths:
                         condition:
                           type: string
                           description: 'Item condition (e.g. "Pre-Owned", "Brand New").'
-                        image:
-                          type: string
-                          description: Item thumbnail URL (may be empty due to lazy loading).
                         link:
                           type: string
                           description: Direct URL to the item page.
@@ -121,48 +92,9 @@ paths:
           signals:
             - ld_json
             - dom
-        extraction:
-          type: page_global_data
-          page_url: /itm/{itemId}
-          expression: |
-            (() => {
-              const itemId = (location.pathname.match(/\/itm\/(\d+)/) || [])[1] || '';
-              const g = (sel) => document.querySelector(sel)?.textContent?.trim() || '';
-              const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
-              let ldProduct = null;
-              for (const s of ldScripts) {
-                try { const d = JSON.parse(s.textContent); if (d['@type'] === 'Product') { ldProduct = d; break; } } catch {}
-              }
-              const sellerCard = document.querySelector('[data-testid="x-sellercard-atf"], .x-sellercard-atf_main');
-              const sellerName = sellerCard?.querySelector('.x-sellercard-atf__info__about-seller a, .x-sellercard-atf__info a')?.textContent?.trim() || '';
-              const sellerFeedback = sellerCard?.querySelector('.x-sellercard-atf__about-seller')?.textContent?.trim() || '';
-              const sellerPositive = [...(sellerCard?.querySelectorAll('span') || [])].find(s => s.textContent?.includes('positive'))?.textContent?.trim() || '';
-              const storeLink = sellerCard?.querySelector('a[href*="/str/"]');
-              const storeSlug = storeLink ? (storeLink.getAttribute('href') || '').match(/\/str\/([^?]+)/)?.[1] || '' : '';
-              if (ldProduct) {
-                const offer = ldProduct.offers || {};
-                return {
-                  itemId, title: ldProduct.name || '',
-                  price: offer.price ? offer.priceCurrency + ' ' + offer.price : '',
-                  priceCurrency: offer.priceCurrency || '', priceValue: offer.price || '',
-                  condition: (offer.itemCondition || '').replace('https://schema.org/', ''),
-                  availability: (offer.availability || '').replace('https://schema.org/', ''),
-                  image: Array.isArray(ldProduct.image) ? ldProduct.image[0] : (ldProduct.image || ''),
-                  images: Array.isArray(ldProduct.image) ? ldProduct.image : [ldProduct.image].filter(Boolean),
-                  seller: { name: sellerName, feedbackScore: sellerFeedback, positivePercent: sellerPositive, storeSlug },
-                  shipping: g('[data-testid="x-shipping-header"] .ux-textspans'),
-                  bids: g('.x-bid-count span'), returns: g('[data-testid="x-returns"] .ux-textspans--BOLD'),
-                };
-              }
-              return {
-                itemId, title: g('.x-item-title__mainTitle span') || g('h1'),
-                price: g('.x-price-primary span.ux-textspans'),
-                condition: g('[data-testid="x-item-condition"] .ux-textspans'),
-                seller: { name: sellerName, feedbackScore: sellerFeedback, positivePercent: sellerPositive, storeSlug },
-                shipping: g('[data-testid="x-shipping-header"] .ux-textspans'),
-                bids: g('.x-bid-count span'), returns: g('[data-testid="x-returns"] .ux-textspans--BOLD'),
-              };
-            })()
+        adapter:
+          name: ebay
+          operation: getItemDetail
       parameters:
         - name: itemId
           in: path
@@ -208,7 +140,7 @@ paths:
                     type: array
                     items:
                       type: string
-                    description: All item image URLs.
+                    description: Item image URLs (up to 5).
                   seller:
                     type: object
                     description: Seller information extracted from the seller card.
@@ -255,37 +187,9 @@ paths:
           tool_version: 1
           signals:
             - dom
-        extraction:
-          type: page_global_data
-          page_url: /str/{username}
-          expression: |
-            (() => {
-              const username = decodeURIComponent((location.pathname.match(/\/str\/([^/?#]+)/) || [])[1] || '');
-              const notFound = document.querySelector('.page-notice--attention');
-              if (notFound && notFound.textContent?.includes('not found')) {
-                return { error: 'Seller not found', username };
-              }
-              const card = document.querySelector('.str-seller-card');
-              if (!card) return { error: 'Could not load seller profile', username };
-              const storeName = document.querySelector('.str-seller-card__store-name h1')?.textContent?.trim() || '';
-              const feedbackLink = card.querySelector('.str-seller-card__feedback-link');
-              const feedbackText = feedbackLink?.textContent?.trim() || '';
-              const fullText = card.textContent?.trim() || '';
-              const positiveMatch = fullText.match(/(\d+\.?\d*)%\s*positive/);
-              const itemsSoldMatch = fullText.match(/(\d+\.?\d*[KMB]?)\s*items?\s*sold/i);
-              const followersMatch = fullText.match(/(\d+\.?\d*[KMB]?)\s*followers?/i);
-              const logo = document.querySelector('.str-header__logo--img');
-              const categoryCards = document.querySelectorAll('[data-testid="card-ajax-true"]');
-              const categories = [...categoryCards].slice(0, 10).map(c => c.textContent?.trim() || '').filter(Boolean);
-              return {
-                username, storeName,
-                logoUrl: logo?.getAttribute('src') || '',
-                positiveFeedback: positiveMatch ? positiveMatch[1] + '%' : feedbackText,
-                itemsSold: itemsSoldMatch ? itemsSoldMatch[1] : '',
-                followers: followersMatch ? followersMatch[1] : '',
-                categories, storeUrl: 'https://www.ebay.com/str/' + username,
-              };
-            })()
+        adapter:
+          name: ebay
+          operation: getSellerProfile
       parameters:
         - name: username
           in: path
@@ -325,7 +229,7 @@ paths:
                     type: array
                     items:
                       type: string
-                    description: Store category names (up to 10).
+                    description: Store category names (up to 5).
                   storeUrl:
                     type: string
                     description: Full URL to the seller store page.
