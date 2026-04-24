@@ -23,7 +23,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+            - adapter-verified
+        adapter:
+          name: bestbuy-read
+          operation: searchProducts
       parameters:
         - name: query
           in: query
@@ -31,26 +34,6 @@ paths:
           schema:
             type: string
           description: Search keyword (e.g. "laptop", "headphones").
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 11
-          description: Max number of suggestion groups to return.
-        - name: searchVariant
-          in: query
-          required: false
-          schema:
-            type: string
-            default: B
-          description: Search variant identifier.
-        - name: x-client-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: Search-Web-View
       responses:
         '200':
           description: Success.
@@ -78,8 +61,6 @@ paths:
                             type: string
                       count:
                         type: integer
-                      queryResponseTime:
-                        type: integer
                       suggestions:
                         type: array
                         items:
@@ -101,10 +82,6 @@ paths:
                               items:
                                 type: object
                                 properties:
-                                  source:
-                                    type: string
-                                  type:
-                                    type: string
                                   skuId:
                                     type: string
   /suggest/v1/fragment/products/www:
@@ -118,7 +95,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+            - adapter-verified
+        adapter:
+          name: bestbuy-read
+          operation: getProductDetails
       parameters:
         - name: skuids
           in: query
@@ -126,12 +106,6 @@ paths:
           schema:
             type: string
           description: Comma-separated SKU IDs (e.g. "12009400,6612975,6613878").
-        - name: x-client-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: Search-Web-View
       responses:
         '200':
           description: Success.
@@ -144,8 +118,6 @@ paths:
                   - products
                 properties:
                   count:
-                    type: integer
-                  queryResponseTime:
                     type: integer
                   products:
                     type: array
@@ -161,8 +133,6 @@ paths:
                         imageUrl:
                           type: string
                           description: Relative image path on pisces.bbystatic.com.
-                        altText:
-                          type: string
                         skushortlabel:
                           type: string
                           description: Short product name.
@@ -185,7 +155,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+            - adapter-verified
+        adapter:
+          name: bestbuy-read
+          operation: getProductPricing
       parameters:
         - name: skus
           in: query
@@ -232,11 +205,15 @@ paths:
                             currentPrice:
                               type: number
                             regularPrice:
-                              type: number
+                              type:
+                                - number
+                                - 'null'
                             pricingType:
                               type: string
                             savingsAmount:
-                              type: number
+                              type:
+                                - number
+                                - 'null'
                         buttonState:
                           type: object
                           properties:
@@ -249,20 +226,6 @@ paths:
                         url:
                           type: string
                           description: Relative product page URL.
-                        class:
-                          type: object
-                          properties:
-                            displayName:
-                              type: string
-                            id:
-                              type: string
-                        department:
-                          type: object
-                          properties:
-                            displayName:
-                              type: string
-                            id:
-                              type: string
                         error:
                           type: string
                           description: Error message if SKU not found.

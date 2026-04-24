@@ -37,6 +37,21 @@
 **Verification:** `openweb verify bestbuy` → PASS (3/3 operations)
 **Commit:** ad290b5
 
+## 2026-04-24: Userflow QA — response trimming via adapter
+
+**What changed:**
+- Created `bestbuy-read` adapter for all 3 read ops. Uses `pageFetch` GET + field trimming.
+- searchProducts: stripped internal metadata (isLLMSourced, track, product source/type).
+- getProductDetails: stripped track, altText, queryResponseTime.
+- getProductPricing: major trim — stripped priceDomain (duplicate), offerQualifiers, giftSkus, multipleSellers, gspAppleCare, sellerInfo, inkSubscriptions, properties, attributes, availability, class, department, subclass.
+- Fixed schema: regularPrice/savingsAmount now nullable (null when no sale).
+- Removed internal-only spec params (count, searchVariant, x-client-id header) — adapter handles them.
+
+**Why:**
+- Blind userflow QA across 3 personas (gamer, professional, parent) revealed heavily verbose pricing responses with duplicate/internal fields.
+
+**Verification:** `pnpm dev verify bestbuy` — 3/3 PASS. 9/9 persona calls succeed.
+
 ## 2026-04-19 — Write-Op Verify Campaign
 
 **Context:** Per `doc/todo/write-verify/handoff.md` §3.10, `removeFromCart` had been shipped against a speculative endpoint `/cart/api/v1/removeFromCart` that does not exist on bestbuy.com. The original "PASS" was a permission-gate false-positive. Goal: capture the real endpoint and chain it after `addToCart`.
