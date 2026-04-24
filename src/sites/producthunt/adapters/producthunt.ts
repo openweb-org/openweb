@@ -25,24 +25,50 @@ function extractTagline(entry: any): string | null {
   return k ? entry[k] : null
 }
 
+function findProduct(cache: ApolloCache, slug: string): any {
+  for (const key of Object.keys(cache)) {
+    const e = cache[key]
+    if (e?.__typename === 'Product' && e.slug === slug) return e
+  }
+  return null
+}
+
+function findBestPost(cache: ApolloCache, product: any, slug: string): any {
+  if (product) {
+    const productRef = `Product:${product.id}`
+    for (const key of Object.keys(cache)) {
+      const e = cache[key]
+      if (e?.__typename === 'Post') {
+        const pr = e.product
+        if (pr && typeof pr === 'object' && '__ref' in pr && pr.__ref === productRef) return e
+      }
+    }
+  }
+  for (const key of Object.keys(cache)) {
+    const e = cache[key]
+    if (e?.__typename === 'Post' && e.slug === slug) return e
+  }
+  return null
+}
+
 async function getPost(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const slug = params.slug
   if (!slug) throw new Error('slug parameter is required')
 
-  await page.goto(`${PH_ORIGIN}/posts/${slug}`, { waitUntil: 'load', timeout: 30_000 })
+  await page.goto(`${PH_ORIGIN}/products/${slug}`, { waitUntil: 'load', timeout: 30_000 })
   await page.waitForTimeout(3000)
 
-  const cache = await extractApolloCache(page)
+  let cache = await extractApolloCache(page)
+  let product = findProduct(cache, String(slug))
 
-  let product: any = null
-  let post: any = null
-  for (const key of Object.keys(cache)) {
-    const entry = cache[key]
-    if (!entry) continue
-    if (!product && entry.__typename === 'Product' && entry.slug === slug) product = entry
-    if (!post && entry.__typename === 'Post' && entry.slug === slug) post = entry
-    if (product && post) break
+  if (!product) {
+    await page.goto(`${PH_ORIGIN}/posts/${slug}`, { waitUntil: 'load', timeout: 30_000 })
+    await page.waitForTimeout(3000)
+    cache = await extractApolloCache(page)
+    product = findProduct(cache, String(slug))
   }
+
+  const post = findBestPost(cache, product, String(slug))
 
   const makers: any[] = []
   for (const uk of Object.keys(cache).filter((k) => k.startsWith('User'))) {

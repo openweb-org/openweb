@@ -10,7 +10,7 @@ servers:
     x-openweb:
       transport: page
       page_plan:
-        settle_ms: 3000
+        settle_ms: 6000
 paths:
   /internal/getToday:
     get:
@@ -296,7 +296,7 @@ paths:
           required: true
           schema:
             type: string
-          description: 'Product slug from getPosts or searchProducts (e.g. "novavoice").'
+          description: 'Product slug — use productSlug from getPosts/getToday, or slug from searchProducts (e.g. "novavoice").'
           example: novavoice
       responses:
         '200':
