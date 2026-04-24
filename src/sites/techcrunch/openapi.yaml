@@ -17,6 +17,9 @@ paths:
       x-openweb:
         permission: read
         actual_path: /posts
+        adapter:
+          name: techcrunch
+          operation: searchArticles
         build:
           stable_id: techcrunch0001
           tool_version: 1
@@ -28,13 +31,6 @@ paths:
             type: string
           description: Search query (keyword or phrase).
           example: artificial intelligence
-        - name: _embed
-          in: query
-          required: false
-          schema:
-            type: string
-            default: '1'
-          description: Include embedded resources (author, featured media). Use "1" to enable.
         - name: per_page
           in: query
           required: false
@@ -80,40 +76,32 @@ paths:
                       description: Post ID.
                     date:
                       type: string
-                      format: date-time
                       description: Publication date in ISO 8601.
                     slug:
                       type: string
                       description: URL slug for the post.
                     link:
                       type: string
-                      format: uri
                       description: Full URL on techcrunch.com.
                     title:
-                      type: object
-                      required: [rendered]
-                      properties:
-                        rendered:
-                          type: string
-                          description: HTML-rendered title.
+                      type: string
+                      description: Article title.
                     excerpt:
-                      type: object
-                      required: [rendered]
-                      properties:
-                        rendered:
-                          type: string
-                          description: Article excerpt as HTML.
+                      type: string
+                      description: Article excerpt as HTML.
                     author:
-                      type: integer
-                      description: Author ID.
+                      type: string
+                      nullable: true
+                      description: Author name.
                     categories:
                       type: array
                       items:
                         type: integer
                       description: Category IDs.
-                    featured_media:
-                      type: integer
-                      description: Featured image attachment ID.
+                    featured_image_url:
+                      type: string
+                      nullable: true
+                      description: Featured image URL.
                   required: [id, date, slug, link, title, excerpt, author, categories]
 
   /posts/{id}:
@@ -122,6 +110,9 @@ paths:
       summary: Get full article content — title, body, date, author, category, featured image
       x-openweb:
         permission: read
+        adapter:
+          name: techcrunch
+          operation: getArticle
         build:
           stable_id: techcrunch0002
           tool_version: 1
@@ -133,13 +124,6 @@ paths:
             type: integer
           description: Post ID (numeric). Use an ID from searchArticles or getLatest results.
           example: 3110945
-        - name: _embed
-          in: query
-          required: false
-          schema:
-            type: string
-            default: '1'
-          description: Include embedded resources (author, featured media). Use "1" to enable.
       responses:
         '200':
           description: Single post object with full content.
@@ -153,43 +137,29 @@ paths:
                     description: Post ID.
                   date:
                     type: string
-                    format: date-time
                     description: Publication date in ISO 8601.
                   modified:
                     type: string
-                    format: date-time
                     description: Last modified date.
                   slug:
                     type: string
                     description: URL slug for the post.
                   link:
                     type: string
-                    format: uri
                     description: Full URL on techcrunch.com.
                   title:
-                    type: object
-                    required: [rendered]
-                    properties:
-                      rendered:
-                        type: string
-                        description: HTML-rendered title.
+                    type: string
+                    description: Article title.
                   content:
-                    type: object
-                    required: [rendered]
-                    properties:
-                      rendered:
-                        type: string
-                        description: Full article body as HTML.
+                    type: string
+                    description: Full article body as HTML.
                   excerpt:
-                    type: object
-                    required: [rendered]
-                    properties:
-                      rendered:
-                        type: string
-                        description: Article excerpt as HTML.
+                    type: string
+                    description: Article excerpt as HTML.
                   author:
-                    type: integer
-                    description: Author ID.
+                    type: string
+                    nullable: true
+                    description: Author name.
                   categories:
                     type: array
                     items:
@@ -200,9 +170,20 @@ paths:
                     items:
                       type: integer
                     description: Tag IDs.
-                  featured_media:
-                    type: integer
-                    description: Featured image attachment ID.
+                  featured_image_url:
+                    type: string
+                    nullable: true
+                    description: Featured image URL.
+                  section:
+                    type: string
+                    nullable: true
+                    description: Article section (e.g. AI, Startups, Transportation).
+                  keywords:
+                    type: array
+                    nullable: true
+                    items:
+                      type: string
+                    description: Article keywords/tags as strings.
                 required: [id, date, slug, link, title, content, excerpt, author, categories]
 
   /posts?latest:
@@ -212,17 +193,13 @@ paths:
       x-openweb:
         permission: read
         actual_path: /posts
+        adapter:
+          name: techcrunch
+          operation: getLatest
         build:
           stable_id: techcrunch0003
           tool_version: 1
       parameters:
-        - name: _embed
-          in: query
-          required: false
-          schema:
-            type: string
-            default: '1'
-          description: Include embedded resources (author, featured media). Use "1" to enable.
         - name: per_page
           in: query
           required: false
@@ -252,40 +229,32 @@ paths:
                       description: Post ID.
                     date:
                       type: string
-                      format: date-time
                       description: Publication date in ISO 8601.
                     slug:
                       type: string
                       description: URL slug for the post.
                     link:
                       type: string
-                      format: uri
                       description: Full URL on techcrunch.com.
                     title:
-                      type: object
-                      required: [rendered]
-                      properties:
-                        rendered:
-                          type: string
-                          description: HTML-rendered title.
+                      type: string
+                      description: Article title.
                     excerpt:
-                      type: object
-                      required: [rendered]
-                      properties:
-                        rendered:
-                          type: string
-                          description: Article excerpt as HTML.
+                      type: string
+                      description: Article excerpt as HTML.
                     author:
-                      type: integer
-                      description: Author ID.
+                      type: string
+                      nullable: true
+                      description: Author name.
                     categories:
                       type: array
                       items:
                         type: integer
                       description: Category IDs.
-                    featured_media:
-                      type: integer
-                      description: Featured image attachment ID.
+                    featured_image_url:
+                      type: string
+                      nullable: true
+                      description: Featured image URL.
                   required: [id, date, slug, link, title, excerpt, author, categories]
 
   /posts?categories:
@@ -295,6 +264,9 @@ paths:
       x-openweb:
         permission: read
         actual_path: /posts
+        adapter:
+          name: techcrunch
+          operation: getCategory
         build:
           stable_id: techcrunch0004
           tool_version: 1
@@ -306,13 +278,6 @@ paths:
             type: integer
           description: "Category ID. Common IDs: 577030455 (AI), 449557042 (Apps), 576965044 (Venture), 20429 (Startups). Use getCategories on the WP categories endpoint to discover IDs."
           example: 577030455
-        - name: _embed
-          in: query
-          required: false
-          schema:
-            type: string
-            default: '1'
-          description: Include embedded resources (author, featured media). Use "1" to enable.
         - name: per_page
           in: query
           required: false
@@ -358,38 +323,30 @@ paths:
                       description: Post ID.
                     date:
                       type: string
-                      format: date-time
                       description: Publication date in ISO 8601.
                     slug:
                       type: string
                       description: URL slug for the post.
                     link:
                       type: string
-                      format: uri
                       description: Full URL on techcrunch.com.
                     title:
-                      type: object
-                      required: [rendered]
-                      properties:
-                        rendered:
-                          type: string
-                          description: HTML-rendered title.
+                      type: string
+                      description: Article title.
                     excerpt:
-                      type: object
-                      required: [rendered]
-                      properties:
-                        rendered:
-                          type: string
-                          description: Article excerpt as HTML.
+                      type: string
+                      description: Article excerpt as HTML.
                     author:
-                      type: integer
-                      description: Author ID.
+                      type: string
+                      nullable: true
+                      description: Author name.
                     categories:
                       type: array
                       items:
                         type: integer
                       description: Category IDs.
-                    featured_media:
-                      type: integer
-                      description: Featured image attachment ID.
+                    featured_image_url:
+                      type: string
+                      nullable: true
+                      description: Featured image URL.
                   required: [id, date, slug, link, title, excerpt, author, categories]
