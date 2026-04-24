@@ -51,7 +51,7 @@ openweb grubhub exec getDeliveryEstimate '{"restaurantId": "64436"}'
 ### Transport
 - `page` — heavy bot detection (Cloudflare + PerimeterX + DataDome) requires browser context
 - All operations use `pageFetch` via `page.evaluate(fetch)` with `credentials: 'include'`
-- Adapter: `adapters/grubhub.ts`
+- Adapter: `adapters/grubhub-read.ts`
 
 ### Extraction
 - All operations: JSON from internal REST API responses via `pageFetch`
@@ -63,4 +63,5 @@ openweb grubhub exec getDeliveryEstimate '{"restaurantId": "64436"}'
 ### Known Issues
 - Bot detection: Cloudflare (`cf_clearance`), PerimeterX (`_px3`), DataDome (`datadome`) — all present
 - Search requires valid lat/lng coordinates for a delivery area
+- `searchTerm` parameter influences ranking but does not strictly filter — API returns popular/promoted results regardless of search term
 - Delivery estimates are real-time and may vary between requests

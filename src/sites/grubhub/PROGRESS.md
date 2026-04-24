@@ -1,3 +1,19 @@
+## 2026-04-24: Userflow QA — adapter rewrite, response trimming
+
+**What changed:**
+- Rewrote adapter from old interface (`init`/`execute`) to `CustomRunner.run(ctx)` — adapter was never loading, raw wire returned
+- Renamed `grubhub.js` → `grubhub-read.ts` (convention match)
+- Added `adapter:` blocks to openapi.yaml for all 3 operations with `adapter-verified` signal
+- Response trimming now active: searchRestaurants 47KB→<2KB, getMenu 460KB→38KB, getDeliveryEstimate 6.6KB→<200B
+- DOC.md: updated adapter reference, documented searchTerm limitation
+
+**Gaps found (3 personas: student/Chinese, group/catering, dietary/gluten-free):**
+- **Adapter not wired (critical):** old interface + no spec adapter blocks → raw wire returned
+- **No response trimming:** 47–510KB payloads with internal fields exposed
+- **searchTerm ineffective:** all 3 search terms return identical results; Grubhub API ranks by popularity/promotion, not searchTerm filtering (documented as known limitation)
+
+**Verification:** `pnpm dev verify grubhub`
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**
