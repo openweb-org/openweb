@@ -26,6 +26,10 @@ paths:
       summary: Search projects — returns id, name, path_with_namespace, star_count, forks_count, visibility
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: searchProjects
         pagination:
           type: link_header
         build:
@@ -104,6 +108,10 @@ paths:
       summary: Get project detail by ID — name, description, star_count, forks_count, default_branch, visibility
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: getProject
         build:
           stable_id: gl0002
           tool_version: 1
@@ -146,6 +154,12 @@ paths:
                     - string
                     - 'null'
                   visibility:
+                    type: string
+                  open_issues_count:
+                    type: integer
+                  last_activity_at:
+                    type: string
+                  created_at:
                     type: string
                 required:
                 - id
@@ -220,6 +234,10 @@ paths:
       summary: List project issues — iid, title, state, labels, description, web_url
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: listProjectIssues
         pagination:
           type: link_header
         build:
@@ -284,6 +302,17 @@ paths:
                       type: array
                       items:
                         type: string
+                    author:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                        name:
+                          type: string
+                    created_at:
+                      type: string
+                    updated_at:
+                      type: string
                   required:
                   - id
                   - title
@@ -445,6 +474,10 @@ paths:
       summary: List project merge requests — iid, title, state, source_branch, target_branch, web_url
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: listProjectMergeRequests
         pagination:
           type: link_header
         build:
@@ -509,6 +542,34 @@ paths:
                       type: string
                     target_branch:
                       type: string
+                    author:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                        name:
+                          type: string
+                    reviewers:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          username:
+                            type: string
+                          name:
+                            type: string
+                    draft:
+                      type: boolean
+                    has_conflicts:
+                      type: boolean
+                    labels:
+                      type: array
+                      items:
+                        type: string
+                    created_at:
+                      type: string
+                    updated_at:
+                      type: string
                   required:
                   - id
                   - title
@@ -519,6 +580,10 @@ paths:
       summary: List project CI/CD pipelines — id, status, ref, sha, source, web_url
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: listProjectPipelines
         pagination:
           type: link_header
         build:
@@ -534,6 +599,18 @@ paths:
         schema:
           type: integer
         description: The ID or URL-encoded path of the project.
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+        description: 'Filter by status: running, pending, success, failed, canceled, skipped, manual, scheduled.'
+      - name: ref
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by ref (branch name or tag).
       - name: per_page
         in: query
         required: false
@@ -574,6 +651,10 @@ paths:
                       type: string
                     web_url:
                       type: string
+                    created_at:
+                      type: string
+                    updated_at:
+                      type: string
                   required:
                   - id
   /api/v4/projects/{projectId}/repository/branches:
@@ -582,6 +663,10 @@ paths:
       summary: List project repository branches — name, merged, protected, default, web_url
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: listProjectBranches
         pagination:
           type: link_header
         build:
@@ -637,6 +722,14 @@ paths:
                       type: boolean
                     web_url:
                       type: string
+                    commit_short_id:
+                      type:
+                      - string
+                      - 'null'
+                    commit_title:
+                      type:
+                      - string
+                      - 'null'
                   required:
                   - name
   /api/v4/projects/{projectId}/repository/files/{filePath}:
@@ -645,6 +738,10 @@ paths:
       summary: Get file from repository — file_name, size, encoding, base64 content, last_commit_id
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: getProjectFile
         build:
           stable_id: gl0009
           tool_version: 1
@@ -704,6 +801,10 @@ paths:
       summary: Search users by name or username — id, username, name, state, avatar_url, web_url
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: searchUsers
         pagination:
           type: link_header
         build:
@@ -848,6 +949,10 @@ paths:
       summary: Search groups by name — id, name, path, description, visibility, web_url
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: searchGroups
         pagination:
           type: link_header
         build:
@@ -911,6 +1016,10 @@ paths:
       summary: Get group detail by ID — name, description, visibility, web_url, full_path
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: getGroup
         build:
           stable_id: gl0008
           tool_version: 1
@@ -958,6 +1067,10 @@ paths:
       summary: List projects within a group — id, name, path_with_namespace, star_count, visibility
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: gitlab
+          operation: listGroupProjects
         pagination:
           type: link_header
         build:
