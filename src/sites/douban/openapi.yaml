@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-29T12:00:00Z
+    compiled_at: 2026-04-24T22:00:00Z
     requires_auth: false
 servers:
 - url: https://m.douban.com
@@ -21,9 +21,13 @@ paths:
       summary: "Search movies by keyword — returns title, rating, year, cover, genres, actors for matching films"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: searchMovies
         build:
           stable_id: search_movie_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: q
@@ -77,16 +81,19 @@ paths:
                               type: string
                             rating:
                               type: object
+                              nullable: true
                               properties:
                                 count:
                                   type: integer
                                 value:
                                   type: number
-                            year:
-                              type: string
                             cover_url:
                               type: string
                             card_subtitle:
+                              type: string
+                            abstract:
+                              type: string
+                            null_rating_reason:
                               type: string
                         target_type:
                           type: string
@@ -99,9 +106,13 @@ paths:
       summary: "Get movie detail — title, rating, year, genres, directors, actors, summary, trailer, photos"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getMovie
         build:
           stable_id: movie_detail_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: id
@@ -137,7 +148,7 @@ paths:
                       value:
                         type: number
                       star_count:
-                        type: integer
+                        type: number
                   genres:
                     type: array
                     items:
@@ -193,10 +204,17 @@ paths:
                     type: integer
                   comment_count:
                     type: integer
-                  url:
-                    type: string
-                  uri:
-                    type: string
+                  trailers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        video_url:
+                          type: string
+                        cover_url:
+                          type: string
 
                 required:
                 - id
@@ -208,9 +226,13 @@ paths:
       summary: "Get user reviews for a movie — reviewer name, rating, comment text, vote count, date"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getMovieReviews
         build:
           stable_id: movie_reviews_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: id
@@ -259,13 +281,14 @@ paths:
                           type: string
                         rating:
                           type: object
+                          nullable: true
                           properties:
                             max:
                               type: integer
                             value:
-                              type: integer
+                              type: number
                             star_count:
-                              type: integer
+                              type: number
                         create_time:
                           type: string
                         vote_count:
@@ -281,6 +304,8 @@ paths:
                               type: string
                         status:
                           type: string
+                        ip_location:
+                          type: string
 
                 required:
                 - interests
@@ -290,9 +315,13 @@ paths:
       summary: "Get cast and crew for a movie — directors, actors with name, latin name, avatar, character role"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getMovieCelebrities
         build:
           stable_id: movie_celebrities_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: id
@@ -365,9 +394,13 @@ paths:
       summary: "Get movie photo gallery — stills, posters, behind the scenes images with dimensions"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getMoviePhotos
         build:
           stable_id: db0004
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: id
@@ -450,9 +483,13 @@ paths:
       summary: "Get Douban Top 250 movies — rank, title, rating, cover, paginated by 25"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getTop250
         build:
           stable_id: db0005
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: start
@@ -505,12 +542,11 @@ paths:
                           type: integer
                         rating:
                           type: object
+                          nullable: true
                           properties:
                             count:
                               type: integer
                             value:
-                              type: number
-                            star_count:
                               type: number
                         cover_url:
                           type: string
@@ -519,10 +555,6 @@ paths:
                         description:
                           type: string
                         type:
-                          type: string
-                        url:
-                          type: string
-                        uri:
                           type: string
 
   # ── Books ───────────────────────────────────────────────────────────
@@ -535,9 +567,13 @@ paths:
       summary: "Search books by keyword — returns title, rating, author, publisher, cover for matching books"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: searchBooks
         build:
           stable_id: search_book_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: q
@@ -593,6 +629,7 @@ paths:
                               type: string
                             rating:
                               type: object
+                              nullable: true
                               properties:
                                 count:
                                   type: integer
@@ -601,6 +638,8 @@ paths:
                             cover_url:
                               type: string
                             card_subtitle:
+                              type: string
+                            null_rating_reason:
                               type: string
                         target_type:
                           type: string
@@ -613,9 +652,13 @@ paths:
       summary: "Get book detail — title, rating, author, publisher, pages, summary, author bio"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getBook
         build:
           stable_id: book_detail_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: id
@@ -671,10 +714,6 @@ paths:
                     type: string
                   review_count:
                     type: integer
-                  url:
-                    type: string
-                  uri:
-                    type: string
 
                 required:
                 - id
@@ -685,9 +724,13 @@ paths:
       summary: "Get user reviews for a book — reviewer name, rating, comment text, vote count, date"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getBookReviews
         build:
           stable_id: book_reviews_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: id
@@ -736,13 +779,14 @@ paths:
                           type: string
                         rating:
                           type: object
+                          nullable: true
                           properties:
                             max:
                               type: integer
                             value:
-                              type: integer
+                              type: number
                             star_count:
-                              type: integer
+                              type: number
                         create_time:
                           type: string
                         vote_count:
@@ -758,6 +802,8 @@ paths:
                               type: string
                         status:
                           type: string
+                        ip_location:
+                          type: string
 
   # ── Music (mobile JSON API) ─────────────────────────────────────────
 
@@ -769,9 +815,13 @@ paths:
       summary: "Search music/albums by keyword — titles, artists, ratings, covers"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: searchMusic
         build:
           stable_id: db0009
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: q
@@ -824,6 +874,7 @@ paths:
                               type: string
                             rating:
                               type: object
+                              nullable: true
                               properties:
                                 count:
                                   type: integer
@@ -833,7 +884,7 @@ paths:
                               type: string
                             card_subtitle:
                               type: string
-                            uri:
+                            null_rating_reason:
                               type: string
                         target_type:
                           type: string
@@ -846,9 +897,13 @@ paths:
       summary: "Get album detail — rating, artist, tracklist, genre, release date, publisher"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getMusicDetail
         build:
           stable_id: db0010
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: id
@@ -928,10 +983,6 @@ paths:
                     type: integer
                   comment_count:
                     type: integer
-                  url:
-                    type: string
-                  uri:
-                    type: string
 
   # ── Trending / Discovery ────────────────────────────────────────────
 
@@ -944,9 +995,13 @@ paths:
       summary: "Get currently trending movies — title, rating, cover, year, genres for popular films"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getRecentHotMovies
         build:
           stable_id: recent_hot_movie_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: limit
@@ -981,15 +1036,12 @@ paths:
                           type: string
                         rating:
                           type: object
+                          nullable: true
                           properties:
                             count:
                               type: integer
                             value:
                               type: number
-                            star_count:
-                              type: number
-                        year:
-                          type: string
                         pic:
                           type: object
                           properties:
@@ -1001,8 +1053,6 @@ paths:
                           type: boolean
                         type:
                           type: string
-                        uri:
-                          type: string
 
                 required:
                 - items
@@ -1012,9 +1062,13 @@ paths:
       summary: "Get currently trending TV shows — title, rating, cover, year, genres for popular series"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getRecentHotTv
         build:
           stable_id: recent_hot_tv_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: limit
@@ -1049,15 +1103,12 @@ paths:
                           type: string
                         rating:
                           type: object
+                          nullable: true
                           properties:
                             count:
                               type: integer
                             value:
                               type: number
-                            star_count:
-                              type: number
-                        year:
-                          type: string
                         pic:
                           type: object
                           properties:
@@ -1071,8 +1122,6 @@ paths:
                           type: boolean
                         type:
                           type: string
-                        uri:
-                          type: string
 
                 required:
                 - items
@@ -1082,9 +1131,13 @@ paths:
       summary: "Get movies currently in theaters — title, rating, cover, release date, directors, actors"
       x-openweb:
         permission: read
+        transport: node
+        adapter:
+          name: douban-read
+          operation: getNowShowingMovies
         build:
           stable_id: now_showing_001
-          tool_version: 2
+          tool_version: 3
       parameters:
       - $ref: '#/components/parameters/Referer'
       - name: count
@@ -1160,7 +1213,7 @@ paths:
                             type: string
                         type:
                           type: string
-                        uri:
+                        null_rating_reason:
                           type: string
 
                 required:
