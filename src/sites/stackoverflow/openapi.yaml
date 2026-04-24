@@ -16,10 +16,12 @@ paths:
       summary: "Search questions by keyword — title, score, answer count, tags, link"
       x-openweb:
         permission: read
-        unwrap: items
+        adapter:
+          name: stackoverflow
+          operation: searchQuestions
         build:
           stable_id: stackoverflow0001
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: q
           in: query
@@ -88,7 +90,7 @@ paths:
                       description: "Unique question ID"
                     title:
                       type: string
-                      description: "Question title"
+                      description: "Question title (decoded)"
                     link:
                       type: string
                       description: "URL to question page"
@@ -112,9 +114,12 @@ paths:
                     creation_date:
                       type: integer
                       description: "Unix timestamp of creation"
-                    last_activity_date:
+                    accepted_answer_id:
                       type: integer
-                      description: "Unix timestamp of last activity"
+                      description: "ID of the accepted answer (if any)"
+                    closed_reason:
+                      type: string
+                      description: "Closure reason (if closed)"
                     owner:
                       type: object
                       description: "Question author"
@@ -128,9 +133,6 @@ paths:
                         reputation:
                           type: integer
                           description: "Reputation score"
-                        link:
-                          type: string
-                          description: "URL to user profile"
 
   /questions/{id}:
     get:
@@ -138,10 +140,12 @@ paths:
       summary: "Get question details — title, body, score, answers count, tags"
       x-openweb:
         permission: read
-        unwrap: items
+        adapter:
+          name: stackoverflow
+          operation: getQuestion
         build:
           stable_id: stackoverflow0002
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: id
           in: path
@@ -171,62 +175,60 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  required: [question_id, title, link, score, answer_count, is_answered, tags, creation_date]
-                  properties:
-                    question_id:
-                      type: integer
-                      description: "Unique question ID"
-                    title:
+                type: object
+                required: [question_id, title, link, score, answer_count, is_answered, tags, creation_date]
+                properties:
+                  question_id:
+                    type: integer
+                    description: "Unique question ID"
+                  title:
+                    type: string
+                    description: "Question title (decoded)"
+                  body:
+                    type: string
+                    description: "Question body (markdown)"
+                  link:
+                    type: string
+                    description: "URL to question page"
+                  score:
+                    type: integer
+                    description: "Vote score"
+                  answer_count:
+                    type: integer
+                    description: "Number of answers"
+                  is_answered:
+                    type: boolean
+                    description: "Whether an accepted answer exists"
+                  view_count:
+                    type: integer
+                    description: "Number of views"
+                  tags:
+                    type: array
+                    items:
                       type: string
-                      description: "Question title"
-                    body:
-                      type: string
-                      description: "Question body (HTML, requires filter=withbody)"
-                    link:
-                      type: string
-                      description: "URL to question page"
-                    score:
-                      type: integer
-                      description: "Vote score"
-                    answer_count:
-                      type: integer
-                      description: "Number of answers"
-                    is_answered:
-                      type: boolean
-                      description: "Whether an accepted answer exists"
-                    view_count:
-                      type: integer
-                      description: "Number of views"
-                    tags:
-                      type: array
-                      items:
+                    description: "Associated tags"
+                  creation_date:
+                    type: integer
+                    description: "Unix timestamp of creation"
+                  accepted_answer_id:
+                    type: integer
+                    description: "ID of the accepted answer (if any)"
+                  closed_reason:
+                    type: string
+                    description: "Closure reason (if closed)"
+                  owner:
+                    type: object
+                    description: "Question author"
+                    properties:
+                      user_id:
+                        type: integer
+                        description: "User ID (use with getUser)"
+                      display_name:
                         type: string
-                      description: "Associated tags"
-                    creation_date:
-                      type: integer
-                      description: "Unix timestamp of creation"
-                    last_activity_date:
-                      type: integer
-                      description: "Unix timestamp of last activity"
-                    owner:
-                      type: object
-                      description: "Question author"
-                      properties:
-                        user_id:
-                          type: integer
-                          description: "User ID (use with getUser)"
-                        display_name:
-                          type: string
-                          description: "Display name"
-                        reputation:
-                          type: integer
-                          description: "Reputation score"
-                        link:
-                          type: string
-                          description: "URL to user profile"
+                        description: "Display name"
+                      reputation:
+                        type: integer
+                        description: "Reputation score"
 
   /questions/{id}/answers:
     get:
@@ -234,10 +236,12 @@ paths:
       summary: "Get answers for a question — body, score, accepted status"
       x-openweb:
         permission: read
-        unwrap: items
+        adapter:
+          name: stackoverflow
+          operation: getAnswers
         build:
           stable_id: stackoverflow0003
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: id
           in: path
@@ -300,17 +304,14 @@ paths:
                 type: array
                 items:
                   type: object
-                  required: [answer_id, question_id, score, is_accepted, creation_date]
+                  required: [answer_id, score, is_accepted, creation_date]
                   properties:
                     answer_id:
                       type: integer
                       description: "Unique answer ID"
-                    question_id:
-                      type: integer
-                      description: "Parent question ID"
                     body:
                       type: string
-                      description: "Answer body (HTML, requires filter=withbody)"
+                      description: "Answer body (markdown)"
                     score:
                       type: integer
                       description: "Vote score"
@@ -320,9 +321,6 @@ paths:
                     creation_date:
                       type: integer
                       description: "Unix timestamp of creation"
-                    last_activity_date:
-                      type: integer
-                      description: "Unix timestamp of last activity"
                     owner:
                       type: object
                       description: "Answer author"
@@ -336,9 +334,6 @@ paths:
                         reputation:
                           type: integer
                           description: "Reputation score"
-                        link:
-                          type: string
-                          description: "URL to user profile"
 
   /users/{id}:
     get:
@@ -346,10 +341,12 @@ paths:
       summary: "Get user profile — reputation, badges, top tags"
       x-openweb:
         permission: read
-        unwrap: items
+        adapter:
+          name: stackoverflow
+          operation: getUser
         build:
           stable_id: stackoverflow0004
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: id
           in: path
@@ -372,60 +369,50 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  required: [user_id, display_name, reputation, badge_counts, creation_date]
-                  properties:
-                    user_id:
-                      type: integer
-                      description: "Unique user ID"
-                    display_name:
-                      type: string
-                      description: "Display name"
-                    link:
-                      type: string
-                      description: "URL to user profile"
-                    reputation:
-                      type: integer
-                      description: "Reputation score"
-                    badge_counts:
-                      type: object
-                      description: "Badge counts by tier"
-                      properties:
-                        gold:
-                          type: integer
-                          description: "Number of gold badges"
-                        silver:
-                          type: integer
-                          description: "Number of silver badges"
-                        bronze:
-                          type: integer
-                          description: "Number of bronze badges"
-                    accept_rate:
-                      type:
-                        - integer
-                        - "null"
-                      description: "Accept rate percentage"
-                    creation_date:
-                      type: integer
-                      description: "Unix timestamp of account creation"
-                    last_access_date:
-                      type: integer
-                      description: "Unix timestamp of last access"
-                    location:
-                      type:
-                        - string
-                        - "null"
-                      description: "User location"
-                    website_url:
-                      type:
-                        - string
-                        - "null"
-                      description: "User website"
-                    profile_image:
-                      type: string
-                      description: "Profile image URL"
+                type: object
+                required: [user_id, display_name, reputation, badge_counts, creation_date]
+                properties:
+                  user_id:
+                    type: integer
+                    description: "Unique user ID"
+                  display_name:
+                    type: string
+                    description: "Display name"
+                  link:
+                    type: string
+                    description: "URL to user profile"
+                  reputation:
+                    type: integer
+                    description: "Reputation score"
+                  badge_counts:
+                    type: object
+                    description: "Badge counts by tier"
+                    properties:
+                      gold:
+                        type: integer
+                        description: "Number of gold badges"
+                      silver:
+                        type: integer
+                        description: "Number of silver badges"
+                      bronze:
+                        type: integer
+                        description: "Number of bronze badges"
+                  accept_rate:
+                    type:
+                      - integer
+                      - "null"
+                    description: "Accept rate percentage"
+                  creation_date:
+                    type: integer
+                    description: "Unix timestamp of account creation"
+                  last_access_date:
+                    type: integer
+                    description: "Unix timestamp of last access"
+                  location:
+                    type:
+                      - string
+                      - "null"
+                    description: "User location"
 
   /tags:
     get:
@@ -433,10 +420,12 @@ paths:
       summary: "Search and browse popular tags — name, question count"
       x-openweb:
         permission: read
-        unwrap: items
+        adapter:
+          name: stackoverflow
+          operation: searchTags
         build:
           stable_id: stackoverflow0005
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: inname
           in: query
@@ -500,12 +489,3 @@ paths:
                     count:
                       type: integer
                       description: "Number of questions with this tag"
-                    has_synonyms:
-                      type: boolean
-                      description: "Whether the tag has synonyms"
-                    is_moderator_only:
-                      type: boolean
-                      description: "Whether only moderators can use this tag"
-                    is_required:
-                      type: boolean
-                      description: "Whether this tag is required"
