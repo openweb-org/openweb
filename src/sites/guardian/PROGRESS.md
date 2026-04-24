@@ -1,5 +1,20 @@
 # The Guardian — Progress
 
+## 2026-04-24 — Userflow QA: section coverage + response trimming
+
+**Personas tested:**
+1. Opinion reader — `getSectionFeed` commentisfree → `getArticle`
+2. Sports fan — `getSectionFeed` sport → `getArticle`
+3. Culture enthusiast — `getSectionFeed` culture/books, `searchArticles` book reviews → `getArticle`
+
+**Gaps found & fixed:**
+- **Section description too narrow (schema/DX):** `getSectionFeed.section` listed only 10 slugs; expanded to 22 including `commentisfree`, `books`, `football`, `film`, `music`, `artanddesign`, `lifeandstyle`, etc.
+- **Response noise (adapter):** Added `adapters/guardian.ts` — trims `apiUrl` (internal), `isHosted` (always false), `pillarId` (redundant); keeps `pillarName` for useful category grouping.
+- **Schema/response mismatch:** Replaced `apiUrl` with `pillarName` in all three response schemas to match adapter output.
+- **Browser skip:** Added `transport: node` at operation level so adapter dispatch skips unnecessary browser startup.
+
+**Verification:** All 3 ops return 200, responses are trimmed, schema validation passes.
+
 ## 2026-04-18 — Verify Flake Investigation
 
 **Context:** `pnpm dev verify guardian` intermittently reported `getSectionFeed: FAIL — transient error: HTTP 429` while `searchArticles` and `getArticle` passed.
