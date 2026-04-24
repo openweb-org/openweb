@@ -118,6 +118,7 @@ paths:
           required: false
           schema:
             type: string
+            default: '/s/search'
           description: Page path context (e.g. "/s/headphones").
       responses:
         '206':
@@ -454,8 +455,6 @@ paths:
                                           type: string
                                     enrichment:
                                       type: object
-                                      required:
-                                        - images
                                       properties:
                                         images:
                                           type: object

@@ -1,5 +1,21 @@
 # Target Fixture — Progress
 
+## 2026-04-24: Userflow QA — parameter and schema fixes
+
+**What changed:**
+- Fixed `searchProducts` HTTP 400 — `page` query param is required by Target's GraphQL backend (`String!`) but had no default; added `default: '/s/search'`
+- Fixed `getProductDetail` schema mismatch — children variants may lack `images` in `enrichment`; removed `images` from `required` in children enrichment schema
+
+**QA workflows (read ops only):**
+1. New parent — `searchProducts("baby monitor")` → `getProductDetail("83905761")` → `getStoreAvailability("83905761", "10001")`: all PASS
+2. Home decorator — `searchProducts("throw pillows")` → `getProductDetail("93342314")` → `getStoreAvailability("93342314", "90210")`: all PASS
+3. College student — `searchProducts("twin XL sheets")` → `getProductDetail("53116498")` → `getStoreAvailability("53116498", "02138")`: all PASS
+
+**Observations:**
+- Search returns HTTP 206 with a non-critical `errors` field about sponsored search (does not affect results)
+- Product detail for products with many variants (e.g. sheets with 84 color/size combos) returns ~800KB — inherent to Target's API, not a spec issue
+- All 3 read operations pass schema validation with no warnings after fixes
+
 ## 2026-03-23: Initial discovery and fixture creation
 
 **What changed:**
