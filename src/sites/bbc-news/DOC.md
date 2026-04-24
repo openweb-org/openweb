@@ -16,7 +16,7 @@ Global news — the BBC's public news service covering world, UK, business, tech
 1. `searchArticles(q)` → matching articles with title, description, url
 
 ### Browse by topic
-1. `getTopicFeed(topic)` → articles for a topic (world, business, innovation, culture, arts, travel)
+1. `getTopicFeed(topic)` → articles for a topic (world, uk, business, technology, health)
 
 ## Operations
 
@@ -25,7 +25,7 @@ Global news — the BBC's public news service covering world, UK, business, tech
 | getHeadlines | top stories | — | title, description, url, topic, isLive | entry point |
 | getArticle | read full article | articleId ← url from getHeadlines | title, body, byline, publishedAt, topics | |
 | searchArticles | search news | q | title, description, url | paginated |
-| getTopicFeed | browse topic | topic | title, description, url, topic | world, business, innovation, culture, arts, travel |
+| getTopicFeed | browse topic | topic | title, description, url, topic | world, uk, business, technology, health |
 
 ## Quick Start
 
@@ -66,7 +66,7 @@ No auth required (public news site).
 - **searchArticles**: Direct extraction from `results[]` array in search page data
 
 ### Known Issues
-- Some BBC topic URLs redirect (e.g., `/news/technology` → `/technology`). Supported topics: world, business, innovation, culture, arts, travel
+- Topics limited to those under `/news/` with `__NEXT_DATA__`: world, uk, business, technology, health. Other BBC sections (culture, arts, travel, innovation) live at root level with different page structures
 - Sport (`/news/sport`) uses a different system without `__NEXT_DATA__` — not supported via this extraction
 - Article URLs from headlines may be relative (`/news/articles/...`) or absolute (`https://www.bbc.com/...`)
 - `lastUpdated` timestamps are Unix milliseconds

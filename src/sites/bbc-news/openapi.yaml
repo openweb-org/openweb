@@ -55,7 +55,8 @@ paths:
                   });
                 }
               }
-              return { count: items.length, items };
+              const capped = items.slice(0, 25);
+              return { count: capped.length, items: capped };
             })()
       parameters: []
       responses:
@@ -218,7 +219,7 @@ paths:
               const search = pageData[mainKey];
               if (!search?.results) return { page: 0, pageSize: 0, total: 0, results: [] };
               return {
-                page: search.page || 0,
+                page: (search.page ?? 0) + 1,
                 pageSize: search.pageSize || 0,
                 total: search.total || 0,
                 results: search.results.filter(r => r.title).map(r => ({
@@ -317,6 +318,7 @@ paths:
                 if (sec.type === 'advertisement') continue;
                 for (const item of (sec.content || [])) {
                   if (!item.title || seen.has(item.id)) continue;
+                  if (item.href && item.href.includes('/newsletters')) continue;
                   seen.add(item.id);
                   items.push({
                     title: item.title,
@@ -328,7 +330,8 @@ paths:
                   });
                 }
               }
-              return { count: items.length, items };
+              const capped = items.slice(0, 25);
+              return { count: capped.length, items: capped };
             })()
       parameters:
         - name: topic
@@ -336,8 +339,8 @@ paths:
           required: true
           schema:
             type: string
-            enum: [world, business, innovation, culture, arts, travel]
-          description: Topic slug. Common topics — world, business, innovation, culture, arts, travel.
+            enum: [world, uk, business, technology, health]
+          description: Topic slug. Valid topics — world, uk, business, technology, health.
           example: world
       responses:
         '200':

@@ -1,3 +1,16 @@
+## 2026-04-24: Userflow QA — fix topic enum, cap responses, fix search page
+
+**What changed:**
+- getTopicFeed: replaced broken enum [world, business, innovation, culture, arts, travel] with verified [world, uk, business, technology, health]. The dropped topics live at bbc.com root level, not under /news/
+- getHeadlines + getTopicFeed: capped items at 25 in extraction expressions (was 34 and 75 uncapped). Filters newsletter promo items from topic feeds
+- searchArticles: fixed response page off-by-one — BBC returns 0-indexed page internally, now normalized to 1-indexed to match input
+- DOC.md: updated topic lists and known issues
+
+**Why:**
+- 3-persona blind QA: global citizen (headlines → article → world), student (search → article), expat (topic → headlines). 4/6 topic enum values returned empty. Business feed had 75 items (22KB). Search page=0 when user expects page=1
+
+**Verification:** `pnpm --silent dev verify bbc-news`
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**
