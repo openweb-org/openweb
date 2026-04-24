@@ -17,6 +17,9 @@ paths:
       summary: "Get scoreboard — live/recent game scores, events with teams, status, date, venue"
       x-openweb:
         permission: read
+        adapter:
+          name: espn
+          operation: getScoreboard
         build:
           stable_id: espn_getScoreboard_v1
           tool_version: 2
@@ -207,6 +210,9 @@ paths:
       summary: "Get team detail — name, logo, record, stats, roster link, venue"
       x-openweb:
         permission: read
+        adapter:
+          name: espn
+          operation: getTeam
         build:
           stable_id: espn_getTeam_v1
           tool_version: 2
@@ -324,6 +330,9 @@ paths:
       summary: "List all teams in a league — id, name, abbreviation, logos"
       x-openweb:
         permission: read
+        adapter:
+          name: espn
+          operation: getTeams
         build:
           stable_id: espn_getTeams_v1
           tool_version: 2
@@ -417,6 +426,9 @@ paths:
       summary: "Get league standings — groups, teams with wins, losses, records, stats"
       x-openweb:
         permission: read
+        adapter:
+          name: espn
+          operation: getStandings
         build:
           stable_id: espn_getStandings_v1
           tool_version: 2
@@ -515,6 +527,9 @@ paths:
       summary: "Get news articles — headline, description, published date, images, links"
       x-openweb:
         permission: read
+        adapter:
+          name: espn
+          operation: getNews
         build:
           stable_id: espn_getNews_v1
           tool_version: 2
@@ -671,6 +686,9 @@ paths:
       summary: "Search ESPN — players, teams, leagues by keyword. Returns name, position, team, links"
       x-openweb:
         permission: read
+        adapter:
+          name: espn
+          operation: searchPlayers
         build:
           stable_id: espn_searchPlayers_v1
           tool_version: 2
@@ -695,7 +713,8 @@ paths:
         schema:
           type: string
           enum: [player, team]
-        description: "Filter by result type — required to get results (player or team)"
+          default: player
+        description: "Filter by result type (player or team)"
         example: player
       responses:
         "200":
