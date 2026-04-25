@@ -273,7 +273,8 @@ const OPERATIONS: Record<string, Handler> = {
     const query = String(params.query || '')
     if (!query) throw helpers.errors.missingParam('query')
     const context = String(params.context || 'blended')
-    const url = `https://www.instagram.com/web/search/topsearch/?query=${encodeURIComponent(query)}&context=${context}&include_reel=true`
+    const includeReel = params.include_reel != null ? String(params.include_reel) : 'true'
+    const url = `https://www.instagram.com/web/search/topsearch/?query=${encodeURIComponent(query)}&context=${encodeURIComponent(context)}&include_reel=${encodeURIComponent(includeReel)}`
     const data = (await fetchJson(helpers, page, url)) as R
     return {
       users: ((data.users as Array<R>) ?? []).map(entry => ({
@@ -591,7 +592,7 @@ const OPERATIONS: Record<string, Handler> = {
     if (!commentId) throw helpers.errors.missingParam('comment_id')
     return postJson(
       helpers, page,
-      `https://www.instagram.com/api/v1/web/comments/${mediaId}/delete/${commentId}/`,
+      `https://www.instagram.com/api/v1/web/comments/${mediaId}/${commentId}/delete/`,
       '',
     )
   },

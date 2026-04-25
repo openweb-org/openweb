@@ -157,9 +157,16 @@ async function searchVideos(page: Page, params: Record<string, unknown>, errors:
   if (!keyword) throw errors.missingParam('keyword')
   const count = Number(params.count) || 12
 
-  const url = `${BASE}/search?q=${encodeURIComponent(keyword)}`
+  const offset = Number(params.offset) || 0
+  const searchSource = String(params.search_source || 'normal_search')
+  const fromPage = String(params.from_page || 'search')
+  const qs = new URLSearchParams({ q: keyword })
+  if (offset) qs.set('offset', String(offset))
+  if (searchSource !== 'normal_search') qs.set('search_source', searchSource)
+  if (fromPage !== 'search') qs.set('from_page', fromPage)
+  const url = `${BASE}/search?${qs}`
   const data = await interceptApi(page, url, ['/api/search/general/full/'])
-  if (!data) return { status_code: 0, data: [], cursor: 0, has_more: 0 }
+  if (!data) throw errors.retriable('TikTok video search returned no API response')
 
   const items = (data.data || []) as Array<Record<string, unknown>>
   return {
@@ -177,9 +184,14 @@ async function searchUsers(page: Page, params: Record<string, unknown>, errors: 
   const keyword = String(params.keyword || '')
   if (!keyword) throw errors.missingParam('keyword')
 
-  const url = `${BASE}/search/user?q=${encodeURIComponent(keyword)}`
+  const count = Number(params.count) || 12
+  const cursor = String(params.cursor || '0')
+  const qs = new URLSearchParams({ q: keyword })
+  if (count !== 12) qs.set('count', String(count))
+  if (cursor !== '0') qs.set('cursor', cursor)
+  const url = `${BASE}/search/user?${qs}`
   const data = await interceptApi(page, url, ['/api/search/user/full/'])
-  if (!data) return { user_list: [], has_more: 0 }
+  if (!data) throw errors.retriable('TikTok user search returned no API response')
 
   const list = (data.user_list || []) as Array<Record<string, unknown>>
   return {

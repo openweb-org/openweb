@@ -92,7 +92,7 @@ paths:
                           type: object
                           required:
                             - id
-                            - desc
+                            - description
                             - video
                             - author
                             - stats
@@ -100,7 +100,7 @@ paths:
                             id:
                               type: string
                               description: Video ID
-                            desc:
+                            description:
                               type: string
                               description: Video description/caption
                             createTime:

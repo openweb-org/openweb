@@ -8,7 +8,7 @@ const API = 'https://api-gtm.grubhub.com'
 async function searchRestaurants(ctx: Ctx, params: Params): Promise<unknown> {
   const lat = Number(params.latitude)
   const lng = Number(params.longitude)
-  if (!lat || !lng) throw ctx.helpers.errors.missingParam('latitude and longitude')
+  if (params.latitude == null || params.longitude == null || Number.isNaN(lat) || Number.isNaN(lng)) throw ctx.helpers.errors.missingParam('latitude and longitude')
 
   const searchTerm = params.searchTerm
     ? `&searchTerm=${encodeURIComponent(String(params.searchTerm))}`
@@ -53,7 +53,7 @@ async function getMenu(ctx: Ctx, params: Params): Promise<unknown> {
   const restaurantId = String(params.restaurantId || '')
   if (!restaurantId) throw ctx.helpers.errors.missingParam('restaurantId')
 
-  const url = `${API}/restaurants/${restaurantId}?hideChoiceCategories=true&orderType=standard&version=4&variationId=default&hideUnavailableMenuItems=true&hideMenuItems=false&showMenuItemCoupons=true&includeOffers=true&locationMode=DELIVERY`
+  const url = `${API}/restaurants/${encodeURIComponent(restaurantId)}?hideChoiceCategories=true&orderType=standard&version=4&variationId=default&hideUnavailableMenuItems=true&hideMenuItems=false&showMenuItemCoupons=true&includeOffers=true&locationMode=DELIVERY`
   const resp = await ctx.helpers.pageFetch(ctx.page, { url, method: 'GET' })
   if (resp.status !== 200) throw ctx.helpers.errors.httpError(resp.status)
 
@@ -84,7 +84,7 @@ async function getDeliveryEstimate(ctx: Ctx, params: Params): Promise<unknown> {
   const restaurantId = String(params.restaurantId || '')
   if (!restaurantId) throw ctx.helpers.errors.missingParam('restaurantId')
 
-  const url = `${API}/restaurants/${restaurantId}?hideChoiceCategories=true&orderType=standard&version=4&variationId=default&hideUnavailableMenuItems=true&hideMenuItems=true&locationMode=DELIVERY`
+  const url = `${API}/restaurants/${encodeURIComponent(restaurantId)}?hideChoiceCategories=true&orderType=standard&version=4&variationId=default&hideUnavailableMenuItems=true&hideMenuItems=true&locationMode=DELIVERY`
   const resp = await ctx.helpers.pageFetch(ctx.page, { url, method: 'GET' })
   if (resp.status !== 200) throw ctx.helpers.errors.httpError(resp.status)
 
