@@ -26,6 +26,7 @@
       "query_selector": 2
     },
     "cnn": {
+      "page_goto": 1,
       "query_selector": 11
     },
     "costco": {
@@ -37,7 +38,7 @@
       "query_selector": 24
     },
     "ebay": {
-      "page_goto": 1,
+      "page_goto": 2,
       "query_selector": 18
     },
     "expedia": {
