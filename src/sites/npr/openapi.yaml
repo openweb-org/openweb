@@ -70,17 +70,21 @@ paths:
           example: 0
       responses:
         '200':
-          description: Array of matching articles (after hits unwrap).
+          description: Paginated search results with articles and Algolia metadata.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    objectID:
-                      type: string
-                      description: Unique article ID (e.g. "nx-s1-5777587"). Use with getArticle.
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        objectID:
+                          type: string
+                          description: Unique article ID (e.g. "nx-s1-5777587"). Use with getArticle.
                     title:
                       type: string
                       description: Article headline.
@@ -329,17 +333,21 @@ paths:
           example: 0
       responses:
         '200':
-          description: Array of top stories (after hits unwrap).
+          description: Paginated top stories with articles and Algolia metadata.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    objectID:
-                      type: string
-                      description: Unique article ID. Use with getArticle for full text.
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        objectID:
+                          type: string
+                          description: Unique article ID. Use with getArticle for full text.
                     title:
                       type: string
                       description: Article headline.

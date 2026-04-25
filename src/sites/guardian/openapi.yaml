@@ -69,15 +69,19 @@ paths:
           description: Sort order for results.
       responses:
         '200':
-          description: Array of matching articles.
+          description: Paginated search results with article array and metadata.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  description: A search result article with headline, section, date, and optional fields.
-                  required: [id, type, sectionId, webTitle, webPublicationDate]
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      description: A search result article with headline, section, date, and optional fields.
+                      required: [id, type, sectionId, webTitle, webPublicationDate]
                   properties:
                     id:
                       type: string
@@ -281,15 +285,19 @@ paths:
           description: Page number for pagination.
       responses:
         '200':
-          description: Array of latest articles in the section.
+          description: Paginated section feed with article array and metadata.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  description: A section feed article with headline, date, and optional fields.
-                  required: [id, type, sectionId, webTitle, webPublicationDate]
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      description: A section feed article with headline, date, and optional fields.
+                      required: [id, type, sectionId, webTitle, webPublicationDate]
                   properties:
                     id:
                       type: string
