@@ -147,7 +147,7 @@ const OPERATIONS: Record<string, Handler> = {
         return {
           id: cid,
           name: c.name ?? c.pushname ?? c.verifiedName ?? c.shortName ?? c.formattedName ?? 'unnamed',
-          isMe: cid === meId || c.isMe === true || c.isUser === true,
+          isMe: cid === meId || c.isMe === true,
         }
       })
     }, (params.limit as number) ?? 100)

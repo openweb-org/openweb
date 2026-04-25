@@ -310,7 +310,7 @@ async function extractReviewsFromDom(page: Page): Promise<unknown> {
 
   const ratingMatch = raw.scoreText.match(/(\d\.\d)/)
   const allNumbers = [...raw.scoreText.matchAll(/([\d,]+)/g)].map(m => parseInt(m[1].replace(/,/g, ''), 10))
-  const reviewCount = allNumbers.find(n => n > 100) ?? allNumbers.find(n => n > 10) ?? null
+  const reviewCount = allNumbers.find(n => n > 0) ?? null
 
   const subscores: Record<string, string> = {}
   for (const { key, value } of raw.subscores) {
@@ -432,19 +432,28 @@ async function getHotelPrices(
       }
     }
 
+    // Extract prices from DOM and merge with GraphQL room data
+    const domPrices = await extractPricesFromDom(page) as { rooms: { name: string; price: string | null; perNight: string | null }[] }
+    const priceByName = new Map<string, { price: string | null; perNight: string | null }>()
+    for (const r of domPrices.rooms) {
+      priceByName.set(r.name, { price: r.price, perNight: r.perNight })
+    }
+
     const rooms = roomsDetails.map(room => {
       const roomId = String(room.id)
       const translations = room.translations as { name: string; description: string } | undefined
       const bedConfigs = room.bedConfigurations as { beds: { bedType: string; count: number }[] }[] ?? []
       const beds = bedConfigs.flatMap(c => c.beds).map(b => `${b.count} ${b.bedType}`).join(', ')
+      const roomName = translations?.name ?? 'Room'
+      const domPrice = priceByName.get(roomName)
 
       return {
-        name: translations?.name ?? 'Room',
+        name: roomName,
         bed: beds || null,
         size: highlightsMap.get(roomId) ?? (room.roomSizeM2 ? `${room.roomSizeM2} m²` : null),
         facilities: facilitiesMap.get(roomId) ?? [],
-        price: null, // Room-level prices require availability check (separate API)
-        perNight: null,
+        price: domPrice?.price ?? null,
+        perNight: domPrice?.perNight ?? null,
       }
     })
 

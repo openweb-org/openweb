@@ -141,7 +141,15 @@ async function getSellerProfile(page: Page, params: Params): Promise<unknown> {
   const username = String(params.username || '')
   const url = `${BASE}/str/${encodeURIComponent(username)}`
 
-  await navigateAndWait(page, url, '.str-seller-card')
+  await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
+  const found = await Promise.race([
+    page.waitForSelector('.str-seller-card', { timeout: 20_000 }).then(() => 'card' as const),
+    page.waitForSelector('.page-notice--attention', { timeout: 20_000 }).then(() => 'notfound' as const),
+  ]).catch(() => 'timeout' as const)
+
+  if (found === 'notfound') {
+    return { error: 'Seller not found', username }
+  }
 
   return page.evaluate((user: string) => {
     const notFound = document.querySelector('.page-notice--attention')

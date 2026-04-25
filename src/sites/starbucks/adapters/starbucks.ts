@@ -64,7 +64,7 @@ async function searchStores(page: Page, params: Record<string, unknown>, helpers
   const { errors } = helpers
   const lat = Number(params.lat)
   const lng = Number(params.lng)
-  if (!lat || !lng) throw errors.missingParam('lat and lng')
+  if (params.lat == null || params.lng == null || Number.isNaN(lat) || Number.isNaN(lng)) throw errors.missingParam('lat and lng')
 
   const resp = await helpers.pageFetch(page, {
     url: `${BASE}/apiproxy/v1/locations?lat=${lat}&lng=${lng}`,
@@ -87,7 +87,7 @@ async function getStoreDetail(page: Page, params: Record<string, unknown>, helpe
 
   const lat = Number(params.lat)
   const lng = Number(params.lng)
-  if (!lat || !lng) throw errors.missingParam('lat and lng (approximate store location)')
+  if (params.lat == null || params.lng == null || Number.isNaN(lat) || Number.isNaN(lng)) throw errors.missingParam('lat and lng (approximate store location)')
 
   const resp = await helpers.pageFetch(page, {
     url: `${BASE}/apiproxy/v1/locations?lat=${lat}&lng=${lng}`,

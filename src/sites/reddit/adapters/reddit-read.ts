@@ -159,8 +159,13 @@ async function getPostComments(params: Params): Promise<unknown> {
   const sub = str(params.subreddit)
   const postId = str(params.post_id)
   if (!sub || !postId) throw new Error('subreddit and post_id are required')
-  const qs = buildQuery(params, ['sort', 'limit'])
-  const body = await redditGet(`/r/${encodeURIComponent(sub)}/comments/${encodeURIComponent(postId)}.json${qs}`) as Array<Record<string, unknown>>
+  const sort = str(params.sort)
+  const qs = buildQuery(params, ['limit'])
+  const path = sort
+    ? `/r/${encodeURIComponent(sub)}/comments/${encodeURIComponent(postId)}/${sort}.json${qs}`
+    : `/r/${encodeURIComponent(sub)}/comments/${encodeURIComponent(postId)}.json${qs}`
+  const body = await redditGet(path) as unknown
+  if (!Array.isArray(body) || body.length < 2) throw new Error('Unexpected response format from Reddit comments endpoint')
   const postListing = body[0]
   const commentListing = body[1]
   const postData = (postListing.data as Record<string, unknown>)

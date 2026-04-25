@@ -31,7 +31,7 @@ function trimText(s: string, max: number): string {
 function normalizePrice(raw: string | null): string | null {
   if (!raw) return null
   const cleaned = raw.replace(/[^0-9.]/g, '')
-  if (!cleaned || Number(cleaned) === 0) return null
+  if (!cleaned) return null
   return raw
 }
 

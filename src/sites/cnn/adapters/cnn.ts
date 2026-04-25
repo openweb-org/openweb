@@ -45,7 +45,9 @@ async function getArticle(page: Page, _params: Params, errors: Errors): Promise<
     }
 
     if (article) {
-      const authors = (article.author as unknown[] || [])
+      const rawAuthor = article.author
+      const authorArr = Array.isArray(rawAuthor) ? rawAuthor : rawAuthor ? [rawAuthor] : []
+      const authors = authorArr
         .map((a: unknown) => typeof a === 'string' ? a : (a as Record<string, string>)?.name)
         .filter(Boolean)
       return {
@@ -54,7 +56,11 @@ async function getArticle(page: Page, _params: Params, errors: Errors): Promise<
         author: authors.join(', ') || null,
         publishedAt: (article.datePublished as string) || null,
         modifiedAt: (article.dateModified as string) || null,
-        section: ((article.articleSection as string[]) || [])[0] || null,
+        section: (() => {
+          const s = article.articleSection
+          if (typeof s === 'string') return s || null
+          return (Array.isArray(s) ? s[0] : null) || null
+        })(),
         body: (article.articleBody as string) || null,
         thumbnail: (article.thumbnailUrl as string) || null,
       }
@@ -82,7 +88,17 @@ async function getArticle(page: Page, _params: Params, errors: Errors): Promise<
   return result
 }
 
-async function searchArticles(page: Page): Promise<unknown> {
+async function searchArticles(page: Page, params: Params, _errors: Errors): Promise<unknown> {
+  const q = params.q ? String(params.q) : ''
+  const size = params.size ? Number(params.size) : undefined
+  const pageNum = params.page ? Number(params.page) : undefined
+  if (q) {
+    const searchUrl = new URL('https://www.cnn.com/search')
+    searchUrl.searchParams.set('q', q)
+    if (size) searchUrl.searchParams.set('size', String(size))
+    if (pageNum) searchUrl.searchParams.set('from', String((pageNum - 1) * (size || 10)))
+    await page.goto(searchUrl.toString(), { waitUntil: 'domcontentloaded', timeout: 15_000 })
+  }
   return page.evaluate(async () => {
     const poll = (sel: string, ms: number, max: number) =>
       new Promise<void>((res) => {
@@ -122,7 +138,7 @@ type Handler = (page: Page, params: Params, errors: Errors) => Promise<unknown>
 const operations: Record<string, Handler> = {
   getHeadlines: (page) => getHeadlines(page),
   getArticle,
-  searchArticles: (page) => searchArticles(page),
+  searchArticles,
 }
 
 const adapter: CustomRunner = {
