@@ -5,7 +5,7 @@ const BASE = 'https://7s4f1grybg-dsn.algolia.net'
 const INDEX = '/1/indexes/nprorg-cds'
 const DEFAULT_KEY = 'f2f5be631a4287148759373ff4ab5227'
 const DEFAULT_APP = '7S4F1GRYBG'
-const TEASER_LIMIT = 300
+const TEASER_LIMIT = 2000
 
 type Params = Readonly<Record<string, unknown>>
 type Errors = AdapterErrorHelpers
@@ -85,8 +85,15 @@ async function searchArticles(params: Params, errors: Errors): Promise<unknown> 
     })}`,
     errors,
   )
-  const hits = ((raw as R).hits as R[]) ?? []
-  return hits.map(trimListItem)
+  const data = raw as R
+  const hits = (data.hits as R[]) ?? []
+  return {
+    results: hits.map(trimListItem),
+    nbHits: data.nbHits ?? null,
+    nbPages: data.nbPages ?? null,
+    page: data.page ?? null,
+    hitsPerPage: data.hitsPerPage ?? null,
+  }
 }
 
 async function getArticle(params: Params, errors: Errors): Promise<unknown> {
@@ -113,8 +120,15 @@ async function getTopStories(params: Params, errors: Errors): Promise<unknown> {
     })}`,
     errors,
   )
-  const hits = ((raw as R).hits as R[]) ?? []
-  return hits.map(trimListItem)
+  const data = raw as R
+  const hits = (data.hits as R[]) ?? []
+  return {
+    results: hits.map(trimListItem),
+    nbHits: data.nbHits ?? null,
+    nbPages: data.nbPages ?? null,
+    page: data.page ?? null,
+    hitsPerPage: data.hitsPerPage ?? null,
+  }
 }
 
 type OpHandler = (params: Params, errors: Errors) => Promise<unknown>

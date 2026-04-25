@@ -36,8 +36,8 @@ function normalizePrice(raw: string | null): string | null {
 }
 
 const MAX_SEARCH_RESULTS = 25
-const MAX_BODY = 800
-const MAX_IMAGES = 5
+const MAX_BODY = 4000
+const MAX_IMAGES = 15
 
 // ── searchListings ─────────────────────────────────────────────────
 

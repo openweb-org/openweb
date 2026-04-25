@@ -94,7 +94,7 @@ async function getProductDetail(
 			usItemId: p.usItemId || id,
 			name: p.name || "",
 			brand: p.brand || null,
-			shortDescription: desc ? desc.slice(0, 500) : null,
+			shortDescription: desc ? desc.slice(0, 2000) : null,
 			averageRating: p.averageRating ?? null,
 			numberOfReviews: p.numberOfReviews ?? null,
 			canonicalUrl: p.canonicalUrl || null,

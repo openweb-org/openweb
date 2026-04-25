@@ -53,7 +53,13 @@ async function searchArticles(params: Params, errors: Errors): Promise<unknown> 
   )
   const response = raw.response as R
   const results = (response?.results as R[]) ?? []
-  return results.map(trimArticle)
+  return {
+    results: results.map(trimArticle),
+    total: response?.total ?? null,
+    currentPage: response?.currentPage ?? null,
+    pageSize: response?.pageSize ?? null,
+    pages: response?.pages ?? null,
+  }
 }
 
 async function getArticle(params: Params, errors: Errors): Promise<unknown> {
@@ -88,7 +94,13 @@ async function getSectionFeed(params: Params, errors: Errors): Promise<unknown> 
   )
   const response = raw.response as R
   const results = (response?.results as R[]) ?? []
-  return results.map(trimArticle)
+  return {
+    results: results.map(trimArticle),
+    total: response?.total ?? null,
+    currentPage: response?.currentPage ?? null,
+    pageSize: response?.pageSize ?? null,
+    pages: response?.pages ?? null,
+  }
 }
 
 type OpHandler = (params: Params, errors: Errors) => Promise<unknown>

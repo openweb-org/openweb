@@ -10,7 +10,7 @@ async function navigateAndWait(page: Page, url: string, readySelector: string): 
   await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
   // eBay may redirect to /splashui/challenge — a JS challenge that auto-resolves in ~10s.
   // waitForSelector survives the cross-page redirect back to the target URL.
-  await page.waitForSelector(readySelector, { timeout: 20_000 }).catch(() => {})
+  await page.waitForSelector(readySelector, { timeout: 20_000 })
 }
 
 async function searchItems(page: Page, params: Params): Promise<unknown> {

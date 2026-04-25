@@ -87,7 +87,7 @@ function trimPost(p: R): R {
     id: p.id,
     user_id: p.user_id,
     title: p.title ?? null,
-    description: desc.length > 2000 ? `${desc.slice(0, 2000)}…` : desc,
+    description: desc.length > 8000 ? `${desc.slice(0, 8000)}…` : desc,
     created_at: p.created_at,
     reply_count: p.reply_count ?? 0,
     retweet_count: p.retweet_count ?? 0,

@@ -165,6 +165,7 @@ async function getUserAnswers(params: Params, errors: AdapterErrorHelpers) {
   const raw = await get(url, errors) as Obj
   const data = ((raw.data ?? []) as Obj[]).map((item: Obj) => ({
     id: item.id, type: item.type, url: item.url,
+    content: item.content ?? null,
     excerpt: item.excerpt, voteup_count: item.voteup_count,
     comment_count: item.comment_count,
     created_time: item.created_time, updated_time: item.updated_time,

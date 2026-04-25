@@ -85,8 +85,15 @@ const OPERATIONS: Record<string, Handler> = {
         const isGroup = chat.id ? (chat.id as Record<string, unknown>).server === 'g.us' : false
         return msgs.getModelsArray().slice(-args.limit).map((m) => {
           const type = String(m.type ?? 'unknown')
+          const mediaWithCaption = new Set(['image', 'video', 'document', 'audio', 'ptt', 'sticker'])
           const textTypes = new Set(['chat', 'gp2', 'notification_template', 'e2e_notification', 'call_log'])
-          const body = textTypes.has(type) && typeof m.body === 'string' ? m.body.substring(0, 500) : ''
+          let body = ''
+          if (textTypes.has(type) && typeof m.body === 'string') {
+            body = m.body.substring(0, 500)
+          } else if (mediaWithCaption.has(type)) {
+            const caption = m.caption ?? m.body
+            body = typeof caption === 'string' ? caption.substring(0, 500) : ''
+          }
           const mid = m.id as Record<string, unknown> | undefined
           const entry: Record<string, unknown> = {
             id: mid?._serialized ?? String(m.id),

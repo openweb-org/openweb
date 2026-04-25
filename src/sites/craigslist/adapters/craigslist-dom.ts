@@ -5,8 +5,8 @@ import type { CustomRunner } from '../../../types/adapter.js'
 type AdapterErrors = { botBlocked(msg: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error }
 
 const MAX_SEARCH_RESULTS = 25
-const MAX_BODY = 800
-const MAX_IMAGES = 5
+const MAX_BODY = 4000
+const MAX_IMAGES = 15
 
 /** Navigate to a Craigslist URL with the given city subdomain. */
 async function navigateTo(page: Page, city: string, path: string, errors: AdapterErrors): Promise<void> {

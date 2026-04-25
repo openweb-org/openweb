@@ -105,7 +105,7 @@ async function getPropertyDetails(
 
       return {
         name: data.name || '',
-        description: trimText(decodeEntities(data.description || ''), 400),
+        description: trimText(decodeEntities(data.description || ''), 4000),
         url: data.url || '',
         datePosted: data.datePosted || '',
         streetAddress: addr.streetAddress || '',
@@ -177,8 +177,15 @@ async function getMarketData(
   const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
   const location = h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : ''
 
+  const neighborhoodMatch = text.match(/(?:neighborhood|area)\s*(?:is\s+)?(?:called\s+)?([A-Z][\w\s]+?)(?:\.|,|\s+is\b)/i)
+  const marketTypeMatch = text.match(/(buyer'?s?\s+market|seller'?s?\s+market|balanced\s+market)/i)
+  const summaryMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i)
+
   return {
     location,
+    neighborhood: neighborhoodMatch ? neighborhoodMatch[1].trim() : null,
+    marketType: marketTypeMatch ? marketTypeMatch[1] : null,
+    summary: summaryMatch ? summaryMatch[1] : null,
     medianSalePrice: medianMatch ? `$${medianMatch[1]}` : null,
     homesSold: homeSoldMatch ? Number(homeSoldMatch[1].replace(/,/g, '')) : null,
     medianDaysOnMarket: medianDomMatch ? Number(medianDomMatch[1]) : null,

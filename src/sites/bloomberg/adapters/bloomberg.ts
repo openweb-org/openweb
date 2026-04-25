@@ -42,7 +42,7 @@ async function extractNextData(page: Page): Promise<AnyRecord | null> {
   return page.evaluate(() => {
     const el = document.getElementById('__NEXT_DATA__')
     if (!el) return null
-    try { return JSON.parse(el.textContent!) } catch { return null }
+    return JSON.parse(el.textContent!)
   })
 }
 
@@ -90,6 +90,7 @@ async function getNewsHeadlines(page: Page): Promise<unknown> {
       items.push({
         id: s.id,
         headline: s.headline,
+        abstract: s.abstract ?? null,
         url: s.url ?? null,
         publishedAt: s.publishedAt ?? null,
         byline: s.byline ?? null,
@@ -119,6 +120,7 @@ async function getLatestNews(page: Page): Promise<unknown> {
   const trimmed = stories.slice(0, 15).map(s => ({
     id: s.id,
     headline: s.headline,
+    abstract: s.abstract ?? null,
     url: s.url ?? null,
     publishedAt: s.publishedAt ?? null,
     byline: s.byline ?? null,

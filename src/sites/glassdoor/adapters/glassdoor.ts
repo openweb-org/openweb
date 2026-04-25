@@ -6,7 +6,7 @@ const GD_ORIGIN = 'https://www.glassdoor.com'
 const GRAPHQL_URL = `${GD_ORIGIN}/graph`
 const CF_POLL_MS = 2_000
 const CF_MAX_WAIT_MS = 30_000
-const MAX_TEXT_LEN = 500
+const MAX_TEXT_LEN = 2000
 
 type Errors = AdapterHelpers['errors']
 

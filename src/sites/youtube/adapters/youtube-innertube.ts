@@ -610,8 +610,12 @@ const getTranscript: Handler = async (page, params, helpers) => {
   let transcriptResp: Record<string, unknown>
   try {
     transcriptResp = await innertubePost(helpers, page, 'get_transcript', { context, params: transcriptParams }, config) as Record<string, unknown>
-  } catch {
-    return { videoId, segments: [], note: 'Transcript fetch failed — endpoint may require browser session context' }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (/transcript|not available|disabled/i.test(msg)) {
+      return { videoId, segments: [], note: 'Transcript fetch failed — endpoint may require browser session context' }
+    }
+    throw err
   }
 
   // Parse transcript from the response
@@ -908,7 +912,7 @@ const getVideoDetail: Handler = async (page, params, helpers) => {
     viewCount,
     dateText,
     likeCount,
-    description: description.slice(0, 2000),
+    description,
     hasTranscript,
     recommendations,
   }

@@ -357,7 +357,7 @@ async function getContacts(page: Page) {
         ...(u?.phoneNumber ? { phoneNumber: u.phoneNumber } : {}),
         ...(u?.status?.type ? { status: u.status.type } : {}),
       }
-    }).filter(c => c.firstName || c.lastName)
+    }).filter(c => c.id || c.username || c.phoneNumber)
   }, FIND_GET_GLOBAL_SRC)
 }
 
