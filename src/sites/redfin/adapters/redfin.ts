@@ -58,10 +58,15 @@ async function searchHomes(
   const listings = homes.map((h: any) => ({
     url: h.url ? `${BASE}${h.url}` : '',
     streetAddress: h.streetLine?.value || '',
+    city: h.city || '',
+    state: h.state || state,
     zip: h.zip || h.postalCode?.value || '',
+    lat: h.latLong?.value?.latitude ?? null,
+    lng: h.latLong?.value?.longitude ?? null,
     rooms: h.beds ?? null,
     sqft: h.sqFt?.value ?? null,
     price: h.price?.value ?? null,
+    currency: h.price?.level === 'CURRENCY' ? 'USD' : null,
     propertyType: PROPERTY_TYPES[h.uiPropertyType] || PROPERTY_TYPES[h.propertyType] || '',
   }))
 

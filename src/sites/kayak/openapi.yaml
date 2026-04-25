@@ -84,7 +84,7 @@ paths:
           description: Sort order (best flight, price, duration, takeoff time, landing time).
       responses:
         "200":
-          description: Trimmed flight search results (top 20 core results, top 3 booking options each).
+          description: Trimmed flight search results (top 20 core results, up to 5 booking options each).
           content:
             application/json:
               schema:
@@ -128,7 +128,7 @@ paths:
                                       type: string
                         bookingOptions:
                           type: array
-                          description: Top 3 cheapest booking options.
+                          description: Up to 5 cheapest booking options.
                           items:
                             type: object
                             properties:
@@ -257,7 +257,7 @@ paths:
           description: Sort order.
       responses:
         "200":
-          description: Trimmed hotel search results (top 20, top 3 providers each).
+          description: Trimmed hotel search results (top 20, up to 5 providers each).
           content:
             application/json:
               schema:
@@ -307,7 +307,7 @@ paths:
                           description: Distance from city center (e.g. "0.7 mi").
                         providers:
                           type: array
-                          description: Top 3 booking providers with prices.
+                          description: Up to 5 booking providers with prices.
                           items:
                             type: object
                             properties:

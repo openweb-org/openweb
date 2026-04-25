@@ -120,7 +120,7 @@ paths:
                     type: [string, "null"]
                   shortDescription:
                     type: [string, "null"]
-                    description: Product description (truncated to 500 chars)
+                    description: Product description (truncated to 2000 chars)
                   averageRating:
                     type: [number, "null"]
                   numberOfReviews:

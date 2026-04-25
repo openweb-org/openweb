@@ -206,8 +206,8 @@ async function getPlaceReviews(page: Page, params: Readonly<Record<string, unkno
   const info = await fetchPlaceInfo(page, placeId, query, errors)
 
   const placeName = dig(info, 11) as string | null
-  const rating = dig(info, 4, 7) as number | null
-  const reviewCount = dig(info, 4, 8) as number | null
+  const rating = (dig(info, 4, 7) ?? dig(info, 4, 1)) as number | null
+  const reviewCount = (dig(info, 4, 8) ?? dig(info, 4, 3)) as number | null
 
   // Extract detailed reviews from [6][31][1]
   const reviewsArr = dig(info, 31, 1) as unknown[][] | null
@@ -218,10 +218,14 @@ async function getPlaceReviews(page: Page, params: Readonly<Record<string, unkno
       const text = dig(r, 1) as string | null
       if (!text) continue
       const authorUrl = dig(r, 0, 0) as string | null
-      const reviewRating = typeof dig(r, 9) === 'number' ? (dig(r, 9) as number) : null
+      const authorName = (dig(r, 0, 1) ?? dig(r, 0, 4)) as string | null
+      const relativeTime = dig(r, 3) as string | null
+      const reviewRating = typeof dig(r, 9) === 'number' ? (dig(r, 9) as number) : (typeof dig(r, 4) === 'number' ? (dig(r, 4) as number) : null)
       reviews.push({
         text,
         authorUrl,
+        authorName,
+        relativeTime,
         rating: reviewRating,
       })
     }

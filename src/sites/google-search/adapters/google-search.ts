@@ -152,7 +152,7 @@ async function searchShopping(page: Page, params: Record<string, unknown>): Prom
   await page.waitForFunction(() => /\$\d/.test(document.body.innerText), { timeout: 10_000 }).catch(() => {})
   return page.evaluate(() => {
     const items: Array<{ title: string; price: string; originalPrice: string; merchant: string; reviewCount: string }> = []
-    const cards = document.querySelectorAll('g-inner-card')
+    const cards = document.querySelectorAll('g-inner-card, .pla-unit')
     for (const card of cards) {
       const titleEl = card.querySelector('.gkQHve') || card.querySelector('.bXPcId div')
       const title = titleEl?.textContent?.trim() || ''

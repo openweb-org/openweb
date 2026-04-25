@@ -97,7 +97,6 @@ paths:
                         - current
                         - exchange
                         - percentage
-                        - stockId
                   maxPage:
                     type: integer
                     description: Total number of pages available
@@ -112,7 +111,6 @@ paths:
                   - list
                   - maxPage
                   - page
-                  - size
   /v5/stock/realtime/quotec.json:
     get:
       operationId: getStockQuote

@@ -82,51 +82,51 @@ paths:
                       type: object
                       description: A search result article with headline, section, date, and optional fields.
                       required: [id, type, sectionId, webTitle, webPublicationDate]
-                  properties:
-                    id:
-                      type: string
-                      description: Article path (e.g. "world/2024/jan/01/article-slug").
-                    type:
-                      type: string
-                      description: Content type (article, liveblog, etc.).
-                    sectionId:
-                      type: string
-                      description: Section slug (world, technology, business, etc.).
-                    sectionName:
-                      type: string
-                      description: Human-readable section name.
-                    webPublicationDate:
-                      type: string
-                      format: date-time
-                      description: Publication date in ISO 8601.
-                    webTitle:
-                      type: string
-                      description: Article headline.
-                    webUrl:
-                      type: string
-                      format: uri
-                      description: URL on theguardian.com.
-                    pillarName:
-                      type:
-                        - string
-                        - 'null'
-                      description: Content pillar (News, Opinion, Sport, Arts, Lifestyle).
-                    fields:
-                      type: object
-                      description: Requested content fields (controlled by show-fields parameter).
                       properties:
-                        headline:
+                        id:
                           type: string
-                          description: Article headline text.
-                        byline:
+                          description: Article path (e.g. "world/2024/jan/01/article-slug").
+                        type:
+                          type: string
+                          description: Content type (article, liveblog, etc.).
+                        sectionId:
+                          type: string
+                          description: Section slug (world, technology, business, etc.).
+                        sectionName:
+                          type: string
+                          description: Human-readable section name.
+                        webPublicationDate:
+                          type: string
+                          format: date-time
+                          description: Publication date in ISO 8601.
+                        webTitle:
+                          type: string
+                          description: Article headline.
+                        webUrl:
+                          type: string
+                          format: uri
+                          description: URL on theguardian.com.
+                        pillarName:
                           type:
                             - string
                             - 'null'
-                          description: Author name(s).
-                        thumbnail:
-                          type:
-                            - string
-                            - 'null'
+                          description: Content pillar (News, Opinion, Sport, Arts, Lifestyle).
+                        fields:
+                          type: object
+                          description: Requested content fields (controlled by show-fields parameter).
+                          properties:
+                            headline:
+                              type: string
+                              description: Article headline text.
+                            byline:
+                              type:
+                                - string
+                                - 'null'
+                              description: Author name(s).
+                            thumbnail:
+                              type:
+                                - string
+                                - 'null'
                           format: uri
                           description: Thumbnail image URL.
 
@@ -298,50 +298,50 @@ paths:
                       type: object
                       description: A section feed article with headline, date, and optional fields.
                       required: [id, type, sectionId, webTitle, webPublicationDate]
-                  properties:
-                    id:
-                      type: string
-                      description: Article path.
-                    type:
-                      type: string
-                      description: Content type (article, liveblog, etc.).
-                    sectionId:
-                      type: string
-                      description: Section slug.
-                    sectionName:
-                      type: string
-                      description: Human-readable section name.
-                    webPublicationDate:
-                      type: string
-                      format: date-time
-                      description: Publication date in ISO 8601.
-                    webTitle:
-                      type: string
-                      description: Article headline.
-                    webUrl:
-                      type: string
-                      format: uri
-                      description: URL on theguardian.com.
-                    pillarName:
-                      type:
-                        - string
-                        - 'null'
-                      description: Content pillar (News, Opinion, Sport, Arts, Lifestyle).
-                    fields:
-                      type: object
-                      description: Requested content fields (controlled by show-fields parameter).
                       properties:
-                        headline:
+                        id:
                           type: string
-                          description: Article headline text.
-                        byline:
-                          type:
-                            - string
-                            - 'null'
-                          description: Author name(s).
-                        thumbnail:
-                          type:
-                            - string
-                            - 'null'
+                          description: Article path.
+                        type:
+                          type: string
+                          description: Content type (article, liveblog, etc.).
+                        sectionId:
+                          type: string
+                          description: Section slug.
+                        sectionName:
+                          type: string
+                          description: Human-readable section name.
+                        webPublicationDate:
+                          type: string
+                          format: date-time
+                          description: Publication date in ISO 8601.
+                        webTitle:
+                          type: string
+                          description: Article headline.
+                        webUrl:
+                          type: string
                           format: uri
-                          description: Thumbnail image URL.
+                          description: URL on theguardian.com.
+                        pillarName:
+                          type:
+                            - string
+                            - 'null'
+                          description: Content pillar (News, Opinion, Sport, Arts, Lifestyle).
+                        fields:
+                          type: object
+                          description: Requested content fields (controlled by show-fields parameter).
+                          properties:
+                            headline:
+                              type: string
+                              description: Article headline text.
+                            byline:
+                              type:
+                                - string
+                                - 'null'
+                              description: Author name(s).
+                            thumbnail:
+                              type:
+                                - string
+                                - 'null'
+                              format: uri
+                              description: Thumbnail image URL.

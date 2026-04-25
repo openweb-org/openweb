@@ -489,7 +489,7 @@ paths:
                 homeType: p.homeType ?? null,
                 homeStatus: p.homeStatus ?? null,
                 yearBuilt: resoFacts.yearBuilt ?? null,
-                description: p.description ? p.description.slice(0, 500) : null,
+                description: p.description ? p.description.slice(0, 4000) : null,
                 zestimate: p.zestimate ?? null,
                 rentZestimate: p.rentZestimate ?? null,
                 taxAssessedValue: (taxFirst && taxFirst.value) ?? null,
@@ -573,7 +573,7 @@ paths:
                     description: Year the property was built.
                   description:
                     type: [string, "null"]
-                    description: Property listing description (truncated to 500 chars)
+                    description: Property listing description (truncated to 4000 chars)
                   zestimate:
                     type: [integer, "null"]
                     description: Zillow estimated home value

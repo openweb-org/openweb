@@ -265,7 +265,9 @@ async function searchFlights(page: Page, params: Record<string, unknown>, errors
 
   page.on('response', handler)
   try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 }).catch(() => {})
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 }).catch((e: unknown) => {
+      throw errors.apiError('searchFlights', `Navigation failed: ${e instanceof Error ? e.message : String(e)}`)
+    })
     const deadline = Date.now() + 30_000
     while (!captured && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500))

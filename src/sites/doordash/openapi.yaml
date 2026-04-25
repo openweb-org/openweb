@@ -294,6 +294,12 @@ paths:
                                 type: string
                               ratingDisplayString:
                                 type: [string, 'null']
+                              unitPrice:
+                                type: [integer, 'null']
+                                description: Item unit price in minor currency units (cents).
+                              currency:
+                                type: [string, 'null']
+                                description: ISO currency code (e.g. "USD").
 
   /graphql/getConsumerOrdersWithDetails:
     post:

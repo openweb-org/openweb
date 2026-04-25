@@ -61,7 +61,7 @@ paths:
       parameters: []
       responses:
         '200':
-          description: Success.
+          description: Top headlines (capped at 25 items, no pagination).
           content:
             application/json:
               schema:
@@ -70,6 +70,7 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Number of items returned (max 25).
                   items:
                     type: array
                     items:
@@ -344,7 +345,7 @@ paths:
           example: world
       responses:
         '200':
-          description: Success.
+          description: Topic feed articles (capped at 25 items, no pagination).
           content:
             application/json:
               schema:
@@ -353,6 +354,7 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Number of items returned (max 25).
                   items:
                     type: array
                     items:
