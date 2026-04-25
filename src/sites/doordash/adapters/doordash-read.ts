@@ -143,14 +143,21 @@ async function getRestaurantMenu(ctx: PreparedContext): Promise<unknown> {
     return {
       id: list.id,
       name: list.name,
-      items: items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        displayPrice: item.displayPrice,
-        ...(item.description ? { description: item.description } : {}),
-        ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
-        ...(item.ratingDisplayString ? { ratingDisplayString: item.ratingDisplayString } : {}),
-      })),
+      items: items.map((item) => {
+        const dp = String(item.displayPrice ?? '')
+        const priceMatch = dp.match(/[\d,.]+/)
+        const unitPrice = priceMatch ? Math.round(parseFloat(priceMatch[0].replace(/,/g, '')) * 100) : null
+        return {
+          id: item.id,
+          name: item.name,
+          displayPrice: item.displayPrice,
+          unitPrice,
+          currency: dp.startsWith('$') ? 'USD' : null,
+          ...(item.description ? { description: item.description } : {}),
+          ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
+          ...(item.ratingDisplayString ? { ratingDisplayString: item.ratingDisplayString } : {}),
+        }
+      }),
     }
   })
 

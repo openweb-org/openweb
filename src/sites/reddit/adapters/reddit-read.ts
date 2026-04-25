@@ -89,9 +89,47 @@ function trimListing(body: Record<string, unknown>) {
       dist: data.dist,
       children: children.map(c => ({
         kind: c.kind,
-        data: trimPost(c.data as Record<string, unknown>),
+        data: trimByKind(c.kind as string, c.data as Record<string, unknown>),
       })),
     },
+  }
+}
+
+function trimByKind(kind: string, raw: Record<string, unknown>): Record<string, unknown> {
+  if (kind === 't5') return trimSubreddit(raw)
+  if (kind === 't2') return trimUser(raw)
+  return trimPost(raw)
+}
+
+function trimSubreddit(raw: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: raw.id,
+    name: raw.name,
+    display_name: raw.display_name,
+    display_name_prefixed: raw.display_name_prefixed,
+    title: raw.title,
+    public_description: raw.public_description,
+    subscribers: raw.subscribers,
+    accounts_active: raw.accounts_active ?? null,
+    created_utc: raw.created_utc,
+    url: raw.url,
+    over18: raw.over18,
+    subreddit_type: raw.subreddit_type,
+    icon_img: raw.icon_img,
+  }
+}
+
+function trimUser(raw: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: raw.id,
+    name: raw.name,
+    link_karma: raw.link_karma,
+    comment_karma: raw.comment_karma,
+    total_karma: raw.total_karma,
+    created_utc: raw.created_utc,
+    icon_img: raw.icon_img,
+    is_gold: raw.is_gold,
+    verified: raw.verified,
   }
 }
 

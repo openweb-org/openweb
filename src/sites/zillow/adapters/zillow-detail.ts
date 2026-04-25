@@ -197,10 +197,17 @@ async function searchProperties(
   const listResults = Array.isArray(raw.listResults) ? raw.listResults.slice(0, 20) : []
   const trimmed = listResults.map(trimListing)
 
+  const rawMapResults = Array.isArray(raw.mapResults) ? raw.mapResults : []
+  const mapResults = rawMapResults.slice(0, 40).map((r: Record<string, unknown>) => ({
+    zpid: r.zpid ?? null,
+    latLong: r.latLong ?? null,
+  }))
+
   return {
     cat1: {
       searchResults: {
         listResults: trimmed,
+        mapResults,
         totalResultCount:
           searchResults.searchList?.totalResultCount ?? listResults.length,
       },

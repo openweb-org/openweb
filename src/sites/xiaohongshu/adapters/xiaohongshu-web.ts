@@ -316,8 +316,26 @@ async function getHotSearch(page: Page, _params: Record<string, unknown>, _error
         }))
         return { items: items.filter(it => it.keyword), count: items.filter(it => it.keyword).length }
       }
-    } catch { /* fall through */ }
+    } catch { /* fall through to SSR */ }
   }
+
+  const ssrResult = await page.evaluate(() => {
+    const state = (window as XhsWindow).__INITIAL_STATE__
+    if (!state?.search) return null
+    const trendingRef = state.search.trending ?? state.search.hotList ?? state.search.queryTrending
+    const trends: SsrNode[] = trendingRef?._rawValue ?? trendingRef ?? []
+    if (!Array.isArray(trends) || trends.length === 0) return null
+    const items = trends.map((t: SsrNode, i: number) => ({
+      keyword: t.name ?? t.word ?? t.keyword ?? t.title ?? '',
+      score: t.score ?? t.hot_value ?? null,
+      rank: t.rank ?? i + 1,
+    }))
+    return items.filter((it: { keyword: string }) => it.keyword).length > 0
+      ? { items: items.filter((it: { keyword: string }) => it.keyword), count: items.filter((it: { keyword: string }) => it.keyword).length }
+      : null
+  })
+  if (ssrResult) return ssrResult
+
   return { items: [], count: 0 }
 }
 
@@ -500,9 +518,77 @@ async function getRelatedNotes(page: Page, params: Record<string, unknown>, erro
     }
     const desc = String(detail.desc ?? '')
     const hashMatch = desc.match(/#([^#\[]+)/)
-    return hashMatch?.[1]?.trim() ?? null
+    if (hashMatch?.[1]?.trim()) return hashMatch[1].trim()
+    const title = String(detail.title ?? detail.displayTitle ?? '')
+    return title.slice(0, 20) || null
   }, noteId)
-  if (!tagKeyword) return { notes: [], count: 0 }
+  if (!tagKeyword) {
+    const domKeyword = await page.evaluate(() => {
+      const tagEls = document.querySelectorAll('.note-tag, [class*="tag"] a, a[href*="search_result"]')
+      for (const el of tagEls) {
+        const text = el.textContent?.replace(/#/g, '').trim()
+        if (text) return text
+      }
+      const titleEl = document.querySelector('.note-title, [class*="title"]')
+      const titleText = titleEl?.textContent?.trim()
+      return titleText?.slice(0, 20) || null
+    })
+    if (!domKeyword) return { notes: [], count: 0 }
+    const searchApiPromise2 = page.waitForResponse(
+      (resp) => resp.url().includes('/api/sns/web/v1/search/notes') && resp.status() === 200,
+      { timeout: 15000 },
+    ).catch(() => null)
+    await page.goto(
+      `${BASE}/search_result?keyword=${encodeURIComponent(domKeyword)}&source=web_search_result_notes`,
+      { waitUntil: 'domcontentloaded', timeout: 30000 },
+    )
+    await page.waitForTimeout(4000)
+    const ssrFallback = await page.evaluate((excludeId: string) => {
+      const state = (window as XhsWindow).__INITIAL_STATE__
+      if (!state?.search) return null
+      const feedsRef = state.search.feeds
+      const feeds: SsrNode[] = feedsRef?._rawValue ?? feedsRef ?? []
+      if (!Array.isArray(feeds) || feeds.length === 0) return null
+      const notes = feeds
+        .filter((f: SsrNode) => f.modelType === 'note' && f.noteCard && String(f.id) !== excludeId)
+        .slice(0, 10)
+        .map((f: SsrNode) => {
+          const card = f.noteCard
+          return {
+            noteId: f.id, xsecToken: f.xsecToken, type: card.type, displayTitle: card.displayTitle,
+            user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
+            likedCount: card.interactInfo?.likedCount ?? null,
+            cover: card.cover ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height } : null,
+          }
+        })
+      return notes.length > 0 ? { notes, count: notes.length } : null
+    }, noteId)
+    if (ssrFallback) return ssrFallback
+    const searchResp2 = await searchApiPromise2
+    if (searchResp2) {
+      try {
+        const json = (await searchResp2.json()) as Record<string, unknown>
+        const data = asRecord(json.data)
+        const items = data.items as Array<Record<string, unknown>> | undefined
+        if (Array.isArray(items) && items.length > 0) {
+          const notes = items
+            .filter((item: SsrNode) => item.model_type === 'note' && String(item.id) !== noteId)
+            .slice(0, 10)
+            .map((item: SsrNode) => {
+              const card = item.note_card
+              return {
+                noteId: item.id, xsecToken: item.xsec_token, type: card?.type, displayTitle: card?.display_title ?? '',
+                user: card?.user ? { userId: card.user.user_id, nickname: card.user.nickname, avatar: card.user.avatar } : null,
+                likedCount: card?.interact_info?.liked_count ?? null,
+                cover: card?.cover ? { url: card.cover.url_default ?? card.cover.url, width: card.cover.width, height: card.cover.height } : null,
+              }
+            })
+          return { notes, count: notes.length }
+        }
+      } catch { /* fall through */ }
+    }
+    return { notes: [], count: 0 }
+  }
   const searchApiPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v1/search/notes') && resp.status() === 200,
     { timeout: 15000 },

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-04-24",
+  "generated": "2026-04-25",
   "note": "Baseline pattern counts per site. See scripts/adapter-pattern-report.ts — ratcheting down is the unit of forward progress for normalize-adapter. Refresh via --write-baseline only after counts legitimately drop.",
   "counts": {
     "amazon": {
@@ -153,7 +153,8 @@
       "query_selector": 2
     },
     "xiaohongshu": {
-      "page_goto": 13
+      "page_goto": 14,
+      "query_selector": 2
     },
     "youtube": {
       "page_goto": 2,

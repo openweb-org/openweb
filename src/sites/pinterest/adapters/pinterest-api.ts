@@ -200,11 +200,14 @@ function trimHomeFeedItem(raw: R): R | null {
   }
 
   return {
-    id: pinId ?? null,
+    id: pinId ?? raw.id ?? null,
     title: title ?? null,
+    link: raw.link ?? null,
     image_url: imageUrl ?? null,
     auto_alt_text: raw.auto_alt_text ?? null,
     is_video: raw.is_video ?? false,
+    board: trimBoard(raw.board as R | undefined) ?? null,
+    pinner: trimPinner(raw.pinner as R | undefined) ?? null,
   }
 }
 

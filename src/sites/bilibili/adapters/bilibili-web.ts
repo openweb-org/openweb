@@ -233,6 +233,17 @@ async function getVideoComments(page: Page, params: Readonly<Record<string, unkn
   if (!oid) throw errors.missingParam('oid')
   const bvid = String(params.bvid ?? '')
   if (!bvid) throw errors.missingParam('bvid')
+  const type = Number(params.type ?? 1)
+  const mode = Number(params.mode ?? 3)
+  const paginationStr = params.pagination_str != null ? String(params.pagination_str) : undefined
+
+  const resp = await fetchApiViaPage(page, '/x/v2/reply/wbi/main', {
+    oid,
+    type,
+    mode,
+    ...(paginationStr ? { pagination_str: paginationStr } : {}),
+  }).catch(() => null)
+  if (resp && isApiOk(resp)) return resp
 
   const responsePromise = page.waitForResponse(
     (resp: PwResponse) => resp.status() === 200 && resp.url().includes('/x/v2/reply/wbi/main'),
@@ -240,8 +251,8 @@ async function getVideoComments(page: Page, params: Readonly<Record<string, unkn
   )
   await page.goto(`https://www.bilibili.com/video/${bvid}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-  const resp = await responsePromise
-  return resp.json()
+  const intercepted = await responsePromise
+  return intercepted.json()
 }
 
 async function getUserInfo(page: Page, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown> {
@@ -285,6 +296,14 @@ async function getUserVideos(page: Page, params: Readonly<Record<string, unknown
   const { errors } = helpers
   const mid = Number(params.mid)
   if (!mid) throw errors.missingParam('mid')
+  const pn = Number(params.pn ?? 1)
+  const ps = Number(params.ps ?? 30)
+  const order = String(params.order ?? 'pubdate')
+
+  const resp = await fetchApiViaPage(page, '/x/space/wbi/arc/search', {
+    mid, pn, ps, order,
+  }).catch(() => null)
+  if (resp && isApiOk(resp)) return resp
 
   return interceptApiResponse(
     page,

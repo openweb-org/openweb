@@ -285,7 +285,6 @@ async function searchFlights(page: Page, params: Record<string, unknown>, errors
       const journeys = (listing as Record<string, unknown>)?.journeys
       if (Array.isArray(journeys)) {
         for (const j of journeys) {
-          delete (j as Record<string, unknown>).detailsAndFares
           delete (j as Record<string, unknown>).dialogSheet
         }
       }

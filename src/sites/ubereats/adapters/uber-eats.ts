@@ -217,9 +217,13 @@ async function getEatsOrderHistory(page: Page, params: R, helpers: AdapterHelper
         isCompleted: eo.isCompleted ?? false,
         shoppingCart: {
           items: ((cart.items as R[]) || []).map((item: R) => ({
+            uuid: item.uuid,
             title: item.title,
             price: item.price,
             quantity: item.quantity,
+            sectionUuid: item.sectionUuid ?? null,
+            subsectionUuid: item.subsectionUuid ?? null,
+            customizations: item.customizations ?? null,
           })),
         },
       },

@@ -60,9 +60,9 @@ async function interceptPoll(
 /* ---------- response trimming ---------- */
 
 const MAX_FLIGHT_RESULTS = 20
-const MAX_BOOKING_OPTIONS = 3
+const MAX_BOOKING_OPTIONS = 5
 const MAX_HOTEL_RESULTS = 20
-const MAX_HOTEL_PROVIDERS = 3
+const MAX_HOTEL_PROVIDERS = 5
 
 function trimFlightResponse(data: AnyRecord): AnyRecord {
   const rawResults = data.results as AnyRecord[] | undefined
