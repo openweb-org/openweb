@@ -668,37 +668,13 @@ paths:
                       - sign
                       - rank
                       - level
-                      - moral
-                      - silence
-                      - control
-                      - fans_badge
-                      - fans_medal
                       - official
                       - vip
-                      - pendant
-                      - nameplate
-                      - user_honour_info
                       - is_followed
-                      - top_photo
-                      - sys_notice
-                      - live_room
                       - birthday
                       - school
-                      - profession
                       - tags
-                      - series
-                      - is_senior_member
-                      - mcn_info
-                      - gaia_res_type
-                      - gaia_data
-                      - is_risk
-                      - elec
-                      - contract
-                      - certificate_show
-                      - name_render
-                      - top_photo_v2
-                      - theme
-                      - attestation
+                      - live_room
                 required:
                   - code
                   - message
@@ -9646,19 +9622,13 @@ paths:
                               vt:
                                 type: integer
                             required:
-                              - aid
                               - view
                               - danmaku
                               - reply
                               - favorite
                               - coin
-                              - share
-                              - now_rank
-                              - his_rank
                               - like
-                              - dislike
-                              - evaluation
-                              - vt
+                              - share
                           argue_info:
                             type: object
                             properties:
@@ -9772,14 +9742,8 @@ paths:
                               required:
                                 - cid
                                 - page
-                                - from
                                 - part
                                 - duration
-                                - vid
-                                - weblink
-                                - dimension
-                                - first_frame
-                                - ctime
                           subtitle:
                             type: object
                             properties:
@@ -10559,41 +10523,16 @@ paths:
                           - aid
                           - videos
                           - tname
-                          - tname_v2
                           - copyright
                           - pic
                           - title
                           - pubdate
                           - desc
-                          - state
                           - duration
                           - owner
                           - stat
-                          - argue_info
-                          - dynamic
                           - cid
-                          - premiere
-                          - teenage_mode
-                          - is_chargeable_season
-                          - is_story
-                          - is_upower_exclusive
-                          - is_upower_play
-                          - is_upower_preview
-                          - enable_vt
-                          - vt_display
-                          - is_upower_exclusive_with_qa
-                          - no_cache
                           - pages
-                          - subtitle
-                          - label
-                          - is_season_display
-                          - user_garb
-                          - honor_reply
-                          - like_icon
-                          - need_jump_bv
-                          - disable_show_up_info
-                          - is_story_play
-                          - is_view_self
                       Card:
                         type: object
                         properties:

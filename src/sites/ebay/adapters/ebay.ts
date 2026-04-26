@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 
 import type { CustomRunner } from '../../../types/adapter.js'
+import { OpenWebError } from '../../../lib/errors.js'
 
 type Params = Readonly<Record<string, unknown>>
 
@@ -148,16 +149,16 @@ async function getSellerProfile(page: Page, params: Params): Promise<unknown> {
   ]).catch(() => 'timeout' as const)
 
   if (found === 'notfound') {
-    return { error: 'Seller not found', username }
+    throw OpenWebError.apiError('getSellerProfile', `Seller not found: ${username}`)
   }
 
-  return page.evaluate((user: string) => {
-    const notFound = document.querySelector('.page-notice--attention')
-    if (notFound?.textContent?.includes('not found')) {
-      return { error: 'Seller not found', username: user }
-    }
+  if (found === 'timeout') {
+    throw OpenWebError.apiError('getSellerProfile', `Timed out loading seller profile: ${username}`)
+  }
+
+  const result = await page.evaluate((user: string) => {
     const card = document.querySelector('.str-seller-card')
-    if (!card) return { error: 'Could not load seller profile', username: user }
+    if (!card) return null
     const storeName = document.querySelector('.str-seller-card__store-name h1')?.textContent?.trim() || ''
     const fullText = card.textContent?.replace(/\s+/g, ' ')?.trim() || ''
     const positiveMatch = fullText.match(/(\d+\.?\d*)%\s*positive/)
@@ -177,6 +178,8 @@ async function getSellerProfile(page: Page, params: Params): Promise<unknown> {
       storeUrl: `https://www.ebay.com/str/${user}`,
     }
   }, username)
+  if (!result) throw OpenWebError.apiError('getSellerProfile', `Could not load seller profile: ${username}`)
+  return result
 }
 
 const OPERATIONS: Record<string, (page: Page, params: Params) => Promise<unknown>> = {

@@ -532,7 +532,6 @@ paths:
                             - user
                       required:
                         - id
-                        - original_status
                 required:
                   - next_max_id
                   - items

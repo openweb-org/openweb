@@ -28,7 +28,7 @@ paths:
       x-openweb:
         permission: read
         adapter:
-          name: apple-podcasts-api
+          name: apple-podcasts
           operation: searchPodcasts
         build:
           stable_id: ap0001
@@ -130,7 +130,7 @@ paths:
       x-openweb:
         permission: read
         adapter:
-          name: apple-podcasts-api
+          name: apple-podcasts
           operation: getPodcast
         build:
           stable_id: ap0002
@@ -275,7 +275,7 @@ paths:
       x-openweb:
         permission: read
         adapter:
-          name: apple-podcasts-api
+          name: apple-podcasts
           operation: getSearchSuggestions
         build:
           stable_id: ap0003
@@ -348,7 +348,7 @@ paths:
       x-openweb:
         permission: read
         adapter:
-          name: apple-podcasts-api
+          name: apple-podcasts
           operation: getTopCharts
         build:
           stable_id: ap0004
