@@ -39,10 +39,16 @@ const MAX_SEARCH_RESULTS = 25
 const MAX_BODY = 4000
 const MAX_IMAGES = 15
 
+function validCity(raw: unknown, errors: AdapterErrors): string {
+  const city = (raw as string) || 'sfbay'
+  if (!/^[a-z0-9-]+$/.test(city)) throw errors.wrap(new Error('Invalid city slug'))
+  return city
+}
+
 // ── searchListings ─────────────────────────────────────────────────
 
 async function searchListings(_page: Page, params: Record<string, unknown>, errors: AdapterErrors): Promise<unknown> {
-  const city = (params.city as string) || 'sfbay'
+  const city = validCity(params.city as string, errors)
   const category = params.category as string
   const query = params.query as string | undefined
   const qs = query ? `?query=${encodeURIComponent(query)}` : ''
@@ -72,7 +78,7 @@ async function searchListings(_page: Page, params: Record<string, unknown>, erro
 // ── getListing ──────────────────────────────────────────────────────
 
 async function getListing(_page: Page, params: Record<string, unknown>, errors: AdapterErrors): Promise<unknown> {
-  const city = (params.city as string) || 'sfbay'
+  const city = validCity(params.city as string, errors)
   const category = params.category as string
   const slug = params.slug as string
   const id = params.id as string
@@ -154,7 +160,7 @@ async function getListing(_page: Page, params: Record<string, unknown>, errors: 
 // ── getCategories ──────────────────────────────────────────────────
 
 async function getCategories(_page: Page, params: Record<string, unknown>, errors: AdapterErrors): Promise<unknown> {
-  const city = (params.city as string) || 'sfbay'
+  const city = validCity(params.city as string, errors)
   const html = await fetchHtml(`https://${city}.craigslist.org/`, errors)
 
   const categories: { name: string; code: string; section: string | null }[] = []

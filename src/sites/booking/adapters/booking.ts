@@ -310,7 +310,7 @@ async function extractReviewsFromDom(page: Page): Promise<unknown> {
 
   const ratingMatch = raw.scoreText.match(/(\d\.\d)/)
   const allNumbers = [...raw.scoreText.matchAll(/([\d,]+)/g)].map(m => parseInt(m[1].replace(/,/g, ''), 10))
-  const reviewCount = allNumbers.find(n => n > 0) ?? null
+  const reviewCount = allNumbers.length > 1 ? allNumbers[allNumbers.length - 1] : allNumbers[0] ?? null
 
   const subscores: Record<string, string> = {}
   for (const { key, value } of raw.subscores) {

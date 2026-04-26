@@ -111,41 +111,41 @@ paths:
                               format: date-time
                               description: ISO 8601 date-time.
                           required: [longDate, dateTime]
-                    bylines:
-                      type: array
-                      items:
+                        bylines:
+                          type: array
+                          items:
+                            type:
+                              - string
+                              - 'null'
+                          description: Author names.
+                        topics:
+                          type: array
+                          items:
+                            type: string
+                          description: Topic tags (Health, Politics, World, etc.).
+                        image:
+                          type:
+                            - object
+                            - 'null'
+                          description: Lead image for the article, or null if unavailable.
+                          properties:
+                            url:
+                              type: string
+                              format: uri
+                              description: Image URL.
+                            caption:
+                              type: string
+                              description: Image caption text.
+                            credit:
+                              type: string
+                              description: Photographer or source credit.
+                        hasAudio:
+                          type: boolean
+                          description: Whether the article has an audio version.
                         type:
-                          - string
-                          - 'null'
-                      description: Author names.
-                    topics:
-                      type: array
-                      items:
-                        type: string
-                      description: Topic tags (Health, Politics, World, etc.).
-                    image:
-                      type:
-                        - object
-                        - 'null'
-                      description: Lead image for the article, or null if unavailable.
-                      properties:
-                        url:
                           type: string
-                          format: uri
-                          description: Image URL.
-                        caption:
-                          type: string
-                          description: Image caption text.
-                        credit:
-                          type: string
-                          description: Photographer or source credit.
-                    hasAudio:
-                      type: boolean
-                      description: Whether the article has an audio version.
-                    type:
-                      type: string
-                      description: Content type (story, etc.).
-                  required: [objectID, title, type]
+                          description: Content type (story, etc.).
+                      required: [objectID, title, type]
 
   /1/indexes/nprorg-cds/{objectID}:
     get:

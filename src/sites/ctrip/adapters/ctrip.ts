@@ -119,6 +119,7 @@ const adapter: CustomRunner = {
     })
 
     if (result.status === 403) throw errors.needsLogin()
+    if (result.status >= 400) throw errors.httpError(result.status)
 
     let parsed: unknown
     try {
