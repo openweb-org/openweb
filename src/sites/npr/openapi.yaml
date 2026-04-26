@@ -16,6 +16,7 @@ paths:
       summary: Search NPR articles by keyword — returns title, summary, author, date, image, audio info
       x-openweb:
         permission: read
+        transport: node
         adapter:
           name: npr
           operation: searchArticles
@@ -85,31 +86,31 @@ paths:
                         objectID:
                           type: string
                           description: Unique article ID (e.g. "nx-s1-5777587"). Use with getArticle.
-                    title:
-                      type: string
-                      description: Article headline.
-                    bodyText:
-                      type: string
-                      description: Article summary/teaser text.
-                    url:
-                      type: string
-                      description: Relative URL path on npr.org.
-                    canonicalUrl:
-                      type: string
-                      format: uri
-                      description: Full canonical URL.
-                    displayDate:
-                      type: object
-                      description: Publication date in human and machine formats.
-                      properties:
-                        longDate:
+                        title:
                           type: string
-                          description: Human-readable date (e.g. "April 09, 2026").
-                        dateTime:
+                          description: Article headline.
+                        bodyText:
                           type: string
-                          format: date-time
-                          description: ISO 8601 date-time.
-                      required: [longDate, dateTime]
+                          description: Article summary/teaser text.
+                        url:
+                          type: string
+                          description: Relative URL path on npr.org.
+                        canonicalUrl:
+                          type: string
+                          format: uri
+                          description: Full canonical URL.
+                        displayDate:
+                          type: object
+                          description: Publication date in human and machine formats.
+                          properties:
+                            longDate:
+                              type: string
+                              description: Human-readable date (e.g. "April 09, 2026").
+                            dateTime:
+                              type: string
+                              format: date-time
+                              description: ISO 8601 date-time.
+                          required: [longDate, dateTime]
                     bylines:
                       type: array
                       items:
@@ -152,6 +153,7 @@ paths:
       summary: Get full NPR article — title, full body text, author, date, topics, image
       x-openweb:
         permission: read
+        transport: node
         adapter:
           name: npr
           operation: getArticle
@@ -278,6 +280,7 @@ paths:
       summary: Get latest NPR top stories — returns title, summary, author, date, topic for front-page headlines
       x-openweb:
         permission: read
+        transport: node
         adapter:
           name: npr
           operation: getTopStories
@@ -348,63 +351,63 @@ paths:
                         objectID:
                           type: string
                           description: Unique article ID. Use with getArticle for full text.
-                    title:
-                      type: string
-                      description: Article headline.
-                    bodyText:
-                      type: string
-                      description: Article summary/teaser text.
-                    url:
-                      type: string
-                      description: Relative URL path on npr.org.
-                    canonicalUrl:
-                      type: string
-                      format: uri
-                      description: Full canonical URL.
-                    displayDate:
-                      type: object
-                      description: Publication date in human and machine formats.
-                      properties:
-                        longDate:
+                        title:
                           type: string
-                          description: Human-readable date (e.g. "April 09, 2026").
-                        dateTime:
+                          description: Article headline.
+                        bodyText:
                           type: string
-                          format: date-time
-                          description: ISO 8601 date-time.
-                      required: [longDate, dateTime]
-                    bylines:
-                      type: array
-                      items:
-                        type:
-                          - string
-                          - 'null'
-                      description: Author names (may contain null for wire stories).
-                    topics:
-                      type: array
-                      items:
-                        type: string
-                      description: Topic tags (Health, Politics, World, etc.).
-                    image:
-                      type:
-                        - object
-                        - 'null'
-                      description: Lead image for the article, or null if unavailable.
-                      properties:
+                          description: Article summary/teaser text.
                         url:
                           type: string
+                          description: Relative URL path on npr.org.
+                        canonicalUrl:
+                          type: string
                           format: uri
-                          description: Image URL.
-                        caption:
+                          description: Full canonical URL.
+                        displayDate:
+                          type: object
+                          description: Publication date in human and machine formats.
+                          properties:
+                            longDate:
+                              type: string
+                              description: Human-readable date (e.g. "April 09, 2026").
+                            dateTime:
+                              type: string
+                              format: date-time
+                              description: ISO 8601 date-time.
+                          required: [longDate, dateTime]
+                        bylines:
+                          type: array
+                          items:
+                            type:
+                              - string
+                              - 'null'
+                          description: Author names (may contain null for wire stories).
+                        topics:
+                          type: array
+                          items:
+                            type: string
+                          description: Topic tags (Health, Politics, World, etc.).
+                        image:
+                          type:
+                            - object
+                            - 'null'
+                          description: Lead image for the article, or null if unavailable.
+                          properties:
+                            url:
+                              type: string
+                              format: uri
+                              description: Image URL.
+                            caption:
+                              type: string
+                              description: Image caption text.
+                            credit:
+                              type: string
+                              description: Photographer or source credit.
+                        hasAudio:
+                          type: boolean
+                          description: Whether the article has an audio version.
+                        type:
                           type: string
-                          description: Image caption text.
-                        credit:
-                          type: string
-                          description: Photographer or source credit.
-                    hasAudio:
-                      type: boolean
-                      description: Whether the article has an audio version.
-                    type:
-                      type: string
-                      description: Content type (story, etc.).
-                  required: [objectID, title, type]
+                          description: Content type (story, etc.).
+                      required: [objectID, title, type]

@@ -17,6 +17,7 @@ paths:
       summary: Autocomplete businesses and categories by prefix and location
       x-openweb:
         permission: read
+        transport: node
         adapter:
           name: yelp
           operation: autocompleteBusinesses

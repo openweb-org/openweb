@@ -149,7 +149,7 @@ const adapter: CustomRunner = {
     const { page, operation, params, helpers } = ctx
     const p = page as Page
     const handler = operations[operation]
-    if (!handler) throw helpers.errors.unknownOp(operation, Object.keys(operations))
+    if (!handler) throw helpers.errors.unknownOp(operation)
     return handler(p, params, helpers.errors)
   },
 }

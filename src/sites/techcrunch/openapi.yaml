@@ -17,6 +17,7 @@ paths:
       x-openweb:
         permission: read
         actual_path: /posts
+        transport: node
         adapter:
           name: techcrunch
           operation: searchArticles
@@ -110,6 +111,7 @@ paths:
       summary: Get full article content — title, body, date, author, category, featured image
       x-openweb:
         permission: read
+        transport: node
         adapter:
           name: techcrunch
           operation: getArticle
@@ -193,6 +195,7 @@ paths:
       x-openweb:
         permission: read
         actual_path: /posts
+        transport: node
         adapter:
           name: techcrunch
           operation: getLatest
@@ -264,6 +267,7 @@ paths:
       x-openweb:
         permission: read
         actual_path: /posts
+        transport: node
         adapter:
           name: techcrunch
           operation: getCategory

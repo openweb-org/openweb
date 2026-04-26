@@ -127,8 +127,8 @@ paths:
                               type:
                                 - string
                                 - 'null'
-                          format: uri
-                          description: Thumbnail image URL.
+                              format: uri
+                              description: Thumbnail image URL.
 
   /search?ids:
     get:
