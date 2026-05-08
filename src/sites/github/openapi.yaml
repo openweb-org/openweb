@@ -861,7 +861,7 @@ paths:
   /repos/{owner}/{repo}/pulls:
     get:
       operationId: listPullRequests
-      summary: List repository pull requests — title, state, user, head, base, created_at
+      summary: List repository pull requests — title, state, user, labels, milestone, head, base, created_at
       x-openweb:
         permission: read
         transport: node
@@ -870,7 +870,7 @@ paths:
           operation: listPullRequests
         build:
           stable_id: gh0008
-          tool_version: 1
+          tool_version: 2
           verified: false
           signals:
           - status-match
@@ -935,6 +935,21 @@ paths:
                       nullable: true
                       properties:
                         login:
+                          type: string
+                    labels:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          color:
+                            type: string
+                    milestone:
+                      type: object
+                      nullable: true
+                      properties:
+                        title:
                           type: string
                     head:
                       type: object

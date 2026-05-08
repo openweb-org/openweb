@@ -196,7 +196,7 @@ paths:
           operation: getReleases
         build:
           stable_id: pypi0003
-          tool_version: 2
+          tool_version: 3
       parameters:
         - name: package
           in: path
@@ -207,7 +207,7 @@ paths:
           example: requests
       responses:
         "200":
-          description: All versions and download files for the package.
+          description: "All released versions with per-version dependency metadata. requires_dist and classifiers reflect the latest version (PyPI does not expose them per historical version without N+1 fetches)."
           content:
             application/json:
               schema:
@@ -216,11 +216,49 @@ paths:
                   name:
                     type: string
                     description: Canonical package name.
+                  requires_dist:
+                    type:
+                      - array
+                      - "null"
+                    items:
+                      type: string
+                    description: "PEP 508 dependency specifiers for the latest version (e.g., 'numpy>=1.20')."
+                  classifiers:
+                    type:
+                      - array
+                      - "null"
+                    items:
+                      type: string
+                    description: "Trove classifiers for the latest version (Python versions, OS, license, etc.)."
                   versions:
                     type: array
                     items:
-                      type: string
-                    description: "All released version strings in chronological order."
+                      type: object
+                      properties:
+                        version:
+                          type: string
+                          description: "Version string (PEP 440)."
+                        requires_python:
+                          type:
+                            - string
+                            - "null"
+                          description: "Python version specifier this release requires (e.g., '>=3.8')."
+                        yanked:
+                          type: boolean
+                          description: "True if any file for this version was yanked (withdrawn)."
+                        yanked_reason:
+                          type:
+                            - string
+                            - "null"
+                          description: "Yank reason if available."
+                        upload_time:
+                          type:
+                            - string
+                            - "null"
+                          description: "ISO 8601 upload time of the first file for this version."
+                      required:
+                        - version
+                    description: "All released versions in chronological order, each annotated with compatibility metadata."
                 required:
                   - name
                   - versions

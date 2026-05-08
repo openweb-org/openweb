@@ -23,7 +23,7 @@ paths:
           operation: getListings
         build:
           stable_id: coinmarketcap_getListings_v1
-          tool_version: 1
+          tool_version: 2
       parameters:
         - name: start
           in: query
@@ -147,6 +147,16 @@ paths:
                                       - number
                                       - "null"
                                     description: "Market capitalization"
+                                  fullyDilutedMarketCap:
+                                    type:
+                                      - number
+                                      - "null"
+                                    description: "Fully diluted market cap"
+                                  marketCapDominance:
+                                    type:
+                                      - number
+                                      - "null"
+                                    description: "Market cap dominance percentage"
                                   percentChange1h:
                                     type:
                                       - number
@@ -167,6 +177,26 @@ paths:
                                       - number
                                       - "null"
                                     description: "30d price change percentage"
+                                  high24h:
+                                    type:
+                                      - number
+                                      - "null"
+                                    description: "24h high price (when present)"
+                                  low24h:
+                                    type:
+                                      - number
+                                      - "null"
+                                    description: "24h low price (when present)"
+                                  highAllTime:
+                                    type:
+                                      - number
+                                      - "null"
+                                    description: "All-time high price (when present)"
+                                  lowAllTime:
+                                    type:
+                                      - number
+                                      - "null"
+                                    description: "All-time low price (when present)"
                                 required: [name, price]
                           required: [id, name, symbol, slug]
                       totalCount:

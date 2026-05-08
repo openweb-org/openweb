@@ -31,10 +31,16 @@ function trimQuote(q: R): R {
     price: q.price ?? null,
     volume24h: q.volume24h ?? null,
     marketCap: q.marketCap ?? null,
+    fullyDilutedMarketCap: q.fullyDilutedMarketCap ?? null,
+    marketCapDominance: q.marketCapDominance ?? q.dominance ?? null,
     percentChange1h: q.percentChange1h ?? null,
     percentChange24h: q.percentChange24h ?? null,
     percentChange7d: q.percentChange7d ?? null,
     percentChange30d: q.percentChange30d ?? null,
+    high24h: q.high24h ?? null,
+    low24h: q.low24h ?? null,
+    highAllTime: q.highAllTime ?? null,
+    lowAllTime: q.lowAllTime ?? null,
   }
 }
 

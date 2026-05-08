@@ -149,6 +149,8 @@ async function listPullRequests(params: Readonly<Record<string, unknown>>, error
     state: pr.state,
     draft: pr.draft,
     user: pr.user ? pickUser(pr.user as Record<string, unknown>) : null,
+    labels: ((pr.labels as Array<Record<string, unknown>>) ?? []).map(pickLabel),
+    milestone: pr.milestone ? { title: (pr.milestone as Record<string, unknown>).title } : null,
     head: pr.head ? { ref: (pr.head as Record<string, unknown>).ref, label: (pr.head as Record<string, unknown>).label } : null,
     base: pr.base ? { ref: (pr.base as Record<string, unknown>).ref, label: (pr.base as Record<string, unknown>).label } : null,
     created_at: pr.created_at,

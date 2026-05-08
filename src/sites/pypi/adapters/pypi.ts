@@ -63,17 +63,51 @@ async function getPackageVersion(params: Readonly<Record<string, unknown>>, erro
   return result
 }
 
+function summarizeReleaseFiles(files: ReadonlyArray<Record<string, unknown>>): {
+  requires_python: string | null
+  yanked: boolean
+  yanked_reason: string | null
+  upload_time: string | null
+} {
+  let requires_python: string | null = null
+  let yanked = false
+  let yanked_reason: string | null = null
+  let upload_time: string | null = null
+  for (const f of files) {
+    if (requires_python === null && typeof f.requires_python === 'string') {
+      requires_python = f.requires_python
+    }
+    if (f.yanked === true || (typeof f.yanked === 'string' && f.yanked.length > 0)) {
+      yanked = true
+      const reason = (f.yanked_reason as string | null | undefined)
+        ?? (typeof f.yanked === 'string' ? f.yanked : null)
+      if (reason && !yanked_reason) yanked_reason = reason
+    }
+    if (upload_time === null && typeof f.upload_time === 'string') {
+      upload_time = f.upload_time
+    }
+  }
+  return { requires_python, yanked, yanked_reason, upload_time }
+}
+
 async function getReleases(params: Readonly<Record<string, unknown>>, errors: AdapterErrorHelpers): Promise<unknown> {
   const pkg = params.package as string | undefined
   if (!pkg) throw errors.missingParam('package')
 
-  const doc = await fetchJson(`${PYPI}/simple/${encodeURIComponent(pkg)}/`, errors, {
-    Accept: 'application/vnd.pypi.simple.v1+json',
-  })
+  const doc = await fetchJson(`${PYPI}/pypi/${encodeURIComponent(pkg)}/json`, errors)
+  const info = (doc.info ?? {}) as Record<string, unknown>
+  const releases = (doc.releases ?? {}) as Record<string, Array<Record<string, unknown>>>
+
+  const versions = Object.entries(releases).map(([version, files]) => ({
+    version,
+    ...summarizeReleaseFiles(files ?? []),
+  }))
 
   return {
-    name: doc.name,
-    versions: doc.versions,
+    name: info.name ?? pkg,
+    requires_dist: info.requires_dist ?? null,
+    classifiers: info.classifiers ?? null,
+    versions,
   }
 }
 
