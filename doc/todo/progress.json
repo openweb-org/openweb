@@ -1,0 +1,83 @@
+[
+  {
+    "id": "session-idle-claude-userstory-continued-1777063286632",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-userstory-continued finished processing",
+    "timestamp": "2026-04-24T20:41:26.632Z",
+    "status": "active",
+    "sessionName": "claude-userstory-continued"
+  },
+  {
+    "id": "session-idle-claude-userstory-continued-1777064193197",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-userstory-continued finished processing",
+    "timestamp": "2026-04-24T20:56:33.197Z",
+    "status": "active",
+    "sessionName": "claude-userstory-continued"
+  },
+  {
+    "id": "session-idle-claude-userstory-continued-1777064435150",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-userstory-continued finished processing",
+    "timestamp": "2026-04-24T21:00:35.150Z",
+    "status": "active",
+    "sessionName": "claude-userstory-continued"
+  },
+  {
+    "id": "session-idle-claude-userstory-continued-1777064918857",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-userstory-continued finished processing",
+    "timestamp": "2026-04-24T21:08:38.857Z",
+    "status": "active",
+    "sessionName": "claude-userstory-continued"
+  },
+  {
+    "id": "session-idle-claude-userstory-continued-1777065583521",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-userstory-continued finished processing",
+    "timestamp": "2026-04-24T21:19:43.521Z",
+    "status": "active",
+    "sessionName": "claude-userstory-continued"
+  },
+  {
+    "id": "session-idle-claude-userstory-continued-1777066550097",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-userstory-continued finished processing",
+    "timestamp": "2026-04-24T21:35:50.097Z",
+    "status": "active",
+    "sessionName": "claude-userstory-continued"
+  },
+  {
+    "id": "session-idle-claude-userstory-continued-1777067395684",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-userstory-continued finished processing",
+    "timestamp": "2026-04-24T21:49:55.684Z",
+    "status": "active",
+    "sessionName": "claude-userstory-continued"
+  },
+  {
+    "id": "session-idle-claude-userstory-continued-1777070349977",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-userstory-continued finished processing",
+    "timestamp": "2026-04-24T22:39:09.977Z",
+    "status": "active",
+    "sessionName": "claude-userstory-continued"
+  },
+  {
+    "id": "session-idle-claude-tall-stormy-lynx-9b7f1f-1777083276411",
+    "agent": "claude",
+    "type": "session_idle",
+    "message": "claude-tall-stormy-lynx-9b7f1f finished processing",
+    "timestamp": "2026-04-25T02:14:36.411Z",
+    "status": "active",
+    "sessionName": "claude-tall-stormy-lynx-9b7f1f"
+  }
+]
