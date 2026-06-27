@@ -182,6 +182,10 @@ const adapterErrors: AdapterErrorHelpers = {
     error: 'execution_failed', code: 'EXECUTION_FAILED', message: msg,
     action: 'Solve CAPTCHA in visible browser, then retry.', retriable: true, failureClass: 'bot_blocked',
   }),
+  rateLimited: (msg) => new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED', message: msg,
+    action: 'The server is rate-limiting this session — wait before retrying.', retriable: false, failureClass: 'rate_limited',
+  }),
   fatal: (msg) => new OpenWebError({
     error: 'execution_failed', code: 'EXECUTION_FAILED', message: msg,
     action: 'Check the operation parameters.', retriable: false, failureClass: 'fatal',

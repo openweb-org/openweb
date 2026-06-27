@@ -19,7 +19,7 @@ paths:
         created timestamp, thumbnail, selftext, flair, awards
       x-openweb:
         permission: read
-        transport: node
+        transport: page
         adapter:
           name: reddit-read
           operation: getSubredditPosts
@@ -147,7 +147,7 @@ paths:
         comment count, subreddit, URL, created timestamp
       x-openweb:
         permission: read
-        transport: node
+        transport: page
         adapter:
           name: reddit-read
           operation: getPopularPosts
@@ -244,7 +244,7 @@ paths:
         subreddit, URL, selftext snippet, created timestamp
       x-openweb:
         permission: read
-        transport: node
+        transport: page
         adapter:
           name: reddit-read
           operation: searchPosts
@@ -380,7 +380,7 @@ paths:
         comment tree with author, body, score, replies, created timestamp
       x-openweb:
         permission: read
-        transport: node
+        transport: page
         adapter:
           name: reddit-read
           operation: getPostComments
@@ -501,7 +501,7 @@ paths:
         created date, description, avatar URL, is_gold, verified
       x-openweb:
         permission: read
-        transport: node
+        transport: page
         adapter:
           name: reddit-read
           operation: getUserProfile
@@ -568,7 +568,7 @@ paths:
         created timestamp, type (post or comment)
       x-openweb:
         permission: read
-        transport: node
+        transport: page
         adapter:
           name: reddit-read
           operation: getUserPosts
@@ -678,7 +678,7 @@ paths:
         count, active users, created date, rules
       x-openweb:
         permission: read
-        transport: node
+        transport: page
         adapter:
           name: reddit-read
           operation: getSubredditAbout

@@ -14,6 +14,10 @@ export interface AdapterErrorHelpers {
   apiError(label: string, message: string): Error
   needsLogin(): Error
   botBlocked(message: string): Error
+  /** Server is rate-limiting (HTTP 429). Non-retriable: the runtime will NOT
+   *  auto-retry, so we don't deepen the throttle. `message` should carry the
+   *  server's own response so the caller can see any stated wait time. */
+  rateLimited(message: string): Error
   fatal(message: string): Error
   retriable(message: string): Error
   wrap(error: unknown): Error

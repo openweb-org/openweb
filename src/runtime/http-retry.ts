@@ -29,6 +29,9 @@ const BASE_BACKOFF_MS = 1000
 const NON_RETRIABLE: ReadonlySet<string> = new Set([
   'needs_login', 'needs_browser', 'needs_page',
   'permission_denied', 'permission_required', 'fatal',
+  // rate_limited: the server is already throttling us — retrying fast would
+  // deepen the throttle (and risk account flags). Surface it and stop.
+  'rate_limited',
 ])
 
 /**

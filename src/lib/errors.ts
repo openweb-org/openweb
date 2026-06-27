@@ -12,6 +12,7 @@ export type FailureClass =
   | 'needs_login'
   | 'needs_page'
   | 'bot_blocked'
+  | 'rate_limited'
   | 'permission_denied'
   | 'permission_required'
   | 'retriable'
